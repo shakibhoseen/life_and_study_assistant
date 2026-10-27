@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -12,6 +14,8 @@ import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../domain/chat_verifiability.dart';
 import '../../domain/models/chat_action.dart';
 import '../providers/chat_provider.dart';
+
+import '../../../../core/services/voice/voice_recording_service.dart';
 
 class AiChatScreen extends ConsumerStatefulWidget {
   const AiChatScreen({super.key});
@@ -30,6 +34,17 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
+  // Voice goes to text first, so the thread keeps a record of what was asked
+  // and a misheard word can be fixed before it is answered.
+  bool _isRecording = false;
+  bool _isTranscribing = false;
+  int _recordedSeconds = 0;
+  Timer? _recordTimer;
+
+  /// Gemini bills speech by the second, so a mic left running by accident is
+  /// a real cost. It stops itself well before that becomes expensive.
+  static const int _maxRecordSeconds = 60;
+
   final List<String> _quickPrompts = [
     '😴 আজকে অফিস শেষে ক্লান্ত, ৫ মিনিটের প্ল্যান দাও',
     '📖 বাংলা ব্যাকরণ: সমাস সহজে মনে রাখার ট্রিকস',
@@ -43,6 +58,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     _textController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
+    _recordTimer?.cancel();
+    if (_isRecording) VoiceRecordingService.instance.cancelRecording();
     super.dispose();
   }
 
@@ -1293,6 +1310,66 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     );
   }
 
+  Future<void> _toggleVoice() async {
+    if (_isTranscribing) return;
+
+    if (_isRecording) {
+      _recordTimer?.cancel();
+      setState(() {
+        _isRecording = false;
+        _isTranscribing = true;
+      });
+
+      final file = await VoiceRecordingService.instance.stopRecording();
+      final text = file == null
+          ? null
+          : await GeminiAiService.instance.transcribeVoice(file);
+
+      if (!mounted) return;
+      setState(() => _isTranscribing = false);
+
+      if (text == null || text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('কিছু শোনা গেল না, আবার বলুন')),
+        );
+        return;
+      }
+
+      // Appended rather than replacing, so a half-typed question survives.
+      final existing = _textController.text.trim();
+      _textController.text = existing.isEmpty ? text : '$existing $text';
+      _textController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _textController.text.length),
+      );
+      _focusNode.requestFocus();
+      return;
+    }
+
+    try {
+      await VoiceRecordingService.instance.startRecording(
+        config: VoiceRecordingService.speechConfig,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isRecording = true;
+        _recordedSeconds = 0;
+      });
+      _recordTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+        if (!mounted || !_isRecording) {
+          t.cancel();
+          return;
+        }
+        setState(() => _recordedSeconds++);
+        if (_recordedSeconds >= _maxRecordSeconds) _toggleVoice();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('মাইক্রোফোনের অনুমতি দিন')));
+    }
+  }
+
   Widget _buildInputBar(bool isSending) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
@@ -1325,7 +1402,11 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 color: isDark ? Colors.white : Colors.black87,
               ),
               decoration: InputDecoration(
-                hintText: 'Ask Gemini anything (BCS, routine, doubts)...',
+                hintText: _isRecording
+                    ? '🎙 শুনছি… ${_recordedSeconds}s / ${_maxRecordSeconds}s'
+                    : (_isTranscribing
+                          ? 'লেখা হচ্ছে…'
+                          : 'Ask Gemini anything (BCS, routine, doubts)...'),
                 hintStyle: TextStyle(
                   fontSize: 13,
                   color: isDark ? Colors.white54 : Colors.grey.shade500,
@@ -1345,7 +1426,25 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
+          IconButton(
+            tooltip: _isRecording ? 'থামুন' : 'বলে জিজ্ঞাসা করুন',
+            onPressed: isSending ? null : _toggleVoice,
+            icon: _isTranscribing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    _isRecording ? Icons.stop_circle : Icons.mic_none,
+                    size: 24,
+                    color: _isRecording
+                        ? Colors.redAccent
+                        : (isDark ? Colors.white60 : Colors.grey.shade600),
+                  ),
+          ),
+          const SizedBox(width: 2),
           CircleAvatar(
             backgroundColor: isSending
                 ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
@@ -890,6 +891,78 @@ Write reasoning in Bengali, two or three sentences, speaking to the user. Never 
       storedIndex: storedIndex,
       userEvidence: userEvidence,
     );
+  }
+
+  /// Turns a spoken question into text for the chat box.
+  ///
+  /// Deliberately transcription only. Sending the audio straight to the
+  /// mentor would answer in one call, but then the thread would hold no
+  /// record of what was actually said, and a misheard Bengali word would be
+  /// answered rather than corrected. The user sees the text first.
+  Future<String?> transcribeVoice(File audioFile) async {
+    await init();
+    if (_model == null) return null;
+    if (!await audioFile.exists()) return null;
+
+    // An AAC header alone runs to roughly a kilobyte, so anything this small
+    // carries no speech and is not worth a call.
+    final size = await audioFile.length();
+    if (size < 2500) {
+      debugPrint('Voice transcribe: $size bytes, treating as silence');
+      return null;
+    }
+
+    try {
+      final bytes = await audioFile.readAsBytes();
+      final response = await _model!.generateContent([
+        Content.multi([
+          TextPart(
+            'Transcribe this audio exactly as spoken. It is a Bangladeshi '
+            'student asking their study mentor something, usually in Bengali '
+            'and often mixing in English words; keep those words as they were '
+            'said. Return the transcription alone, with no quotes, no '
+            'translation and no commentary. Return an empty string if there '
+            'is no speech.',
+          ),
+          DataPart(_audioMimeType(audioFile.path), bytes),
+        ]),
+      ], generationConfig: _proseConfig);
+
+      await GeminiUsageTracker.instance.recordSuccess(
+        tokens: response.usageMetadata?.totalTokenCount ?? 0,
+        actualInputTokens: response.usageMetadata?.promptTokenCount,
+        actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
+        actualTotalTokens: response.usageMetadata?.totalTokenCount,
+        operation: 'voice_transcribe',
+        model: _selectedModel,
+      );
+
+      final text = response.text?.trim();
+      debugPrint(
+        'Voice transcribe: ${text?.length ?? 0} chars from $size bytes',
+      );
+      return (text == null || text.isEmpty) ? null : text;
+    } catch (e) {
+      debugPrint('Voice transcribe failed: $e');
+      final lower = e.toString().toLowerCase();
+      if (lower.contains('429') ||
+          lower.contains('resource_exhausted') ||
+          lower.contains('quota')) {
+        await GeminiUsageTracker.instance.recordQuotaExceeded();
+      } else {
+        await GeminiUsageTracker.instance.recordError(e.toString());
+      }
+      return null;
+    }
+  }
+
+  static String _audioMimeType(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.m4a') || lower.endsWith('.aac')) return 'audio/mp4';
+    if (lower.endsWith('.mp3')) return 'audio/mpeg';
+    if (lower.endsWith('.wav')) return 'audio/wav';
+    if (lower.endsWith('.ogg')) return 'audio/ogg';
+    return 'audio/mp4';
   }
 
   /// Parses an independent solve, returning null for anything malformed.

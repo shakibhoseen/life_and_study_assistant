@@ -32,7 +32,17 @@ class VoiceRecordingService {
     }
   }
 
-  Future<void> startRecording() async {
+  /// Mono 16 kHz is all speech recognition uses, and it makes the upload a
+  /// fraction of the size. It does not change the token cost, which Gemini
+  /// charges by duration rather than by bytes.
+  static const RecordConfig speechConfig = RecordConfig(
+    encoder: AudioEncoder.aacLc,
+    bitRate: 32000,
+    sampleRate: 16000,
+    numChannels: 1,
+  );
+
+  Future<void> startRecording({RecordConfig? config}) async {
     if (_isRecording) return;
 
     final hasPerm = await hasPermission();
@@ -46,7 +56,7 @@ class VoiceRecordingService {
     _currentFilePath = path;
 
     await _audioRecorder.start(
-      const RecordConfig(encoder: AudioEncoder.aacLc),
+      config ?? const RecordConfig(encoder: AudioEncoder.aacLc),
       path: path,
     );
     _isRecording = true;
