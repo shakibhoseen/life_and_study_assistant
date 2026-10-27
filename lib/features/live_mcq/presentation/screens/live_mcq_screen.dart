@@ -1,0 +1,2320 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/database/app_database.dart';
+import '../../../../core/database/database_provider.dart';
+import '../../../../core/services/ai/gemini_ai_service.dart';
+import '../../../../core/services/ai/models/study_sheet_summary.dart';
+import '../../../../core/services/ai/routine_parser_service.dart';
+import '../../../../core/services/calendar/calendar_sync_service.dart';
+import '../../../../core/utils/bengali_math_sanitizer.dart';
+import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
+import '../providers/exam_schedule_provider.dart';
+import '../widgets/voice_mistake_bottom_sheet.dart';
+
+class LiveMcqScreen extends ConsumerStatefulWidget {
+  const LiveMcqScreen({super.key});
+
+  @override
+  ConsumerState<LiveMcqScreen> createState() => _LiveMcqScreenState();
+}
+
+class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final TextEditingController _studySheetController = TextEditingController();
+  final TextEditingController _subjectController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSummarizing = false;
+  StudySheetSummary? _summaryResult;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _studySheetController.dispose();
+    _subjectController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'LiveMCQ Hub',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.mic, color: Color(0xFF6366F1)),
+            tooltip: 'Voice Mistake Note & Floating Bubble',
+            onPressed: () => VoiceMistakeBottomSheet.show(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.calendar_month),
+            tooltip: 'Export Track Schedule to Calendar (.ics)',
+            onPressed: () => _exportCurrentTrackToIcs(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: 'Upload Routine PDF',
+            onPressed: () => _pickAndParsePdf(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.playlist_add),
+            tooltip: 'Import Routine Text / Post',
+            onPressed: () => _showImportRoutineDialog(context),
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.event_note), text: 'Exam Schedules'),
+            Tab(icon: Icon(Icons.summarize), text: 'AI Study Summarizer'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [_buildSchedulesTab(), _buildSummarizerTab()],
+      ),
+      floatingActionButton: _tabController.index == 0
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton.small(
+                  heroTag: 'fab_voice_bubble_mcq',
+                  backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  tooltip: 'Voice Mistake Note & Floating Bubble',
+                  onPressed: () => VoiceMistakeBottomSheet.show(context),
+                  child: const Icon(Icons.mic, size: 20),
+                ),
+                const SizedBox(height: 10),
+                FloatingActionButton.extended(
+                  heroTag: 'fab_add_exam_mcq',
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Exam'),
+                  onPressed: () => _showAddExamDialog(context),
+                ),
+              ],
+            )
+          : null,
+    );
+  }
+
+  String _formatExamDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final monthStr = months[date.month - 1];
+    final dayStr = date.day.toString().padLeft(2, '0');
+    final weekdayStr = weekdays[date.weekday - 1];
+    return '$dayStr $monthStr ($weekdayStr)';
+  }
+
+  Widget _buildSchedulesTab() {
+    final selectedTrack = ref.watch(selectedTrackProvider);
+    final tracksAsync = ref.watch(distinctTracksStreamProvider);
+    final examsAsync = ref.watch(filteredExamsStreamProvider);
+    final currentTimelineFilter = ref.watch(examTimelineFilterProvider);
+    final searchQuery = ref.watch(examSearchQueryProvider).trim().toLowerCase();
+
+    return Column(
+      children: [
+        _buildTrackFilterBar(tracksAsync, selectedTrack),
+        Expanded(
+          child: examsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Center(child: Text('Error: $err')),
+            data: (rawExams) {
+              if (rawExams.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.event_busy,
+                        size: 64,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        selectedTrack == 'All'
+                            ? 'No LiveMCQ exams scheduled'
+                            : 'No exams found under "$selectedTrack"',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      if (selectedTrack != 'All') ...[
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            ref
+                                .read(selectedTrackProvider.notifier)
+                                .setTrack('All');
+                          },
+                          child: const Text('Show All Programs'),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }
+
+              // Apply search query filter if user typed anything
+              final exams = searchQuery.isEmpty
+                  ? rawExams
+                  : rawExams.where((e) {
+                      final titleMatch = e.title.toLowerCase().contains(
+                        searchQuery,
+                      );
+                      final topicMatch = e.topicsCovered.toLowerCase().contains(
+                        searchQuery,
+                      );
+                      final trackMatch = e.trackName.toLowerCase().contains(
+                        searchQuery,
+                      );
+                      return titleMatch || topicMatch || trackMatch;
+                    }).toList();
+
+              // Partition into Upcoming, Past, and Completed
+              final now = DateTime.now();
+              final todayStart = DateTime(now.year, now.month, now.day);
+
+              final upcomingExams = <ExamSchedule>[];
+              final pastExams = <ExamSchedule>[];
+              final completedExams = <ExamSchedule>[];
+
+              for (final exam in exams) {
+                if (exam.completedStatus) {
+                  completedExams.add(exam);
+                } else {
+                  final examDateOnly = DateTime(
+                    exam.examDate.year,
+                    exam.examDate.month,
+                    exam.examDate.day,
+                  );
+                  final daysDiff = examDateOnly.difference(todayStart).inDays;
+                  if (daysDiff >= 0) {
+                    upcomingExams.add(exam);
+                  } else {
+                    pastExams.add(exam);
+                  }
+                }
+              }
+
+              // Sort upcoming: ASCENDING (today first, then tomorrow, then upcoming dates)
+              upcomingExams.sort((a, b) => a.examDate.compareTo(b.examDate));
+
+              // Sort past: DESCENDING (most recent first: yesterday, 2 days ago, then older)
+              pastExams.sort((a, b) => b.examDate.compareTo(a.examDate));
+
+              // Sort completed: DESCENDING
+              completedExams.sort((a, b) => b.examDate.compareTo(a.examDate));
+
+              return Column(
+                children: [
+                  _buildTimelineFilterBar(
+                    currentFilter: currentTimelineFilter,
+                    upcomingCount: upcomingExams.length,
+                    pastCount: pastExams.length,
+                    completedCount: completedExams.length,
+                    allCount: exams.length,
+                  ),
+                  Expanded(
+                    child: _buildExamsListView(
+                      currentFilter: currentTimelineFilter,
+                      upcomingExams: upcomingExams,
+                      pastExams: pastExams,
+                      completedExams: completedExams,
+                      todayStart: todayStart,
+                      selectedTrack: selectedTrack,
+                      searchQuery: searchQuery,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimelineFilterBar({
+    required ExamTimelineFilter currentFilter,
+    required int upcomingCount,
+    required int pastCount,
+    required int completedCount,
+    required int allCount,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Search Input Bar
+          Container(
+            height: 38,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: TextField(
+              controller: _searchController,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 9,
+                ),
+                hintText: 'Search by topic, subject or routine...',
+                hintStyle: TextStyle(
+                  fontSize: 12.5,
+                  color: isDark ? Colors.white54 : Colors.grey.shade500,
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 18,
+                  color: isDark ? Colors.white54 : Colors.grey,
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.clear,
+                          size: 16,
+                          color: isDark ? Colors.white70 : Colors.grey.shade700,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          ref
+                              .read(examSearchQueryProvider.notifier)
+                              .setQuery('');
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+              onChanged: (val) {
+                ref.read(examSearchQueryProvider.notifier).setQuery(val);
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Timeline Filter Chips Row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildTimelineChip(
+                  label: 'Upcoming',
+                  count: upcomingCount,
+                  icon: Icons.upcoming,
+                  isSelected: currentFilter == ExamTimelineFilter.upcoming,
+                  activeColor: isDark
+                      ? const Color(0xFF3B82F6)
+                      : const Color(0xFF1E3A8A),
+                  onTap: () => ref
+                      .read(examTimelineFilterProvider.notifier)
+                      .setFilter(ExamTimelineFilter.upcoming),
+                ),
+                const SizedBox(width: 8),
+                _buildTimelineChip(
+                  label: 'Past',
+                  count: pastCount,
+                  icon: Icons.history,
+                  isSelected: currentFilter == ExamTimelineFilter.past,
+                  activeColor: isDark
+                      ? const Color(0xFFF43F5E)
+                      : const Color(0xFFBE123C),
+                  onTap: () => ref
+                      .read(examTimelineFilterProvider.notifier)
+                      .setFilter(ExamTimelineFilter.past),
+                ),
+                const SizedBox(width: 8),
+                _buildTimelineChip(
+                  label: 'Completed',
+                  count: completedCount,
+                  icon: Icons.check_circle_outline,
+                  isSelected: currentFilter == ExamTimelineFilter.completed,
+                  activeColor: isDark
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFF047857),
+                  onTap: () => ref
+                      .read(examTimelineFilterProvider.notifier)
+                      .setFilter(ExamTimelineFilter.completed),
+                ),
+                const SizedBox(width: 8),
+                _buildTimelineChip(
+                  label: 'All',
+                  count: allCount,
+                  icon: Icons.list_alt,
+                  isSelected: currentFilter == ExamTimelineFilter.all,
+                  activeColor: isDark
+                      ? const Color(0xFF64748B)
+                      : const Color(0xFF475569),
+                  onTap: () => ref
+                      .read(examTimelineFilterProvider.notifier)
+                      .setFilter(ExamTimelineFilter.all),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineChip({
+    required String label,
+    required int count,
+    required IconData icon,
+    required bool isSelected,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? activeColor
+              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? activeColor
+                : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+            width: isSelected ? 1.4 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: isSelected
+                  ? Colors.white
+                  : (isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B)),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected
+                    ? Colors.white
+                    : (isDark
+                          ? const Color(0xFFE2E8F0)
+                          : const Color(0xFF334155)),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.white.withValues(alpha: 0.25)
+                    : (isDark
+                          ? const Color(0xFF0F172A)
+                          : const Color(0xFFE2E8F0)),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark
+                            ? const Color(0xFFCBD5E1)
+                            : const Color(0xFF475569)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExamsListView({
+    required ExamTimelineFilter currentFilter,
+    required List<ExamSchedule> upcomingExams,
+    required List<ExamSchedule> pastExams,
+    required List<ExamSchedule> completedExams,
+    required DateTime todayStart,
+    required String selectedTrack,
+    required String searchQuery,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (currentFilter == ExamTimelineFilter.upcoming) {
+      if (upcomingExams.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 56,
+                  color: Colors.teal.shade400,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'No upcoming exams right now!',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  pastExams.isNotEmpty
+                      ? '${pastExams.length} past exams have already occurred or passed.'
+                      : 'Add an exam or import a routine to get started.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isDark ? const Color(0xFF94A3B8) : Colors.grey,
+                  ),
+                ),
+                if (pastExams.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark
+                          ? const Color(0xFF3B82F6)
+                          : const Color(0xFF1E3A8A),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.history, size: 16),
+                    label: Text('View Past Exams (${pastExams.length})'),
+                    onPressed: () {
+                      ref
+                          .read(examTimelineFilterProvider.notifier)
+                          .setFilter(ExamTimelineFilter.past);
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+        itemCount: upcomingExams.length + (pastExams.isNotEmpty ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index < upcomingExams.length) {
+            return _buildExamCard(upcomingExams[index], todayStart);
+          }
+          // Bottom archived hint banner
+          return Container(
+            margin: const EdgeInsets.only(top: 8, bottom: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? const Color(0xFF334155)
+                    : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.history,
+                    size: 16,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${pastExams.length} past exam(s) archived',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF334155),
+                        ),
+                      ),
+                      Text(
+                        'Older dates are archived so you can focus on upcoming tests.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark
+                        ? const Color(0xFF0F172A)
+                        : Colors.white,
+                    foregroundColor: isDark
+                        ? const Color(0xFF93C5FD)
+                        : const Color(0xFF1E3A8A),
+                    elevation: 0,
+                    side: BorderSide(
+                      color: isDark
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFCBD5E1),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () {
+                    ref
+                        .read(examTimelineFilterProvider.notifier)
+                        .setFilter(ExamTimelineFilter.past);
+                  },
+                  child: const Text('View Past'),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    if (currentFilter == ExamTimelineFilter.past) {
+      if (pastExams.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.history_toggle_off,
+                size: 56,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'No past exams found',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  ref
+                      .read(examTimelineFilterProvider.notifier)
+                      .setFilter(ExamTimelineFilter.upcoming);
+                },
+                child: const Text('Back to Upcoming Exams'),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+        itemCount: pastExams.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF881337).withValues(alpha: 0.25)
+                    : const Color(0xFFFFF1F2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark
+                      ? const Color(0xFFBE123C)
+                      : const Color(0xFFFECDD3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: isDark
+                        ? const Color(0xFFFB7185)
+                        : const Color(0xFFBE123C),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Showing ${pastExams.length} past exams (most recent first). Tap "Drill Topic" to practice.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark
+                            ? const Color(0xFFFECDD3)
+                            : const Color(0xFF9F1239),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          return _buildExamCard(pastExams[index - 1], todayStart);
+        },
+      );
+    }
+
+    if (currentFilter == ExamTimelineFilter.completed) {
+      if (completedExams.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.fact_check_outlined,
+                size: 56,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'No completed exams yet',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  ref
+                      .read(examTimelineFilterProvider.notifier)
+                      .setFilter(ExamTimelineFilter.upcoming);
+                },
+                child: const Text('View Upcoming Schedule'),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+        itemCount: completedExams.length,
+        itemBuilder: (context, index) {
+          return _buildExamCard(completedExams[index], todayStart);
+        },
+      );
+    }
+
+    // ExamTimelineFilter.all: Show partitioned with Upcoming on top, Past at bottom
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      children: [
+        if (upcomingExams.isNotEmpty) ...[
+          _buildSectionHeaderCard(
+            title: '🎯 Upcoming & Active Exams (${upcomingExams.length})',
+            color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF1E3A8A),
+            bgColor: const Color(0xFFEFF6FF),
+          ),
+          ...upcomingExams.map((e) => _buildExamCard(e, todayStart)),
+          const SizedBox(height: 14),
+        ],
+        if (pastExams.isNotEmpty || completedExams.isNotEmpty) ...[
+          _buildSectionHeaderCard(
+            title:
+                '📜 Past & Completed Exams (${pastExams.length + completedExams.length})',
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+            bgColor: const Color(0xFFF1F5F9),
+          ),
+          ...pastExams.map((e) => _buildExamCard(e, todayStart)),
+          ...completedExams.map((e) => _buildExamCard(e, todayStart)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSectionHeaderCard({
+    required String title,
+    required Color color,
+    required Color bgColor,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveBg = isDark ? color.withValues(alpha: 0.15) : bgColor;
+    final effectiveBorderColor = isDark
+        ? color.withValues(alpha: 0.4)
+        : color.withValues(alpha: 0.2);
+    final effectiveTextColor = isDark ? Colors.white : color;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10, top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: effectiveBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: effectiveBorderColor),
+      ),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.bold,
+          color: effectiveTextColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExamCard(ExamSchedule exam, DateTime todayStart) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final examDateOnly = DateTime(
+      exam.examDate.year,
+      exam.examDate.month,
+      exam.examDate.day,
+    );
+    final daysDiff = examDateOnly.difference(todayStart).inDays;
+    final isToday = daysDiff == 0;
+    final isTomorrow = daysDiff == 1;
+    final isPast = daysDiff < 0;
+
+    return Card(
+      elevation: isToday ? 2.5 : 1,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: exam.completedStatus
+              ? (isDark ? const Color(0xFF059669) : const Color(0xFF86EFAC))
+              : isToday
+              ? const Color(0xFFF59E0B)
+              : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+          width: isToday ? 1.6 : 1,
+        ),
+      ),
+      color: isToday
+          ? (isDark ? const Color(0xFF261D11) : const Color(0xFFFFFDF5))
+          : (exam.completedStatus
+                ? (isDark ? const Color(0xFF062315) : const Color(0xFFF0FDF4))
+                : (isDark ? const Color(0xFF111827) : Colors.white)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Badge Row
+            Row(
+              children: [
+                // Track Pill
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getTrackBackgroundColor(exam.trackName, isDark),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: _getTrackColor(exam.trackName)
+                            .withValues(alpha: isDark ? 0.6 : 0.35),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.bookmark_outline,
+                          size: 11,
+                          color: isDark
+                              ? const Color(0xFF93C5FD)
+                              : _getTrackColor(exam.trackName),
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            exam.trackName,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? const Color(0xFFE2E8F0)
+                                  : _getTrackColor(exam.trackName),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Status Badge (Today / Tomorrow / in X d / Passed / Done)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: exam.completedStatus
+                        ? (isDark
+                              ? const Color(0xFF064E3B)
+                              : const Color(0xFFDCFCE7))
+                        : isToday
+                        ? (isDark
+                              ? const Color(0xFF78350F)
+                              : const Color(0xFFFEF3C7))
+                        : isTomorrow
+                        ? (isDark
+                              ? const Color(0xFF312E81)
+                              : const Color(0xFFEEF2FF))
+                        : isPast
+                        ? (isDark
+                              ? const Color(0xFF881337)
+                              : const Color(0xFFFFF1F2))
+                        : (isDark
+                              ? const Color(0xFF1E3A8A)
+                              : const Color(0xFFEFF6FF)),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: exam.completedStatus
+                          ? (isDark
+                                ? const Color(0xFF059669)
+                                : const Color(0xFF86EFAC))
+                          : isToday
+                          ? (isDark
+                                ? const Color(0xFFD97706)
+                                : const Color(0xFFFDE68A))
+                          : isTomorrow
+                          ? (isDark
+                                ? const Color(0xFF6366F1)
+                                : const Color(0xFFC7D2FE))
+                          : isPast
+                          ? (isDark
+                                ? const Color(0xFFE11D48)
+                                : const Color(0xFFFECDD3))
+                          : (isDark
+                                ? const Color(0xFF3B82F6)
+                                : const Color(0xFFBFDBFE)),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isToday && !exam.completedStatus) ...[
+                        Icon(
+                          Icons.stars,
+                          size: 11,
+                          color: isDark
+                              ? const Color(0xFFFCD34D)
+                              : const Color(0xFFB45309),
+                        ),
+                        const SizedBox(width: 3),
+                      ],
+                      Text(
+                        exam.completedStatus
+                            ? 'Done ✓'
+                            : isToday
+                            ? 'TODAY 🎯'
+                            : isTomorrow
+                            ? 'Tomorrow ⏳'
+                            : isPast
+                            ? 'Passed (${-daysDiff}d ago)'
+                            : 'in $daysDiff d',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: exam.completedStatus
+                              ? (isDark
+                                    ? const Color(0xFF6EE7B7)
+                                    : const Color(0xFF15803D))
+                              : isToday
+                              ? (isDark
+                                    ? const Color(0xFFFCD34D)
+                                    : const Color(0xFFB45309))
+                              : isTomorrow
+                              ? (isDark
+                                    ? const Color(0xFFA5B4FC)
+                                    : const Color(0xFF4338CA))
+                              : isPast
+                              ? (isDark
+                                    ? const Color(0xFFFDA4AF)
+                                    : const Color(0xFFBE123C))
+                              : (isDark
+                                    ? const Color(0xFF93C5FD)
+                                    : const Color(0xFF1D4ED8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+
+                // Calendar date text
+                Text(
+                  _formatExamDate(exam.examDate),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                    color: isToday
+                        ? (isDark
+                              ? const Color(0xFFFCD34D)
+                              : const Color(0xFFB45309))
+                        : (isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600),
+                  ),
+                ),
+
+                // Popup menu
+                PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.more_vert, size: 18),
+                  onSelected: (val) {
+                    if (val == 'calendar') {
+                      CalendarSyncService.instance.addToGoogleCalendar(exam);
+                    } else if (val == 'done') {
+                      ref
+                          .read(examScheduleNotifierProvider.notifier)
+                          .markCompleted(exam.id);
+                    } else if (val == 'undone') {
+                      ref
+                          .read(examScheduleNotifierProvider.notifier)
+                          .markIncomplete(exam.id);
+                    } else if (val == 'score') {
+                      _showScoreDialog(context, exam);
+                    } else if (val == 'voice_mistake') {
+                      VoiceMistakeBottomSheet.show(context);
+                    } else if (val == 'delete') {
+                      ref
+                          .read(examScheduleNotifierProvider.notifier)
+                          .deleteExam(exam.id);
+                    }
+                  },
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: 'calendar',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_month,
+                            size: 16,
+                            color: Color(0xFF1E3A8A),
+                          ),
+                          SizedBox(width: 8),
+                          Text('Add to Calendar'),
+                        ],
+                      ),
+                    ),
+                    if (!exam.completedStatus)
+                      const PopupMenuItem(
+                        value: 'done',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              size: 16,
+                              color: Colors.green,
+                            ),
+                            SizedBox(width: 8),
+                            Text('Mark as Completed'),
+                          ],
+                        ),
+                      )
+                    else
+                      const PopupMenuItem(
+                        value: 'undone',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.restart_alt,
+                              size: 16,
+                              color: Colors.orange,
+                            ),
+                            SizedBox(width: 8),
+                            Text('Mark as Incomplete'),
+                          ],
+                        ),
+                      ),
+                    const PopupMenuItem(
+                      value: 'score',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.grade_outlined,
+                            size: 16,
+                            color: Colors.indigo,
+                          ),
+                          SizedBox(width: 8),
+                          Text('Record Score'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'voice_mistake',
+                      child: Row(
+                        children: [
+                          Icon(Icons.mic, size: 16, color: Color(0xFF6366F1)),
+                          SizedBox(width: 8),
+                          Text('Record Mistake Voice Note'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline,
+                            size: 16,
+                            color: Colors.red,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Delete Exam',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Exam Title
+            Text(
+              exam.title,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                decoration: exam.completedStatus
+                    ? TextDecoration.lineThrough
+                    : null,
+                color: exam.completedStatus
+                    ? Colors.grey.shade600
+                    : (Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : const Color(0xFF0F172A)),
+              ),
+            ),
+            const SizedBox(height: 6),
+
+            // Topics Covered
+            Text(
+              'Topics: ${exam.topicsCovered}',
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.black87,
+              ),
+            ),
+
+            if (exam.resourceSummary != null &&
+                exam.resourceSummary!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E293B)
+                      : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  exam.resourceSummary!,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white70
+                        : Colors.black54,
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 10),
+
+            // Bottom Quick Action Bar: Drill Topic & Done toggle
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor:
+                        Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF93C5FD)
+                        : const Color(0xFF1E3A8A),
+                    side: BorderSide(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white12
+                          : const Color(0xFFCBD5E1),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.psychology, size: 15),
+                  label: const Text(
+                    'Drill Topic',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () {
+                    QuizDrillModal.show(
+                      context,
+                      topic: exam.topicsCovered,
+                      subject: exam.title,
+                    );
+                  },
+                ),
+                if (isPast || exam.completedStatus) ...[
+                  const SizedBox(width: 6),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: isDark
+                          ? const Color(0xFFA5B4FC)
+                          : const Color(0xFF6366F1),
+                      side: BorderSide(
+                        color: isDark
+                            ? const Color(0xFF4338CA)
+                            : const Color(0xFFC7D2FE),
+                      ),
+                      backgroundColor: isDark
+                          ? const Color(0xFF312E81).withValues(alpha: 0.3)
+                          : const Color(0xFFEEF2FF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: const Icon(Icons.mic, size: 14),
+                    label: const Text(
+                      'Voice Mistake',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: () => VoiceMistakeBottomSheet.show(context),
+                  ),
+                ],
+                const SizedBox(width: 6),
+                IconButton(
+                  style: IconButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: isDark
+                        ? const Color(0xFFA5B4FC)
+                        : const Color(0xFF6366F1),
+                  ),
+                  icon: const Icon(Icons.calendar_month, size: 18),
+                  tooltip: 'Sync to Calendar with 30m alert',
+                  onPressed: () =>
+                      CalendarSyncService.instance.addToGoogleCalendar(exam),
+                ),
+                const SizedBox(width: 6),
+                if (!exam.completedStatus)
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: isDark
+                          ? const Color(0xFF34D399)
+                          : const Color(0xFF047857),
+                    ),
+                    icon: const Icon(Icons.check, size: 15),
+                    label: const Text(
+                      'Mark Done',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: () {
+                      ref
+                          .read(examScheduleNotifierProvider.notifier)
+                          .markCompleted(exam.id);
+                    },
+                  )
+                else
+                  Text(
+                    'Score: ${exam.score != null ? "${exam.score!.toStringAsFixed(1)} marks" : "Completed ✓"}',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: isDark
+                          ? const Color(0xFF34D399)
+                          : const Color(0xFF047857),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showScoreDialog(BuildContext context, ExamSchedule exam) {
+    final scoreController = TextEditingController(
+      text: exam.score?.toStringAsFixed(1) ?? '',
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Record LiveMCQ Score'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              exam.title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: scoreController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Score / Marks obtained',
+                hintText: 'e.g. 78.50',
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = double.tryParse(scoreController.text.trim());
+              ref
+                  .read(examScheduleNotifierProvider.notifier)
+                  .markCompleted(exam.id, score: val);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save Score'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrackFilterBar(
+    AsyncValue<List<String>> tracksAsync,
+    String selectedTrack,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return tracksAsync.when(
+      loading: () => const SizedBox(height: 48),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (tracks) {
+        final allTracks = ['All', ...tracks];
+        return Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF111827) : Colors.white,
+            border: Border(
+              bottom: BorderSide(
+                color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
+              ),
+            ),
+          ),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: allTracks.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final track = allTracks[index];
+              final isSelected = selectedTrack == track;
+              final isAll = track == 'All';
+
+              return ChoiceChip(
+                showCheckmark: false,
+                avatar: isAll
+                    ? Icon(
+                        Icons.layers,
+                        size: 14,
+                        color: isSelected ? Colors.white : Colors.indigo,
+                      )
+                    : Icon(
+                        Icons.bookmark,
+                        size: 14,
+                        color: isSelected ? _getTrackColor(track) : Colors.grey,
+                      ),
+                selected: isSelected,
+                label: Text(
+                  isAll ? 'All Programs' : track,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected
+                        ? (isAll
+                              ? Colors.white
+                              : (isDark ? Colors.white : _getTrackColor(track)))
+                        : (isDark ? Colors.white70 : Colors.black87),
+                  ),
+                ),
+                selectedColor: isAll
+                    ? Colors.indigo
+                    : _getTrackBackgroundColor(track, isDark),
+                backgroundColor: isDark
+                    ? const Color(0xFF1E293B)
+                    : Colors.grey.shade50,
+                side: BorderSide(
+                  color: isSelected
+                      ? (isAll ? Colors.indigo : _getTrackColor(track))
+                      : (isDark
+                            ? const Color(0xFF334155)
+                            : Colors.grey.shade300),
+                  width: isSelected ? 1.5 : 1,
+                ),
+                onSelected: (_) {
+                  ref.read(selectedTrackProvider.notifier).setTrack(track);
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Color _getTrackColor(String track) {
+    final lower = track.toLowerCase();
+    if (lower.contains('vocab')) return Colors.orange.shade800;
+    if (lower.contains('friday') ||
+        lower.contains('mega') ||
+        lower.contains('model')) {
+      return Colors.teal.shade800;
+    }
+    if (lower.contains('135') ||
+        lower.contains('140') ||
+        lower.contains('200') ||
+        lower.contains('bcs')) {
+      return Colors.deepPurple.shade700;
+    }
+    if (lower.contains('primary')) return Colors.blue.shade800;
+    return Colors.indigo.shade800;
+  }
+
+  Color _getTrackBackgroundColor(String track, [bool isDark = false]) {
+    final lower = track.toLowerCase();
+    if (lower.contains('vocab')) {
+      return isDark
+          ? Colors.orange.withValues(alpha: 0.2)
+          : Colors.orange.shade50;
+    }
+    if (lower.contains('friday') ||
+        lower.contains('mega') ||
+        lower.contains('model')) {
+      return isDark ? Colors.teal.withValues(alpha: 0.2) : Colors.teal.shade50;
+    }
+    if (lower.contains('135') ||
+        lower.contains('140') ||
+        lower.contains('200') ||
+        lower.contains('bcs')) {
+      return isDark
+          ? Colors.deepPurple.withValues(alpha: 0.2)
+          : Colors.deepPurple.shade50;
+    }
+    if (lower.contains('primary')) {
+      return isDark ? Colors.blue.withValues(alpha: 0.2) : Colors.blue.shade50;
+    }
+    return isDark
+        ? Colors.indigo.withValues(alpha: 0.2)
+        : Colors.indigo.shade50;
+  }
+
+  Widget _buildSummarizerTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'LiveMCQ Study Material & PDF Summarizer',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Paste study notes or text extracted from LiveMCQ study sheets. Gemini AI will synthesize 5 high-yield bullet points, past exam questions, and memory mnemonics.',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white70 : Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _subjectController,
+            decoration: const InputDecoration(
+              labelText: 'Subject (e.g. Bangla Grammar, Math, Science)',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _studySheetController,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: 'Paste study sheet text or topics here...',
+              border: OutlineInputBorder(),
+              hintText: 'e.g. কারক ও বিভক্তি: বাক্যের ক্রিয়ার সাথে অন্য পদের সম্বন্ধ...',
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: _isSummarizing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.auto_awesome),
+              label: Text(
+                _isSummarizing
+                    ? 'Synthesizing with AI...'
+                    : 'Generate 5-Point Summary',
+              ),
+              onPressed: _isSummarizing ? null : _runSummarizer,
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (_summaryResult != null) _buildSummaryDisplay(_summaryResult!),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _runSummarizer() async {
+    final text = _studySheetController.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please paste some study text first.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSummarizing = true;
+    });
+
+    final summary = await GeminiAiService.instance.summarizeStudySheet(
+      content: text,
+      subject: _subjectController.text.trim(),
+    );
+
+    setState(() {
+      _isSummarizing = false;
+      _summaryResult = summary;
+    });
+  }
+
+  Widget _buildSummaryDisplay(StudySheetSummary summary) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF334155) : Colors.transparent,
+        ),
+      ),
+      color: isDark ? const Color(0xFF111827) : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.stars, color: Colors.amber, size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    summary.title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Divider(
+              height: 24,
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            ),
+            Text(
+              '🎯 5 High-Yield Bullet Points:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...summary.highYieldPoints.asMap().entries.map((entry) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${entry.key + 1}. ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? const Color(0xFF818CF8) : Colors.indigo,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        BengaliMathSanitizer.sanitize(entry.value),
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: isDark
+                              ? const Color(0xFFE2E8F0)
+                              : const Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            if (summary.recurringPastQuestions.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                '🔄 Recurring Past Exam Traps:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              ...summary.recurringPastQuestions.map(
+                (q) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '• ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? const Color(0xFF818CF8)
+                              : Colors.indigo,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          BengaliMathSanitizer.sanitize(q),
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.35,
+                            color: isDark
+                                ? const Color(0xFFCBD5E1)
+                                : const Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (summary.mnemonics.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                '🧠 Memory Shortcut (Mnemonic):',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              ...summary.mnemonics.map(
+                (m) => Container(
+                  margin: const EdgeInsets.only(bottom: 4),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.purple.withValues(alpha: 0.25)
+                        : Colors.purple.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.purple.withValues(alpha: 0.5)
+                          : Colors.purple.shade100,
+                    ),
+                  ),
+                  child: Text(
+                    m,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? Colors.purple.shade200
+                          : Colors.purple.shade900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDark
+                      ? const Color(0xFF3B82F6)
+                      : const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 11,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: const Icon(Icons.psychology, size: 18),
+                label: const Text(
+                  '🎯 5-Question LiveMCQ Drill',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onPressed: () {
+                  QuizDrillModal.show(
+                    context,
+                    topic: summary.title,
+                    subject: _subjectController.text.trim().isNotEmpty
+                        ? _subjectController.text.trim()
+                        : 'LiveMCQ Study Sheet',
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddExamDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final topicsController = TextEditingController();
+    final summaryController = TextEditingController();
+    final customTrackController = TextEditingController();
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 3));
+
+    final defaultTracks = [
+      '52nd BCS 135-Day',
+      'Vocabulary Booster',
+      'Friday Mega Model Test',
+      'Primary Exam Track',
+      '200-Day Routine',
+      'General BCS',
+      'Custom Track...',
+    ];
+    String selectedTrack = '52nd BCS 135-Day';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final isCustom = selectedTrack == 'Custom Track...';
+
+          return AlertDialog(
+            title: const Text('Add LiveMCQ Exam'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Program / Track:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(ctx).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedTrack,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
+                      ),
+                    ),
+                    items: defaultTracks
+                        .map(
+                          (t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(
+                              t,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() {
+                          selectedTrack = val;
+                        });
+                      }
+                    },
+                  ),
+                  if (isCustom) ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: customTrackController,
+                      decoration: const InputDecoration(
+                        labelText: 'Enter Custom Program Name',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Exam Title (e.g. Day-12: Bangla Grammar)',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: topicsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Topics Covered',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: summaryController,
+                    decoration: const InputDecoration(
+                      labelText: 'Resource Summary / Target Marks',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Exam Date: ${selectedDate.toIso8601String().substring(0, 10)}',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    trailing: const Icon(Icons.calendar_today, size: 20),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          selectedDate = picked;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final title = titleController.text.trim();
+                  final topics = topicsController.text.trim();
+                  if (title.isNotEmpty && topics.isNotEmpty) {
+                    final finalTrack =
+                        isCustom && customTrackController.text.trim().isNotEmpty
+                        ? customTrackController.text.trim()
+                        : (isCustom ? 'General BCS' : selectedTrack);
+
+                    ref
+                        .read(examScheduleNotifierProvider.notifier)
+                        .addExam(
+                          examDate: selectedDate,
+                          title: title,
+                          topicsCovered: topics,
+                          resourceSummary: summaryController.text.trim(),
+                          trackName: finalTrack,
+                        );
+                    ref.invalidate(distinctTracksStreamProvider);
+                    ref.invalidate(filteredExamsStreamProvider);
+                    ref.invalidate(upcomingExamsStreamProvider);
+                    Navigator.pop(ctx);
+                  }
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showImportRoutineDialog(BuildContext context) {
+    final textController = TextEditingController();
+    final customTrackController = TextEditingController();
+    bool isProcessing = false;
+    String selectedTrack = 'Auto-detect from Routine';
+    final trackOptions = [
+      'Auto-detect from Routine',
+      '52nd BCS 135-Day',
+      'Vocabulary Booster',
+      'Friday Mega Model Test',
+      'Primary Exam Track',
+      '200-Day Routine',
+      'Custom Track...',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final isCustom = selectedTrack == 'Custom Track...';
+
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Colors.indigo, size: 22),
+                SizedBox(width: 8),
+                Text(
+                  'Parse Routine with Gemini',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Program / Routine Track:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(ctx).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedTrack,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                    ),
+                    items: trackOptions
+                        .map(
+                          (t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(
+                              t,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() {
+                          selectedTrack = val;
+                        });
+                      }
+                    },
+                  ),
+                  if (isCustom) ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: customTrackController,
+                      decoration: const InputDecoration(
+                        labelText: 'Specify Program / Track Name',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Text(
+                    'Paste Facebook post text or LiveMCQ notice routine below:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(ctx).brightness == Brightness.dark
+                          ? Colors.white70
+                          : Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: textController,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g.\n52nd BCS 135 Days Routine:\n28 Oct | 10:00 PM | Bangla: কারক ও বিভক্তি\n30 Oct | 10:00 PM | Math: শতকরা',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    icon: const Icon(
+                      Icons.flash_on,
+                      size: 16,
+                      color: Colors.amber,
+                    ),
+                    label: const Text(
+                      'Insert Multi-Track Sample Routine',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    onPressed: () {
+                      textController.text =
+                          '52nd BCS 135-Day Syllabus Routine:\n'
+                          '2026-10-28 | 10:00 PM | Bangla Grammar: কারক ও বিভক্তি | 135 Days Syllabus\n'
+                          '2026-10-30 | 10:00 PM | Mathematics: শতকরা ও লাভ-ক্ষতি | 135 Days Syllabus\n\n'
+                          'Daily Vocabulary Booster:\n'
+                          '2026-10-27 | 10:30 PM | English: Synonyms & Antonyms (Set 1-5)\n'
+                          '2026-10-28 | 10:30 PM | English: Idioms & Phrases (Set 1-3)\n\n'
+                          'Friday Full Model Test:\n'
+                          '2026-10-31 | 09:00 PM | 200 Marks Full BCS Simulation Test 01';
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isProcessing
+                    ? null
+                    : () async {
+                        final input = textController.text.trim();
+                        if (input.isEmpty) return;
+
+                        setDialogState(() {
+                          isProcessing = true;
+                        });
+
+                        final nav = Navigator.of(ctx);
+                        final messenger = ScaffoldMessenger.of(context);
+
+                        final items = await RoutineParserService.instance
+                            .parseRoutineFromText(input);
+                        if (!mounted) return;
+
+                        if (items.isNotEmpty) {
+                          String? overrideTrack;
+                          if (selectedTrack == 'Custom Track...' &&
+                              customTrackController.text.trim().isNotEmpty) {
+                            overrideTrack = customTrackController.text.trim();
+                          } else if (selectedTrack !=
+                                  'Auto-detect from Routine' &&
+                              selectedTrack != 'Custom Track...') {
+                            overrideTrack = selectedTrack;
+                          }
+
+                          final db = ref.read(appDatabaseProvider);
+                          final result = await RoutineParserService.instance
+                              .saveParsedRoutinesToDatabase(
+                                db,
+                                items,
+                                overrideTrack: overrideTrack,
+                              );
+                          ref.invalidate(upcomingExamsStreamProvider);
+                          ref.invalidate(allExamsStreamProvider);
+                          ref.invalidate(distinctTracksStreamProvider);
+                          ref.invalidate(filteredExamsStreamProvider);
+
+                          nav.pop();
+                          messenger.showSnackBar(
+                            SnackBar(
+                              backgroundColor: result.allDuplicates
+                                  ? Colors.amber.shade900
+                                  : Colors.green.shade800,
+                              content: Text(result.toBengaliMessage()),
+                            ),
+                          );
+                        } else {
+                          setDialogState(() {
+                            isProcessing = false;
+                          });
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Could not extract schedules from text.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                child: isProcessing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Parse & Save'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _pickAndParsePdf(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final pickedFiles = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (pickedFiles.isNotEmpty && pickedFiles.first.path != null) {
+        final filePath = pickedFiles.first.path!;
+        final file = File(filePath);
+
+        messenger.showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.indigo.shade900,
+            content: Row(
+              children: [
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Analyzing ${file.path.split("/").last} with Gemini Vision...',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final items = await RoutineParserService.instance.parseRoutineFromPdf(
+          file,
+        );
+        if (!mounted) return;
+
+        if (items.isNotEmpty) {
+          final db = ref.read(appDatabaseProvider);
+          final result = await RoutineParserService.instance
+              .saveParsedRoutinesToDatabase(db, items);
+          ref.invalidate(upcomingExamsStreamProvider);
+          ref.invalidate(allExamsStreamProvider);
+          ref.invalidate(distinctTracksStreamProvider);
+          ref.invalidate(filteredExamsStreamProvider);
+
+          messenger.showSnackBar(
+            SnackBar(
+              backgroundColor: result.allDuplicates
+                  ? Colors.amber.shade900
+                  : Colors.green.shade800,
+              content: Text(result.toBengaliMessage()),
+            ),
+          );
+        } else {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Could not extract schedules from PDF.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking or parsing PDF: $e');
+      messenger.showSnackBar(SnackBar(content: Text('Error reading PDF: $e')));
+    }
+  }
+
+  Future<void> _exportCurrentTrackToIcs(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final selectedTrack = ref.read(selectedTrackProvider);
+    final exams = ref.read(filteredExamsStreamProvider).value ?? [];
+
+    if (exams.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('No exams found to export for "$selectedTrack".'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final file = await CalendarSyncService.instance.generateIcsFile(
+        exams,
+        trackName: selectedTrack,
+      );
+
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF1E3A8A),
+          content: Row(
+            children: [
+              const Icon(Icons.calendar_month, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Exported ${exams.length} exams to ${file.path.split("/").last} with 30m alerts!',
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to export calendar: $e')),
+      );
+    }
+  }
+}
