@@ -16,6 +16,9 @@ enum EvidenceVerdict {
     EvidenceVerdict.storedHolds => 'সংরক্ষিত উত্তরই ঠিক মনে হচ্ছে',
     EvidenceVerdict.stillUnclear => 'এখনো নিষ্পত্তি হয়নি',
   };
+
+  /// True where the result is a standoff rather than an answer.
+  bool get isUnsettled => this == EvidenceVerdict.stillUnclear;
 }
 
 /// Something wrong with the question itself, rather than with its answer.
@@ -133,6 +136,7 @@ class EvidenceReview {
     required this.storedIndex,
     required this.userMathCheck,
     this.suggestedCorrectIndex,
+    this.conflictsWithUserMath = false,
   });
 
   String get reasoning => opinion.reasoning;
@@ -149,15 +153,29 @@ class EvidenceReview {
   bool get userArithmeticHolds =>
       userMathCheck.outcome == MathCheckOutcome.holds;
 
+  /// The user's arithmetic checked out, yet the reviewer still chose the
+  /// stored option.
+  ///
+  /// One of the two is wrong and the app cannot tell which, so it says so
+  /// instead of quietly siding with the model.
+  final bool conflictsWithUserMath;
+
   /// Whether this was settled rather than merely agreed on.
   ///
   /// A model siding with the user is not proof — it is agreeable. Only the
-  /// user's own arithmetic holding up makes it more than that.
-  bool get settled => userArithmeticHolds;
+  /// user's own arithmetic holding up makes it more than that, and not even
+  /// then while the reviewer is pulling the other way.
+  bool get settled => userArithmeticHolds && !conflictsWithUserMath;
 
-  String get limitations => settled
-      ? 'আপনার হিসাব যাচাই করা হয়েছে · External sources not checked'
-      : 'মডেলের মতামত, স্বাধীন প্রমাণ নয় · External sources not checked';
+  String get limitations {
+    if (conflictsWithUserMath) {
+      return 'আপনার হিসাব মিলেছে, কিন্তু যাচাইকারী সংরক্ষিত উত্তরেই স্থির '
+          '· External sources not checked';
+    }
+    return settled
+        ? 'আপনার হিসাব যাচাই করা হয়েছে · External sources not checked'
+        : 'মডেলের মতামত, স্বাধীন প্রমাণ নয় · External sources not checked';
+  }
 
   /// Works out what the reply means for the stored answer.
   ///
@@ -189,6 +207,20 @@ class EvidenceReview {
         storedIndex: storedIndex,
         suggestedCorrectIndex: index,
         userMathCheck: mathCheck,
+      );
+    }
+
+    // The reviewer came down on the stored answer. Where the user's own
+    // arithmetic checked out in code, that is a standoff between something
+    // proved and something recalled -- and recall does not win it.
+    final mathHolds = mathCheck.outcome == MathCheckOutcome.holds;
+    if (mathHolds) {
+      return EvidenceReview(
+        verdict: EvidenceVerdict.stillUnclear,
+        opinion: opinion,
+        storedIndex: storedIndex,
+        userMathCheck: mathCheck,
+        conflictsWithUserMath: true,
       );
     }
 

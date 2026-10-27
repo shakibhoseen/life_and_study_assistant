@@ -98,6 +98,12 @@ class McqVerification {
   });
 
   bool get hasProposal => proposedIndex != null;
+
+  /// Something is demonstrably wrong here, whether or not a better option was
+  /// named: a stored explanation whose own arithmetic fails is a problem even
+  /// when the verifier picked the same option.
+  bool get hasProblem =>
+      hasProposal || explanationCheck.outcome == MathCheckOutcome.fails;
   bool get agrees => solve.chosenIndex == storedIndex;
 
   /// True only where something was actually settled, not merely agreed on.
@@ -115,6 +121,11 @@ class McqVerification {
     VerificationVerdict.inconclusive
         when solve.ambiguity != McqAmbiguity.none =>
       'প্রশ্নটি অস্পষ্ট',
+    // Saying "the verifier agreed" above a red arithmetic mismatch reads as
+    // reassurance the result does not support, so the mismatch leads.
+    VerificationVerdict.inconclusive
+        when explanationCheck.outcome == MathCheckOutcome.fails =>
+      'ব্যাখ্যার হিসাব মিলছে না',
     VerificationVerdict.inconclusive when agrees =>
       'স্বাধীনভাবে একই উত্তর এসেছে',
     VerificationVerdict.inconclusive => 'নিশ্চিতভাবে যাচাই করা যায়নি',
@@ -191,6 +202,8 @@ class McqVerification {
       evidence: settled ? ClaimEvidence.localComputation : ClaimEvidence.none,
       limitations: settled
           ? 'গাণিতিকভাবে যাচাই করা · $noSources'
+          : mathCheck.outcome == MathCheckOutcome.fails
+          ? 'যাচাইকারী একই উত্তর দিলেও সংরক্ষিত ব্যাখ্যার হিসাব মিলছে না · $noSources'
           : 'যাচাইকারীও একই উত্তর দিয়েছে, তবে এটি স্বাধীন প্রমাণ নয় · $noSources',
     );
   }

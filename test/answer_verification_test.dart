@@ -128,6 +128,35 @@ void main() {
     });
   });
 
+  group('Broken Explanation Tests', () {
+    test('a failing explanation leads, even when the verifier agreed', () {
+      final r = decide(
+        solveReply(chosen: 0),
+        storedIndex: 0,
+        explanation: 'অনুপাত ১০:৬, অর্থাৎ ৩:২।',
+      );
+
+      // "the verifier agreed" over a red mismatch reads as reassurance.
+      expect(r.headline, 'ব্যাখ্যার হিসাব মিলছে না');
+      expect(r.hasProblem, isTrue);
+      expect(r.limitations, contains('হিসাব মিলছে না'));
+    });
+
+    test('agreement with a sound explanation is not a problem', () {
+      final r = decide(
+        solveReply(chosen: 0),
+        storedIndex: 0,
+        explanation: '২০ + ১ = ২১ শতাংশ।',
+      );
+
+      expect(r.hasProblem, isFalse);
+    });
+
+    test('a disagreement is a problem whatever the explanation says', () {
+      expect(decide(solveReply(chosen: 2), storedIndex: 0).hasProblem, isTrue);
+    });
+  });
+
   group('Ambiguity Tests', () {
     test('multiple defensible options yield no correction', () {
       final r = decide(
@@ -361,6 +390,49 @@ void main() {
     test('malformed replies are rejected', () {
       expect(review('not json'), isNull);
       expect(review(jsonEncode({'reviewer_index': 1})), isNull);
+    });
+  });
+
+  group('Standoff Tests', () {
+    test('verified arithmetic is not overruled by the reviewer', () {
+      final r = GeminiAiService.decodeEvidenceReview(
+        jsonEncode({
+          'user_reasoning_sound': false,
+          'reviewer_index': 0,
+          'reasoning': 'আমার মতে আগেরটিই ঠিক।',
+          'question_flaw': 'none',
+          'suggested_question_text': '',
+          'suggested_options': [],
+        }),
+        userEvidence: '১০:৬ মানে ৫:৩।',
+        optionCount: 4,
+        storedIndex: 0,
+      )!;
+
+      // The checker proved something; the reviewer only recalled something.
+      expect(r.conflictsWithUserMath, isTrue);
+      expect(r.verdict, EvidenceVerdict.stillUnclear);
+      expect(r.settled, isFalse);
+      expect(r.limitations, contains('যাচাইকারী সংরক্ষিত উত্তরেই স্থির'));
+    });
+
+    test('without user arithmetic the stored answer simply holds', () {
+      final r = GeminiAiService.decodeEvidenceReview(
+        jsonEncode({
+          'user_reasoning_sound': false,
+          'reviewer_index': 0,
+          'reasoning': 'আগেরটিই ঠিক।',
+          'question_flaw': 'none',
+          'suggested_question_text': '',
+          'suggested_options': [],
+        }),
+        userEvidence: 'আমার মনে হয় এটা ভুল',
+        optionCount: 4,
+        storedIndex: 0,
+      )!;
+
+      expect(r.conflictsWithUserMath, isFalse);
+      expect(r.verdict, EvidenceVerdict.storedHolds);
     });
   });
 
@@ -648,6 +720,60 @@ void main() {
       await db.clearVerificationMark(id);
 
       expect((await reload(id)).verificationStatus, isNull);
+    });
+
+    test('a correction that vindicates the user clears the mistake', () async {
+      // The attempt picked option 2; the key said 0 and scored it wrong.
+      final id = await insertAttempt();
+
+      await db.acceptAnswerCorrection(
+        id,
+        correctedIndex: 2,
+        correctedExplanation: 'আসলে এটিই সঠিক।',
+      );
+
+      final row = await reload(id);
+      expect(row.selectedIndex, 2, reason: 'what was picked is history');
+      expect(row.isCorrect, isTrue, reason: 'the grade followed the new key');
+    });
+
+    test('a correction to another option still counts as wrong', () async {
+      final id = await insertAttempt();
+
+      await db.acceptAnswerCorrection(
+        id,
+        correctedIndex: 1,
+        correctedExplanation: 'এটিই সঠিক।',
+      );
+
+      final row = await reload(id);
+      expect(row.selectedIndex, 2);
+      expect(row.isCorrect, isFalse);
+    });
+
+    test('an edited key regrades the attempt too', () async {
+      final id = await insertAttempt();
+
+      await db.applyQuestionEdit(id, correctIndex: 2);
+
+      expect((await reload(id)).isCorrect, isTrue);
+    });
+
+    test('reverting puts the grade back as well', () async {
+      final id = await insertAttempt();
+
+      await db.acceptAnswerCorrection(
+        id,
+        correctedIndex: 2,
+        correctedExplanation: 'সঠিক।',
+      );
+      expect((await reload(id)).isCorrect, isTrue);
+
+      await db.revertAnswerCorrection(id);
+
+      final row = await reload(id);
+      expect(row.correctIndex, 0);
+      expect(row.isCorrect, isFalse);
     });
 
     test('statistics are unchanged by a correction', () async {

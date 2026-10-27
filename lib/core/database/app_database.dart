@@ -962,6 +962,10 @@ class AppDatabase extends _$AppDatabase {
       DrillQuestionsCompanion(
         correctIndex: Value(correctedIndex),
         explanation: Value(correctedExplanation),
+        // selectedIndex is history and stays. isCorrect is not history, it is
+        // a grade against a key -- and the key just changed, so a user who
+        // picked the now-correct option stops being marked wrong.
+        isCorrect: Value(row.selectedIndex == correctedIndex),
         originalCorrectIndex: Value(
           row.originalCorrectIndex ?? row.correctIndex,
         ),
@@ -1034,6 +1038,10 @@ class AppDatabase extends _$AppDatabase {
         correctIndex: correctIndex == null
             ? const Value.absent()
             : Value(correctIndex),
+        // Regraded against the new key, for the same reason as above.
+        isCorrect: correctIndex == null
+            ? const Value.absent()
+            : Value(row.selectedIndex == correctIndex),
         explanation: explanation == null
             ? const Value.absent()
             : Value(explanation),
@@ -1068,6 +1076,9 @@ class AppDatabase extends _$AppDatabase {
         questionText: Value(row.originalQuestionText ?? row.questionText),
         optionsJson: Value(row.originalOptionsJson ?? row.optionsJson),
         correctIndex: Value(row.originalCorrectIndex ?? row.correctIndex),
+        isCorrect: Value(
+          row.selectedIndex == (row.originalCorrectIndex ?? row.correctIndex),
+        ),
         explanation: Value(row.originalExplanation ?? row.explanation),
         originalQuestionText: const Value(null),
         originalOptionsJson: const Value(null),
