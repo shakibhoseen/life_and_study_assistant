@@ -128,6 +128,47 @@ void main() {
     });
   });
 
+  group('User Decision Tests', () {
+    McqVerification decideSettled(String raw, {required int storedIndex}) =>
+        McqVerification.decide(
+          solve: GeminiAiService.decodeSolve(raw)!,
+          storedIndex: storedIndex,
+          storedExplanation: '',
+          optionCount: 4,
+          userDecided: true,
+        );
+
+    test('a verifier cannot undo an answer the user settled', () {
+      final r = decideSettled(solveReply(chosen: 0), storedIndex: 1);
+
+      expect(r.hasProposal, isFalse, reason: 'no one-tap undo');
+      expect(r.reviewerDissents, isTrue);
+      expect(r.dissentIndex, 0);
+      expect(r.verdict, VerificationVerdict.inconclusive);
+    });
+
+    test('the disagreement is still reported, not hidden', () {
+      final r = decideSettled(solveReply(chosen: 0), storedIndex: 1);
+
+      expect(r.headline, 'যাচাইকারী দ্বিমত করছে');
+      expect(r.limitations, contains('আপনি নিজে এই উত্তরটি ঠিক করেছেন'));
+    });
+
+    test('an undecided answer still gets a proposal', () {
+      final r = decide(solveReply(chosen: 0), storedIndex: 1);
+
+      expect(r.hasProposal, isTrue);
+      expect(r.reviewerDissents, isFalse);
+    });
+
+    test('agreement on a settled answer is not a dissent', () {
+      final r = decideSettled(solveReply(chosen: 1), storedIndex: 1);
+
+      expect(r.reviewerDissents, isFalse);
+      expect(r.hasProposal, isFalse);
+    });
+  });
+
   group('Broken Explanation Tests', () {
     test('a failing explanation leads, even when the verifier agreed', () {
       final r = decide(

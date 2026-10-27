@@ -33,7 +33,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'life_and_study_assistant');
@@ -91,6 +91,16 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(drillQuestions, drillQuestions.verificationStatus);
         await m.addColumn(drillQuestions, drillQuestions.verificationNote);
         await m.addColumn(drillQuestions, drillQuestions.verifiedAt);
+      }
+      if (from < 12) {
+        // Corrections used to change the answer key without re-grading the
+        // attempt, so a user who had picked the now-correct option stayed
+        // marked wrong. Only rows whose key actually moved are touched.
+        await customStatement(
+          'UPDATE drill_questions '
+          'SET is_correct = (selected_index = correct_index) '
+          'WHERE corrected_at IS NOT NULL',
+        );
       }
     },
   );

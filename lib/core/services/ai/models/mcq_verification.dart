@@ -87,6 +87,13 @@ class McqVerification {
   final ClaimEvidence evidence;
   final String limitations;
 
+  /// Where the verifier landed when it disagreed with an answer the user had
+  /// already decided for themselves.
+  ///
+  /// Shown, but never offered as a one-tap correction: the user settled this
+  /// question, and a model's recall does not get to quietly undo that.
+  final int? dissentIndex;
+
   const McqVerification({
     required this.verdict,
     required this.solve,
@@ -95,9 +102,11 @@ class McqVerification {
     required this.evidence,
     required this.limitations,
     this.proposedIndex,
+    this.dissentIndex,
   });
 
   bool get hasProposal => proposedIndex != null;
+  bool get reviewerDissents => dissentIndex != null;
 
   /// Something is demonstrably wrong here, whether or not a better option was
   /// named: a stored explanation whose own arithmetic fails is a problem even
@@ -123,6 +132,8 @@ class McqVerification {
       'প্রশ্নটি অস্পষ্ট',
     // Saying "the verifier agreed" above a red arithmetic mismatch reads as
     // reassurance the result does not support, so the mismatch leads.
+    VerificationVerdict.inconclusive when reviewerDissents =>
+      'যাচাইকারী দ্বিমত করছে',
     VerificationVerdict.inconclusive
         when explanationCheck.outcome == MathCheckOutcome.fails =>
       'ব্যাখ্যার হিসাব মিলছে না',
@@ -144,6 +155,7 @@ class McqVerification {
     required int storedIndex,
     required String storedExplanation,
     required int optionCount,
+    bool userDecided = false,
   }) {
     final mathCheck = ClaimMathChecker.check(storedExplanation);
     const noSources = 'External sources not checked';
@@ -176,6 +188,22 @@ class McqVerification {
     }
 
     if (chosen != storedIndex) {
+      // An answer the user settled themselves is not re-opened by a model
+      // that merely remembers otherwise. The disagreement is reported; the
+      // one-tap undo is not offered.
+      if (userDecided) {
+        return McqVerification(
+          verdict: VerificationVerdict.inconclusive,
+          solve: solve,
+          storedIndex: storedIndex,
+          dissentIndex: chosen,
+          explanationCheck: mathCheck,
+          evidence: ClaimEvidence.none,
+          limitations:
+              'আপনি নিজে এই উত্তরটি ঠিক করেছেন, তাই স্বয়ংক্রিয়ভাবে বদলানো হচ্ছে না · $noSources',
+        );
+      }
+
       return McqVerification(
         verdict: VerificationVerdict.likelyIncorrect,
         solve: solve,

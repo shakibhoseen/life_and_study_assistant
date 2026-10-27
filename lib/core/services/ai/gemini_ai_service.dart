@@ -639,6 +639,7 @@ Write every reasoning in Bengali, one sentence. Never cite a source or a URL.
     required int correctIndex,
     required int selectedIndex,
     required String explanation,
+    bool userDecided = false,
   }) async {
     await init();
     if (options.isEmpty) return null;
@@ -740,6 +741,7 @@ Write reasoning in Bengali, one or two sentences. Never cite a source or a URL.
       storedIndex: correctIndex,
       storedExplanation: explanation,
       optionCount: options.length,
+      userDecided: userDecided,
     );
   }
 
@@ -933,7 +935,7 @@ Write reasoning in Bengali, two or three sentences, speaking to the user. Never 
         '$subject|$topic|$questionText|${options.join(",")}|$userAns|$correctAns|$explanation';
     final cacheKey = GeminiResultCache.instance.computeKeyFromString(
       operation: 'mistake_explain',
-      promptVersion: 'v2.0',
+      promptVersion: 'v2.1',
       model: _selectedModel,
       payloadText: payload,
     );
@@ -960,23 +962,25 @@ Write reasoning in Bengali, two or three sentences, speaking to the user. Never 
     try {
       final prompt =
           '''
-You are an elite mentor for BCS and government job exams in Bangladesh.
-A candidate made a mistake on this question:
+You are a mentor for BCS and government job exams in Bangladesh. A candidate got this wrong.
 
 Subject: $subject
 Topic: $topic
 Question: $questionText
 Options: ${options.join(', ')}
-Candidate's Selected Answer: $userAns
-Correct Answer: $correctAns
-Provided Explanation: $explanation
+They chose: $userAns
+Correct: $correctAns
+Existing explanation: ${_shorten(explanation, 300)}
 
-Provide a deep, friendly, and practical explanation in Bengali using this exact 3-section format:
-১. 🎯 **ভুল হওয়ার মূল কারণ ও ফাঁদ (The Trap):** অধিকাংশ পরীক্ষার্থী কেন এই প্রশ্নে ভুল উত্তর দাগায় বা বিভ্রান্ত হয়?
-২. 💡 **মনে রাখার শর্টকাট / নেমোনিক ট্রিক (Memory Hook):** কীভাবে এটি আজীবনের মতো মনে রাখা যাবে?
-৩. 📌 **বিসিএস ও চাকরির পরীক্ষায় সম্পর্কিত তথ্য (Related High-Yield Fact):** এই নিয়ম বা টপিক থেকে পিএসসি সচরাচর আর কী প্রশ্ন করে?
+Reply in Bengali under exactly these three headings, copied verbatim:
 
-Format with clean Bengali and Unicode mathematical symbols (e.g., °, →, ×, ², ³). No raw LaTeX or unescaped markdown. Keep it crisp, encouraging, and under 250 words.
+১. 🎯 **ভুল হওয়ার মূল কারণ ও ফাঁদ (The Trap):**
+২. 💡 **মনে রাখার শর্টকাট / নেমোনিক ট্রিক (Memory Hook):**
+৩. 📌 **বিসিএস ও চাকরির পরীক্ষায় সম্পর্কিত তথ্য (Related High-Yield Fact):**
+
+Under them, in order: why candidates fall for this one; a hook that makes it stick for good; what else PSC tends to ask from this rule or topic.
+
+Use Unicode symbols (°, →, ×, ², ³), no LaTeX, no stray markdown. Friendly, crisp, under 250 words.
 ''';
 
       final response = await _model!.generateContent([

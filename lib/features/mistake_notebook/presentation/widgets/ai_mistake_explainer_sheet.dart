@@ -54,6 +54,14 @@ class _AiMistakeExplainerSheetState
   /// Set when a correction showed the user had actually answered correctly.
   bool _nowScoredCorrect = false;
 
+  /// Whether this answer is one the user settled themselves, by correcting it
+  /// or by vouching for it. Their decision outranks a verifier's recall.
+  bool get _userDecided =>
+      _correctionAccepted ||
+      _questionEdited ||
+      widget.question.correctedAt != null ||
+      _mark == VerificationMark.userVerified;
+
   // A verifier that cannot settle something is not the end of it: the user
   // knows things it does not, so they get to make the case themselves.
   final TextEditingController _evidenceController = TextEditingController();
@@ -131,6 +139,7 @@ class _AiMistakeExplainerSheetState
       correctIndex: _correctIndex,
       selectedIndex: dq.selectedIndex,
       explanation: _explanationText,
+      userDecided: _userDecided,
     );
 
     if (result == null) {
@@ -141,6 +150,7 @@ class _AiMistakeExplainerSheetState
         ' | stored=$_correctIndex solved=${result.solve.chosenIndex}'
         ' | ambiguity=${result.solve.ambiguity.name}'
         ' | proposal=${result.hasProposal}'
+        ' | dissent=${result.dissentIndex ?? -1}'
         ' | evidence=${result.evidence.name}'
         ' | explanationCheck=${result.explanationCheck.outcome.name}',
       );
@@ -211,8 +221,9 @@ class _AiMistakeExplainerSheetState
         .acceptAnswerCorrection(
           dq.id,
           correctedIndex: proposedIndex,
-          correctedExplanation:
-              'সংশোধিত উত্তর: $proposed। $reason\n\n(পূর্বের ব্যাখ্যা: ${dq.explanation})',
+          // The replaced text is kept in originalExplanation, so repeating it
+          // here only leaves its broken arithmetic to be re-flagged forever.
+          correctedExplanation: 'সংশোধিত উত্তর: $proposed। $reason',
         );
 
     if (!mounted) return;
@@ -353,6 +364,13 @@ class _AiMistakeExplainerSheetState
     final optionCtrls = [
       for (final o in seedOptions) TextEditingController(text: o),
     ];
+    // A corrected answer can still leave a wrong explanation behind, so the
+    // explanation is editable too rather than only ever machine-written.
+    final explanationCtrl = TextEditingController(
+      text: review?.reasoning.isNotEmpty == true
+          ? review!.reasoning
+          : _explanationText,
+    );
     var chosen = review?.suggestedCorrectIndex ?? _correctIndex;
     if (chosen < 0 || chosen >= optionCtrls.length) chosen = 0;
 
@@ -372,6 +390,18 @@ class _AiMistakeExplainerSheetState
                   style: const TextStyle(fontSize: 13.5),
                   decoration: const InputDecoration(
                     labelText: 'প্রশ্ন',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: explanationCtrl,
+                  maxLines: null,
+                  minLines: 2,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: const InputDecoration(
+                    labelText: 'ব্যাখ্যা',
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -433,7 +463,9 @@ class _AiMistakeExplainerSheetState
 
     final newQuestion = questionCtrl.text.trim();
     final newOptions = [for (final c in optionCtrls) c.text.trim()];
+    final newExplanation = explanationCtrl.text.trim();
     questionCtrl.dispose();
+    explanationCtrl.dispose();
     for (final c in optionCtrls) {
       c.dispose();
     }
@@ -446,7 +478,6 @@ class _AiMistakeExplainerSheetState
       return;
     }
 
-    final note = _review?.reasoning ?? '';
     await ref
         .read(appDatabaseProvider)
         .applyQuestionEdit(
@@ -454,10 +485,7 @@ class _AiMistakeExplainerSheetState
           questionText: newQuestion,
           options: newOptions,
           correctIndex: chosen,
-          explanation: note.isEmpty
-              ? _explanationText
-              : 'আপনার সম্পাদনা অনুযায়ী সংশোধিত। $note'
-                    '\n\n(পূর্বের ব্যাখ্যা: $_explanationText)',
+          explanation: newExplanation,
         );
 
     if (!mounted) return;
@@ -465,6 +493,8 @@ class _AiMistakeExplainerSheetState
       _questionText = newQuestion;
       _options = newOptions;
       _correctIndex = chosen;
+      _explanationText = newExplanation;
+      _nowScoredCorrect = widget.question.selectedIndex == chosen;
       _questionEdited = true;
       _mark = VerificationMark.none;
       _markNote = null;
@@ -786,6 +816,27 @@ class _AiMistakeExplainerSheetState
                   ),
                 ),
               ],
+            ),
+          ],
+          if (result.reviewerDissents) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: isDark ? 0.12 : 0.07),
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                'যাচাইকারী "${optionAt(result.dissentIndex!)}" বেছেছে, '
+                'কিন্তু আপনি নিজে "${optionAt(result.storedIndex)}" ঠিক করেছেন। '
+                'আপনার সিদ্ধান্তই রাখা হয়েছে — বদলাতে চাইলে নিজে সম্পাদনা করুন।',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.45,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
             ),
           ],
           if (_mark == VerificationMark.userVerified) ...[
