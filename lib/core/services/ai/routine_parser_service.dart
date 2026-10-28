@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/notification_constants.dart';
 import '../../database/app_database.dart';
+import 'gemini_ai_service.dart';
 import 'gemini_result_cache.dart';
 import 'ai_media_limits.dart';
 import 'gemini_usage_tracker.dart';
@@ -15,8 +16,8 @@ import 'models/parsed_routine_item.dart';
 import 'models/routine_import_result.dart';
 
 class RoutineParserService {
-  /// Ceiling for a routine PDF handed to the model.
-  static const int maxPdfBytes = 8 * 1024 * 1024;
+  /// Ceiling for a routine PDF handed to the model (20MB max supported by Gemini API).
+  static const int maxPdfBytes = 20 * 1024 * 1024;
 
   RoutineParserService._();
   static final RoutineParserService instance = RoutineParserService._();
@@ -28,27 +29,28 @@ class RoutineParserService {
   String? get modelName => _modelName;
 
   static const String _prompt = '''
-Extract all competitive examination / LiveMCQ / BCS schedules from this routine image, PDF or text into a JSON array.
-Format each item strictly as:
-[
-  {
-    "date": "YYYY-MM-DD",
-    "exam_time": "HH:MM AM/PM",
-    "subject": "Name of Subject (e.g., Bangla Grammar, Mathematics, General Science, English)",
-    "title": "Exact exam/test title or serial from the routine (e.g., Model Test 03, Daily Exam 12)",
-    "topics": ["Topic 1", "Topic 2"],
-    "exam_type": "Daily / Weekly / Model Test / Special",
-    "track_name": "Program / Batch name from routine title (e.g., 52nd BCS 135-Day, Vocabulary Booster, Friday Mega Model Test, Primary, or General BCS)"
-  }
-]
-Rules:
-1. If the year is not mentioned, use the current ongoing year.
-2. If time is not mentioned, default to "10:00 PM".
-3. Extract EVERY schedule row from EVERY page. One row in the source must become one JSON item; do not combine rows, omit later pages, or return only an example.
-4. Preserve a distinct title/test number for exams that share a date or subject, so they remain separate in the app.
-5. Extract clean subject and topic names (support both English and Bengali script).
-6. Identify the program/track name accurately so multiple concurrent routines can be organized separately.
-7. Return ONLY the valid JSON array without markdown code blocks or additional text.
+Extract all competitive examination / BCS / LiveMCQ schedules from this document.
+Return a compact JSON structure to maximize token efficiency:
+{
+  "track_name": "Program / Batch name from routine header (e.g., 52nd BCS 135-Day, 100 Days BCS, General BCS)",
+  "exams": [
+    {
+      "date": "YYYY-MM-DD",
+      "exam_time": "10:00 PM",
+      "subject": "Subject name",
+      "title": "Exam title or serial (e.g., Day 01, Model Test 03)",
+      "topics": ["Topic 1", "Topic 2"],
+      "exam_type": "Daily"
+    }
+  ]
+}
+Alternatively, a direct JSON array of exams [ { "date": ..., ... } ] is also acceptable.
+Rules for maximum token capacity:
+1. Output completely minified JSON on a single line (no newlines, no indentation) so all 100+ schedules fit completely within token limits.
+2. Do NOT repeat "track_name" inside individual exam objects if using the envelope format above.
+3. If the year is not mentioned, use the current ongoing year. Default time to "10:00 PM" if absent.
+4. Extract EVERY schedule row from EVERY page without omitting any row.
+5. Return ONLY the valid JSON without markdown formatting or conversational text.
 ''';
 
   Future<void> init([String? apiKey]) async {
@@ -63,7 +65,9 @@ Rules:
     ].contains(modelName)) {
       modelName = 'gemini-flash-lite-latest';
     }
-    final key = apiKey ?? await _getStoredApiKey();
+    final key = apiKey ??
+        await _getStoredApiKey() ??
+        GeminiAiService.instance.apiKey;
     if (key != null && key.isNotEmpty) {
       _cachedApiKey = key;
       _modelName = modelName;
@@ -73,9 +77,6 @@ Rules:
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
           temperature: 0.1,
-          // Routine PDFs often contain dozens of rows. The old 4096-token
-          // ceiling could cut the JSON array short, which then looked like a
-          // single imported routine.
           maxOutputTokens: 8192,
         ),
       );
@@ -225,78 +226,81 @@ Rules:
     await init();
     final activeModel = _modelName ?? 'gemini-flash-lite-latest';
 
-    if (_model != null) {
-      try {
-        final pdfBytes = await pdfFile.readAsBytes();
+    if (_model == null) {
+      throw Exception(
+        'Gemini API Key সেট করা নেই। রুটিন PDF বিশ্লেষণ করতে Settings এ গিয়ে API Key যোগ করুন।',
+      );
+    }
 
-        // Gemini bills a PDF by the page (roughly 258 tokens each), and this
-        // path has no page count to check against, so size stands in for it.
-        // A LiveMCQ routine is a handful of pages; anything near this ceiling
-        // is a wrong file, and sending it would quietly cost a day's quota.
-        if (pdfBytes.lengthInBytes > maxPdfBytes) {
-          debugPrint(
-            'Routine PDF rejected: ${(pdfBytes.lengthInBytes / 1048576).toStringAsFixed(1)}MB '
-            'exceeds the ${(maxPdfBytes / 1048576).round()}MB limit.',
-          );
-          return [];
-        }
+    final pdfBytes = await pdfFile.readAsBytes();
 
-        final content = [
-          Content.multi([
-            TextPart(_prompt),
-            DataPart('application/pdf', pdfBytes),
-          ]),
-        ];
+    if (pdfBytes.lengthInBytes > maxPdfBytes) {
+      throw Exception(
+        'PDF ফাইলটি অনেক বড় (${(pdfBytes.lengthInBytes / 1048576).toStringAsFixed(1)}MB)। সর্বোচ্চ ২০MB পর্যন্ত ফাইল দেওয়া যাবে।',
+      );
+    }
 
-        final response = await _model!.generateContent(content);
-        await GeminiUsageTracker.instance.recordSuccess(
-          tokens: response.usageMetadata?.totalTokenCount ?? 0,
-          actualInputTokens: response.usageMetadata?.promptTokenCount,
-          actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
-          actualTotalTokens: response.usageMetadata?.totalTokenCount,
+    try {
+      final content = [
+        Content.multi([
+          TextPart(_prompt),
+          DataPart('application/pdf', pdfBytes),
+        ]),
+      ];
+
+      final response = await _model!.generateContent(content);
+      await GeminiUsageTracker.instance.recordSuccess(
+        tokens: response.usageMetadata?.totalTokenCount ?? 0,
+        actualInputTokens: response.usageMetadata?.promptTokenCount,
+        actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
+        actualTotalTokens: response.usageMetadata?.totalTokenCount,
+        operation: 'parse_routine_pdf',
+        model: activeModel,
+      );
+
+      final rawText = response.text;
+      final parsed = _decodeResponse(
+        rawText,
+        rawRef: 'PDF: ${pdfFile.path.split('/').last}',
+      );
+
+      final truncated =
+          response.candidates.isNotEmpty &&
+          response.candidates.first.finishReason == FinishReason.maxTokens;
+
+      debugPrint(
+        'PDF routine parse: ${parsed.length} items'
+        '${truncated ? " (OUTPUT TRUNCATED BY TOKEN LIMIT -- recovered ${parsed.length} complete rows)" : ""}',
+      );
+
+      if (parsed.isNotEmpty) return parsed;
+
+      debugPrint(
+        'PDF routine parse: nothing usable in reply. Raw length: ${rawText?.length ?? 0}',
+      );
+      throw Exception(
+        'রুটিন PDF থেকে কোনো পরীক্ষার তথ্য সনাক্ত করা যায়নি। ফাইলটি স্পষ্ট কিনা যাচাই করুন।',
+      );
+    } catch (e) {
+      debugPrint('Gemini PDF Routine parsing failed: $e');
+      if (e.toString().contains('429') ||
+          e.toString().toLowerCase().contains('quota')) {
+        await GeminiUsageTracker.instance.recordQuotaExceeded(
           operation: 'parse_routine_pdf',
           model: activeModel,
         );
-        final parsed = _decodeResponse(
-          response.text,
-          rawRef: 'PDF: ${pdfFile.path.split('/').last}',
+        throw Exception(
+          'Gemini API কোটা শেষ বা রেট লিমিট হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।',
         );
-        // A routine PDF holds dozens of rows, and whether they all arrived is
-        // the whole question with this feature. Say so rather than leaving it
-        // to be worked out from the database afterwards.
-        final truncated =
-            response.candidates.isNotEmpty &&
-            response.candidates.first.finishReason == FinishReason.maxTokens;
-        debugPrint(
-          'PDF routine parse: ${parsed.length} items'
-          '${truncated ? " (OUTPUT TRUNCATED -- rows are missing)" : ""}',
+      } else {
+        await GeminiUsageTracker.instance.recordError(
+          e.toString(),
+          operation: 'parse_routine_pdf',
+          model: activeModel,
         );
-        if (parsed.isNotEmpty) return parsed;
-        debugPrint('PDF routine parse: nothing usable in the reply');
-      } catch (e) {
-        debugPrint(
-          'Gemini PDF Routine parsing failed: $e. Nothing will be saved.',
-        );
-        if (e.toString().contains('429') ||
-            e.toString().toLowerCase().contains('quota')) {
-          await GeminiUsageTracker.instance.recordQuotaExceeded(
-            operation: 'parse_routine_pdf',
-            model: activeModel,
-          );
-        } else {
-          await GeminiUsageTracker.instance.recordError(
-            e.toString(),
-            operation: 'parse_routine_pdf',
-            model: activeModel,
-          );
-        }
+        rethrow;
       }
     }
-
-    // A PDF cannot be read reliably without the vision model. Do not save a
-    // made-up placeholder: it was indistinguishable from a real routine and
-    // made a multi-row PDF look as if it contained only one exam.
-    return [];
   }
 
   /// Whether this text is already a routine array rather than something to
@@ -313,52 +317,274 @@ Rules:
           .replaceFirst(RegExp(r'\s*```$'), '')
           .trim();
     }
-    if (!cleaned.startsWith('[')) return false;
+    if (!cleaned.startsWith('[') && !cleaned.startsWith('{')) return false;
 
     try {
       final decoded = jsonDecode(cleaned);
-      if (decoded is! List || decoded.isEmpty) return false;
-      return decoded.every((e) {
-        if (e is! Map) return false;
-        final date = e['date']?.toString();
-        return date != null && DateTime.tryParse(date) != null;
-      });
+      if (decoded is List) {
+        if (decoded.isEmpty) return false;
+        return decoded.every((e) {
+          if (e is! Map) return false;
+          final date = e['date']?.toString();
+          return date != null && DateTime.tryParse(date) != null;
+        });
+      } else if (decoded is Map) {
+        final list =
+            decoded['exams'] ?? decoded['schedules'] ?? decoded['items'];
+        if (list is List && list.isNotEmpty) {
+          return list.every((e) {
+            if (e is! Map) return false;
+            final date = e['date']?.toString();
+            return date != null && DateTime.tryParse(date) != null;
+          });
+        }
+      }
+      return false;
     } catch (_) {
       return false;
     }
   }
 
-  /// Helper to decode JSON response safely
+  /// Testing bridge for decoding response and token truncation recovery
+  @visibleForTesting
+  List<ParsedRoutineItem> decodeResponseForTesting(
+    String? rawJson, {
+    String? rawRef,
+  }) =>
+      _decodeResponse(rawJson, rawRef: rawRef);
+
+  /// Helper to decode JSON response safely with token truncation recovery
   List<ParsedRoutineItem> _decodeResponse(String? rawJson, {String? rawRef}) {
     if (rawJson == null || rawJson.trim().isEmpty) return [];
 
-    try {
-      var cleaned = rawJson.trim();
-      if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.substring(7);
-      } else if (cleaned.startsWith('```')) {
-        cleaned = cleaned.substring(3);
-      }
-      if (cleaned.endsWith('```')) {
-        cleaned = cleaned.substring(0, cleaned.length - 3);
-      }
-      cleaned = cleaned.trim();
+    var cleaned = rawJson.trim();
+    if (cleaned.startsWith('```json')) {
+      cleaned = cleaned.substring(7);
+    } else if (cleaned.startsWith('```')) {
+      cleaned = cleaned.substring(3);
+    }
+    if (cleaned.endsWith('```')) {
+      cleaned = cleaned.substring(0, cleaned.length - 3);
+    }
+    cleaned = cleaned.trim();
 
+    // 1. Fast path: Standard complete JSON
+    try {
       final dynamic decoded = jsonDecode(cleaned);
-      if (decoded is List) {
-        return decoded
-            .map(
-              (e) => ParsedRoutineItem.fromJson(
-                Map<String, dynamic>.from(e as Map),
-                rawRef: rawRef,
-              ),
-            )
-            .toList();
+      final items = _extractItemsFromDecoded(decoded, rawRef: rawRef);
+      if (items.isNotEmpty) return items;
+    } catch (e) {
+      debugPrint(
+        'Standard JSON parse failed, attempting token truncation recovery: $e',
+      );
+    }
+
+    // 2. Truncation Recovery: If hit max tokens and JSON was cut off mid-stream
+    try {
+      final repaired = _tryRepairTruncatedJson(cleaned);
+      if (repaired != null) {
+        final dynamic decoded = jsonDecode(repaired);
+        final items = _extractItemsFromDecoded(decoded, rawRef: rawRef);
+        if (items.isNotEmpty) {
+          debugPrint(
+            'Successfully recovered ${items.length} items from token-truncated JSON!',
+          );
+          return items;
+        }
       }
     } catch (e) {
-      debugPrint('JSON parsing error in RoutineParserService: $e');
+      debugPrint('Truncated repair attempt failed: $e');
+    }
+
+    // 3. Robust Scanner: Extract individual complete {...} objects
+    try {
+      final items = _extractIndividualObjects(cleaned, rawRef: rawRef);
+      if (items.isNotEmpty) {
+        debugPrint(
+          'Recovered ${items.length} items via individual object scanner!',
+        );
+        return items;
+      }
+    } catch (e) {
+      debugPrint('Individual object extraction failed: $e');
+    }
+
+    return [];
+  }
+
+  List<ParsedRoutineItem> _extractItemsFromDecoded(
+    dynamic decoded, {
+    String? rawRef,
+  }) {
+    if (decoded is List) {
+      return decoded
+          .whereType<Map>()
+          .map(
+            (e) => ParsedRoutineItem.fromJson(
+              Map<String, dynamic>.from(e),
+              rawRef: rawRef,
+            ),
+          )
+          .where(_isValidRoutineItem)
+          .toList();
+    } else if (decoded is Map) {
+      final defaultTrack = decoded['track_name']?.toString() ??
+          decoded['program_name']?.toString() ??
+          decoded['batch_name']?.toString() ??
+          decoded['routine_title']?.toString();
+
+      final list = decoded['exams'] ??
+          decoded['schedules'] ??
+          decoded['items'] ??
+          decoded['routine'] ??
+          decoded['data'];
+
+      if (list is List) {
+        return list
+            .whereType<Map>()
+            .map(
+              (e) => ParsedRoutineItem.fromJson(
+                Map<String, dynamic>.from(e),
+                rawRef: rawRef,
+                defaultTrack: defaultTrack,
+              ),
+            )
+            .where(_isValidRoutineItem)
+            .toList();
+      }
     }
     return [];
+  }
+
+  bool _isValidRoutineItem(ParsedRoutineItem item) {
+    return item.subject.trim().isNotEmpty ||
+        (item.title != null && item.title!.trim().isNotEmpty);
+  }
+
+  String? _tryRepairTruncatedJson(String text) {
+    var s = text.trim();
+    if (s.isEmpty) return null;
+
+    if (s.endsWith('```')) {
+      s = s.substring(0, s.length - 3).trim();
+    }
+
+    final lastBraceIndex = s.lastIndexOf('}');
+    if (lastBraceIndex == -1) return null;
+
+    final truncated = s.substring(0, lastBraceIndex + 1).trim();
+
+    if (truncated.startsWith('[')) {
+      return '$truncated]';
+    }
+
+    if (truncated.startsWith('{')) {
+      int openBrackets = 0;
+      int openBraces = 0;
+      bool inString = false;
+      bool escaped = false;
+
+      for (int i = 0; i < truncated.length; i++) {
+        final c = truncated[i];
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (c == '\\') {
+          escaped = true;
+          continue;
+        }
+        if (c == '"') {
+          inString = !inString;
+          continue;
+        }
+        if (!inString) {
+          if (c == '[') openBrackets++;
+          if (c == ']') openBrackets--;
+          if (c == '{') openBraces++;
+          if (c == '}') openBraces--;
+        }
+      }
+
+      final buf = StringBuffer(truncated);
+      while (openBrackets > 0) {
+        buf.write(']');
+        openBrackets--;
+      }
+      while (openBraces > 0) {
+        buf.write('}');
+        openBraces--;
+      }
+      return buf.toString();
+    }
+
+    return null;
+  }
+
+  List<ParsedRoutineItem> _extractIndividualObjects(
+    String text, {
+    String? rawRef,
+  }) {
+    final List<ParsedRoutineItem> results = [];
+
+    String? detectedTrack;
+    final trackMatch =
+        RegExp(r'"track_name"\s*:\s*"([^"]+)"').firstMatch(text);
+    if (trackMatch != null) {
+      detectedTrack = trackMatch.group(1);
+    }
+
+    int depth = 0;
+    int start = -1;
+    bool inString = false;
+    bool escaped = false;
+
+    for (int i = 0; i < text.length; i++) {
+      final c = text[i];
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (c == '\\') {
+        escaped = true;
+        continue;
+      }
+      if (c == '"') {
+        inString = !inString;
+        continue;
+      }
+      if (!inString) {
+        if (c == '{') {
+          if (depth == 0) start = i;
+          depth++;
+        } else if (c == '}') {
+          depth--;
+          if (depth == 0 && start != -1) {
+            final candidate = text.substring(start, i + 1);
+            try {
+              final decoded = jsonDecode(candidate);
+              if (decoded is Map) {
+                if (decoded.containsKey('date') ||
+                    decoded.containsKey('subject') ||
+                    decoded.containsKey('title')) {
+                  final item = ParsedRoutineItem.fromJson(
+                    Map<String, dynamic>.from(decoded),
+                    rawRef: rawRef,
+                    defaultTrack: detectedTrack,
+                  );
+                  if (_isValidRoutineItem(item)) {
+                    results.add(item);
+                  }
+                }
+              }
+            } catch (_) {}
+            start = -1;
+          }
+        }
+      }
+    }
+
+    return results;
   }
 
   /// Scales an image down to [AiMediaLimits.maxImageDimension] before it is

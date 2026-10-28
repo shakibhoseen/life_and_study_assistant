@@ -20,6 +20,7 @@ import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
 import '../../../quiz/presentation/widgets/quiz_batch_correction_sheet.dart';
 import '../../../quiz/presentation/widgets/question_bank_scanner_modal.dart';
 import '../../domain/models/exam_source_info.dart';
+import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/exam_schedule_provider.dart';
 import '../widgets/voice_mistake_bottom_sheet.dart';
 
@@ -3106,6 +3107,31 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
   Future<void> _pickAndParsePdf(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
 
+    // Ensure API Key is available before opening file picker
+    await RoutineParserService.instance.init();
+    if (RoutineParserService.instance.cachedApiKey == null ||
+        RoutineParserService.instance.cachedApiKey!.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade800,
+          content: const Text(
+            'Gemini API Key সেট করা নেই। রুটিন PDF বিশ্লেষণ করতে Settings এ গিয়ে API Key দিন।',
+          ),
+          action: SnackBarAction(
+            label: 'Settings',
+            textColor: Colors.amber,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
     try {
       final pickedFiles = await FilePicker.pickFiles(
         type: FileType.custom,
@@ -3118,7 +3144,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
 
         messenger.showSnackBar(
           SnackBar(
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 10),
             backgroundColor: Colors.indigo.shade900,
             content: Row(
               children: [
@@ -3133,7 +3159,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Analyzing ${file.path.split("/").last} with Gemini Vision...',
+                    'Analyzing ${file.path.split("/").last} with Gemini AI Vision (টোকেন অপ্টিমাইজড)...',
                     style: const TextStyle(color: Colors.white, fontSize: 13),
                   ),
                 ),
@@ -3167,14 +3193,22 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
         } else {
           messenger.showSnackBar(
             const SnackBar(
-              content: Text('Could not extract schedules from PDF.'),
+              content: Text(
+                'রুটিন PDF থেকে কোনো পরীক্ষার তথ্য পাওয়া যায়নি। ফাইলটি স্পষ্ট কিনা যাচাই করুন।',
+              ),
             ),
           );
         }
       }
     } catch (e) {
       debugPrint('Error picking or parsing PDF: $e');
-      messenger.showSnackBar(SnackBar(content: Text('Error reading PDF: $e')));
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade900,
+          content: Text(msg),
+        ),
+      );
     }
   }
 

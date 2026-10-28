@@ -183,5 +183,55 @@ LiveMCQ BCS Crash Routine:
         );
       },
     );
+
+    test('Envelope routine JSON format is parsed correctly with shared track', () async {
+      const envelopeJson = '''{
+  "track_name": "১০০ দিনে বিসিএস প্রস্তুতি",
+  "exams": [
+    {"date": "2026-11-01", "exam_time": "10:00 PM", "subject": "বাংলা", "title": "Day 01", "topics": ["ধ্বনি"]},
+    {"date": "2026-11-02", "exam_time": "10:00 PM", "subject": "ইংরেজি", "title": "Day 02", "topics": ["Noun"]}
+  ]
+}''';
+
+      final items = await RoutineParserService.instance.parseRoutineFromText(
+        envelopeJson,
+      );
+      expect(items.length, equals(2));
+      expect(items.first.trackName, equals('১০০ দিনে বিসিএস প্রস্তুতি'));
+      expect(items.last.subject, equals('ইংরেজি'));
+    });
+
+    test('Token truncation recovery recovers all complete items from cut-off JSON', () async {
+      // Simulates Gemini running out of maxOutputTokens mid-way through day 3
+      const truncatedJson = '''```json
+[
+  {"date": "2026-11-01", "subject": "বাংলা সাহিত্য", "title": "Day 01", "topics": ["চর্যাপদ"]},
+  {"date": "2026-11-02", "subject": "বাংলাদেশ বিষয়াবলী", "title": "Day 02", "topics": ["প্রাচীন বাংলা"]},
+  {"date": "2026-11-03", "subject": "গণিত", "title": "Day 03", "topics": ["বাস্তব সং''';
+
+      final items = RoutineParserService.instance.decodeResponseForTesting(
+        truncatedJson,
+      );
+      expect(items.length, equals(2));
+      expect(items[0].title, equals('Day 01'));
+      expect(items[1].subject, equals('বাংলাদেশ বিষয়াবলী'));
+    });
+
+    test('Token truncation recovery recovers complete items from cut-off envelope format', () async {
+      // Simulates Gemini envelope format truncated mid-stream
+      const truncatedEnvelope = '''{
+  "track_name": "100 Days BCS Challenge",
+  "exams": [
+    {"date": "2026-11-01", "subject": "Bangla", "title": "Day 01", "topics": ["Grammar"]},
+    {"date": "2026-11-02", "subject": "English", "title": "Day 02", "topics": ["Vocabulary"]},
+    {"date": "2026-11-03", "subject": "Math", "title": "Day 03", "top''';
+
+      final items = RoutineParserService.instance.decodeResponseForTesting(
+        truncatedEnvelope,
+      );
+      expect(items.length, equals(2));
+      expect(items[0].trackName, equals('100 Days BCS Challenge'));
+      expect(items[1].title, equals('Day 02'));
+    });
   });
 }
