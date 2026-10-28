@@ -9,6 +9,7 @@ import 'package:life_and_study_assistant/core/utils/bengali_math_sanitizer.dart'
 import 'package:life_and_study_assistant/features/chat/presentation/providers/chat_provider.dart';
 import 'package:life_and_study_assistant/features/chat/presentation/screens/ai_chat_screen.dart';
 import 'package:life_and_study_assistant/features/mistake_notebook/presentation/screens/mistake_notebook_screen.dart';
+import 'package:life_and_study_assistant/features/mistake_notebook/presentation/widgets/ai_mistake_explainer_sheet.dart';
 import 'package:life_and_study_assistant/features/quiz/presentation/providers/drill_history_provider.dart';
 import 'package:life_and_study_assistant/features/quiz/presentation/widgets/quiz_drill_modal.dart';
 import 'package:life_and_study_assistant/features/quiz/presentation/widgets/study_sheet_camera_modal.dart';
@@ -290,33 +291,36 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
           children: [
             Row(
               children: [
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.indigo.withValues(alpha: 0.2)
-                          : Colors.indigo.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      topic.subject,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.indigo.shade200
-                            : Colors.indigo.shade800,
+                            ? Colors.indigo.withValues(alpha: 0.2)
+                            : Colors.indigo.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        topic.subject,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.indigo.shade200
+                              : Colors.indigo.shade800,
+                        ),
                       ),
                     ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -1047,131 +1051,165 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
       elevation: 1.5,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Subject & Topic Badge + Time + Menu
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.indigo.withValues(alpha: 0.2)
-                        : Colors.indigo.shade50,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    dq.subject,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.indigo.shade200
-                          : Colors.indigo.shade800,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => AiMistakeExplainerSheet.show(context, dq),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Subject & Topic Badge + Time + Menu
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.indigo.withValues(alpha: 0.2)
+                                  : Colors.indigo.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              dq.subject,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.indigo.shade200
+                                    : Colors.indigo.shade800,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '• ${dq.topic}',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '• ${dq.topic}',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black87,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatDateTime(dq.attemptedAt),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Text(
-                  _formatDateTime(dq.attemptedAt),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white60
-                        : Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: PopupMenuButton<String>(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(
-                      Icons.more_vert,
-                      size: 18,
+                    style: TextStyle(
+                      fontSize: 10,
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white70
-                          : Colors.grey.shade700,
+                          ? Colors.white60
+                          : Colors.grey.shade600,
                     ),
-                    onSelected: (val) {
-                    if (val == 'delete') {
-                      ref
-                          .read(drillHistoryNotifierProvider.notifier)
-                          .deleteQuestion(dq.id);
-                    } else if (val == 'ask_ai') {
-                      ref
-                          .read(chatNotifierProvider.notifier)
-                          .openOrCreateTopicSession(
-                            subject: dq.subject,
-                            topic: dq.topic,
-                            initialPrompt:
-                                'প্রশ্ন: "${dq.questionText}"\nসঠিক উত্তর: "$correctAns"\nএই প্রশ্নটি কেন সঠিক এবং এর পেছনের কনসেপ্টটি বিস্তারিত বুঝিয়ে দাও।',
-                          );
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AiChatScreen()),
-                      );
-                    }
-                  },
-                  itemBuilder: (ctx) => [
-                    const PopupMenuItem(
-                      value: 'ask_ai',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.auto_awesome,
-                            size: 16,
-                            color: Colors.indigo,
-                          ),
-                          SizedBox(width: 8),
-                          Text('Ask AI to Explain'),
-                        ],
+                  ),
+                  const SizedBox(width: 4),
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: PopupMenuButton<String>(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      icon: Icon(
+                        Icons.more_vert,
+                        size: 18,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white70
+                            : Colors.grey.shade700,
                       ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.delete_outline,
-                            size: 16,
-                            color: Colors.red,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Delete from Bank',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ],
+                      tooltip: 'Options',
+                      onSelected: (val) {
+                      if (val == 'details') {
+                        AiMistakeExplainerSheet.show(context, dq);
+                      } else if (val == 'delete') {
+                        ref
+                            .read(drillHistoryNotifierProvider.notifier)
+                            .deleteQuestion(dq.id);
+                      } else if (val == 'ask_ai') {
+                        ref
+                            .read(chatNotifierProvider.notifier)
+                            .openOrCreateTopicSession(
+                              subject: dq.subject,
+                              topic: dq.topic,
+                              initialPrompt:
+                                  'প্রশ্ন: "${dq.questionText}"\nসঠিক উত্তর: "$correctAns"\nএই প্রশ্নটি কেন সঠিক এবং এর পেছনের কনসেপ্টটি বিস্তারিত বুঝিয়ে দাও।',
+                            );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AiChatScreen()),
+                        );
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'details',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: Colors.blue,
+                            ),
+                            SizedBox(width: 8),
+                            Text('বিস্তারিত দেখুন (Details)'),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      const PopupMenuItem(
+                        value: 'ask_ai',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.auto_awesome,
+                              size: 16,
+                              color: Colors.indigo,
+                            ),
+                            SizedBox(width: 8),
+                            Text('Ask AI to Explain'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 16,
+                              color: Colors.red,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Delete from Bank',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-            const SizedBox(height: 10),
+              ],
+            ),
+              const SizedBox(height: 10),
 
             // Question Text
             Text(
@@ -1380,8 +1418,9 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ==========================================
   // DRILL HISTORY LIST

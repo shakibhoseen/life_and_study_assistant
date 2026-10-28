@@ -932,67 +932,71 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
             // Top Row: Subject & Topic, Source Badge, Menu
             Row(
               children: [
-                // The subject comes from the user's own data and the source
-                // label is translated, so neither has a bounded width. With a
-                // Spacer between them and the trailing badge, a long pair ran
-                // the row off the card.
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.indigo.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      dq.subject,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: source.color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: source.color.withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(source.icon, size: 11, color: source.color),
-                        const SizedBox(width: 3),
-                        Flexible(
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                           child: Text(
-                            source.banglaLabel,
+                            dq.subject,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 9.5,
+                            style: const TextStyle(
+                              fontSize: 10.5,
                               fontWeight: FontWeight.bold,
-                              color: source.color,
+                              color: Colors.indigo,
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: source.color.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: source.color.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(source.icon, size: 11, color: source.color),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  source.banglaLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: source.color,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 6),
-                if (dq.isMastered)
+                if (dq.isMastered) ...[
+                  const SizedBox(width: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 6,
@@ -1018,6 +1022,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                       ],
                     ),
                   ),
+                ],
                 const SizedBox(width: 4),
                 SizedBox(
                   width: 24,
@@ -1030,6 +1035,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                       size: 18,
                       color: isDark ? Colors.white70 : Colors.black54,
                     ),
+                    tooltip: 'Options',
                     onSelected: (val) {
                     if (val == 'toggle_mastered') {
                       ref
