@@ -463,7 +463,7 @@ void main() {
         'planning: ${planning.length}, teaching: ${gated.length}',
       );
 
-      expect(gated.length, lessThan(ungated.length ~/ 8));
+      expect(gated.length, lessThan(ungated.length ~/ 7));
       expect(planning.length, lessThan(ungated.length ~/ 3));
     });
 

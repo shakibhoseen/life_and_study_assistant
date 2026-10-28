@@ -1685,6 +1685,20 @@ class AppDatabase extends _$AppDatabase {
     return into(spacedReviewItems).insert(entry);
   }
 
+  Future<int> insertSpacedReviewItemsBatch(
+    List<SpacedReviewItemsCompanion> entries,
+  ) async {
+    if (entries.isEmpty) return 0;
+    return transaction(() async {
+      int count = 0;
+      for (final entry in entries) {
+        await into(spacedReviewItems).insert(entry);
+        count++;
+      }
+      return count;
+    });
+  }
+
   Future<bool> advanceSpacedReview(int id) async {
     final item = await (select(
       spacedReviewItems,

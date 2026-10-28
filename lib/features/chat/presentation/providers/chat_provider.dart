@@ -528,6 +528,26 @@ class ChatNotifier extends Notifier<ChatState> {
         }
       }
 
+      if (action.type == ChatActionType.addFlashcard) {
+        final title = action.title.trim();
+        final keyRule = (action.keyRule ?? '').trim();
+        if (title.isEmpty && keyRule.isEmpty) return false;
+
+        await _db.insertSpacedReviewItem(
+          SpacedReviewItemsCompanion.insert(
+            subject: action.subject.isEmpty ? 'General' : action.subject,
+            topic: (action.topic != null && action.topic!.isNotEmpty)
+                ? action.topic!
+                : 'Flashcard',
+            title: title.isEmpty ? 'ফ্ল্যাশ কার্ড' : title,
+            keyRule: keyRule.isEmpty ? title : keyRule,
+            repetitionLevel: const Value(1),
+            intervalDays: const Value(1),
+            nextReviewDate: DateTime.now().add(const Duration(days: 1)),
+          ),
+        );
+      }
+
       final existingActions = ChatAction.decodeList(message.suggestedAction);
       final updatedActions = existingActions.map((a) {
         if (a.title == action.title &&

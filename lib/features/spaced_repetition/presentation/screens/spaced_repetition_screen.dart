@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../providers/spaced_repetition_provider.dart';
+import '../widgets/ai_flashcard_generator_modal.dart';
 
 class SpacedRepetitionScreen extends ConsumerStatefulWidget {
   const SpacedRepetitionScreen({super.key});
@@ -42,8 +43,13 @@ class _SpacedRepetitionScreenState
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.auto_awesome, color: Color(0xFF6366F1)),
+            tooltip: 'AI দিয়ে ফ্ল্যাশ কার্ড ও সূত্র তৈরি',
+            onPressed: () => AiFlashcardGeneratorModal.show(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'Add Difficult Rule',
+            tooltip: 'ম্যানুয়ালি সূত্র যোগ করুন',
             onPressed: () => _showAddRuleDialog(context),
           ),
         ],
@@ -680,6 +686,20 @@ class _SpacedRepetitionScreenState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: const Color(0xFF6366F1),
+                  side: const BorderSide(color: Color(0xFF6366F1)),
+                ),
+                icon: const Icon(Icons.auto_awesome, size: 16),
+                label: const Text('বা AI দিয়ে স্বয়ংক্রিয় তৈরি করুন 🪄'),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  AiFlashcardGeneratorModal.show(context);
+                },
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: subjectController,
                 decoration: const InputDecoration(

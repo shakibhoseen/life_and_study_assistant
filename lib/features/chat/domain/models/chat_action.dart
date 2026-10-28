@@ -8,6 +8,7 @@ enum ChatActionType {
   addExam,
   routinePlan,
   fixExam,
+  addFlashcard,
   unknown,
 }
 
@@ -32,6 +33,9 @@ class ChatAction {
   final int? examId;
   final String? correctionsJson;
 
+  /// Set for [ChatActionType.addFlashcard]: the formula, key rule, or explanation on the back of the card.
+  final String? keyRule;
+
   final bool isExecuted;
 
   const ChatAction({
@@ -47,6 +51,7 @@ class ChatAction {
     this.routineJson,
     this.examId,
     this.correctionsJson,
+    this.keyRule,
     this.isExecuted = false,
   });
 
@@ -99,6 +104,7 @@ class ChatAction {
     String? routineJson,
     int? examId,
     String? correctionsJson,
+    String? keyRule,
   }) {
     return ChatAction(
       type: type,
@@ -113,6 +119,7 @@ class ChatAction {
       routineJson: routineJson ?? this.routineJson,
       examId: examId ?? this.examId,
       correctionsJson: correctionsJson ?? this.correctionsJson,
+      keyRule: keyRule ?? this.keyRule,
       isExecuted: isExecuted ?? this.isExecuted,
     );
   }
@@ -130,6 +137,7 @@ class ChatAction {
     'routineJson': routineJson,
     'examId': examId,
     'correctionsJson': correctionsJson,
+    'keyRule': keyRule,
     'isExecuted': isExecuted,
   };
 
@@ -151,6 +159,9 @@ class ChatAction {
       case 'fixExam':
         type = ChatActionType.fixExam;
         break;
+      case 'addFlashcard':
+        type = ChatActionType.addFlashcard;
+        break;
       default:
         type = ChatActionType.unknown;
     }
@@ -167,6 +178,7 @@ class ChatAction {
       routineJson: json['routineJson'] as String?,
       examId: (json['examId'] as num?)?.toInt(),
       correctionsJson: json['correctionsJson'] as String?,
+      keyRule: json['keyRule'] as String?,
       isExecuted: json['isExecuted'] as bool? ?? false,
     );
   }
@@ -337,6 +349,52 @@ class ChatAction {
       }
     }
 
+    // 4. ADD_FLASHCARD: [[ACTION:ADD_FLASHCARD|Subject|Topic|Title|KeyRule]]
+    final addFlashcardRegex = RegExp(
+      r'\[\[ACTION:ADD_FLASHCARD\|([^|\]]+)\|([^|\]]+)\|([^|\]]+)\|([^|\]]+)\]\]',
+      caseSensitive: false,
+    );
+    for (final match in addFlashcardRegex.allMatches(rawText)) {
+      final subject = match.group(1)?.trim() ?? 'General';
+      final topic = match.group(2)?.trim() ?? 'Flashcard';
+      final front = match.group(3)?.trim() ?? '';
+      final back = match.group(4)?.trim() ?? '';
+      if (front.isNotEmpty && back.isNotEmpty) {
+        actions.add(
+          ChatAction(
+            type: ChatActionType.addFlashcard,
+            title: front,
+            subject: subject,
+            topic: topic,
+            keyRule: back,
+          ),
+        );
+      }
+    }
+
+    // 5. ADD_FLASHCARD_BLOCK: [[ACTION:ADD_FLASHCARD_BEGIN|Subject|Topic|Title]]\n...\n[[ACTION:ADD_FLASHCARD_END]]
+    final addFlashcardBlockRegex = RegExp(
+      r'\[\[ACTION:ADD_FLASHCARD_BEGIN\|([^|\]]+)\|([^|\]]+)\|([^|\]]+)\]\]([\s\S]*?)\[\[ACTION:ADD_FLASHCARD_END\]\]',
+      caseSensitive: false,
+    );
+    for (final match in addFlashcardBlockRegex.allMatches(rawText)) {
+      final subject = match.group(1)?.trim() ?? 'General';
+      final topic = match.group(2)?.trim() ?? 'Flashcard';
+      final front = match.group(3)?.trim() ?? '';
+      final back = match.group(4)?.trim() ?? '';
+      if (front.isNotEmpty && back.isNotEmpty) {
+        actions.add(
+          ChatAction(
+            type: ChatActionType.addFlashcard,
+            title: front,
+            subject: subject,
+            topic: topic,
+            keyRule: back,
+          ),
+        );
+      }
+    }
+
     return actions;
   }
 
@@ -437,6 +495,20 @@ class ChatAction {
     var cleaned = rawText.replaceAll(
       RegExp(
         r'\[\[ACTION:ROUTINE_PLAN_BEGIN\]\][\s\S]*?\[\[ACTION:ROUTINE_PLAN_END\]\]',
+        caseSensitive: false,
+      ),
+      '',
+    );
+    cleaned = cleaned.replaceAll(
+      RegExp(
+        r'\[\[ACTION:ADD_FLASHCARD_BEGIN\|[\s\S]*?\]\][\s\S]*?\[\[ACTION:ADD_FLASHCARD_END\]\]',
+        caseSensitive: false,
+      ),
+      '',
+    );
+    cleaned = cleaned.replaceAll(
+      RegExp(
+        r'\[\[ACTION:FIX_EXAM_BEGIN\|[\s\S]*?\]\][\s\S]*?\[\[ACTION:FIX_EXAM_END\]\]',
         caseSensitive: false,
       ),
       '',

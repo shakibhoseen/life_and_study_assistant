@@ -1213,11 +1213,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 ? Icons.check_circle
                 : (action.type == ChatActionType.fixExam
                       ? Icons.auto_fix_high_rounded
-                      : (isStudyTask
-                            ? Icons.quiz_outlined
-                            : (isRoutinePlan
-                                  ? Icons.calendar_month
-                                  : Icons.auto_awesome))),
+                      : (action.type == ChatActionType.addFlashcard
+                            ? Icons.bolt_rounded
+                            : (isStudyTask
+                                  ? Icons.quiz_outlined
+                                  : (isRoutinePlan
+                                        ? Icons.calendar_month
+                                        : Icons.auto_awesome)))),
             size: 16,
             color: isDone
                 ? (isDark ? Colors.green.shade400 : Colors.green)
@@ -1245,13 +1247,17 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 Text(
                   action.type == ChatActionType.fixExam
                       ? 'E-${action.examId} পরীক্ষার প্রশ্নসমূহ অটো-ফিক্স'
-                      : (action.type == ChatActionType.addExam
-                            ? '${action.examDate ?? ""} · ${action.examTime ?? "10:00 PM"} · 🏷️ ${action.effectiveTrackName}'
-                            : (isRoutinePlan
-                                  ? '${action.effectiveTrackName} · ${action.routineItems.length} days'
-                                  : (isStudyTask
-                                        ? '${action.subject} · ${action.minutes != null ? "${action.minutes} মিনিট " : ""}কুইজ ড্রিল'
-                                        : 'Subject: ${action.subject}'))),
+                      : (action.type == ChatActionType.addFlashcard
+                            ? '${action.subject} · ${action.keyRule ?? "ফ্ল্যাশ কার্ড সূত্র"}'
+                            : (action.type == ChatActionType.addExam
+                                  ? '${action.examDate ?? ""} · ${action.examTime ?? "10:00 PM"} · 🏷️ ${action.effectiveTrackName}'
+                                  : (isRoutinePlan
+                                        ? '${action.effectiveTrackName} · ${action.routineItems.length} days'
+                                        : (isStudyTask
+                                              ? '${action.subject} · ${action.minutes != null ? "${action.minutes} মিনিট " : ""}কুইজ ড্রিল'
+                                              : 'Subject: ${action.subject}')))),
+                  maxLines: action.type == ChatActionType.addFlashcard ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 10.5,
                     color: isDark
@@ -1358,9 +1364,11 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                         content: Text(
                           action.type == ChatActionType.fixExam
                               ? '"${action.title}" সফলভাবে সংশোধন করা হয়েছে'
-                              : (action.type == ChatActionType.addExam
-                                    ? '"${action.title}" রুটিনে যোগ হয়েছে'
-                                    : '"${action.title}" দুর্বল টপিকে যোগ হয়েছে'),
+                              : (action.type == ChatActionType.addFlashcard
+                                    ? '"${action.title}" ফ্ল্যাশ কার্ডে যুক্ত হয়েছে'
+                                    : (action.type == ChatActionType.addExam
+                                          ? '"${action.title}" রুটিনে যোগ হয়েছে'
+                                          : '"${action.title}" দুর্বল টপিকে যোগ হয়েছে')),
                         ),
                         backgroundColor: Colors.green.shade700,
                       ),
@@ -1370,18 +1378,22 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               isDone
                   ? (action.type == ChatActionType.fixExam
                         ? 'সংশোধিত ✓'
-                        : (isRoutinePlan
-                              ? 'সংরক্ষিত'
-                              : (isStudyTask ? 'কুইজ সম্পন্ন' : 'যোগ হয়েছে')))
+                        : (action.type == ChatActionType.addFlashcard
+                              ? 'যুক্ত ✓'
+                              : (isRoutinePlan
+                                    ? 'সংরক্ষিত'
+                                    : (isStudyTask ? 'কুইজ সম্পন্ন' : 'যোগ হয়েছে'))))
                   : (action.type == ChatActionType.fixExam
                         ? 'সংশোধন প্রয়োগ'
-                        : (isRoutinePlan
-                              ? 'রুটিন প্রিভিউ'
-                              : (action.type == ChatActionType.addExam
-                                    ? 'রুটিনে যোগ'
-                                    : (isStudyTask
-                                          ? 'কুইজ শুরু'
-                                          : 'টপিকে যোগ')))),
+                        : (action.type == ChatActionType.addFlashcard
+                              ? 'কার্ডে যোগ'
+                              : (isRoutinePlan
+                                    ? 'রুটিন প্রিভিউ'
+                                    : (action.type == ChatActionType.addExam
+                                          ? 'রুটিনে যোগ'
+                                          : (isStudyTask
+                                                ? 'কুইজ শুরু'
+                                                : 'টপিকে যোগ'))))),
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
             ),
           ),
