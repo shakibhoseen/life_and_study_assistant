@@ -1,14 +1,26 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_and_study_assistant/core/database/app_database.dart';
+import 'package:life_and_study_assistant/core/database/database_provider.dart';
 import 'package:life_and_study_assistant/core/services/ai/entity_ref.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/providers/exam_schedule_provider.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/live_mcq_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  late AppDatabase db;
+
+  setUp(() {
+    db = AppDatabase(NativeDatabase.memory());
+  });
+
+  tearDown(() async {
+    await db.close();
+  });
 
   final now = DateTime.now();
   final todayStart = DateTime(now.year, now.month, now.day);
@@ -50,6 +62,7 @@ void main() {
     final list = exams ?? sampleExams;
     return ProviderScope(
       overrides: [
+        appDatabaseProvider.overrideWithValue(db),
         distinctTracksStreamProvider.overrideWith(
           (ref) => Stream.value(['47th BCS']),
         ),
@@ -181,6 +194,36 @@ void main() {
           find.text('E-25 কপি হয়েছে — AI মেন্টরে পেস্ট করে বলুন কী সমস্যা'),
           findsOneWidget,
         );
+      },
+    );
+
+    testWidgets(
+      'LiveMcqScreen shows delete track button when a specific track is selected',
+      (tester) async {
+        await tester.pumpWidget(createLiveMcqScreen());
+        await tester.pumpAndSettle();
+
+        // Initially 'All Programs' is selected, so 'ট্র্যাক মুছুন' is not visible
+        expect(find.text('ট্র্যাক মুছুন'), findsNothing);
+
+        // Select the '47th BCS' track chip
+        final trackChip = find.widgetWithText(ChoiceChip, '47th BCS');
+        expect(trackChip, findsOneWidget);
+        await tester.tap(trackChip);
+        await tester.pumpAndSettle();
+
+        // Now 'ট্র্যাক মুছুন' button is visible in track bar
+        final deleteTrackBtn = find.text('ট্র্যাক মুছুন');
+        expect(deleteTrackBtn, findsOneWidget);
+
+        // Tap the delete track button
+        await tester.tap(deleteTrackBtn);
+        await tester.pumpAndSettle();
+
+        // Verify confirmation dialog appears
+        expect(find.text('ট্র্যাকের সব পরীক্ষা মুছবেন?'), findsOneWidget);
+        expect(find.text('বাতিল'), findsOneWidget);
+        expect(find.byIcon(Icons.delete_forever), findsOneWidget);
       },
     );
   });

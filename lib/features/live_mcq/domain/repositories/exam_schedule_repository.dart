@@ -25,4 +25,5 @@ abstract class ExamScheduleRepository {
   Future<bool> markExamIncomplete(int id);
   Future<bool> updateExamTrack(int id, String newTrack);
   Future<int> deleteExam(int id);
+  Future<int> deleteExamsByTrack(String trackName);
 }

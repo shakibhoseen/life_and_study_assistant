@@ -102,5 +102,64 @@ void main() {
         expect(distinctTracks.contains('Self Test'), isTrue);
       },
     );
+
+    test('deleteExamsByTrack removes only targeted track and keeps other tracks intact', () async {
+      await db.delete(db.examSchedules).go();
+
+      // Insert 3 exams in '১০০ দিনে বিসিএস'
+      await repo.addExam(
+        examDate: todayStart,
+        title: 'Exam 1',
+        topicsCovered: 'Topic 1',
+        trackName: '১০০ দিনে বিসিএস',
+      );
+      await repo.addExam(
+        examDate: todayStart.add(const Duration(days: 1)),
+        title: 'Exam 2',
+        topicsCovered: 'Topic 2',
+        trackName: '১০০ দিনে বিসিএস',
+      );
+      await repo.addExam(
+        examDate: todayStart.add(const Duration(days: 2)),
+        title: 'Exam 3',
+        topicsCovered: 'Topic 3',
+        trackName: '১০০ দিনে বিসিএস',
+      );
+
+      // Insert 2 exams in 'Vocabulary Booster'
+      await repo.addExam(
+        examDate: todayStart,
+        title: 'Vocab 1',
+        topicsCovered: 'Synonyms',
+        trackName: 'Vocabulary Booster',
+      );
+      await repo.addExam(
+        examDate: todayStart.add(const Duration(days: 1)),
+        title: 'Vocab 2',
+        topicsCovered: 'Antonyms',
+        trackName: 'Vocabulary Booster',
+      );
+
+      // Verify total initial exams = 5
+      final initialExams = await (db.select(db.examSchedules)).get();
+      expect(initialExams.length, equals(5));
+
+      // Delete all exams of '১০০ দিনে বিসিএস'
+      final deletedCount = await repo.deleteExamsByTrack('১০০ দিনে বিসিএস');
+      expect(deletedCount, equals(3));
+
+      // Verify remaining exams = 2, and all belong to 'Vocabulary Booster'
+      final remainingExams = await (db.select(db.examSchedules)).get();
+      expect(remainingExams.length, equals(2));
+      expect(
+        remainingExams.every((e) => e.trackName == 'Vocabulary Booster'),
+        isTrue,
+      );
+
+      // Verify distinct tracks no longer contains '১০০ দিনে বিসিএস'
+      final distinctTracks = await repo.watchAllDistinctTracks().first;
+      expect(distinctTracks.contains('১০০ দিনে বিসিএস'), isFalse);
+      expect(distinctTracks.contains('Vocabulary Booster'), isTrue);
+    });
   });
 }

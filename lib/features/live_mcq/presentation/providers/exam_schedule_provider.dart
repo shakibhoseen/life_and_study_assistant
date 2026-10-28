@@ -130,6 +130,16 @@ class ExamScheduleNotifier extends Notifier<void> {
     final repo = ref.read(examScheduleRepositoryProvider);
     await repo.deleteExam(id);
   }
+
+  Future<int> deleteExamsByTrack(String trackName) async {
+    final repo = ref.read(examScheduleRepositoryProvider);
+    final count = await repo.deleteExamsByTrack(trackName);
+    ref.invalidate(upcomingExamsStreamProvider);
+    ref.invalidate(allExamsStreamProvider);
+    ref.invalidate(distinctTracksStreamProvider);
+    ref.invalidate(filteredExamsStreamProvider);
+    return count;
+  }
 }
 
 final examScheduleNotifierProvider =

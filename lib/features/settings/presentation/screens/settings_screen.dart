@@ -14,6 +14,7 @@ import '../../../../core/services/background/wifi_monitor_service.dart';
 import '../../../../core/services/export/app_export_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
 import '../../../../core/theme/theme_provider.dart';
+import 'package:life_and_study_assistant/features/live_mcq/presentation/providers/exam_schedule_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/gemini_usage_monitor_card.dart';
 
@@ -506,6 +507,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           }
                         }
                       },
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.folder_delete_outlined,
+                          color: Colors.amber,
+                        ),
+                      ),
+                      title: const Text('Delete Specific Program Track'),
+                      subtitle: const Text(
+                        'Remove all exams of a single track/tag without affecting others',
+                      ),
+                      onTap: () => _showDeleteTrackDialog(context),
                     ),
                     const Divider(height: 1),
                     ListTile(
@@ -2662,6 +2682,107 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteTrackDialog(BuildContext context) async {
+    final db = ref.read(appDatabaseProvider);
+    final exams = await db.select(db.examSchedules).get();
+    final trackCounts = <String, int>{};
+    for (final e in exams) {
+      if (e.trackName.isNotEmpty) {
+        trackCounts[e.trackName] = (trackCounts[e.trackName] ?? 0) + 1;
+      }
+    }
+
+    if (!context.mounted) return;
+
+    if (trackCounts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No exam tracks found in database.')),
+      );
+      return;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Select Program Track to Delete',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...trackCounts.entries.map((entry) {
+                return ListTile(
+                  leading: const Icon(Icons.bookmark, color: Colors.indigo),
+                  title: Text(
+                    entry.key,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text('${entry.value} exams scheduled'),
+                  trailing: const Icon(Icons.delete_outline, color: Colors.red),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (dCtx) => AlertDialog(
+                        title: Text('Delete "${entry.key}"?'),
+                        content: Text(
+                          'Are you sure you want to delete all ${entry.value} exams in "${entry.key}"? Other tracks will remain safe.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dCtx, false),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () => Navigator.pop(dCtx, true),
+                            child: const Text('Delete Track'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true && context.mounted) {
+                      await db.deleteExamsByTrack(entry.key);
+                      ref.invalidate(distinctTracksStreamProvider);
+                      ref.invalidate(upcomingExamsStreamProvider);
+                      ref.invalidate(allExamsStreamProvider);
+                      ref.invalidate(filteredExamsStreamProvider);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: Colors.red.shade800,
+                            content: Text(
+                              'Deleted all ${entry.value} exams of "${entry.key}".',
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                );
+              }),
+            ],
+          ),
+        ),
       ),
     );
   }

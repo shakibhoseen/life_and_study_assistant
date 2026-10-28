@@ -84,4 +84,8 @@ class ExamScheduleRepositoryImpl implements ExamScheduleRepository {
 
   @override
   Future<int> deleteExam(int id) => _db.deleteExamSchedule(id);
+
+  @override
+  Future<int> deleteExamsByTrack(String trackName) =>
+      _db.deleteExamsByTrack(trackName);
 }
