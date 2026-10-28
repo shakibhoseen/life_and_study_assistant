@@ -1045,7 +1045,13 @@ They chose: $userAns
 Correct: $correctAns
 Existing explanation: ${_shorten(explanation, 300)}
 
-Reply in Bengali under exactly these three headings, copied verbatim:
+IMPORTANT VALIDITY & REDUNDANCY CHECK:
+First, inspect if the question stem itself is factually flawed, has no correct options, is ambiguous, or is completely obsolete/redundant for BCS/PSC syllabus (e.g. outdated one-time GK from years ago or syllabus-irrelevant questions).
+- If the question is FLAWED, OUTDATED, or REDUNDANT:
+  Begin your response with an alert box:
+  ⚠️ **সতর্কতা: প্রশ্নটি ত্রুটিপূর্ণ বা অপ্রাসঙ্গিক (Flawed / Redundant Question)**
+  [Explain why this question is invalid or unnecessary for BCS, and explicitly advise the candidate to delete/exclude or correct it instead of memorizing it.]
+- Then (or if question is valid), reply in Bengali under these three headings:
 
 ১. 🎯 **ভুল হওয়ার মূল কারণ ও ফাঁদ (The Trap):**
 ২. 💡 **মনে রাখার শর্টকাট / নেমোনিক ট্রিক (Memory Hook):**

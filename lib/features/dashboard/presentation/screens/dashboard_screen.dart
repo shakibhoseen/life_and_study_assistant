@@ -13,6 +13,7 @@ import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
 import '../../../live_mcq/presentation/widgets/voice_mistake_bottom_sheet.dart';
 import '../../../quiz/presentation/providers/drill_history_provider.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
+import '../../../quiz/presentation/widgets/question_bank_scanner_modal.dart';
 import '../../../quiz/presentation/widgets/study_sheet_camera_modal.dart';
 import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
@@ -242,6 +243,18 @@ class DashboardScreen extends ConsumerWidget {
               context,
               MaterialPageRoute(builder: (_) => const MistakeNotebookScreen()),
             ),
+          ),
+          const SizedBox(width: 8),
+
+          // 1.5. Test Paper & Question Bank Scanner
+          _buildQuickActionPill(
+            context,
+            icon: Icons.assignment_outlined,
+            iconColor: const Color(0xFF0D9488),
+            bgColor: const Color(0xFF0D9488).withValues(alpha: 0.12),
+            label: 'Test Paper',
+            badge: 'Exam 📝',
+            onTap: () => QuestionBankScannerModal.show(context),
           ),
           const SizedBox(width: 8),
 

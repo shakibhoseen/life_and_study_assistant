@@ -5,6 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
+import '../../../live_mcq/presentation/widgets/routine_preview_sheet.dart';
+import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
+import '../../../quiz/presentation/widgets/question_bank_scanner_modal.dart';
+
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
@@ -569,6 +574,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                         'পরীক্ষা প্রস্তুতি',
                         isDark,
                       ),
+                      _buildStarterCard(
+                        '📸 প্রশ্ন ব্যাংক স্ক্যান করে কুইজ',
+                        'বইয়ের পাতা থেকে এক্সাম',
+                        isDark,
+                        onTap: () => QuestionBankScannerModal.show(context),
+                      ),
                     ],
             ),
           ],
@@ -577,9 +588,14 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     );
   }
 
-  Widget _buildStarterCard(String title, String subtitle, bool isDark) {
+  Widget _buildStarterCard(
+    String title,
+    String subtitle,
+    bool isDark, {
+    VoidCallback? onTap,
+  }) {
     return InkWell(
-      onTap: () => _handleSend(title),
+      onTap: onTap ?? () => _handleSend(title),
       borderRadius: BorderRadius.circular(10),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1169,6 +1185,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
   Widget _buildActionCard(ChatAction action, ChatMessage message, bool isDark) {
     final isDone = action.isExecuted;
+    final isRoutinePlan = action.type == ChatActionType.routinePlan;
+    final isStudyTask = action.type == ChatActionType.studyTask;
 
     return Container(
       margin: const EdgeInsets.only(top: 6),
@@ -1191,7 +1209,15 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       child: Row(
         children: [
           Icon(
-            isDone ? Icons.check_circle : Icons.auto_awesome,
+            isDone
+                ? Icons.check_circle
+                : (action.type == ChatActionType.fixExam
+                      ? Icons.auto_fix_high_rounded
+                      : (isStudyTask
+                            ? Icons.quiz_outlined
+                            : (isRoutinePlan
+                                  ? Icons.calendar_month
+                                  : Icons.auto_awesome))),
             size: 16,
             color: isDone
                 ? (isDark ? Colors.green.shade400 : Colors.green)
@@ -1217,7 +1243,15 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   ),
                 ),
                 Text(
-                  'Subject: ${action.subject}',
+                  action.type == ChatActionType.fixExam
+                      ? 'E-${action.examId} পরীক্ষার প্রশ্নসমূহ অটো-ফিক্স'
+                      : (action.type == ChatActionType.addExam
+                            ? '${action.examDate ?? ""} · ${action.examTime ?? "10:00 PM"} · 🏷️ ${action.effectiveTrackName}'
+                            : (isRoutinePlan
+                                  ? '${action.effectiveTrackName} · ${action.routineItems.length} days'
+                                  : (isStudyTask
+                                        ? '${action.subject} · ${action.minutes != null ? "${action.minutes} মিনিট " : ""}কুইজ ড্রিল'
+                                        : 'Subject: ${action.subject}'))),
                   style: TextStyle(
                     fontSize: 10.5,
                     color: isDark
@@ -1246,22 +1280,108 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             onPressed: isDone
                 ? null
                 : () async {
-                    final success = await ref
-                        .read(chatNotifierProvider.notifier)
-                        .executeAction(action: action, message: message);
-                    if (success && mounted) {
+                    if (isRoutinePlan) {
+                      final items = action.routineItems;
+                      if (items.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('রুটিনের তথ্য পাওয়া যায়নি'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final approved = await RoutinePreviewSheet.show(
+                        context,
+                        items,
+                        sourceLabel:
+                            'AI Mentor (${action.trackName ?? "Study Routine"})',
+                      );
+
+                      if (approved == null || approved.isEmpty || !mounted) {
+                        return;
+                      }
+
+                      final success = await ref
+                          .read(chatNotifierProvider.notifier)
+                          .executeAction(
+                            action: action,
+                            message: message,
+                            approvedItems: approved,
+                          );
+
+                      if (!success || !mounted) return;
+
+                      ref.invalidate(upcomingExamsStreamProvider);
+                      ref.invalidate(allExamsStreamProvider);
+                      ref.invalidate(distinctTracksStreamProvider);
+                      ref.invalidate(filteredExamsStreamProvider);
+
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            '"${action.title}" added to Weak Topics radar!',
+                            '${approved.length}টি স্টাডি সেশন সফলভাবে সেভ করা হয়েছে',
                           ),
                           backgroundColor: Colors.green.shade700,
                         ),
                       );
+                      return;
                     }
+
+                    if (isStudyTask) {
+                      await ref
+                          .read(chatNotifierProvider.notifier)
+                          .executeAction(action: action, message: message);
+                      if (!mounted) return;
+                      QuizDrillModal.show(
+                        context,
+                        topic: action.topic ?? action.title,
+                        subject: action.subject,
+                      );
+                      return;
+                    }
+
+                    final success = await ref
+                        .read(chatNotifierProvider.notifier)
+                        .executeAction(action: action, message: message);
+                    if (!success || !mounted) return;
+                    if (action.type == ChatActionType.addExam ||
+                        action.type == ChatActionType.fixExam) {
+                      // The routine screens are watching their own streams.
+                      ref.invalidate(upcomingExamsStreamProvider);
+                      ref.invalidate(allExamsStreamProvider);
+                      ref.invalidate(distinctTracksStreamProvider);
+                      ref.invalidate(filteredExamsStreamProvider);
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          action.type == ChatActionType.fixExam
+                              ? '"${action.title}" সফলভাবে সংশোধন করা হয়েছে'
+                              : (action.type == ChatActionType.addExam
+                                    ? '"${action.title}" রুটিনে যোগ হয়েছে'
+                                    : '"${action.title}" দুর্বল টপিকে যোগ হয়েছে'),
+                        ),
+                        backgroundColor: Colors.green.shade700,
+                      ),
+                    );
                   },
             child: Text(
-              isDone ? 'Saved' : 'Save Topic',
+              isDone
+                  ? (action.type == ChatActionType.fixExam
+                        ? 'সংশোধিত ✓'
+                        : (isRoutinePlan
+                              ? 'সংরক্ষিত'
+                              : (isStudyTask ? 'কুইজ সম্পন্ন' : 'যোগ হয়েছে')))
+                  : (action.type == ChatActionType.fixExam
+                        ? 'সংশোধন প্রয়োগ'
+                        : (isRoutinePlan
+                              ? 'রুটিন প্রিভিউ'
+                              : (action.type == ChatActionType.addExam
+                                    ? 'রুটিনে যোগ'
+                                    : (isStudyTask
+                                          ? 'কুইজ শুরু'
+                                          : 'টপিকে যোগ')))),
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
             ),
           ),
@@ -1427,6 +1547,17 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             ),
           ),
           const SizedBox(width: 6),
+          IconButton(
+            tooltip: 'প্রশ্ন ব্যাংক স্ক্যান করে এক্সাম',
+            onPressed: isSending
+                ? null
+                : () => QuestionBankScannerModal.show(context),
+            icon: Icon(
+              Icons.document_scanner_outlined,
+              size: 22,
+              color: isDark ? Colors.indigo.shade200 : const Color(0xFF4F46E5),
+            ),
+          ),
           IconButton(
             tooltip: _isRecording ? 'থামুন' : 'বলে জিজ্ঞাসা করুন',
             onPressed: isSending ? null : _toggleVoice,

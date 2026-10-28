@@ -533,7 +533,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Inserts a batch of exam schedules while intelligently detecting and skipping duplicates.
-  /// Deduplication is based on: same track + same calendar date (year, month, day) + matching title or subject/topics.
+  /// Deduplication is based on: same track + same calendar date (year, month,
+  /// day) + matching title, or an exact matching subject and topics pair.
   /// If an existing exam is found, it will update any newly found details while strictly preserving completedStatus and score.
   Future<RoutineImportResult> insertExamSchedulesDeduplicated(
     List<ExamSchedulesCompanion> entries,
@@ -557,6 +558,12 @@ class AppDatabase extends _$AppDatabase {
           ? newEntry.trackName.value.trim().toLowerCase()
           : 'general bcs';
       final newTitle = newEntry.title.value.trim().toLowerCase();
+      // An absent time becomes the column default once written, so compare
+      // against that rather than against an empty string -- otherwise a
+      // re-import never matches what it inserted last time.
+      final newTime = newEntry.examTime.present
+          ? newEntry.examTime.value.trim().toLowerCase()
+          : '10:00 pm';
       final newSubject = newEntry.subject.present
           ? newEntry.subject.value.trim().toLowerCase()
           : '';
@@ -575,6 +582,14 @@ class AppDatabase extends _$AppDatabase {
         final isSameTrack = existing.trackName.trim().toLowerCase() == newTrack;
         if (!isSameTrack) continue;
 
+        // Two exams at different hours are two exams, whatever they are
+        // called. Titles are often generated rather than read from the
+        // routine ("Bangla Grammar Daily Exam"), so the same title on one day
+        // is routine, not a duplicate -- and matching on it alone silently
+        // swallowed the second sitting.
+        final isSameTime = existing.examTime.trim().toLowerCase() == newTime;
+        if (!isSameTime) continue;
+
         final isSameTitle = existing.title.trim().toLowerCase() == newTitle;
         final isSameSubject =
             newSubject.isNotEmpty &&
@@ -582,7 +597,10 @@ class AppDatabase extends _$AppDatabase {
         final isSameTopics =
             existing.topicsCovered.trim().toLowerCase() == newTopics;
 
-        if (isSameTitle || isSameTopics || isSameSubject) {
+        // A routine can legitimately have several Bangla/Math tests on the
+        // same date. Matching merely by subject (or merely by a generic
+        // topic) collapsed those separate schedule rows into one.
+        if (isSameTitle || (isSameSubject && isSameTopics)) {
           match = existing;
           break;
         }
@@ -596,8 +614,12 @@ class AppDatabase extends _$AppDatabase {
             (match.resourceSummary == null || match.resourceSummary!.isEmpty) &&
             (newEntry.resourceSummary.present &&
                 newEntry.resourceSummary.value != null);
+        final hasNewRef =
+            (match.rawReference == null || match.rawReference!.isEmpty) &&
+            (newEntry.rawReference.present &&
+                newEntry.rawReference.value != null);
 
-        if (hasMoreTopics || hasNewSummary) {
+        if (hasMoreTopics || hasNewSummary || hasNewRef) {
           await update(examSchedules).replace(
             match.copyWith(
               topicsCovered: hasMoreTopics
@@ -606,6 +628,9 @@ class AppDatabase extends _$AppDatabase {
               resourceSummary: hasNewSummary
                   ? newEntry.resourceSummary
                   : Value(match.resourceSummary),
+              rawReference: hasNewRef
+                  ? newEntry.rawReference
+                  : Value(match.rawReference),
               examTime: newEntry.examTime.present
                   ? newEntry.examTime.value
                   : match.examTime,
@@ -616,7 +641,14 @@ class AppDatabase extends _$AppDatabase {
           skipped++;
         }
       } else {
-        await into(examSchedules).insert(newEntry);
+        final id = await into(examSchedules).insert(newEntry);
+        // Include entries inserted earlier in this batch too; an imported
+        // PDF occasionally repeats a row on a later page.
+        allExisting.add(
+          await (select(
+            examSchedules,
+          )..where((table) => table.id.equals(id))).getSingle(),
+        );
         inserted++;
       }
     }
@@ -1161,6 +1193,10 @@ class AppDatabase extends _$AppDatabase {
       dailyEnergyLogs,
     )..orderBy([(t) => OrderingTerm(expression: t.date)])).get();
 
+    final allMistakes = await (select(
+      drillQuestions,
+    )..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+
     final backupMap = {
       'version': 1,
       'exported_at': DateTime.now().toIso8601String(),
@@ -1203,6 +1239,27 @@ class AppDatabase extends _$AppDatabase {
             },
           )
           .toList(),
+      'drill_questions': allMistakes
+          .map(
+            (q) => {
+              'subject': q.subject,
+              'topic': q.topic,
+              'question_text': q.questionText,
+              'options_json': q.optionsJson,
+              'correct_index': q.correctIndex,
+              'selected_index': q.selectedIndex,
+              'is_correct': q.isCorrect,
+              'explanation': q.explanation,
+              'is_mastered': q.isMastered,
+              'attempted_at': q.attemptedAt.toIso8601String(),
+              'original_correct_index': q.originalCorrectIndex,
+              'original_explanation': q.originalExplanation,
+              'corrected_at': q.correctedAt?.toIso8601String(),
+              'verification_status': q.verificationStatus,
+              'verification_note': q.verificationNote,
+            },
+          )
+          .toList(),
     };
 
     return const JsonEncoder.withIndent('  ').convert(backupMap);
@@ -1210,8 +1267,18 @@ class AppDatabase extends _$AppDatabase {
 
   /// Imports and restores study data from JSON with smart deduplication.
   Future<Map<String, int>> importBackupJson(String jsonString) async {
-    final Map<String, dynamic> data =
-        jsonDecode(jsonString) as Map<String, dynamic>;
+    var cleaned = jsonString.trim().replaceFirst(RegExp(r'^\uFEFF'), '');
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned
+          .replaceFirst(RegExp(r'^```(?:json)?\s*', caseSensitive: false), '')
+          .replaceFirst(RegExp(r'\s*```$'), '')
+          .trim();
+    }
+    final decoded = jsonDecode(cleaned);
+    if (decoded is! Map) {
+      throw const FormatException('Backup JSON must be an object, not a list.');
+    }
+    final data = Map<String, dynamic>.from(decoded);
 
     int importedTopics = 0;
     int importedExams = 0;
@@ -1224,8 +1291,12 @@ class AppDatabase extends _$AppDatabase {
 
       for (final raw in topicList) {
         if (raw is! Map) continue;
-        final subject = (raw['subject'] ?? 'General').toString().trim();
-        final topicName = (raw['topic_name'] ?? '').toString().trim();
+        final subject = (raw['subject'] ?? raw['subjectName'] ?? 'General')
+            .toString()
+            .trim();
+        final topicName = (raw['topic_name'] ?? raw['topicName'] ?? '')
+            .toString()
+            .trim();
         if (topicName.isEmpty) continue;
 
         final levelStr = (raw['proficiency_level'] ?? 'weak')
@@ -1290,23 +1361,36 @@ class AppDatabase extends _$AppDatabase {
 
       for (final raw in examList) {
         if (raw is! Map) continue;
-        final dateStr = raw['exam_date']?.toString();
+        final dateStr = (raw['exam_date'] ?? raw['examDate'] ?? raw['date'])
+            ?.toString();
         if (dateStr == null) continue;
         final parsedDate = DateTime.tryParse(dateStr);
         if (parsedDate == null) continue;
 
-        final title = (raw['title'] ?? 'LiveMCQ Exam').toString();
-        final topics = (raw['topics_covered'] ?? '').toString();
-        final track = (raw['track_name'] ?? 'General BCS').toString();
-        final examTime = (raw['exam_time'] ?? '10:00 PM').toString();
+        final title = (raw['title'] ?? raw['exam_title'] ?? 'LiveMCQ Exam')
+            .toString();
+        // Hand-written and AI-written backups often give topics as an array.
+        // Calling toString() on one stores the brackets as part of the text.
+        final rawTopics = raw['topics_covered'] ?? raw['topics'] ?? '';
+        final topics = rawTopics is List
+            ? rawTopics.map((t) => t.toString().trim()).join(', ')
+            : rawTopics.toString();
+        final track = (raw['track_name'] ?? raw['trackName'] ?? 'General BCS')
+            .toString();
+        final examTime = (raw['exam_time'] ?? raw['examTime'] ?? '10:00 PM')
+            .toString();
         final subject = (raw['subject'] ?? 'General').toString();
-        final examType = (raw['exam_type'] ?? 'Daily').toString();
-        final resourceSummary = raw['resource_summary']?.toString();
-        final rawReference = raw['raw_reference']?.toString();
-        final isCompleted = raw['completed_status'] == true;
+        final examType = (raw['exam_type'] ?? raw['examType'] ?? 'Daily')
+            .toString();
+        final resourceSummary =
+            (raw['resource_summary'] ?? raw['resourceSummary'])?.toString();
+        final rawReference = (raw['raw_reference'] ?? raw['rawReference'])
+            ?.toString();
+        final isCompleted =
+            raw['completed_status'] == true || raw['completedStatus'] == true;
         final score = raw['score'] is num
             ? (raw['score'] as num).toDouble()
-            : null;
+            : double.tryParse(raw['score']?.toString() ?? '');
 
         companions.add(
           ExamSchedulesCompanion.insert(
@@ -1339,7 +1423,8 @@ class AppDatabase extends _$AppDatabase {
       final logList = data['daily_energy_logs'] as List;
       for (final raw in logList) {
         if (raw is! Map) continue;
-        final dateStr = raw['date']?.toString();
+        final dateStr = (raw['date'] ?? raw['logged_at'] ?? raw['loggedAt'])
+            ?.toString();
         if (dateStr == null) continue;
         final parsedDate = DateTime.tryParse(dateStr);
         if (parsedDate == null) continue;
@@ -1351,10 +1436,13 @@ class AppDatabase extends _$AppDatabase {
         if (levelStr == 'low') level = EnergyLevel.low;
         if (levelStr == 'high') level = EnergyLevel.high;
 
-        final fatigue = raw['office_fatigue_score'] is int
-            ? raw['office_fatigue_score'] as int
-            : 5;
-        final tasks = (raw['completed_tasks'] ?? '[]').toString();
+        final fatigue = raw['office_fatigue_score'] is num
+            ? (raw['office_fatigue_score'] as num).round()
+            : int.tryParse(raw['office_fatigue_score']?.toString() ?? '') ?? 5;
+        final completedTasks = raw['completed_tasks'] ?? raw['completedTasks'];
+        final tasks = completedTasks is List
+            ? jsonEncode(completedTasks)
+            : (completedTasks ?? '[]').toString();
         final notes = raw['notes']?.toString();
 
         await insertOrUpdateDailyLog(
@@ -1370,11 +1458,70 @@ class AppDatabase extends _$AppDatabase {
       }
     }
 
-    return {
+    // 4. Drill Questions (Mistake Notebook)
+    int importedMistakes = 0;
+    if (data.containsKey('drill_questions') &&
+        data['drill_questions'] is List) {
+      final qList = data['drill_questions'] as List;
+      final existingDq = await select(drillQuestions).get();
+      final existingTexts = existingDq
+          .map((e) => e.questionText.trim())
+          .toSet();
+
+      for (final raw in qList) {
+        if (raw is! Map) continue;
+        final qText = (raw['question_text'] ?? raw['questionText'])
+            ?.toString()
+            .trim();
+        if (qText == null || qText.isEmpty) continue;
+        if (existingTexts.contains(qText)) continue;
+
+        final subject = (raw['subject'] ?? 'General').toString();
+        final topic = (raw['topic'] ?? '').toString();
+        final optionsJson = (raw['options_json'] ?? raw['optionsJson'] ?? '[]')
+            .toString();
+        final correctIndex =
+            int.tryParse(raw['correct_index']?.toString() ?? '0') ?? 0;
+        final selectedIndex =
+            int.tryParse(raw['selected_index']?.toString() ?? '-1') ?? -1;
+        final isCorrect = raw['is_correct'] == true || raw['isCorrect'] == true;
+        final explanation = raw['explanation']?.toString();
+        final isMastered =
+            raw['is_mastered'] == true || raw['isMastered'] == true;
+        final attemptedAt = DateTime.tryParse(
+          (raw['attempted_at'] ?? raw['attemptedAt'])?.toString() ?? '',
+        );
+
+        await into(drillQuestions).insert(
+          DrillQuestionsCompanion.insert(
+            subject: subject,
+            topic: topic,
+            questionText: qText,
+            optionsJson: optionsJson,
+            correctIndex: correctIndex,
+            selectedIndex: selectedIndex,
+            isCorrect: isCorrect,
+            explanation: Value(explanation ?? ''),
+            isMastered: Value(isMastered),
+            attemptedAt: attemptedAt != null
+                ? Value(attemptedAt)
+                : const Value.absent(),
+          ),
+        );
+        existingTexts.add(qText);
+        importedMistakes++;
+      }
+    }
+
+    final result = <String, int>{
       'weak_topics': importedTopics,
       'exam_schedules': importedExams,
       'daily_energy_logs': importedLogs,
     };
+    if (data.containsKey('drill_questions')) {
+      result['mistakes'] = importedMistakes;
+    }
+    return result;
   }
 
   // --- Drill Records & Question Bank Queries ---

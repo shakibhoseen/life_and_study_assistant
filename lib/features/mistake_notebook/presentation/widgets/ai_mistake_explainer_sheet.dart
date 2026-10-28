@@ -51,15 +51,25 @@ class _AiMistakeExplainerSheetState
   /// re-reading the row.
   bool _correctionAccepted = false;
 
+  /// Set when the user dismisses or rejects a proposal to keep the saved answer.
+  bool _proposalDismissed = false;
+
   /// Set when a correction showed the user had actually answered correctly.
   bool _nowScoredCorrect = false;
+
+  /// Live copy of snapshot fields so corrections and reverts reflect immediately.
+  int? _originalCorrectIndex;
+  String? _originalExplanation;
+  String? _originalQuestionText;
+  List<String>? _originalOptions;
+  DateTime? _correctedAt;
 
   /// Whether this answer is one the user settled themselves, by correcting it
   /// or by vouching for it. Their decision outranks a verifier's recall.
   bool get _userDecided =>
       _correctionAccepted ||
       _questionEdited ||
-      widget.question.correctedAt != null ||
+      _correctedAt != null ||
       _mark == VerificationMark.userVerified;
 
   // A verifier that cannot settle something is not the end of it: the user
@@ -93,6 +103,13 @@ class _AiMistakeExplainerSheetState
     _correctIndex = dq.correctIndex;
     _explanationText = dq.explanation;
     _options = _decodeOptions(dq.optionsJson);
+    _originalCorrectIndex = dq.originalCorrectIndex;
+    _originalExplanation = dq.originalExplanation;
+    _originalQuestionText = dq.originalQuestionText;
+    _originalOptions = dq.originalOptionsJson != null
+        ? _decodeOptions(dq.originalOptionsJson!)
+        : null;
+    _correctedAt = dq.correctedAt;
     _mark = VerificationMark.parse(dq.verificationStatus);
     _markNote = dq.verificationNote;
     _markedAt = dq.verifiedAt;
@@ -124,6 +141,7 @@ class _AiMistakeExplainerSheetState
     setState(() {
       _isVerifying = true;
       _verifyFailed = false;
+      _proposalDismissed = false;
     });
 
     final dq = widget.question;
@@ -228,10 +246,73 @@ class _AiMistakeExplainerSheetState
 
     if (!mounted) return;
     setState(() {
+      _originalCorrectIndex ??= _correctIndex;
+      _originalExplanation ??= _explanationText;
+      _correctedAt = DateTime.now();
       _correctionAccepted = true;
+      _proposalDismissed = false;
       _correctIndex = proposedIndex;
       _nowScoredCorrect = widget.question.selectedIndex == proposedIndex;
     });
+  }
+
+  /// Restores the question to its original pre-correction state.
+  Future<void> _revertCorrection() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'পূর্বের অবস্থায় ফিরবেন?',
+          style: TextStyle(fontSize: 16),
+        ),
+        content: const Text(
+          'সংশোধনটি বাতিল করে প্রশ্ন এবং উত্তরকে এর মূল অবস্থায় ফিরিয়ে আনা হবে। আপনার পূর্বের প্রচেষ্টার ইতিহাস অপরিবর্তিত থাকবে।',
+          style: TextStyle(fontSize: 13.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('থাক'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text('হ্যাঁ, ফিরুন'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final db = ref.read(appDatabaseProvider);
+    await db.revertAnswerCorrection(widget.question.id);
+
+    final updated = await (db.select(
+      db.drillQuestions,
+    )..where((t) => t.id.equals(widget.question.id))).getSingleOrNull();
+
+    if (!mounted) return;
+    if (updated != null) {
+      setState(() {
+        _questionText = updated.questionText;
+        _correctIndex = updated.correctIndex;
+        _explanationText = updated.explanation;
+        _options = _decodeOptions(updated.optionsJson);
+        _originalCorrectIndex = updated.originalCorrectIndex;
+        _originalExplanation = updated.originalExplanation;
+        _originalQuestionText = updated.originalQuestionText;
+        _originalOptions = updated.originalOptionsJson != null
+            ? _decodeOptions(updated.originalOptionsJson!)
+            : null;
+        _correctedAt = updated.correctedAt;
+        _correctionAccepted = false;
+        _questionEdited = false;
+        _nowScoredCorrect = updated.isCorrect;
+        _verification = null;
+        _proposalDismissed = false;
+      });
+    }
   }
 
   /// Removes a question that is broken beyond correcting.
@@ -490,6 +571,11 @@ class _AiMistakeExplainerSheetState
 
     if (!mounted) return;
     setState(() {
+      _originalCorrectIndex ??= _correctIndex;
+      _originalExplanation ??= _explanationText;
+      _originalQuestionText ??= _questionText;
+      _originalOptions ??= _options;
+      _correctedAt = DateTime.now();
       _questionText = newQuestion;
       _options = newOptions;
       _correctIndex = chosen;
@@ -499,6 +585,7 @@ class _AiMistakeExplainerSheetState
       _mark = VerificationMark.none;
       _markNote = null;
       _markedAt = null;
+      _proposalDismissed = false;
       // The old verdict described the old question, so it goes.
       _verification = null;
       _review = null;
@@ -536,6 +623,113 @@ class _AiMistakeExplainerSheetState
     }
   }
 
+  Widget _buildCorrectionStatusBanner(bool isDark) {
+    if (_originalCorrectIndex == null && _correctedAt == null) {
+      return const SizedBox.shrink();
+    }
+
+    String origText = '(অজানা)';
+    if (_originalCorrectIndex != null) {
+      final opts = _originalOptions ?? _options;
+      if (_originalCorrectIndex! >= 0 && _originalCorrectIndex! < opts.length) {
+        origText = opts[_originalCorrectIndex!];
+      }
+    }
+
+    String currentText = '(অজানা)';
+    if (_correctIndex >= 0 && _correctIndex < _options.length) {
+      currentText = _options[_correctIndex];
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark
+              ? Colors.amber.shade700.withValues(alpha: 0.3)
+              : Colors.amber.shade300,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.history,
+                size: 16,
+                color: isDark ? Colors.amber.shade300 : Colors.amber.shade800,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'প্রশ্নটিতে পূর্বে সংশোধন প্রয়োগ করা হয়েছে',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? Colors.amber.shade200
+                        : Colors.amber.shade900,
+                  ),
+                ),
+              ),
+              if (_correctedAt != null)
+                Text(
+                  '${_correctedAt!.day}/${_correctedAt!.month}/${_correctedAt!.year}',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: isDark ? Colors.white38 : Colors.black45,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_originalCorrectIndex != null) ...[
+            _buildAnswerLine('মূল উত্তর ছিল', origText, isDark, false),
+            const SizedBox(height: 4),
+          ],
+          _buildAnswerLine('বর্তমান উত্তর', currentText, isDark, true),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'আপনার পছন্দ ও পরীক্ষার ইতিহাস অপরিবর্তিত আছে',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.white54 : Colors.black54,
+                  ),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: _revertCorrection,
+                icon: const Icon(Icons.undo, size: 13),
+                label: const Text(
+                  'পূর্বের অবস্থায় ফিরুন',
+                  style: TextStyle(fontSize: 11.5),
+                ),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVerificationSection(bool isDark) {
     final result = _verification;
 
@@ -546,6 +740,7 @@ class _AiMistakeExplainerSheetState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildCorrectionStatusBanner(isDark),
             // What an earlier check concluded, so reopening the sheet does not
             // start from nothing -- or cost another call.
             if (hasMark) ...[
@@ -661,153 +856,259 @@ class _AiMistakeExplainerSheetState
     String optionAt(int i) =>
         i >= 0 && i < _options.length ? _options[i] : '(অজানা)';
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: isDark ? 0.12 : 0.07),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accent.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildCorrectionStatusBanner(isDark),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: isDark ? 0.12 : 0.07),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: accent.withValues(alpha: 0.35)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 17, color: accent),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  headline,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.bold,
-                    color: accent,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SelectableText(
-            result.solve.reasoning,
-            style: const TextStyle(fontSize: 13, height: 1.55),
-          ),
-          if (result.explanationCheck.outcome == MathCheckOutcome.fails) ...[
-            const SizedBox(height: 8),
-            Text(
-              '⚠ ব্যাখ্যার হিসাবে গরমিল: ${result.explanationCheck.detail}',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.45,
-                color: Colors.redAccent.shade200,
-              ),
-            ),
-          ],
-          if (result.hasProposal && !_correctionAccepted) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white10 : Colors.white,
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(
-                  color: isDark ? Colors.white24 : Colors.grey.shade300,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Text(
-                    'সংশোধন প্রস্তাব',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.4,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                  Icon(icon, size: 17, color: accent),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      headline,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: accent,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 7),
-                  _buildAnswerLine(
-                    'বর্তমান উত্তর',
-                    optionAt(result.storedIndex),
-                    isDark,
-                    false,
-                  ),
-                  const SizedBox(height: 4),
-                  _buildAnswerLine(
-                    'প্রস্তাবিত উত্তর',
-                    optionAt(result.proposedIndex!),
-                    isDark,
-                    true,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        size: 12,
-                        color: isDark ? Colors.white38 : Colors.black38,
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          'প্রমাণের অবস্থা: ${result.independentlyVerified ? "যাচাই করা" : "উৎস পাওয়া যায়নি"}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? Colors.white38 : Colors.black45,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () =>
-                              setState(() => _correctionAccepted = false),
-                          style: OutlinedButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          child: const Text(
-                            'আগেরটাই রাখুন',
-                            style: TextStyle(fontSize: 12.5),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () =>
-                              _acceptCorrection(result.proposedIndex!),
-                          style: FilledButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          child: const Text(
-                            'সংশোধন গ্রহণ',
-                            style: TextStyle(fontSize: 12.5),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
-            ),
-          ],
-          if (_correctionAccepted) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const Icon(Icons.check_circle, size: 15, color: Colors.green),
-                const SizedBox(width: 6),
-                Expanded(
+              const SizedBox(height: 8),
+              SelectableText(
+                result.solve.reasoning,
+                style: const TextStyle(fontSize: 13, height: 1.55),
+              ),
+              if (result.explanationCheck.outcome ==
+                  MathCheckOutcome.fails) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '⚠ ব্যাখ্যার হিসাবে গরমিল: ${result.explanationCheck.detail}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: Colors.redAccent.shade200,
+                  ),
+                ),
+              ],
+              if (result.agrees && !result.independentlyVerified) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 14,
+                        color: Colors.amber.shade700,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'মডেলের সম্মতি কোনো তথ্যগত প্রমাণ নয় (বহিঃস্থ উৎস যাচাই করা হয়নি)।',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (result.hasProposal &&
+                  !_correctionAccepted &&
+                  !_proposalDismissed) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : Colors.white,
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(
+                      color: isDark ? Colors.white24 : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'সংশোধন প্রস্তাব',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.4,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      _buildAnswerLine(
+                        'বর্তমান উত্তর',
+                        optionAt(result.storedIndex),
+                        isDark,
+                        false,
+                      ),
+                      const SizedBox(height: 4),
+                      _buildAnswerLine(
+                        'প্রস্তাবিত উত্তর',
+                        optionAt(result.proposedIndex!),
+                        isDark,
+                        true,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 12,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              'প্রমাণের অবস্থা: ${result.independentlyVerified ? "যাচাই করা" : "উৎস পাওয়া যায়নি"}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white38 : Colors.black45,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                setState(() => _proposalDismissed = true);
+                              },
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              child: const Text(
+                                'আগেরটাই রাখুন',
+                                style: TextStyle(fontSize: 12.5),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () =>
+                                  _acceptCorrection(result.proposedIndex!),
+                              style: FilledButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              child: const Text(
+                                'সংশোধন গ্রহণ',
+                                style: TextStyle(fontSize: 12.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (_proposalDismissed && !_correctionAccepted) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? Colors.white12 : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'সংশোধন প্রস্তাব বাতিল করা হয়েছে। সংরক্ষিত উত্তরটি অপরিবর্তিত রাখা হয়েছে।',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (_correctionAccepted) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      size: 15,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _nowScoredCorrect
+                            ? 'সংশোধন সংরক্ষিত হয়েছে। আপনি আসলে সঠিক উত্তরই দিয়েছিলেন, তাই এটি আর ভুল হিসেবে গণ্য হবে না।'
+                            : 'সংশোধন সংরক্ষিত হয়েছে। আপনি যা বেছেছিলেন তা অপরিবর্তিত আছে।',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          height: 1.45,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (result.reviewerDissents) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(
+                      alpha: isDark ? 0.12 : 0.07,
+                    ),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(
+                      color: Colors.orange.withValues(alpha: 0.3),
+                    ),
+                  ),
                   child: Text(
-                    _nowScoredCorrect
-                        ? 'সংশোধন সংরক্ষিত হয়েছে। আপনি আসলে সঠিক উত্তরই দিয়েছিলেন, তাই এটি আর ভুল হিসেবে গণ্য হবে না।'
-                        : 'সংশোধন সংরক্ষিত হয়েছে। আপনি যা বেছেছিলেন তা অপরিবর্তিত আছে।',
+                    'যাচাইকারী "${optionAt(result.dissentIndex!)}" বেছেছে, '
+                    'কিন্তু আপনি নিজে "${optionAt(result.storedIndex)}" ঠিক করেছেন। '
+                    'আপনার সিদ্ধান্তই রাখা হয়েছে — বদলাতে চাইলে নিজে সম্পাদনা করুন।',
                     style: TextStyle(
                       fontSize: 11.5,
                       height: 1.45,
@@ -816,76 +1117,55 @@ class _AiMistakeExplainerSheetState
                   ),
                 ),
               ],
-            ),
-          ],
-          if (result.reviewerDissents) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: isDark ? 0.12 : 0.07),
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                'যাচাইকারী "${optionAt(result.dissentIndex!)}" বেছেছে, '
-                'কিন্তু আপনি নিজে "${optionAt(result.storedIndex)}" ঠিক করেছেন। '
-                'আপনার সিদ্ধান্তই রাখা হয়েছে — বদলাতে চাইলে নিজে সম্পাদনা করুন।',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  height: 1.45,
-                  color: isDark ? Colors.white70 : Colors.black87,
-                ),
-              ),
-            ),
-          ],
-          if (_mark == VerificationMark.userVerified) ...[
-            const SizedBox(height: 10),
-            _buildMarkChip(isDark),
-          ] else ...[
-            const SizedBox(height: 6),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _markVerifiedByUser,
-                icon: const Icon(Icons.how_to_reg_outlined, size: 16),
-                label: const Text(
-                  'আমি নিশ্চিত করছি',
-                  style: TextStyle(fontSize: 12.5),
-                ),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 4),
-          _buildEvidenceSection(isDark),
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.info_outline,
-                size: 13,
-                color: isDark ? Colors.white38 : Colors.black38,
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  result.limitations,
-                  style: TextStyle(
-                    fontSize: 11,
-                    height: 1.45,
-                    color: isDark ? Colors.white38 : Colors.black45,
+              if (_mark == VerificationMark.userVerified) ...[
+                const SizedBox(height: 10),
+                _buildMarkChip(isDark),
+              ] else ...[
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _markVerifiedByUser,
+                    icon: const Icon(Icons.how_to_reg_outlined, size: 16),
+                    label: const Text(
+                      'আমি নিশ্চিত করছি',
+                      style: TextStyle(fontSize: 12.5),
+                    ),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                    ),
                   ),
                 ),
+              ],
+              const SizedBox(height: 4),
+              _buildEvidenceSection(isDark),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 13,
+                    color: isDark ? Colors.white38 : Colors.black38,
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      result.limitations,
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.45,
+                        color: isDark ? Colors.white38 : Colors.black45,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1331,6 +1611,22 @@ class _AiMistakeExplainerSheetState
                         ),
                       ],
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_note, size: 20),
+                    tooltip: 'প্রশ্ন বা উত্তর সংশোধন করুন',
+                    onPressed: _openQuestionEditor,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                      color: Colors.redAccent,
+                    ),
+                    tooltip: 'ভুল বা অপ্রয়োজনীয় প্রশ্ন, নোটবুক থেকে মুছুন',
+                    onPressed: _deleteQuestion,
+                    visualDensity: VisualDensity.compact,
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),

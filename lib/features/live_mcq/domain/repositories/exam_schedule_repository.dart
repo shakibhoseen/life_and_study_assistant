@@ -19,8 +19,10 @@ abstract class ExamScheduleRepository {
     required String topicsCovered,
     String? resourceSummary,
     String trackName = 'General BCS',
+    String? rawReference,
   });
   Future<bool> markExamCompleted(int id, {double? score});
   Future<bool> markExamIncomplete(int id);
+  Future<bool> updateExamTrack(int id, String newTrack);
   Future<int> deleteExam(int id);
 }

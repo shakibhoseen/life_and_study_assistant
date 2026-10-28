@@ -35,6 +35,7 @@ Format each item strictly as:
     "date": "YYYY-MM-DD",
     "exam_time": "HH:MM AM/PM",
     "subject": "Name of Subject (e.g., Bangla Grammar, Mathematics, General Science, English)",
+    "title": "Exact exam/test title or serial from the routine (e.g., Model Test 03, Daily Exam 12)",
     "topics": ["Topic 1", "Topic 2"],
     "exam_type": "Daily / Weekly / Model Test / Special",
     "track_name": "Program / Batch name from routine title (e.g., 52nd BCS 135-Day, Vocabulary Booster, Friday Mega Model Test, Primary, or General BCS)"
@@ -43,9 +44,11 @@ Format each item strictly as:
 Rules:
 1. If the year is not mentioned, use the current ongoing year.
 2. If time is not mentioned, default to "10:00 PM".
-3. Extract clean subject and topic names (support both English and Bengali script).
-4. Identify the program/track name accurately so multiple concurrent routines can be organized separately.
-5. Return ONLY the valid JSON array without markdown code blocks or additional text.
+3. Extract EVERY schedule row from EVERY page. One row in the source must become one JSON item; do not combine rows, omit later pages, or return only an example.
+4. Preserve a distinct title/test number for exams that share a date or subject, so they remain separate in the app.
+5. Extract clean subject and topic names (support both English and Bengali script).
+6. Identify the program/track name accurately so multiple concurrent routines can be organized separately.
+7. Return ONLY the valid JSON array without markdown code blocks or additional text.
 ''';
 
   Future<void> init([String? apiKey]) async {
@@ -70,7 +73,10 @@ Rules:
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
           temperature: 0.1,
-          maxOutputTokens: 4096,
+          // Routine PDFs often contain dozens of rows. The old 4096-token
+          // ceiling could cut the JSON array short, which then looked like a
+          // single imported routine.
+          maxOutputTokens: 8192,
         ),
       );
       debugPrint('RoutineParserService initialized with $modelName');
@@ -84,6 +90,17 @@ Rules:
 
   /// Parse exam schedules from a text-based post (Facebook / LiveMCQ notice)
   Future<List<ParsedRoutineItem>> parseRoutineFromText(String text) async {
+    // A routine that is already JSON needs no model: the import prompt asks
+    // for exactly this shape, so a saved or shared reply can be read straight
+    // back in, at no cost.
+    if (_looksLikeRoutineJson(text)) {
+      final direct = _decodeResponse(text, rawRef: 'JSON import');
+      if (direct.isNotEmpty) {
+        debugPrint('Routine JSON read directly: ${direct.length} items');
+        return direct;
+      }
+    }
+
     await init();
 
     final activeModel = _modelName ?? 'gemini-flash-lite-latest';
@@ -244,10 +261,21 @@ Rules:
           response.text,
           rawRef: 'PDF: ${pdfFile.path.split('/').last}',
         );
+        // A routine PDF holds dozens of rows, and whether they all arrived is
+        // the whole question with this feature. Say so rather than leaving it
+        // to be worked out from the database afterwards.
+        final truncated =
+            response.candidates.isNotEmpty &&
+            response.candidates.first.finishReason == FinishReason.maxTokens;
+        debugPrint(
+          'PDF routine parse: ${parsed.length} items'
+          '${truncated ? " (OUTPUT TRUNCATED -- rows are missing)" : ""}',
+        );
         if (parsed.isNotEmpty) return parsed;
+        debugPrint('PDF routine parse: nothing usable in the reply');
       } catch (e) {
         debugPrint(
-          'Gemini PDF Routine parsing failed: $e. Falling back to local placeholder.',
+          'Gemini PDF Routine parsing failed: $e. Nothing will be saved.',
         );
         if (e.toString().contains('429') ||
             e.toString().toLowerCase().contains('quota')) {
@@ -265,23 +293,39 @@ Rules:
       }
     }
 
-    return _fallbackParsePdf(pdfFile);
+    // A PDF cannot be read reliably without the vision model. Do not save a
+    // made-up placeholder: it was indistinguishable from a real routine and
+    // made a multi-row PDF look as if it contained only one exam.
+    return [];
   }
 
-  List<ParsedRoutineItem> _fallbackParsePdf(File pdfFile) {
-    final fileName = pdfFile.path.split('/').last;
-    return [
-      ParsedRoutineItem(
-        date: DateTime.now().add(const Duration(days: 1)),
-        examTime: '10:00 PM',
-        subject: 'LiveMCQ PDF Routine',
-        topics: [
-          'Extracted from PDF: $fileName. Connect Gemini API to parse full table.',
-        ],
-        examType: 'Model Test',
-        rawReference: 'PDF: $fileName',
-      ),
-    ];
+  /// Whether this text is already a routine array rather than something to
+  /// be read by the model.
+  ///
+  /// Checked strictly, because [ParsedRoutineItem.fromJson] fills in whatever
+  /// is missing: handed an unrelated JSON array it would happily produce
+  /// exams dated tomorrow. A real routine row carries a parseable date.
+  bool _looksLikeRoutineJson(String text) {
+    var cleaned = text.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned
+          .replaceFirst(RegExp(r'^```(?:json)?\s*', caseSensitive: false), '')
+          .replaceFirst(RegExp(r'\s*```$'), '')
+          .trim();
+    }
+    if (!cleaned.startsWith('[')) return false;
+
+    try {
+      final decoded = jsonDecode(cleaned);
+      if (decoded is! List || decoded.isEmpty) return false;
+      return decoded.every((e) {
+        if (e is! Map) return false;
+        final date = e['date']?.toString();
+        return date != null && DateTime.tryParse(date) != null;
+      });
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Helper to decode JSON response safely
@@ -373,6 +417,15 @@ Rules:
   /// Local rule-based fallback for text routines
   List<ParsedRoutineItem> _fallbackParseText(String text) {
     final List<ParsedRoutineItem> items = [];
+
+    // JSON that got this far is JSON the strict reader rejected. Scraping it
+    // as prose turns braces and colons into exams, so leave it alone.
+    final head = text.trim();
+    if (head.startsWith('[') || head.startsWith('{')) {
+      debugPrint('Routine text fallback: input is JSON, not prose; skipping');
+      return items;
+    }
+
     final lines = text.split('\n');
 
     String detectedTrack = 'General BCS';
@@ -393,6 +446,9 @@ Rules:
     }
 
     DateTime runningDate = DateTime.now().add(const Duration(days: 1));
+    // Without a date read from the text itself, every row below would be
+    // scheduled on invented consecutive days.
+    var sawDate = false;
 
     for (final line in lines) {
       final trimmed = line.trim();
@@ -406,8 +462,11 @@ Rules:
           final day = int.parse(dateMatch.group(1)!);
           final month = int.parse(dateMatch.group(2)!);
           runningDate = DateTime(DateTime.now().year, month, day);
+          sawDate = true;
         } catch (_) {}
       }
+
+      if (!sawDate) continue;
 
       // Check if line looks like an exam topic
       if (trimmed.contains(':') ||
@@ -429,39 +488,23 @@ Rules:
       }
     }
 
+    // Nothing recognised means nothing recognised. Inventing a row here made
+    // a failed import look like a one-exam routine, which is how a broken
+    // import went unnoticed for so long.
     if (items.isEmpty) {
-      items.add(
-        ParsedRoutineItem(
-          date: DateTime.now().add(const Duration(days: 1)),
-          examTime: '10:00 PM',
-          subject: 'Shared LiveMCQ Routine',
-          topics: [text.length > 80 ? '${text.substring(0, 80)}...' : text],
-          examType: 'Daily',
-          trackName: detectedTrack,
-          rawReference: text,
-        ),
-      );
+      debugPrint('Routine text fallback: no schedule lines recognised');
     }
 
     return items;
   }
 
-  /// Fallback for image when offline / no API key
+  /// An image cannot be read without the vision model.
+  ///
+  /// Returns nothing rather than a placeholder, for the same reason the PDF
+  /// and text paths do: a made-up row is indistinguishable from a real one.
   List<ParsedRoutineItem> _fallbackParseImage(File imageFile) {
-    final fileName = imageFile.path.split('/').last;
-    return [
-      ParsedRoutineItem(
-        date: DateTime.now().add(const Duration(days: 1)),
-        examTime: '10:00 PM',
-        subject: 'LiveMCQ Shared Routine',
-        topics: [
-          'Imported from image: $fileName. Connect Gemini API in Settings for AI OCR parsing.',
-        ],
-        examType: 'Model Test',
-        trackName: 'General BCS',
-        rawReference: 'Image: $fileName',
-      ),
-    ];
+    debugPrint('Routine image parse: no vision model available, nothing saved');
+    return const [];
   }
 
   /// Batch persist parsed items into Drift database with intelligent deduplication
@@ -480,6 +523,12 @@ Rules:
     final companions = items
         .map((item) => item.toCompanion(overrideTrack: overrideTrack))
         .toList();
-    return db.insertExamSchedulesDeduplicated(companions);
+    final result = await db.insertExamSchedulesDeduplicated(companions);
+    debugPrint(
+      'PDF routine saved: ${result.insertedCount} new, '
+      '${result.updatedCount} updated, ${result.skippedCount} duplicate '
+      'of ${items.length} parsed',
+    );
+    return result;
   }
 }

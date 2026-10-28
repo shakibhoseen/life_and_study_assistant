@@ -37,6 +37,7 @@ class ExamScheduleRepositoryImpl implements ExamScheduleRepository {
     required String topicsCovered,
     String? resourceSummary,
     String trackName = 'General BCS',
+    String? rawReference,
   }) {
     return _db.insertExamSchedule(
       ExamSchedulesCompanion.insert(
@@ -45,6 +46,7 @@ class ExamScheduleRepositoryImpl implements ExamScheduleRepository {
         topicsCovered: topicsCovered,
         resourceSummary: Value(resourceSummary),
         trackName: Value(trackName),
+        rawReference: Value(rawReference),
       ),
     );
   }
@@ -69,6 +71,15 @@ class ExamScheduleRepositoryImpl implements ExamScheduleRepository {
     return _db.updateExamSchedule(
       existing.copyWith(completedStatus: false, score: const Value(null)),
     );
+  }
+
+  @override
+  Future<bool> updateExamTrack(int id, String newTrack) async {
+    final existing = await (_db.select(
+      _db.examSchedules,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    if (existing == null) return false;
+    return _db.updateExamSchedule(existing.copyWith(trackName: newTrack));
   }
 
   @override

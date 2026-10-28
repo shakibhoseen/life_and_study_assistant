@@ -10,6 +10,81 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  group('No Invented Routines', () {
+    // Every one of these used to manufacture a single placeholder exam that
+    // was indistinguishable from a real import, which is how a failed import
+    // looked like a one-exam routine.
+    test('unrecognisable text produces nothing', () async {
+      final items = await RoutineParserService.instance.parseRoutineFromText(
+        'হ্যালো, কেমন আছেন? আজ আবহাওয়া ভালো।',
+      );
+
+      expect(items, isEmpty);
+    });
+
+    test('an empty string produces nothing', () async {
+      expect(
+        await RoutineParserService.instance.parseRoutineFromText('   '),
+        isEmpty,
+      );
+    });
+
+    test('routine JSON is read directly, without the model', () async {
+      const json = '''[
+  {"date": "2026-11-02", "exam_time": "10:00 AM", "subject": "বাংলা সাহিত্য",
+   "title": "পরীক্ষা – ০১", "topics": ["প্রাচীন যুগ"], "exam_type": "Daily",
+   "track_name": "১০০ দিনে বিসিএস"},
+  {"date": "2026-11-04", "exam_time": "10:00 PM", "subject": "বাংলা ব্যাকরণ",
+   "title": "পরীক্ষা – ০২", "topics": ["কারক"], "exam_type": "Daily",
+   "track_name": "১০০ দিনে বিসিএস"}
+]''';
+
+      final items = await RoutineParserService.instance.parseRoutineFromText(
+        json,
+      );
+
+      expect(items.length, 2);
+      expect(items.first.title, 'পরীক্ষা – ০১');
+      expect(items.first.date, DateTime(2026, 11, 2));
+      expect(items[1].trackName, '১০০ দিনে বিসিএস');
+    });
+
+    test('code-fenced routine JSON is read too', () async {
+      const json = '''```json
+[{"date": "2026-11-02", "subject": "Math", "title": "Model Test 01",
+  "topics": ["Algebra"], "exam_type": "Model Test"}]
+```''';
+
+      final items = await RoutineParserService.instance.parseRoutineFromText(
+        json,
+      );
+
+      expect(items.length, 1);
+      expect(items.first.subject, 'Math');
+    });
+
+    test('an unrelated JSON array is not treated as a routine', () async {
+      // fromJson fills in every missing field, so without a date check this
+      // would become an exam scheduled for tomorrow.
+      final items = await RoutineParserService.instance.parseRoutineFromText(
+        '[{"foo": "bar"}, {"baz": 2}]',
+      );
+
+      expect(items, isEmpty);
+    });
+
+    test(
+      'a partly dated array is rejected rather than half-imported',
+      () async {
+        final items = await RoutineParserService.instance.parseRoutineFromText(
+          '[{"date": "2026-11-02", "subject": "Math"}, {"subject": "Bangla"}]',
+        );
+
+        expect(items, isEmpty);
+      },
+    );
+  });
+
   group('RoutineParserService & Models Tests', () {
     test(
       'ParsedRoutineItem parses JSON structure accurately with trackName',
@@ -21,6 +96,7 @@ void main() {
           'topics': ['কারক ও বিভক্তি', 'সমাস'],
           'exam_type': 'Daily',
           'track_name': '52nd BCS 135-Day',
+          'title': 'Daily Exam 07',
         };
 
         final item = ParsedRoutineItem.fromJson(json, rawRef: 'Sample Post');
@@ -34,6 +110,7 @@ void main() {
         expect(item.topics.first, equals('কারক ও বিভক্তি'));
         expect(item.examType, equals('Daily'));
         expect(item.trackName, equals('52nd BCS 135-Day'));
+        expect(item.title, equals('Daily Exam 07'));
         expect(item.rawReference, equals('Sample Post'));
       },
     );

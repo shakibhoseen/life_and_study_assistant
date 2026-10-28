@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -11,10 +12,13 @@ import '../../../../core/services/ai/quiz_generator_service.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
 import '../providers/drill_history_provider.dart';
+import 'quiz_batch_correction_sheet.dart';
 
 class QuizDrillModal extends ConsumerStatefulWidget {
   final String topic;
   final String subject;
+  final int? examId;
+  final List<DrillQuestion>? mistakeQuestions;
   final List<QuizQuestion>? customQuestions;
   final VoidCallback? onCompleted;
 
@@ -22,6 +26,8 @@ class QuizDrillModal extends ConsumerStatefulWidget {
     super.key,
     required this.topic,
     required this.subject,
+    this.examId,
+    this.mistakeQuestions,
     this.customQuestions,
     this.onCompleted,
   });
@@ -30,6 +36,8 @@ class QuizDrillModal extends ConsumerStatefulWidget {
     BuildContext context, {
     required String topic,
     required String subject,
+    int? examId,
+    List<DrillQuestion>? mistakeQuestions,
     List<QuizQuestion>? customQuestions,
     VoidCallback? onCompleted,
   }) {
@@ -40,6 +48,8 @@ class QuizDrillModal extends ConsumerStatefulWidget {
       builder: (ctx) => QuizDrillModal(
         topic: topic,
         subject: subject,
+        examId: examId,
+        mistakeQuestions: mistakeQuestions,
         customQuestions: customQuestions,
         onCompleted: onCompleted,
       ),
@@ -162,6 +172,161 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     } catch (e) {
       debugPrint('Error persisting drill session: $e');
     }
+  }
+
+  void _copyFullReviewToClipboard() {
+    final buffer = StringBuffer();
+    buffer.writeln('কুইজ পর্যালোচনা ও উত্তরপত্র (যাচাইয়ের জন্য):');
+    if (widget.examId != null) {
+      buffer.writeln('পরীক্ষা রেফারেন্স: E-${widget.examId}');
+    }
+    if (widget.subject.isNotEmpty) buffer.writeln('বিষয়: ${widget.subject}');
+    if (widget.topic.isNotEmpty) buffer.writeln('টপিক: ${widget.topic}');
+    buffer.writeln(
+      'মোট প্রশ্ন: ${_questions.length}টি | সঠিক: $_correctCountটি | ভুল: ${_questions.length - _correctCount}টি',
+    );
+    buffer.writeln('==============================\n');
+
+    for (int i = 0; i < _questions.length; i++) {
+      final q = _questions[i];
+      final selected = _userAnswers[i] ?? -1;
+      final isCorrect = selected == q.correctIndex;
+      final userAnsText = selected >= 0 && selected < q.options.length
+          ? q.options[selected]
+          : 'উত্তর দেওয়া হয়নি';
+      final correctAnsText =
+          q.correctIndex >= 0 && q.correctIndex < q.options.length
+          ? q.options[q.correctIndex]
+          : 'Unknown';
+
+      final refTag =
+          (widget.mistakeQuestions != null &&
+              i < widget.mistakeQuestions!.length)
+          ? ' [Q-${widget.mistakeQuestions![i].id}]'
+          : '';
+      buffer.writeln('প্রশ্ন ${i + 1}$refTag: ${q.questionText}');
+      buffer.writeln('অপশনসমূহ:');
+      for (int optIdx = 0; optIdx < q.options.length; optIdx++) {
+        final optChar = optIdx == 0
+            ? 'ক'
+            : (optIdx == 1 ? 'খ' : (optIdx == 2 ? 'গ' : 'ঘ'));
+        buffer.writeln('  $optChar. ${q.options[optIdx]}');
+      }
+      buffer.writeln(
+        '• পরীক্ষার্থীর উত্তর: $userAnsText ${isCorrect ? "(সঠিক ✓)" : "(ভুল ❌)"}',
+      );
+      buffer.writeln('• সিস্টেমের সঠিক উত্তর: $correctAnsText');
+      if (q.explanation.isNotEmpty) {
+        buffer.writeln('• প্রদত্ত ব্যাখ্যা: ${q.explanation}');
+      }
+      buffer.writeln('');
+    }
+
+    buffer.writeln('==============================');
+    buffer.writeln(
+      'নির্দেশনা: অনুগ্রহ করে উপরের প্রতিটি প্রশ্ন ও উত্তর নিরপেক্ষভাবে যাচাই করুন। কোনো প্রশ্নে তথ্যের ভুল, ভুল অপশন বা বিকল্প সঠিক উত্তর থাকলে বিস্তারিত বুঝিয়ে দিন।',
+    );
+
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Color(0xFF10B981),
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'সম্পূর্ণ কুইজ ও উত্তরপত্র ক্লিপবোর্ডে কপি হয়েছে! অন্য AI-তে পেস্ট করতে পারেন।',
+                style: TextStyle(fontSize: 12.5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showPasteExternalAiFixSheet() async {
+    final answersByText = <String, int>{};
+    for (int i = 0; i < _questions.length; i++) {
+      final ans = _userAnswers[i];
+      if (ans != null) {
+        answersByText[_questions[i].questionText] = ans;
+      }
+    }
+
+    final updated = await QuizBatchCorrectionSheet.show(
+      context,
+      ref: ref,
+      questions: _questions,
+      examId: widget.examId,
+      mistakeQuestions: widget.mistakeQuestions,
+      topic: widget.topic,
+      subject: widget.subject,
+    );
+
+    if (updated != null && mounted) {
+      setState(() {
+        _questions = updated;
+        _userAnswers.clear();
+        int newCorrect = 0;
+        for (int i = 0; i < _questions.length; i++) {
+          final userAns = answersByText[_questions[i].questionText];
+          if (userAns != null) {
+            _userAnswers[i] = userAns;
+            if (userAns == _questions[i].correctIndex) {
+              newCorrect++;
+            }
+          }
+        }
+        _correctCount = newCorrect;
+      });
+    }
+  }
+
+  void _copySingleQuestionToClipboard(int index) {
+    if (index < 0 || index >= _questions.length) return;
+    final q = _questions[index];
+    final selected = _userAnswers[index] ?? -1;
+    final isCorrect = selected == q.correctIndex;
+    final userAnsText = selected >= 0 && selected < q.options.length
+        ? q.options[selected]
+        : 'উত্তর দেওয়া হয়নি';
+    final correctAnsText =
+        q.correctIndex >= 0 && q.correctIndex < q.options.length
+        ? q.options[q.correctIndex]
+        : 'Unknown';
+
+    final buffer = StringBuffer();
+    if (widget.subject.isNotEmpty) buffer.writeln('বিষয়: ${widget.subject}');
+    if (widget.topic.isNotEmpty) buffer.writeln('টপিক: ${widget.topic}');
+    buffer.writeln('প্রশ্ন: ${q.questionText}');
+    buffer.writeln('অপশনসমূহ:');
+    for (int optIdx = 0; optIdx < q.options.length; optIdx++) {
+      final optChar = optIdx == 0
+          ? 'ক'
+          : (optIdx == 1 ? 'খ' : (optIdx == 2 ? 'গ' : 'ঘ'));
+      buffer.writeln('  $optChar. ${q.options[optIdx]}');
+    }
+    buffer.writeln(
+      '• পরীক্ষার্থীর উত্তর: $userAnsText ${isCorrect ? "(সঠিক ✓)" : "(ভুল ❌)"}',
+    );
+    buffer.writeln('• সিস্টেমের সঠিক উত্তর: $correctAnsText');
+    if (q.explanation.isNotEmpty) {
+      buffer.writeln('• প্রদত্ত ব্যাখ্যা: ${q.explanation}');
+    }
+    buffer.writeln(
+      '\nঅনুগ্রহ করে প্রশ্নটি ফ্যাক্ট-চেক করে সঠিক উত্তর ও ব্যাখ্যা দিন।',
+    );
+
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF10B981),
+        content: Text('প্রশ্ন ${index + 1}-এর বিবরণ কপি হয়েছে!'),
+      ),
+    );
   }
 
   @override
@@ -615,17 +780,70 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             const SizedBox(height: 16),
           ],
 
-          // Detailed Question-by-Question Review
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '📋 প্রশ্নভিত্তিক পর্যালোচনা (Detailed Review)',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.indigo.shade200 : Colors.indigo.shade900,
+          // Detailed Question-by-Question Review with Copy for External AI
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '📋 প্রশ্নভিত্তিক পর্যালোচনা (Detailed Review)',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? Colors.indigo.shade200
+                        : Colors.indigo.shade900,
+                  ),
+                ),
               ),
-            ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  foregroundColor: isDark
+                      ? const Color(0xFFA5B4FC)
+                      : const Color(0xFF4F46E5),
+                  side: BorderSide(
+                    color: isDark
+                        ? const Color(0xFF6366F1)
+                        : const Color(0xFF4F46E5),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                icon: const Icon(Icons.copy_rounded, size: 14),
+                label: const Text(
+                  'কপি করুন',
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                ),
+                onPressed: _copyFullReviewToClipboard,
+              ),
+              const SizedBox(width: 6),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                icon: const Icon(Icons.auto_fix_high_rounded, size: 14),
+                label: const Text(
+                  'AI ফিক্স',
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                ),
+                onPressed: _showPasteExternalAiFixSheet,
+              ),
+            ],
           ),
           const SizedBox(height: 8),
 
@@ -678,6 +896,14 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                               ? const Color(0xFF15803D)
                               : const Color(0xFFC2410C),
                         ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.copy_rounded, size: 15),
+                        tooltip: 'এই প্রশ্ন ও উত্তর কপি করুন',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        onPressed: () => _copySingleQuestionToClipboard(i),
                       ),
                     ],
                   ),

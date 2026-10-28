@@ -8,6 +8,7 @@ import 'package:life_and_study_assistant/features/chat/presentation/screens/ai_c
 import 'package:life_and_study_assistant/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/providers/exam_schedule_provider.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/live_mcq_screen.dart';
+import 'package:life_and_study_assistant/features/live_mcq/presentation/widgets/routine_preview_sheet.dart';
 import 'package:life_and_study_assistant/features/settings/presentation/screens/settings_screen.dart';
 import 'package:life_and_study_assistant/features/topics/presentation/screens/topics_screen.dart';
 
@@ -74,6 +75,20 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
               ),
             ),
           );
+          break;
+
+        case SharingImportStatus.needsConfirmation:
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          // Shared routines go through the same preview as every other
+          // import: nothing is saved before it has been looked at.
+          RoutinePreviewSheet.show(
+            context,
+            state.parsedItems,
+            sourceLabel: state.message ?? 'শেয়ার করা ফাইল',
+          ).then((approved) {
+            if (approved == null || approved.isEmpty) return;
+            SharingIntentService.instance.confirmImport(approved);
+          });
           break;
 
         case SharingImportStatus.success:

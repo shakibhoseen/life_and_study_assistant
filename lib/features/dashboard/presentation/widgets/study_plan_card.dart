@@ -243,171 +243,178 @@ class StudyPlanCard extends ConsumerWidget {
                                   : Colors.indigo.shade100),
                       ),
                     ),
-                    child: CheckboxListTile(
-                      dense: true,
-                      value: task.isCompleted,
-                      activeColor: Colors.teal,
-                      title: Text(
-                        task.title,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          decoration: task.isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: task.isCompleted
-                              ? Colors.grey
-                              : (isDark ? Colors.white : Colors.black87),
-                        ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            task.actionablePrompt,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: task.isCompleted
-                                  ? Colors.grey
-                                  : (isDark ? Colors.white70 : Colors.black54),
-                            ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: CheckboxListTile(
+                        dense: true,
+                        value: task.isCompleted,
+                        activeColor: Colors.teal,
+                        title: Text(
+                          task.title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            decoration: task.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: task.isCompleted
+                                ? Colors.grey
+                                : (isDark ? Colors.white : Colors.black87),
                           ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? Colors.white12
-                                      : Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  task.subject,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: isDark
-                                        ? Colors.white
-                                        : Colors.black87,
-                                  ),
-                                ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              task.actionablePrompt,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: task.isCompleted
+                                    ? Colors.grey
+                                    : (isDark
+                                          ? Colors.white70
+                                          : Colors.black54),
                               ),
-                              Text(
-                                '⏱ ${task.estimatedMinutes}m',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: isDark
-                                      ? Colors.white60
-                                      : Colors.black54,
-                                ),
-                              ),
-                              InkWell(
-                                onTap: () => FocusTimerDialog.show(
-                                  context,
-                                  taskId: task.id,
-                                  taskTitle: task.title,
-                                  subject: task.subject,
-                                  initialMinutes: task.estimatedMinutes,
-                                ),
-                                child: Container(
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 2.5,
+                                    horizontal: 6,
+                                    vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
                                     color: isDark
-                                        ? const Color(0xFF312E81)
-                                        : Colors.indigo.shade50,
+                                        ? Colors.white12
+                                        : Colors.grey.shade200,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.timer,
-                                        size: 12,
-                                        color: isDark
-                                            ? const Color(0xFFA5B4FC)
-                                            : Colors.indigo.shade800,
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        'Focus',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
+                                  child: Text(
+                                    task.subject,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '⏱ ${task.estimatedMinutes}m',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark
+                                        ? Colors.white60
+                                        : Colors.black54,
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () => FocusTimerDialog.show(
+                                    context,
+                                    taskId: task.id,
+                                    taskTitle: task.title,
+                                    subject: task.subject,
+                                    initialMinutes: task.estimatedMinutes,
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 2.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF312E81)
+                                          : Colors.indigo.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.timer,
+                                          size: 12,
                                           color: isDark
                                               ? const Color(0xFFA5B4FC)
                                               : Colors.indigo.shade800,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          'Focus',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark
+                                                ? const Color(0xFFA5B4FC)
+                                                : Colors.indigo.shade800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                              InkWell(
-                                onTap: () => QuizDrillModal.show(
-                                  context,
-                                  topic: task.title,
-                                  subject: task.subject,
-                                  onCompleted: () {
-                                    ref
-                                        .read(adaptivePlannerProvider.notifier)
-                                        .toggleTaskCompletion(task.id);
-                                  },
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 2.5,
+                                InkWell(
+                                  onTap: () => QuizDrillModal.show(
+                                    context,
+                                    topic: task.title,
+                                    subject: task.subject,
+                                    onCompleted: () {
+                                      ref
+                                          .read(
+                                            adaptivePlannerProvider.notifier,
+                                          )
+                                          .toggleTaskCompletion(task.id);
+                                    },
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? const Color(0xFF2E1065)
-                                        : Colors.purple.shade50,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.psychology,
-                                        size: 12,
-                                        color: isDark
-                                            ? const Color(0xFFD8B4FE)
-                                            : Colors.deepPurple.shade800,
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        'Quiz',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 2.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF2E1065)
+                                          : Colors.purple.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.psychology,
+                                          size: 12,
                                           color: isDark
                                               ? const Color(0xFFD8B4FE)
                                               : Colors.deepPurple.shade800,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          'Quiz',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark
+                                                ? const Color(0xFFD8B4FE)
+                                                : Colors.deepPurple.shade800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
+                        onChanged: (val) {
+                          ref
+                              .read(adaptivePlannerProvider.notifier)
+                              .toggleTaskCompletion(task.id);
+                        },
                       ),
-                      onChanged: (val) {
-                        ref
-                            .read(adaptivePlannerProvider.notifier)
-                            .toggleTaskCompletion(task.id);
-                      },
                     ),
                   );
                 }),

@@ -9,7 +9,7 @@ import '../../database/app_database.dart';
 import '../ai/models/parsed_routine_item.dart';
 import '../ai/routine_parser_service.dart';
 
-enum SharingImportStatus { idle, analyzing, success, error }
+enum SharingImportStatus { idle, analyzing, needsConfirmation, success, error }
 
 class SharingImportState {
   final SharingImportStatus status;
@@ -28,6 +28,16 @@ class SharingImportState {
   factory SharingImportState.analyzing(String message) => SharingImportState(
     status: SharingImportStatus.analyzing,
     message: message,
+  );
+
+  /// Parsed, but not saved: the user has to see these rows first.
+  factory SharingImportState.needsConfirmation(
+    List<ParsedRoutineItem> items,
+    String source,
+  ) => SharingImportState(
+    status: SharingImportStatus.needsConfirmation,
+    message: source,
+    parsedItems: items,
   );
 
   factory SharingImportState.success(List<ParsedRoutineItem> items) =>
@@ -82,6 +92,15 @@ class SharingIntentService {
         });
   }
 
+  /// Saves the rows the user approved in the preview.
+  Future<void> confirmImport(List<ParsedRoutineItem> items) async {
+    final db = _db;
+    if (db == null || items.isEmpty) return;
+    await RoutineParserService.instance.saveParsedRoutinesToDatabase(db, items);
+    debugPrint('Shared routine saved after confirmation: ${items.length}');
+    _stateController.add(SharingImportState.success(items));
+  }
+
   Future<void> _processSharedMedia(List<SharedMediaFile> files) async {
     final firstFile = files.first;
     debugPrint(
@@ -132,13 +151,18 @@ class SharingIntentService {
       }
 
       if (parsedItems.isNotEmpty && _db != null) {
-        await RoutineParserService.instance.saveParsedRoutinesToDatabase(
-          _db!,
-          parsedItems,
-        );
-        _stateController.add(SharingImportState.success(parsedItems));
+        // Hand the rows to the UI instead of writing them. A shared file is
+        // the least inspected import of all, so it is the last place that
+        // should save without being looked at.
         debugPrint(
-          'Successfully imported ${parsedItems.length} exam routines into local database',
+          'Shared routine parsed: ${parsedItems.length} items '
+          'awaiting confirmation',
+        );
+        _stateController.add(
+          SharingImportState.needsConfirmation(
+            parsedItems,
+            firstFile.path.split('/').last,
+          ),
         );
       } else {
         _stateController.add(

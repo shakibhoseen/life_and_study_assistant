@@ -192,6 +192,18 @@ Your Personality & Communication Style:
 INTERACTIVE ACTION TAGS — you can trigger app database actions by appending these exact tags at the bottom of a reply:
 [[ACTION:ADD_TOPIC|SubjectName|TopicName|weak]]   e.g. [[ACTION:ADD_TOPIC|বাংলা ব্যাকরণ|সমাস|weak]]
 [[ACTION:STUDY_TASK|Task Title|SubjectName|Minutes]]   e.g. [[ACTION:STUDY_TASK|১০টি সমাস প্র্যাকটিস MCQ|বাংলা ব্যাকরণ|10]]
+[[ACTION:ADD_EXAM|YYYY-MM-DD|Exam Title|SubjectName|Topics|Track|HH:MM AM/PM]]   e.g. [[ACTION:ADD_EXAM|2026-11-12|বাংলা ব্যাকরণ কুইজ|বাংলা ব্যাকরণ|কারক, সমাস|Self Test|10:00 PM]]
+Multi-day routine:
+[[ACTION:ROUTINE_PLAN_BEGIN]]
+{"title":"১০ দিনের প্ল্যান","subject":"Subject","track":"Self Study","items":[{"date":"YYYY-MM-DD","exam_time":"10:00 PM","subject":"Subject","title":"Day 1: Title","topics":["Topic"],"exam_type":"Study Session"}]}
+[[ACTION:ROUTINE_PLAN_END]]
+
+Tag rules:
+- Tags are proposals the user taps to apply; never claim you already saved anything.
+- Priority: When asked to add/schedule an exam, quiz or self-test, emit ADD_EXAM (or ROUTINE_PLAN); do NOT emit ADD_TOPIC. Use ADD_TOPIC only when discussing weak topics.
+- ADD_EXAM: single exam with a real date. Never invent dates.
+- Track selection: Track names create category tabs in LiveMCQ Hub. Use "Self Test" for self-tests, "Self Study" for custom exams/study routines, or user-specified track name. NEVER assign AI items to imported official PDF tracks (e.g. "১০০ দিনে বিসিএস", "১৩৫ দিনে বিসিএস") unless explicitly asked. Default: "Self Study".
+- ROUTINE_PLAN: multi-day study schedule anchored from tomorrow using CURRENT DATE ANCHOR. Default track "Self Study". For E-{id}, use syllabus & date from REFERENCED ITEMS (ask if missing). Use exam_type "Study Session" / "Revision" ("Mock Test" on final day). Do not misrepresent study sessions as real exams. Append block at the bottom.
 
 OUTPUT FORMAT:
 - Write maths and science directly in Unicode (১৮০°, →, ×, ÷, a² + b², √(a²+b²), π, ∠, ½). Never output LaTeX commands or \$...\$ delimiters.
@@ -215,6 +227,7 @@ OUTPUT FORMAT:
     String? sessionSubject,
     String? sessionTopic,
     String? threadSummary,
+    String? referencedItems,
     ChatContextNeeds needs = const ChatContextNeeds(
       energy: true,
       weakTopics: true,
@@ -239,6 +252,17 @@ OUTPUT FORMAT:
         'EARLIER IN THIS THREAD (summary of messages no longer replayed):',
       );
       context.writeln(threadSummary.trim());
+    }
+
+    // Never gated either: the user pasted these tags to be acted on, so the
+    // rows they name are the subject of the message.
+    if (referencedItems != null && referencedItems.trim().isNotEmpty) {
+      context.writeln(referencedItems.trim());
+      context.writeln(
+        'Act on these rows when the user asks you to. To propose a change, '
+        'emit the matching ACTION tag; never claim you have already changed '
+        'anything.',
+      );
     }
 
     if (needs.energy) {
@@ -289,8 +313,10 @@ OUTPUT FORMAT:
 
     if (context.isEmpty) return chatStaticInstruction;
 
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
     return '$chatStaticInstruction'
         '--- CURRENT USER CONTEXT ---\n'
+        'CURRENT DATE ANCHOR: Today is $todayStr.\n'
         '$context'
         '----------------------------\n';
   }

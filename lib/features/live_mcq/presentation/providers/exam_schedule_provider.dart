@@ -98,6 +98,7 @@ class ExamScheduleNotifier extends Notifier<void> {
     required String topicsCovered,
     String? resourceSummary,
     String trackName = 'General BCS',
+    String? rawReference,
   }) async {
     final repo = ref.read(examScheduleRepositoryProvider);
     await repo.addExam(
@@ -106,6 +107,7 @@ class ExamScheduleNotifier extends Notifier<void> {
       topicsCovered: topicsCovered,
       resourceSummary: resourceSummary,
       trackName: trackName,
+      rawReference: rawReference,
     );
   }
 
@@ -117,6 +119,11 @@ class ExamScheduleNotifier extends Notifier<void> {
   Future<void> markIncomplete(int id) async {
     final repo = ref.read(examScheduleRepositoryProvider);
     await repo.markExamIncomplete(id);
+  }
+
+  Future<void> updateExamTrack(int id, String newTrack) async {
+    final repo = ref.read(examScheduleRepositoryProvider);
+    await repo.updateExamTrack(id, newTrack);
   }
 
   Future<void> deleteExam(int id) async {

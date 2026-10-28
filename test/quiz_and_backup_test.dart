@@ -2,13 +2,17 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNotNull;
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_and_study_assistant/core/database/app_database.dart';
+import 'package:life_and_study_assistant/core/database/database_provider.dart';
 import 'package:life_and_study_assistant/core/database/tables/daily_energy_logs_table.dart';
 import 'package:life_and_study_assistant/core/database/tables/weak_topics_table.dart';
 import 'package:life_and_study_assistant/core/services/ai/models/quiz_question.dart';
 import 'package:life_and_study_assistant/core/services/ai/quiz_generator_service.dart';
 import 'package:life_and_study_assistant/core/services/background/wifi_monitor_service.dart';
+import 'package:life_and_study_assistant/features/quiz/presentation/widgets/quiz_drill_modal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -233,6 +237,111 @@ void main() {
         expect(opticsExams.length, equals(1));
       },
     );
+
+    test(
+      'importBackupJson accepts code-fenced and camelCase backup JSON',
+      () async {
+        const backup = '''```json
+{
+  "weak_topics": [{"subjectName": "Math", "topicName": "Algebra"}],
+  "exam_schedules": [{
+    "examDate": "2026-11-12",
+    "examTime": "09:00 PM",
+    "subject": "Math",
+    "title": "Algebra Model Test 02",
+    "topics": ["সূচক", "লগারিদম"],
+    "examType": "Model Test",
+    "trackName": "Weekend Batch",
+    "score": "87.5"
+  }],
+  "daily_energy_logs": [{
+    "loggedAt": "2026-11-11",
+    "energy_level": "high",
+    "office_fatigue_score": "3",
+    "completedTasks": ["Algebra revision"]
+  }]
+}
+```''';
+
+        final result = await db.importBackupJson(backup);
+        expect(result, {
+          'weak_topics': 1,
+          'exam_schedules': 1,
+          'daily_energy_logs': 1,
+        });
+
+        final exams = await db.select(db.examSchedules).get();
+        final algebraExam = exams.singleWhere(
+          (exam) => exam.title == 'Algebra Model Test 02',
+        );
+        // A topics array becomes a readable list, not a stringified Dart
+        // list with its brackets still attached.
+        expect(algebraExam.topicsCovered, 'সূচক, লগারিদম');
+        expect(algebraExam.score, 87.5);
+        final log = await db.getTodayLog(DateTime(2026, 11, 11));
+        expect(log!.completedTasks, '["Algebra revision"]');
+      },
+    );
+    test('a real export restores into an empty database', () async {
+      // What the user actually does: copy the exported text, paste it back.
+      await db.insertWeakTopic(
+        WeakTopicsCompanion.insert(
+          subject: 'Bangla Grammar',
+          topicName: 'কারক ও বিভক্তি',
+          proficiencyLevel: ProficiencyLevel.weak,
+          notes: const Value('প্রায়ই ভুল হয়'),
+        ),
+      );
+      await db.insertExamSchedule(
+        ExamSchedulesCompanion.insert(
+          examDate: DateTime(2026, 12, 1),
+          examTime: const Value('09:00 PM'),
+          subject: const Value('Mathematics'),
+          title: 'Model Test 07',
+          topicsCovered: 'সূচক, লগারিদম',
+          trackName: const Value('Weekend Batch'),
+        ),
+      );
+
+      await db
+          .into(db.drillQuestions)
+          .insert(
+            DrillQuestionsCompanion.insert(
+              subject: 'গণিত',
+              topic: 'সূচক',
+              questionText: '২^৩ এর মান কত?',
+              optionsJson: '["৪", "৬", "৮", "১০"]',
+              correctIndex: 2,
+              selectedIndex: 1,
+              isCorrect: false,
+            ),
+          );
+
+      final exported = await db.exportBackupJson();
+
+      final fresh = AppDatabase(NativeDatabase.memory());
+      addTearDown(fresh.close);
+      await fresh.delete(fresh.weakTopics).go();
+      await fresh.delete(fresh.examSchedules).go();
+      await fresh.delete(fresh.drillQuestions).go();
+
+      final importRes = await fresh.importBackupJson(exported);
+      expect(importRes['mistakes'], 1);
+
+      final exams = await fresh.select(fresh.examSchedules).get();
+      final restored = exams.singleWhere((e) => e.title == 'Model Test 07');
+      expect(restored.topicsCovered, 'সূচক, লগারিদম');
+      expect(restored.examTime, '09:00 PM');
+      expect(restored.trackName, 'Weekend Batch');
+
+      final topics = await fresh.select(fresh.weakTopics).get();
+      expect(topics.any((t) => t.topicName == 'কারক ও বিভক্তি'), isTrue);
+
+      final restoredDq = await fresh.select(fresh.drillQuestions).get();
+      expect(restoredDq.length, 1);
+      expect(restoredDq.first.questionText, '২^৩ এর মান কত?');
+      expect(restoredDq.first.isCorrect, isFalse);
+    });
   });
 
   group('Multi-SSID Office Wi-Fi & Transition Tests', () {
@@ -445,5 +554,74 @@ void main() {
       expect(stats['active_wrong_count'], equals(0));
       expect(stats['total_wrong'], equals(1)); // Historical wrong is kept
     });
+
+    testWidgets(
+      'QuizDrillModal shows Detailed Review and Copy button after completion',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(800, 1600));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        const testQuestions = [
+          QuizQuestion(
+            questionText: '১. বাংলাদেশের জাতীয় ফুল কোনটি?',
+            options: ['ক. গোলাপ', 'খ. শাপলা', 'গ. পদ্ম', 'ঘ. বেলি'],
+            correctIndex: 1,
+            explanation: 'সাদা শাপলা বাংলাদেশের জাতীয় ফুল।',
+            subject: 'বাংলাদেশ বিষয়াবলী',
+          ),
+        ];
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            child: const MaterialApp(
+              home: Scaffold(
+                body: QuizDrillModal(
+                  subject: 'বাংলাদেশ বিষয়াবলী',
+                  topic: 'জাতীয় প্রতীক',
+                  customQuestions: testQuestions,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Check quiz question is displayed
+        expect(find.text('১. বাংলাদেশের জাতীয় ফুল কোনটি?'), findsOneWidget);
+
+        // Select an option ('খ. শাপলা')
+        await tester.tap(find.text('খ. শাপলা'));
+        await tester.pump();
+
+        // Tap 'See Results & Summary'
+        expect(find.text('See Results & Summary'), findsOneWidget);
+        await tester.ensureVisible(find.text('See Results & Summary'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('See Results & Summary'));
+        await tester.pumpAndSettle();
+
+        // In results state:
+        expect(find.text('দারুণ প্রস্তুতি!'), findsOneWidget);
+        expect(
+          find.text('📋 প্রশ্নভিত্তিক পর্যালোচনা (Detailed Review)'),
+          findsOneWidget,
+        );
+        expect(find.text('কপি করুন'), findsOneWidget);
+
+        // Tap 'কপি করুন'
+        await tester.tap(find.text('কপি করুন'));
+        await tester.pump();
+
+        // Verify SnackBar appears
+        expect(
+          find.text(
+            'সম্পূর্ণ কুইজ ও উত্তরপত্র ক্লিপবোর্ডে কপি হয়েছে! অন্য AI-তে পেস্ট করতে পারেন।',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

@@ -1,12 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
+import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/calendar/calendar_sync_service.dart';
 import '../../../live_mcq/presentation/screens/live_mcq_screen.dart';
+import '../../../quiz/presentation/widgets/question_bank_scanner_modal.dart';
+import '../../../quiz/presentation/widgets/quiz_batch_correction_sheet.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
 
 class MultiTrackExamCountdownCard extends ConsumerStatefulWidget {
@@ -313,6 +318,46 @@ class _MultiTrackExamCountdownCardState
                         ],
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () {
+                        Clipboard.setData(
+                          ClipboardData(text: 'E-${heroExam.id}'),
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF4F46E5),
+                            content: Text(
+                              'E-${heroExam.id} কপি হয়েছে! AI Mentor-এ এটি ব্যবহার করতে পারেন।',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'E-${heroExam.id}',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? const Color(0xFFA5B4FC)
+                                : const Color(0xFF4F46E5),
+                          ),
+                        ),
+                      ),
+                    ),
                     const Spacer(),
                     _buildStatusBadge(difference, targetTime),
                   ],
@@ -346,84 +391,206 @@ class _MultiTrackExamCountdownCardState
                 _buildLiveCountdownBoxes(difference, targetTime, isDark),
                 const SizedBox(height: 14),
 
-                // 5. Quick Actions Row (Practice Drill, AI Cheat Sheet, Add to Calendar)
-                Row(
-                  children: [
-                    // A. Practice Drill
-                    Expanded(
-                      flex: 4,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.flash_on, size: 15),
-                        label: const Text(
-                          'Drill Topic',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E3A8A),
-                          foregroundColor: Colors.white,
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: () {
-                          QuizDrillModal.show(
-                            context,
-                            topic: heroExam.topicsCovered,
-                            subject: heroExam.title,
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
+                // 5. Quick Actions Row (Practice Drill, AI Cheat Sheet, Add to Calendar, Test Paper Menu)
+                () {
+                  List<QuizQuestion> customQuestions = [];
+                  if (heroExam.resourceSummary != null &&
+                      heroExam.resourceSummary!.trim().startsWith('[')) {
+                    try {
+                      final decoded = jsonDecode(heroExam.resourceSummary!);
+                      if (decoded is List) {
+                        customQuestions = decoded
+                            .map(
+                              (e) => QuizQuestion.fromJson(
+                                e as Map<String, dynamic>,
+                              ),
+                            )
+                            .toList();
+                      }
+                    } catch (_) {}
+                  }
+                  final isCustomMcq = customQuestions.isNotEmpty;
 
-                    // B. AI Cheat Sheet Modal
-                    Expanded(
-                      flex: 4,
-                      child: OutlinedButton.icon(
-                        icon: const Icon(
-                          Icons.auto_awesome,
-                          size: 15,
-                          color: Color(0xFF10B981),
-                        ),
-                        label: const Text(
-                          'AI Summary',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                  return Row(
+                    children: [
+                      // A. Practice Drill
+                      Expanded(
+                        flex: 4,
+                        child: ElevatedButton.icon(
+                          icon: Icon(
+                            isCustomMcq
+                                ? Icons.play_arrow_rounded
+                                : Icons.flash_on,
+                            size: isCustomMcq ? 17 : 15,
                           ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          side: const BorderSide(color: Color(0xFF10B981)),
-                          foregroundColor: isDark
-                              ? Colors.white
-                              : const Color(0xFF047857),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          label: Text(
+                            isCustomMcq
+                                ? 'MCQ প্র্যাকটিস (${customQuestions.length})'
+                                : 'Drill Topic',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isCustomMcq
+                                ? const Color(0xFF4F46E5)
+                                : const Color(0xFF1E3A8A),
+                            foregroundColor: Colors.white,
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () {
+                            QuizDrillModal.show(
+                              context,
+                              topic: heroExam.topicsCovered,
+                              subject: heroExam.title,
+                              examId: heroExam.id,
+                              customQuestions: isCustomMcq
+                                  ? customQuestions
+                                  : null,
+                            );
+                          },
                         ),
-                        onPressed: () =>
-                            _showAiCheatSheetModal(context, heroExam),
                       ),
-                    ),
-                    const SizedBox(width: 6),
+                      const SizedBox(width: 8),
 
-                    // C. Calendar Sync Button
-                    IconButton(
-                      icon: const Icon(Icons.calendar_month, size: 20),
-                      tooltip: 'Add to Calendar with alert',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => CalendarSyncService.instance
-                          .addToGoogleCalendar(heroExam),
-                    ),
-                  ],
-                ),
+                      // B. AI Cheat Sheet Modal
+                      Expanded(
+                        flex: 4,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(
+                            Icons.auto_awesome,
+                            size: 15,
+                            color: Color(0xFF10B981),
+                          ),
+                          label: const Text(
+                            'AI Summary',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            side: const BorderSide(color: Color(0xFF10B981)),
+                            foregroundColor: isDark
+                                ? Colors.white
+                                : const Color(0xFF047857),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () =>
+                              _showAiCheatSheetModal(context, heroExam),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+
+                      // C. Calendar Sync Button
+                      IconButton(
+                        icon: const Icon(Icons.calendar_month, size: 20),
+                        tooltip: 'Add to Calendar with alert',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => CalendarSyncService.instance
+                            .addToGoogleCalendar(heroExam),
+                      ),
+
+                      // D. Test Paper Options (Batch Fix, Copy, Edit Scanner)
+                      if (isCustomMcq) ...[
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert, size: 20),
+                          tooltip: 'টেস্ট পেপার প্রশ্ন অপশন',
+                          padding: EdgeInsets.zero,
+                          onSelected: (val) {
+                            if (val == 'ai_fix') {
+                              QuizBatchCorrectionSheet.show(
+                                context,
+                                ref: ref,
+                                questions: customQuestions,
+                                examId: heroExam.id,
+                                topic: heroExam.topicsCovered,
+                                subject: heroExam.title,
+                              );
+                            } else if (val == 'copy_questions') {
+                              _copyExamQuestionsToClipboard(
+                                context,
+                                heroExam,
+                                customQuestions,
+                              );
+                            } else if (val == 'edit_scanner') {
+                              QuestionBankScannerModal.show(
+                                context,
+                                initialQuestions: customQuestions,
+                                initialTitle: heroExam.title,
+                                initialSubject: heroExam.subject,
+                                existingExamId: heroExam.id,
+                              );
+                            }
+                          },
+                          itemBuilder: (ctx) => [
+                            const PopupMenuItem(
+                              value: 'ai_fix',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.auto_fix_high_rounded,
+                                    color: Color(0xFF6366F1),
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'AI ফিক্স (ব্যাচ সংশোধন)',
+                                    style: TextStyle(fontSize: 12.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'copy_questions',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.copy_rounded,
+                                    color: Color(0xFF10B981),
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'প্রশ্নসমূহ কপি করুন',
+                                    style: TextStyle(fontSize: 12.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'edit_scanner',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.edit_note_rounded,
+                                    color: Color(0xFFF59E0B),
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'প্রশ্ন সম্পাদনা ও টেস্ট পেপার',
+                                    style: TextStyle(fontSize: 12.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  );
+                }(),
               ],
             ),
           ),
@@ -712,6 +879,53 @@ class _MultiTrackExamCountdownCardState
           color: Color(0xFF6366F1),
           fontWeight: FontWeight.bold,
           fontSize: 10.5,
+        ),
+      ),
+    );
+  }
+
+  void _copyExamQuestionsToClipboard(
+    BuildContext context,
+    ExamSchedule exam,
+    List<QuizQuestion> questions,
+  ) {
+    final buffer = StringBuffer();
+    buffer.writeln('পরীক্ষা: ${exam.title}');
+    buffer.writeln('রেফারেন্স: E-${exam.id}');
+    if (exam.subject.isNotEmpty) buffer.writeln('বিষয়: ${exam.subject}');
+    buffer.writeln('মোট প্রশ্ন: ${questions.length}টি');
+    buffer.writeln('==============================\n');
+
+    for (int i = 0; i < questions.length; i++) {
+      final q = questions[i];
+      buffer.writeln('প্রশ্ন ${i + 1}: ${q.questionText}');
+      for (int optIdx = 0; optIdx < q.options.length; optIdx++) {
+        final optChar = optIdx == 0
+            ? 'ক'
+            : (optIdx == 1 ? 'খ' : (optIdx == 2 ? 'গ' : 'ঘ'));
+        buffer.writeln('  $optChar. ${q.options[optIdx]}');
+      }
+      final correctAns =
+          q.correctIndex >= 0 && q.correctIndex < q.options.length
+          ? q.options[q.correctIndex]
+          : 'অজানা';
+      buffer.writeln('• চিহ্নিত সঠিক উত্তর: $correctAns');
+      if (q.explanation.isNotEmpty) {
+        buffer.writeln('• ব্যাখ্যা: ${q.explanation}');
+      }
+      buffer.writeln('');
+    }
+    buffer.writeln('==============================');
+    buffer.writeln(
+      'নির্দেশনা: অনুগ্রহ করে প্রতিটি প্রশ্ন ও উত্তর নিরপেক্ষভাবে যাচাই করুন। কোনো প্রশ্নে তথ্যের ভুল, ভুল উত্তর বা অস্পষ্টতা থাকলে বিস্তারিত বলুন।',
+    );
+
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF10B981),
+        content: Text(
+          'E-${exam.id} এর ${questions.length}টি প্রশ্ন ক্লিপবোর্ডে কপি হয়েছে!',
         ),
       ),
     );

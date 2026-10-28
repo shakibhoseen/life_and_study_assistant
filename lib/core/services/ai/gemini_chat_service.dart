@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 // drift also generates a ChatSession (the stored thread), so the SDK's
@@ -95,6 +97,9 @@ class GeminiChatService {
     String? sessionSubject,
     String? sessionTopic,
     String? threadSummary,
+
+    /// Rows the user named by tag, spelled out so the reply can act on them.
+    String? referencedItems,
     ChatContextNeeds needs = const ChatContextNeeds(
       energy: true,
       weakTopics: true,
@@ -118,6 +123,7 @@ class GeminiChatService {
         weakTopics: weakTopics,
         upcomingExams: upcomingExams,
         isOffDay: isOffDay,
+        referencedItems: referencedItems,
       );
     }
 
@@ -144,6 +150,7 @@ class GeminiChatService {
       sessionSubject: sessionSubject,
       sessionTopic: sessionTopic,
       threadSummary: threadSummary,
+      referencedItems: referencedItems,
       needs: needs,
     );
 
@@ -159,7 +166,9 @@ class GeminiChatService {
         onPartial: onPartial,
       );
     } catch (e) {
-      debugPrint('Gemini Chat error with $modelName: $e');
+      // Redact sensitive API keys and query parameters before logging or displaying
+      final sanitizedErr = _sanitizeErrorMessage(e.toString());
+      debugPrint('Gemini Chat error with $modelName: $sanitizedErr');
 
       // Auto-fallback from Pro to Flash-Lite if rate limit / quota issue
       if (modelName.contains('pro')) {
@@ -176,7 +185,9 @@ class GeminiChatService {
             onPartial: onPartial,
           );
         } catch (e2) {
-          debugPrint('Flash fallback also failed: $e2');
+          debugPrint(
+            'Flash fallback also failed: ${_sanitizeErrorMessage(e2.toString())}',
+          );
         }
       }
 
@@ -190,7 +201,7 @@ class GeminiChatService {
         );
       } else {
         await GeminiUsageTracker.instance.recordError(
-          e.toString(),
+          sanitizedErr,
           operation: 'chat',
           model: modelName,
         );
@@ -202,7 +213,9 @@ class GeminiChatService {
         fatigueScore: fatigueScore,
         weakTopics: weakTopics,
         upcomingExams: upcomingExams,
-        errorMessage: e.toString(),
+        isOffDay: isOffDay,
+        referencedItems: referencedItems,
+        errorMessage: sanitizedErr,
       );
     }
   }
@@ -316,9 +329,13 @@ class GeminiChatService {
       ];
       pulled.addAll(turn.functionCalls.map((c) => c.name));
 
+      // The SDK's Content.functionResponses incorrectly hardcodes role: 'function'.
+      // The Gemini API rejects that role with:
+      // "Role 'function' is not supported. Please use a valid role: SYSTEM, USER, MODEL...".
+      // In the Gemini REST protocol, client tool responses must use role: 'user'.
       turn = await _runTurn(
         chat,
-        Content.functionResponses(replies),
+        buildFunctionResponseContent(replies),
         onPartial,
         answer,
       );
@@ -370,6 +387,21 @@ class GeminiChatService {
     );
   }
 
+  /// Formats function responses for the Gemini API.
+  ///
+  /// The SDK's [Content.functionResponses] incorrectly hardcodes `role: 'function'`,
+  /// which the Gemini backend rejects with:
+  /// "Role 'function' is not supported. Please use a valid role: SYSTEM, USER, MODEL...".
+  ///
+  /// In the Gemini REST API protocol, tool responses must be returned as a client turn
+  /// with `role: 'user'`.
+  @visibleForTesting
+  static Content buildFunctionResponseContent(
+    Iterable<FunctionResponse> replies,
+  ) {
+    return Content('user', replies.toList());
+  }
+
   /// Converts stored messages into a history Gemini will accept.
   ///
   /// The API requires strictly alternating turns that start with `user` and
@@ -386,17 +418,23 @@ class GeminiChatService {
 
     final turns = <({String role, String text})>[];
     for (final m in recent) {
-      if (m.role != 'user' && m.role != 'model') continue;
+      final role = m.role.trim().toLowerCase();
+      // Ensure only Gemini-compatible roles are passed. Map 'assistant' to 'model'.
+      // Safely drop any invalid or unsupported roles (such as 'function' or 'tool').
+      final normalizedRole = (role == 'model' || role == 'assistant')
+          ? 'model'
+          : (role == 'user' ? 'user' : null);
+      if (normalizedRole == null) continue;
       final text = m.textContent.trim();
       if (text.isEmpty) continue;
 
-      if (turns.isNotEmpty && turns.last.role == m.role) {
+      if (turns.isNotEmpty && turns.last.role == normalizedRole) {
         turns[turns.length - 1] = (
-          role: m.role,
+          role: normalizedRole,
           text: '${turns.last.text}\n\n$text',
         );
       } else {
-        turns.add((role: m.role, text: text));
+        turns.add((role: normalizedRole, text: text));
       }
     }
 
@@ -506,6 +544,18 @@ class GeminiChatService {
     return '$body\n…(সংক্ষেপিত)';
   }
 
+  /// Redacts API keys and sensitive credentials from error messages before
+  /// logging or displaying in user-facing diagnostics.
+  @visibleForTesting
+  static String sanitizeErrorMessage(String message) {
+    return message
+        .replaceAll(RegExp(r'AIza[0-9A-Za-z\-_]{35}'), '[REDACTED_API_KEY]')
+        .replaceAll(RegExp(r'key=[0-9A-Za-z\-_]+'), 'key=[REDACTED]');
+  }
+
+  static String _sanitizeErrorMessage(String message) =>
+      sanitizeErrorMessage(message);
+
   GeminiChatResponse _generateLocalFallbackResponse({
     required String userMessage,
     String? energyLevel,
@@ -513,6 +563,7 @@ class GeminiChatService {
     List<WeakTopic>? weakTopics,
     List<ExamSchedule>? upcomingExams,
     bool isOffDay = false,
+    String? referencedItems,
     String? errorMessage,
   }) {
     final lower = userMessage.toLowerCase();
@@ -520,7 +571,8 @@ class GeminiChatService {
     final actions = <ChatAction>[];
 
     if (errorMessage != null) {
-      final errLower = errorMessage.toLowerCase();
+      final sanitizedErr = _sanitizeErrorMessage(errorMessage);
+      final errLower = sanitizedErr.toLowerCase();
       String diagnosis;
 
       if (errLower.contains('api_key_invalid') ||
@@ -541,7 +593,7 @@ class GeminiChatService {
           errLower.contains('handshake')) {
         diagnosis = '📶 **ইন্টারনেট সংযোগ সমস্যা।**\nফোনের ইন্টারনেট বা Wi-Fi চেক করুন।';
       } else {
-        diagnosis = '🔍 **কারিগরি কারণ:** $errorMessage';
+        diagnosis = '🔍 **কারিগরি কারণ:** $sanitizedErr';
       }
 
       responseText =
@@ -613,6 +665,203 @@ $diagnosis
           subject: 'বাংলা ব্যাকরণ',
           topic: 'সমাস',
           proficiency: 'weak',
+        ),
+      );
+    } else if ((lower.contains('রুটিন') &&
+            (lower.contains('বানাও') ||
+                lower.contains('তৈরি') ||
+                lower.contains('plan') ||
+                lower.contains('make') ||
+                lower.contains('create') ||
+                lower.contains('দাও'))) ||
+        (lower.contains('routine') &&
+            (lower.contains('make') ||
+                lower.contains('create') ||
+                lower.contains('build') ||
+                lower.contains('banao') ||
+                lower.contains('plan')))) {
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+      final startDate = todayStart.add(const Duration(days: 1));
+
+      // 1. Detect requested duration in days (default to 3, or parsed number e.g. "৭ দিন", "7 days")
+      int requestedDays = 3;
+      final dayMatch = RegExp(r'(\d+|[০-৯]+)\s*(?:দিন|day)')
+          .firstMatch(userMessage);
+      if (dayMatch != null) {
+        final parsed = int.tryParse(
+          BengaliMathSanitizer.toEnglishDigits(dayMatch.group(1)!),
+        );
+        if (parsed != null && parsed >= 1 && parsed <= 30) {
+          requestedDays = parsed;
+        }
+      } else if (lower.contains('সপ্তাহ') || lower.contains('week')) {
+        requestedDays = 7;
+      }
+
+      // 2. Detect requested daily study hours (e.g. "৩ ঘণ্টা", "3 hours")
+      int? dailyHours;
+      final hourMatch = RegExp(r'(\d+|[০-৯]+)\s*(?:ঘণ্টা|ঘন্টা|hour)')
+          .firstMatch(userMessage);
+      if (hourMatch != null) {
+        dailyHours = int.tryParse(
+          BengaliMathSanitizer.toEnglishDigits(hourMatch.group(1)!),
+        );
+      }
+
+      // 3. Resolve referenced exam if user mentioned E-{id}
+      ExamSchedule? matchedExam;
+      final examRefMatch = RegExp(
+        r'E-(\d+)',
+        caseSensitive: false,
+      ).firstMatch(userMessage);
+      if (examRefMatch != null) {
+        final examId = int.tryParse(examRefMatch.group(1)!);
+        if (examId != null && upcomingExams != null) {
+          matchedExam = upcomingExams.where((e) => e.id == examId).firstOrNull;
+        }
+      }
+      matchedExam ??= upcomingExams?.firstOrNull;
+
+      String planTitle = 'স্টাডি রুটিন';
+      String track = 'AI Study Sprint';
+      String subject = 'General BCS';
+      List<String> topicPool = [];
+
+      // Extract exam syllabus & metadata from referencedItems if available
+      if (referencedItems != null && examRefMatch != null) {
+        final refTag = 'E-${examRefMatch.group(1)}';
+        if (referencedItems.contains(refTag)) {
+          final syllabusMatch = RegExp(r'সিলেবাস:\s*([^\n]+)')
+              .firstMatch(referencedItems);
+          if (syllabusMatch != null) {
+            final rawSyllabus = syllabusMatch.group(1)!.trim();
+            topicPool = rawSyllabus
+                .split(RegExp(r'[,;\n]'))
+                .map((s) => s.trim())
+                .where((s) => s.isNotEmpty)
+                .toList();
+          }
+          final subjectMatch = RegExp(r'বিষয়:\s*([^·\n]+)')
+              .firstMatch(referencedItems);
+          final titleMatch = RegExp(r'scheduled exam:\s*([^\n]+)')
+              .firstMatch(referencedItems);
+          final trackMatch = RegExp(r'ট্র্যাক:\s*([^\n·]+)')
+              .firstMatch(referencedItems);
+
+          subject =
+              subjectMatch?.group(1)?.trim() ??
+              matchedExam?.subject ??
+              'General BCS';
+          track =
+              trackMatch?.group(1)?.trim() ??
+              matchedExam?.trackName ??
+              'AI Study Sprint';
+          planTitle =
+              titleMatch?.group(1)?.trim() ??
+              matchedExam?.title ??
+              'স্টাডি রুটিন';
+        }
+      }
+
+      if (topicPool.isEmpty && matchedExam != null) {
+        planTitle = matchedExam.title;
+        track = matchedExam.trackName;
+        subject = matchedExam.subject;
+        topicPool = matchedExam.topicsCovered
+            .split(RegExp(r'[,;\n]'))
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+      }
+
+      if (topicPool.isEmpty) {
+        topicPool = [
+          'বাংলা ব্যাকরণ ও সাহিত্য',
+          'English Vocabulary & Grammar',
+          'বাংলাদেশ বিষয়াবলি',
+          'আন্তর্জাতিক বিষয়াবলি',
+          'গাণিতিক যুক্তি ও মানসিক দক্ষতা',
+          'সাধারণ বিজ্ঞান ও প্রযুক্তি',
+        ];
+      }
+
+      final items = <Map<String, dynamic>>[];
+      final previewLines = <String>[];
+
+      for (var i = 0; i < requestedDays; i++) {
+        final dayNum = i + 1;
+        final isLastDay = (dayNum == requestedDays);
+        final isPenultimateDay =
+            (requestedDays >= 5 && dayNum == requestedDays - 1);
+        final date = startDate
+            .add(Duration(days: i))
+            .toIso8601String()
+            .substring(0, 10);
+
+        List<String> dayTopics;
+        String dayTitle;
+        String examType;
+
+        if (isLastDay) {
+          dayTopics = ['সম্পূর্ণ সিলেবাস ফাইনাল রিভিশন ও পূর্ণাঙ্গ মক টেস্ট'];
+          dayTitle = 'Day $dayNum: ফাইনাল রিভিশন ও মক টেস্ট';
+          examType = 'Mock Test';
+        } else if (isPenultimateDay) {
+          dayTopics = ['গুরুত্বপূর্ণ টপিক রিভিশন ও দুর্বল অংশ সমাধান'];
+          dayTitle = 'Day $dayNum: দ্রুত রিভিশন ও প্র্যাকটিস';
+          examType = 'Study Session';
+        } else {
+          final topicIndex = i % topicPool.length;
+          dayTopics = [topicPool[topicIndex]];
+          dayTitle = 'Day $dayNum: ${dayTopics.first} প্রস্তুতি';
+          examType = 'Study Session';
+        }
+
+        items.add({
+          'date': date,
+          'exam_time': '10:00 PM',
+          'subject': subject,
+          'title': dayTitle,
+          'topics': dayTopics,
+          'exam_type': examType,
+          'track_name': track,
+          'resource_summary': 'AI Mentor Plan',
+        });
+
+        previewLines.add(
+          '* **Day $dayNum:** ${dayTopics.join(", ")} (${examType == "Mock Test" ? "মক টেস্ট" : "স্টাডি সেশন"})',
+        );
+      }
+
+      final bnDays = BengaliMathSanitizer.toBengaliDigits('$requestedDays');
+      final formattedPlanTitle = '$planTitle ($bnDays দিন)';
+
+      final routineJson = jsonEncode({
+        'title': formattedPlanTitle,
+        'subject': subject,
+        'track': track,
+        'items': items,
+      });
+
+      final hoursNote = dailyHours != null
+          ? '\n*(প্রতিদিন ${BengaliMathSanitizer.toBengaliDigits('$dailyHours')} ঘণ্টা পড়ার সময় অনুযায়ী বিন্যস্ত)*'
+          : '';
+
+      responseText +=
+          '''
+📋 **আপনার জন্য $bnDays দিনের স্টাডি রুটিন খসড়া তৈরি করা হয়েছে:**$hoursNote
+${previewLines.join('\n')}
+
+নিচের **"রুটিন প্রিভিউ"** বাটনে ট্যাপ করে প্রতিটি দিনের শিডিউল দেখে নিয়ে আপনার মূল রুটিনে যোগ করুন।
+''';
+      actions.add(
+        ChatAction(
+          type: ChatActionType.routinePlan,
+          title: formattedPlanTitle,
+          subject: subject,
+          trackName: track,
+          routineJson: routineJson,
         ),
       );
     } else if (lower.contains('পরীক্ষা') ||

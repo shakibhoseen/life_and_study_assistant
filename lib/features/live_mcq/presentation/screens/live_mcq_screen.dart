@@ -1,17 +1,25 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/services/ai/entity_ref.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
 import '../../../../core/services/ai/models/study_sheet_summary.dart';
 import '../../../../core/services/ai/routine_parser_service.dart';
+import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/calendar/calendar_sync_service.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
+import '../../../quiz/presentation/widgets/quiz_batch_correction_sheet.dart';
+import '../../../quiz/presentation/widgets/question_bank_scanner_modal.dart';
+import '../../domain/models/exam_source_info.dart';
 import '../providers/exam_schedule_provider.dart';
 import '../widgets/voice_mistake_bottom_sheet.dart';
 
@@ -30,6 +38,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
   final TextEditingController _searchController = TextEditingController();
   bool _isSummarizing = false;
   StudySheetSummary? _summaryResult;
+  final Set<int> _expandedTestPaperExams = {};
 
   @override
   void initState() {
@@ -55,6 +64,14 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.document_scanner_outlined,
+              color: Color(0xFF10B981),
+            ),
+            tooltip: 'প্রশ্ন ব্যাংক স্ক্যান করে এক্সাম তৈরি',
+            onPressed: () => QuestionBankScannerModal.show(context),
+          ),
           IconButton(
             icon: const Icon(Icons.mic, color: Color(0xFF6366F1)),
             tooltip: 'Voice Mistake Note & Floating Bubble',
@@ -94,6 +111,15 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 FloatingActionButton.small(
+                  heroTag: 'fab_scan_qb_mcq',
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  tooltip: 'প্রশ্ন ব্যাংক স্ক্যান করে এক্সাম',
+                  onPressed: () => QuestionBankScannerModal.show(context),
+                  child: const Icon(Icons.document_scanner_outlined, size: 20),
+                ),
+                const SizedBox(height: 10),
+                FloatingActionButton.small(
                   heroTag: 'fab_voice_bubble_mcq',
                   backgroundColor: const Color(0xFF6366F1),
                   foregroundColor: Colors.white,
@@ -111,6 +137,16 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               ],
             )
           : null,
+    );
+  }
+
+  void _copyExamRef(int examId) {
+    final tag = EntityRef(EntityKind.exam, examId).tag;
+    Clipboard.setData(ClipboardData(text: tag));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$tag কপি হয়েছে — AI মেন্টরে পেস্ট করে বলুন কী সমস্যা'),
+      ),
     );
   }
 
@@ -1043,7 +1079,9 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.more_vert, size: 18),
                   onSelected: (val) {
-                    if (val == 'calendar') {
+                    if (val == 'copy_ref') {
+                      _copyExamRef(exam.id);
+                    } else if (val == 'calendar') {
                       CalendarSyncService.instance.addToGoogleCalendar(exam);
                     } else if (val == 'done') {
                       ref
@@ -1055,6 +1093,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                           .markIncomplete(exam.id);
                     } else if (val == 'score') {
                       _showScoreDialog(context, exam);
+                    } else if (val == 'change_track') {
+                      _showChangeTrackDialog(context, exam);
                     } else if (val == 'voice_mistake') {
                       VoiceMistakeBottomSheet.show(context);
                     } else if (val == 'delete') {
@@ -1064,6 +1104,24 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     }
                   },
                   itemBuilder: (ctx) => [
+                    PopupMenuItem(
+                      value: 'copy_ref',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.tag,
+                            size: 16,
+                            color: Colors.blueGrey,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'আইডি কপি (${EntityRef(EntityKind.exam, exam.id).tag})',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
                       value: 'calendar',
                       child: Row(
@@ -1074,7 +1132,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                             color: Color(0xFF1E3A8A),
                           ),
                           SizedBox(width: 8),
-                          Text('Add to Calendar'),
+                          Flexible(child: Text('Add to Calendar')),
                         ],
                       ),
                     ),
@@ -1089,7 +1147,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                               color: Colors.green,
                             ),
                             SizedBox(width: 8),
-                            Text('Mark as Completed'),
+                            Flexible(child: Text('Mark as Completed')),
                           ],
                         ),
                       )
@@ -1104,7 +1162,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                               color: Colors.orange,
                             ),
                             SizedBox(width: 8),
-                            Text('Mark as Incomplete'),
+                            Flexible(child: Text('Mark as Incomplete')),
                           ],
                         ),
                       ),
@@ -1118,7 +1176,23 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                             color: Colors.indigo,
                           ),
                           SizedBox(width: 8),
-                          Text('Record Score'),
+                          Flexible(child: Text('Record Score')),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'change_track',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.bookmark_outline,
+                            size: 16,
+                            color: Colors.blueAccent,
+                          ),
+                          SizedBox(width: 8),
+                          Flexible(
+                            child: Text('ট্র্যাক পরিবর্তন (Change Track)'),
+                          ),
                         ],
                       ),
                     ),
@@ -1128,7 +1202,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                         children: [
                           Icon(Icons.mic, size: 16, color: Color(0xFF6366F1)),
                           SizedBox(width: 8),
-                          Text('Record Mistake Voice Note'),
+                          Flexible(child: Text('Record Mistake Voice Note')),
                         ],
                       ),
                     ),
@@ -1142,9 +1216,11 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                             color: Colors.red,
                           ),
                           SizedBox(width: 8),
-                          Text(
-                            'Delete Exam',
-                            style: TextStyle(color: Colors.red),
+                          Flexible(
+                            child: Text(
+                              'Delete Exam',
+                              style: TextStyle(color: Colors.red),
+                            ),
                           ),
                         ],
                       ),
@@ -1153,7 +1229,54 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
+
+            // Exam ID Tag (tappable to copy) & Origin Source Badge
+            Row(
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(5),
+                  onTap: () => _copyExamRef(exam.id),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.copy,
+                          size: 11,
+                          color: isDark ? Colors.white30 : Colors.black26,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          EntityRef(EntityKind.exam, exam.id).tag,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontFamily: 'monospace',
+                            letterSpacing: 0.4,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                () {
+                  final sourceInfo = ExamSourceInfo.resolve(exam);
+                  if (sourceInfo == null) return const SizedBox.shrink();
+                  return Flexible(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: _buildSourceBadge(sourceInfo, isDark),
+                    ),
+                  );
+                }(),
+              ],
+            ),
+            const SizedBox(height: 4),
 
             // Exam Title
             Text(
@@ -1184,28 +1307,59 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               ),
             ),
 
-            if (exam.resourceSummary != null &&
-                exam.resourceSummary!.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF1E293B)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  exam.resourceSummary!,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white70
-                        : Colors.black54,
+            () {
+              final summaryText = exam.resourceSummary?.trim() ?? '';
+              final isRedundantSummary =
+                  summaryText.isEmpty ||
+                  summaryText == 'AI Mentor' ||
+                  summaryText == 'AI Mentor Plan' ||
+                  summaryText == 'AI Study Plan' ||
+                  summaryText == 'নিজে যোগ করেছেন' ||
+                  summaryText.startsWith('Imported routine');
+
+              if (isRedundantSummary) return const SizedBox.shrink();
+
+              // Cleanly format test paper MCQs instead of dumping raw JSON
+              if (summaryText.startsWith('[')) {
+                try {
+                  final decoded = jsonDecode(summaryText);
+                  if (decoded is List && decoded.isNotEmpty) {
+                    final questions = decoded
+                        .map(
+                          (e) =>
+                              QuizQuestion.fromJson(e as Map<String, dynamic>),
+                        )
+                        .toList();
+                    return _buildTestPaperCardSummary(
+                      context,
+                      exam,
+                      questions,
+                      isDark,
+                    );
+                  }
+                } catch (_) {}
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    summaryText,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              );
+            }(),
 
             const SizedBox(height: 10),
 
@@ -1241,10 +1395,28 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     ),
                   ),
                   onPressed: () {
+                    List<QuizQuestion>? customQuestions;
+                    if (exam.resourceSummary != null &&
+                        exam.resourceSummary!.trim().startsWith('[')) {
+                      try {
+                        final decoded = jsonDecode(exam.resourceSummary!);
+                        if (decoded is List) {
+                          customQuestions = decoded
+                              .map(
+                                (e) => QuizQuestion.fromJson(
+                                  e as Map<String, dynamic>,
+                                ),
+                              )
+                              .toList();
+                        }
+                      } catch (_) {}
+                    }
                     QuizDrillModal.show(
                       context,
                       topic: exam.topicsCovered,
                       subject: exam.title,
+                      examId: exam.id,
+                      customQuestions: customQuestions,
                     );
                   },
                 ),
@@ -1342,6 +1514,350 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
     );
   }
 
+  Widget _buildTestPaperCardSummary(
+    BuildContext context,
+    ExamSchedule exam,
+    List<QuizQuestion> questions,
+    bool isDark,
+  ) {
+    final isExpanded = _expandedTestPaperExams.contains(exam.id);
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF1E293B).withValues(alpha: 0.6)
+            : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4F46E5)
+                      .withValues(alpha: isDark ? 0.2 : 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.menu_book_rounded,
+                  size: 16,
+                  color: Color(0xFF4F46E5),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'টেস্ট পেপার প্রশ্নমালা (${BengaliMathSanitizer.toBengaliDigits('${questions.length}')}টি MCQ)',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    if (isExpanded) {
+                      _expandedTestPaperExams.remove(exam.id);
+                    } else {
+                      _expandedTestPaperExams.add(exam.id);
+                    }
+                  });
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        isExpanded ? 'সংক্ষেপ' : 'প্রশ্ন দেখুন',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? const Color(0xFFA5B4FC)
+                              : const Color(0xFF4F46E5),
+                        ),
+                      ),
+                      Icon(
+                        isExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: isDark
+                            ? const Color(0xFFA5B4FC)
+                            : const Color(0xFF4F46E5),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // If Expanded: Show the list of questions cleanly formatted
+          if (isExpanded) ...[
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            ...List.generate(questions.length, (idx) {
+              final q = questions[idx];
+              final hasLeadingNumber = RegExp(r'^(\d+|[০-৯]+)\.')
+                  .hasMatch(q.questionText.trim());
+              final displayText = hasLeadingNumber
+                  ? q.questionText
+                  : '${idx + 1}. ${q.questionText}';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: q.options.asMap().entries.map((optEntry) {
+                        final isCorrect = optEntry.key == q.correctIndex;
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isCorrect
+                                ? (isDark
+                                      ? Colors.green.shade900.withValues(
+                                          alpha: 0.3,
+                                        )
+                                      : Colors.green.shade50)
+                                : (isDark
+                                      ? const Color(0xFF0F172A)
+                                      : Colors.white),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: isCorrect
+                                  ? Colors.green
+                                  : (isDark
+                                        ? Colors.white12
+                                        : Colors.grey.shade300),
+                              width: isCorrect ? 1.2 : 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            optEntry.value,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: isCorrect
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isCorrect
+                                  ? (isDark
+                                        ? Colors.green.shade300
+                                        : Colors.green.shade800)
+                                  : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    if (q.explanation.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '💡 ব্যাখ্যা: ${q.explanation}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontStyle: FontStyle.italic,
+                          color: isDark
+                              ? Colors.amber.shade200
+                              : Colors.amber.shade900,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+          ] else ...[
+            const SizedBox(height: 6),
+            Text(
+              '১ম প্রশ্ন: ${questions.first.questionText}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.white60 : Colors.black54,
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 8),
+
+          // Bottom Action Row
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  foregroundColor: isDark
+                      ? const Color(0xFFA5B4FC)
+                      : const Color(0xFF4F46E5),
+                  side: BorderSide(
+                    color: isDark
+                        ? const Color(0xFF6366F1)
+                        : const Color(0xFF4F46E5),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                icon: const Icon(Icons.edit_note, size: 14),
+                label: const Text(
+                  'সম্পাদনা',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () => QuestionBankScannerModal.show(
+                  context,
+                  initialQuestions: questions,
+                  initialTitle: exam.title,
+                  initialSubject: exam.subject,
+                  existingExamId: exam.id,
+                ),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  foregroundColor: isDark
+                      ? const Color(0xFFA5B4FC)
+                      : const Color(0xFF4F46E5),
+                  side: BorderSide(
+                    color: isDark
+                        ? const Color(0xFF6366F1)
+                        : const Color(0xFF4F46E5),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                icon: const Icon(Icons.copy_rounded, size: 13),
+                label: const Text(
+                  'কপি',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () => _copyExamQuestionsToClipboard(exam, questions),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                icon: const Icon(Icons.auto_fix_high_rounded, size: 13),
+                label: const Text(
+                  'AI ফিক্স',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () => QuizBatchCorrectionSheet.show(
+                  context,
+                  ref: ref,
+                  questions: questions,
+                  examId: exam.id,
+                  topic: exam.topicsCovered,
+                  subject: exam.title,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _copyExamQuestionsToClipboard(
+    ExamSchedule exam,
+    List<QuizQuestion> questions,
+  ) {
+    final buffer = StringBuffer();
+    buffer.writeln('পরীক্ষা: ${exam.title}');
+    buffer.writeln('রেফারেন্স: E-${exam.id}');
+    if (exam.subject.isNotEmpty) buffer.writeln('বিষয়: ${exam.subject}');
+    buffer.writeln('মোট প্রশ্ন: ${questions.length}টি');
+    buffer.writeln('==============================\n');
+
+    for (int i = 0; i < questions.length; i++) {
+      final q = questions[i];
+      buffer.writeln('প্রশ্ন ${i + 1}: ${q.questionText}');
+      for (int optIdx = 0; optIdx < q.options.length; optIdx++) {
+        final optChar = optIdx == 0
+            ? 'ক'
+            : (optIdx == 1 ? 'খ' : (optIdx == 2 ? 'গ' : 'ঘ'));
+        buffer.writeln('  $optChar. ${q.options[optIdx]}');
+      }
+      final correctAns =
+          q.correctIndex >= 0 && q.correctIndex < q.options.length
+          ? q.options[q.correctIndex]
+          : 'Unknown';
+      buffer.writeln('• সঠিক উত্তর: $correctAns');
+      if (q.explanation.isNotEmpty) {
+        buffer.writeln('• ব্যাখ্যা: ${q.explanation}');
+      }
+      buffer.writeln('');
+    }
+    buffer.writeln('==============================');
+    buffer.writeln(
+      'নির্দেশনা: উপরের প্রশ্ন ও উত্তরগুলো যাচাই করে কোনো ভুল বা অসঙ্গতি থাকলে চিহ্নিত করুন।',
+    );
+
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Color(0xFF10B981),
+        content: Text(
+          'পরীক্ষার সকল প্রশ্ন ক্লিপবোর্ডে কপি হয়েছে! অন্য AI-তে পেস্ট করতে পারেন।',
+        ),
+      ),
+    );
+  }
+
   void _showScoreDialog(BuildContext context, ExamSchedule exam) {
     final scoreController = TextEditingController(
       text: exam.score?.toStringAsFixed(1) ?? '',
@@ -1389,6 +1905,224 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
             child: const Text('Save Score'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSourceBadge(ExamSourceInfo source, bool isDark) {
+    Color bg;
+    Color border;
+    Color text;
+
+    switch (source.kind) {
+      case ExamSourceKind.aiMentor:
+        bg = isDark ? const Color(0xFF2E1065) : const Color(0xFFF3E8FF);
+        border = isDark ? const Color(0xFF7E22CE) : const Color(0xFFD8B4FE);
+        text = isDark ? const Color(0xFFD8B4FE) : const Color(0xFF6B21A8);
+        break;
+      case ExamSourceKind.aiStudyPlan:
+        bg = isDark ? const Color(0xFF042F2E) : const Color(0xFFCCFBF1);
+        border = isDark ? const Color(0xFF0F766E) : const Color(0xFF5EEAD4);
+        text = isDark ? const Color(0xFF5EEAD4) : const Color(0xFF0F766E);
+        break;
+      case ExamSourceKind.manual:
+        bg = isDark ? const Color(0xFF451A03) : const Color(0xFFFEF3C7);
+        border = isDark ? const Color(0xFFB45309) : const Color(0xFFFDE68A);
+        text = isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E);
+        break;
+      case ExamSourceKind.pdfImport:
+        bg = isDark ? const Color(0xFF172554) : const Color(0xFFEFF6FF);
+        border = isDark ? const Color(0xFF1D4ED8) : const Color(0xFFBFDBFE);
+        text = isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF);
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: border, width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(source.icon, size: 10.5, color: text),
+          const SizedBox(width: 3.5),
+          Flexible(
+            child: Text(
+              source.label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: text,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangeTrackDialog(BuildContext context, ExamSchedule exam) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final distinctTracks = ref.read(distinctTracksStreamProvider).value ?? [];
+    final suggestions = <String>{
+      ...distinctTracks,
+      'Self Test',
+      'Self Study',
+      'General BCS',
+    }.toList();
+
+    String selected = exam.trackName;
+    bool isCustom = !suggestions.contains(selected);
+    final customController = TextEditingController(
+      text: isCustom ? selected : '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.bookmark_outline, color: Color(0xFF2563EB)),
+                SizedBox(width: 8),
+                Text(
+                  'ট্র্যাক পরিবর্তন করুন',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'পরীক্ষা: ${exam.title}',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'ট্র্যাক নির্বাচন করুন:',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isDark ? Colors.white24 : Colors.grey.shade300,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: isCustom ? 'custom' : selected,
+                        dropdownColor: isDark
+                            ? const Color(0xFF1E293B)
+                            : Colors.white,
+                        items: [
+                          ...suggestions.map(
+                            (t) => DropdownMenuItem(
+                              value: t,
+                              child: Text(
+                                t,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ),
+                          const DropdownMenuItem(
+                            value: 'custom',
+                            child: Text(
+                              '+ নতুন ট্র্যাক লিখুন (Custom)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.blueAccent,
+                              ),
+                            ),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          if (val == null) return;
+                          setDialogState(() {
+                            if (val == 'custom') {
+                              isCustom = true;
+                            } else {
+                              isCustom = false;
+                              selected = val;
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  if (isCustom) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: customController,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: 'নতুন ট্র্যাকের নাম (যেমন: Self Test)',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final finalTrack = isCustom
+                      ? customController.text.trim()
+                      : selected;
+                  if (finalTrack.isNotEmpty && finalTrack != exam.trackName) {
+                    await ref
+                        .read(examScheduleNotifierProvider.notifier)
+                        .updateExamTrack(exam.id, finalTrack);
+                    ref.invalidate(distinctTracksStreamProvider);
+                    ref.invalidate(filteredExamsStreamProvider);
+                    ref.invalidate(upcomingExamsStreamProvider);
+                    ref.invalidate(allExamsStreamProvider);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: Colors.teal.shade800,
+                          content: Text(
+                            'ট্র্যাক পরিবর্তন করে "$finalTrack" করা হয়েছে',
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1956,14 +2690,18 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                         ? customTrackController.text.trim()
                         : (isCustom ? 'General BCS' : selectedTrack);
 
+                    final summary = summaryController.text.trim();
                     ref
                         .read(examScheduleNotifierProvider.notifier)
                         .addExam(
                           examDate: selectedDate,
                           title: title,
                           topicsCovered: topics,
-                          resourceSummary: summaryController.text.trim(),
+                          resourceSummary: summary.isNotEmpty
+                              ? summary
+                              : 'নিজে যোগ করেছেন',
                           trackName: finalTrack,
+                          rawReference: 'manual',
                         );
                     ref.invalidate(distinctTracksStreamProvider);
                     ref.invalidate(filteredExamsStreamProvider);
@@ -2294,20 +3032,51 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
         trackName: selectedTrack,
       );
 
+      String displayLoc = file.path;
+      if (displayLoc.contains('/Download/')) {
+        displayLoc =
+            'Download${displayLoc.substring(displayLoc.indexOf('/Download/') + 9)}';
+      } else if (displayLoc.contains('/Downloads/')) {
+        displayLoc =
+            'Downloads${displayLoc.substring(displayLoc.indexOf('/Downloads/') + 10)}';
+      }
+
       messenger.showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFF1E3A8A),
-          content: Row(
+          duration: const Duration(seconds: 6),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.calendar_month, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Exported ${exams.length} exams to ${file.path.split("/").last} with 30m alerts!',
-                  style: const TextStyle(color: Colors.white),
+              Text(
+                '${exams.length}টি পরীক্ষার রুটিন ক্যালেন্ডার ফাইলে এক্সপোর্ট হয়েছে!',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(height: 3),
+              Text(
+                '📁 $displayLoc',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                '💡 ফোনের Download ফোল্ডারে ফাইলটি পাবেন।',
+                style: TextStyle(color: Colors.tealAccent, fontSize: 11),
+              ),
             ],
+          ),
+          action: SnackBarAction(
+            textColor: Colors.tealAccent,
+            label: 'Open',
+            onPressed: () async {
+              final uri = Uri.file(file.path);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              }
+            },
           ),
         ),
       );

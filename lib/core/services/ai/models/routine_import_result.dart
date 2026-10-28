@@ -26,6 +26,9 @@ class RoutineImportResult {
     if (isAllNew) {
       return '🎉 সফলভাবে $insertedCountটি নতুন পরীক্ষা রুটিনে যুক্ত হয়েছে!';
     }
-    return '✅ $insertedCountটি নতুন পরীক্ষা যুক্ত হয়েছে ($skippedCountটি পূর্বে থাকায় ডুপ্লিকেট স্কিপ করা হয়েছে)।';
+    final updatedText = updatedCount > 0
+        ? ', $updatedCountটি আগের তথ্য আপডেট হয়েছে'
+        : '';
+    return '✅ $insertedCountটি নতুন পরীক্ষা যুক্ত হয়েছে$updatedText ($skippedCountটি ডুপ্লিকেট স্কিপ করা হয়েছে)।';
   }
 }

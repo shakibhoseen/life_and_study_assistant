@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../../../core/services/ai/entity_ref.dart';
 import '../../../../core/services/ai/models/verification_mark.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../quiz/presentation/providers/drill_history_provider.dart';
+import '../../../quiz/presentation/widgets/quiz_batch_correction_sheet.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
 import '../../domain/models/mistake_folder.dart';
 import '../widgets/ai_mistake_explainer_sheet.dart';
@@ -46,18 +49,21 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
     super.dispose();
   }
 
+  List<String> _decodeOptions(String optionsJson) {
+    try {
+      final decoded = jsonDecode(optionsJson);
+      if (decoded is List) {
+        return decoded.map((e) => e.toString()).toList();
+      }
+    } catch (_) {}
+    return const [];
+  }
+
   void _startQuizDrill(List<DrillQuestion> questions) {
     if (questions.isEmpty) return;
 
     final quizQuestions = questions.map((dq) {
-      List<String> options = [];
-      try {
-        final decoded = jsonDecode(dq.optionsJson);
-        if (decoded is List) {
-          options = decoded.map((e) => e.toString()).toList();
-        }
-      } catch (_) {}
-
+      final options = _decodeOptions(dq.optionsJson);
       return QuizQuestion(
         questionText: dq.questionText,
         options: options,
@@ -70,7 +76,98 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
       context,
       topic: 'Mistake Notebook Practice',
       subject: _selectedFolderId == 'all' ? 'All Mistakes' : _selectedFolderId,
+      mistakeQuestions: questions,
       customQuestions: quizQuestions,
+    );
+  }
+
+  String _optChar(int index) {
+    switch (index) {
+      case 0:
+        return 'ক';
+      case 1:
+        return 'খ';
+      case 2:
+        return 'গ';
+      case 3:
+        return 'ঘ';
+      default:
+        return '${index + 1}';
+    }
+  }
+
+  void _copyFilteredMistakesToClipboard(List<DrillQuestion> questions) {
+    if (questions.isEmpty) return;
+
+    final buffer = StringBuffer();
+    final folderLabel = _selectedFolderId == 'all'
+        ? 'সব বিষয়'
+        : _selectedFolderId;
+    buffer.writeln(
+      '[স্মার্ট মিস্টেক নোটবুক: $folderLabel (${questions.length}টি প্রশ্ন)]\n',
+    );
+
+    for (int i = 0; i < questions.length; i++) {
+      final dq = questions[i];
+      final options = _decodeOptions(dq.optionsJson);
+      buffer.writeln('প্রশ্ন ${i + 1}: ${dq.questionText} [Q-${dq.id}]');
+      for (int j = 0; j < options.length; j++) {
+        final optChar = _optChar(j);
+        buffer.writeln('  $optChar) ${options[j]}');
+      }
+      final correctOpt =
+          (dq.correctIndex >= 0 && dq.correctIndex < options.length)
+          ? '${_optChar(dq.correctIndex)}) ${options[dq.correctIndex]}'
+          : '(অজানা)';
+      final userOpt =
+          (dq.selectedIndex >= 0 && dq.selectedIndex < options.length)
+          ? '${_optChar(dq.selectedIndex)}) ${options[dq.selectedIndex]}'
+          : '(দাগানো হয়নি)';
+      buffer.writeln('  চিহ্নিত সঠিক উত্তর: $correctOpt');
+      buffer.writeln('  ব্যবহারকারীর ভুল উত্তর: $userOpt');
+      if (dq.explanation.isNotEmpty) {
+        buffer.writeln('  ব্যাখ্যা: ${dq.explanation}');
+      }
+      buffer.writeln();
+    }
+    buffer.writeln('==============================');
+    buffer.writeln(
+      'নির্দেশনা: অনুগ্রহ করে উপরের প্রতিটি ভুল প্রশ্নের উত্তর ও ব্যাখ্যা নিরপেক্ষভাবে যাচাই করুন। কোনো প্রশ্নে অসঙ্গতি থাকলে সঠিক উত্তরটি জানিয়ে দিন।',
+    );
+
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF4F46E5),
+        content: Text(
+          '${questions.length}টি ভুল প্রশ্ন কপি হয়েছে — ChatGPT বা Claude-এ পেস্ট করতে পারেন!',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _batchFixFilteredMistakes(List<DrillQuestion> questions) async {
+    if (questions.isEmpty) return;
+
+    final quizQuestions = questions.map((dq) {
+      final options = _decodeOptions(dq.optionsJson);
+      return QuizQuestion(
+        questionText: dq.questionText,
+        options: options,
+        correctIndex: dq.correctIndex,
+        explanation: dq.explanation,
+      );
+    }).toList();
+
+    await QuizBatchCorrectionSheet.show(
+      context,
+      ref: ref,
+      questions: quizQuestions,
+      mistakeQuestions: questions,
+      topic: _selectedFolderId == 'all'
+          ? 'স্মার্ট মিস্টেক নোটবুক'
+          : _selectedFolderId,
+      subject: 'Mistake Notebook',
     );
   }
 
@@ -218,17 +315,76 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                 ),
               ),
               if (filtered.isNotEmpty)
-                TextButton.icon(
-                  onPressed: () => _startQuizDrill(filtered),
-                  icon: const Icon(
-                    Icons.flash_on,
-                    size: 15,
-                    color: Colors.amber,
-                  ),
-                  label: const Text(
-                    'এই তালিকা ড্রিল করুন',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        foregroundColor: isDark
+                            ? const Color(0xFFA5B4FC)
+                            : const Color(0xFF4F46E5),
+                        side: BorderSide(
+                          color: isDark
+                              ? const Color(0xFF6366F1)
+                              : const Color(0xFF4F46E5),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () =>
+                          _copyFilteredMistakesToClipboard(filtered),
+                      icon: const Icon(Icons.copy_rounded, size: 13),
+                      label: const Text(
+                        'কপি',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        backgroundColor: const Color(0xFF6366F1),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () => _batchFixFilteredMistakes(filtered),
+                      icon: const Icon(Icons.auto_fix_high_rounded, size: 13),
+                      label: const Text(
+                        'AI ফিক্স',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      tooltip: 'এই তালিকা ড্রিল করুন',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _startQuizDrill(filtered),
+                      icon: const Icon(
+                        Icons.flash_on,
+                        size: 19,
+                        color: Colors.amber,
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -734,6 +890,16 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
     );
   }
 
+  String _getOptionText(String optionsJson, int index) {
+    try {
+      final decoded = jsonDecode(optionsJson);
+      if (decoded is List && index >= 0 && index < decoded.length) {
+        return decoded[index].toString();
+      }
+    } catch (_) {}
+    return '(অজানা)';
+  }
+
   Widget _buildMistakeCard(DrillQuestion dq, bool isDark) {
     final source = detectMistakeSource(dq);
 
@@ -861,6 +1027,18 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                           .markQuestionMastered(dq.id, !dq.isMastered);
                     } else if (val == 'ai_explain') {
                       AiMistakeExplainerSheet.show(context, dq);
+                    } else if (val == 'copy_ref') {
+                      // Paste this into the mentor to talk about this exact
+                      // question instead of describing it again.
+                      final tag = EntityRef(EntityKind.question, dq.id).tag;
+                      Clipboard.setData(ClipboardData(text: tag));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '$tag কপি হয়েছে — AI মেন্টরে পেস্ট করে বলুন কী সমস্যা',
+                          ),
+                        ),
+                      );
                     } else if (val == 'delete') {
                       ref
                           .read(drillHistoryNotifierProvider.notifier)
@@ -897,6 +1075,22 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                           ),
                           SizedBox(width: 8),
                           Text('AI ভুল বিশ্লেষণ ও শর্টকাট'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'copy_ref',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.tag,
+                            size: 16,
+                            color: Colors.blueGrey,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'আইডি কপি (${EntityRef(EntityKind.question, dq.id).tag})',
+                          ),
                         ],
                       ),
                     ),
@@ -1003,6 +1197,21 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
               ),
             ),
 
+            if (dq.originalCorrectIndex != null) ...[
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
+                  'পূর্বে সংরক্ষিত উত্তর ছিল: ${_getOptionText(dq.originalOptionsJson ?? dq.optionsJson, dq.originalCorrectIndex!)}',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontStyle: FontStyle.italic,
+                    color: isDark ? Colors.white54 : Colors.black54,
+                  ),
+                ),
+              ),
+            ],
+
             // Explanation & Key rule
             if (dq.explanation.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -1039,6 +1248,53 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
 
             // Whether this answer has been checked, and by whom. A question
             // flagged as broken is worth seeing without opening the sheet.
+            // The tag is only useful if the user can see it without hunting
+            // through a menu: tap it to copy, then paste it to the mentor.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(5),
+                onTap: () {
+                  final tag = EntityRef(EntityKind.question, dq.id).tag;
+                  Clipboard.setData(ClipboardData(text: tag));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '$tag কপি হয়েছে — AI মেন্টরে পেস্ট করে বলুন কী সমস্যা',
+                      ),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.copy,
+                        size: 11,
+                        color: isDark ? Colors.white30 : Colors.black26,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        EntityRef(EntityKind.question, dq.id).tag,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.4,
+                          color: isDark ? Colors.white38 : Colors.black38,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+
             if (VerificationMark.parse(dq.verificationStatus) !=
                 VerificationMark.none) ...[
               _buildVerificationBadge(

@@ -208,6 +208,86 @@ void main() {
       );
     });
 
+    test(
+      'Deduplication keeps distinct same-subject exams on the same day',
+      () async {
+        final date = DateTime(2026, 11, 15);
+        final result = await db.insertExamSchedulesDeduplicated([
+          ExamSchedulesCompanion.insert(
+            title: 'Bangla Daily Exam 01',
+            examDate: date,
+            topicsCovered: 'কারক ও বিভক্তি',
+            subject: const Value('Bangla'),
+            trackName: const Value('52nd BCS'),
+          ),
+          ExamSchedulesCompanion.insert(
+            title: 'Bangla Daily Exam 02',
+            examDate: date,
+            topicsCovered: 'সমাস ও সন্ধি',
+            subject: const Value('Bangla'),
+            trackName: const Value('52nd BCS'),
+          ),
+        ]);
+
+        expect(result.insertedCount, 2);
+        final saved = await db.select(db.examSchedules).get();
+        expect(saved.where((e) => e.examDate == date).length, 2);
+      },
+    );
+
+    test(
+      'Deduplication keeps two sittings of the same exam at different times',
+      () async {
+        // The hard case: the routine gives no distinct title, so both rows
+        // generate the same one, and both cover the same syllabus line. Only
+        // the hour tells them apart.
+        final date = DateTime(2026, 11, 2);
+        ExamSchedulesCompanion sitting(String time) =>
+            ExamSchedulesCompanion.insert(
+              title: 'Bangla Grammar Daily Exam',
+              examDate: date,
+              examTime: Value(time),
+              topicsCovered: 'General Syllabus',
+              subject: const Value('Bangla Grammar'),
+              examType: const Value('Daily'),
+              trackName: const Value('52nd BCS'),
+            );
+
+        final result = await db.insertExamSchedulesDeduplicated([
+          sitting('10:00 AM'),
+          sitting('10:00 PM'),
+        ]);
+
+        expect(result.insertedCount, 2);
+        final saved = await (db.select(
+          db.examSchedules,
+        )..where((t) => t.trackName.equals('52nd BCS'))).get();
+        expect(saved.where((e) => e.examDate == date).length, 2);
+      },
+    );
+
+    test(
+      'Deduplication still skips a genuine re-import of the same sitting',
+      () async {
+        final date = DateTime(2026, 11, 3);
+        ExamSchedulesCompanion sitting() => ExamSchedulesCompanion.insert(
+          title: 'Bangla Grammar Daily Exam',
+          examDate: date,
+          examTime: const Value('10:00 PM'),
+          topicsCovered: 'General Syllabus',
+          subject: const Value('Bangla Grammar'),
+          examType: const Value('Daily'),
+          trackName: const Value('52nd BCS'),
+        );
+
+        await db.insertExamSchedulesDeduplicated([sitting()]);
+        final again = await db.insertExamSchedulesDeduplicated([sitting()]);
+
+        expect(again.insertedCount, 0);
+        expect(again.skippedCount, 1);
+      },
+    );
+
     test('Deduplication: Preserves completedStatus and score when re-importing updated routines', () async {
       final date = DateTime(2026, 11, 20);
       final id = await db.insertExamSchedule(

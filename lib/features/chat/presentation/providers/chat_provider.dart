@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/ai/entity_ref_resolver.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/database/tables/weak_topics_table.dart';
 import '../../../../core/services/ai/chat_context_resolver.dart';
@@ -12,6 +14,10 @@ import '../../../../core/services/ai/gemini_chat_service.dart';
 import '../../../../core/services/ai/thread_summarizer_service.dart';
 import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
+import '../../../../core/services/ai/models/parsed_routine_item.dart';
+import '../../../../core/services/ai/models/quiz_question.dart';
+import '../../../../core/services/ai/quiz_batch_correction_service.dart';
+import '../../../../core/services/ai/routine_parser_service.dart';
 import '../../domain/models/chat_action.dart';
 
 final chatSessionsStreamProvider = StreamProvider<List<ChatSession>>((ref) {
@@ -281,6 +287,9 @@ class ChatNotifier extends Notifier<ChatState> {
         sessionSubject: state.currentSession?.subject,
         sessionTopic: state.currentSession?.topic,
         threadSummary: state.currentSession?.summary,
+        // Only reads rows the message actually named, so an ordinary question
+        // adds nothing to the prompt.
+        referencedItems: await EntityRefResolver.describe(_db, text),
         needs: needs,
         reserveWeakTopics: reserveTopics,
         reserveUpcomingExams: reserveExams,
@@ -415,11 +424,13 @@ class ChatNotifier extends Notifier<ChatState> {
     return filtered.isEmpty ? topics : filtered;
   }
 
-  /// Executes an interactive action suggested by Gemini (e.g. Add to Weak Topics)
+  /// Executes an interactive action suggested by Gemini (e.g. Add to Weak Topics, Routine Plan)
   Future<bool> executeAction({
     required ChatAction action,
     required ChatMessage message,
+    List<ParsedRoutineItem>? approvedItems,
   }) async {
+    if (action.isExecuted) return false;
     try {
       if (action.type == ChatActionType.addTopic) {
         ProficiencyLevel prof = ProficiencyLevel.weak;
@@ -438,9 +449,90 @@ class ChatNotifier extends Notifier<ChatState> {
         );
       }
 
+      if (action.type == ChatActionType.addExam) {
+        final date = DateTime.tryParse(action.examDate ?? '');
+        if (date == null) return false;
+
+        final track = action.effectiveTrackName;
+
+        // Goes through the same deduplicated insert as a PDF import, so an
+        // exam the routine already holds is not added twice.
+        await _db.insertExamSchedulesDeduplicated([
+          ExamSchedulesCompanion.insert(
+            examDate: date,
+            examTime: Value(action.examTime ?? '10:00 PM'),
+            subject: Value(action.subject),
+            title: action.title,
+            topicsCovered: (action.topic == null || action.topic!.isEmpty)
+                ? 'General Syllabus'
+                : action.topic!,
+            trackName: Value(track),
+            resourceSummary: const Value('AI Mentor'),
+            rawReference: const Value('ai_mentor'),
+          ),
+        ]);
+      }
+
+      if (action.type == ChatActionType.routinePlan) {
+        final itemsToSave = approvedItems ?? action.routineItems;
+        if (itemsToSave.isEmpty) return false;
+
+        final result = await RoutineParserService.instance
+            .saveParsedRoutinesToDatabase(
+              _db,
+              itemsToSave,
+              overrideTrack: action.trackName,
+            );
+        if (result.insertedCount == 0 &&
+            result.updatedCount == 0 &&
+            result.skippedCount == 0) {
+          return false;
+        }
+      }
+
+      if (action.type == ChatActionType.fixExam) {
+        if (action.examId == null || action.correctionsJson == null) {
+          return false;
+        }
+        try {
+          final decoded = jsonDecode(action.correctionsJson!);
+          if (decoded is List) {
+            final exam = await (_db.select(
+              _db.examSchedules,
+            )..where((t) => t.id.equals(action.examId!))).getSingleOrNull();
+            if (exam == null || exam.resourceSummary == null) return false;
+
+            final qDecoded = jsonDecode(exam.resourceSummary!);
+            if (qDecoded is List) {
+              final questions = qDecoded
+                  .map((e) => QuizQuestion.fromJson(e as Map<String, dynamic>))
+                  .toList();
+              final corrections = decoded
+                  .whereType<Map<String, dynamic>>()
+                  .map((m) => QuestionCorrectionItem.tryFromJson(m, questions))
+                  .nonNulls
+                  .toList();
+
+              final ok = await QuizBatchCorrectionService.instance
+                  .applyCorrectionsToExam(
+                    _db,
+                    examId: action.examId!,
+                    corrections: corrections,
+                  );
+              if (!ok) return false;
+            }
+          }
+        } catch (e) {
+          debugPrint('Error executing fixExam action: $e');
+          return false;
+        }
+      }
+
       final existingActions = ChatAction.decodeList(message.suggestedAction);
       final updatedActions = existingActions.map((a) {
-        if (a.title == action.title && a.subject == action.subject) {
+        if (a.title == action.title &&
+            a.subject == action.subject &&
+            a.type == action.type) {
           return a.copyWith(isExecuted: true);
         }
         return a;

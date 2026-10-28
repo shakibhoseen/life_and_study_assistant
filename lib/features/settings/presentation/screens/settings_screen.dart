@@ -7,11 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/background/wifi_monitor_service.dart';
+import '../../../../core/services/export/app_export_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
 import '../../../../core/theme/theme_provider.dart';
 import '../providers/settings_provider.dart';
@@ -1972,19 +1972,142 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
+              // Option 1: Save directly to Download folder (Recommended)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.download_rounded, size: 20),
+                  label: const Text(
+                    'Download ফোল্ডারে সেভ করুন',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final nowStr = DateTime.now().toIso8601String().substring(
+                      0,
+                      10,
+                    );
+                    final fileName = 'life_study_backup_$nowStr.json';
+                    final result = await AppExportService.saveToDownloads(
+                      fileName: fileName,
+                      content: jsonString,
+                    );
+                    if (!context.mounted) return;
+                    if (result.success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: Colors.teal.shade800,
+                          duration: const Duration(seconds: 6),
+                          content: Text(result.bengaliSummary),
+                          action: SnackBarAction(
+                            textColor: Colors.tealAccent,
+                            label: 'পথ কপি',
+                            onPressed: () {
+                              if (result.filePath != null) {
+                                Clipboard.setData(
+                                  ClipboardData(text: result.filePath!),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      );
+                    } else if (!result.wasCancelled) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: Colors.red.shade800,
+                          content: Text(result.bengaliSummary),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Option 2 & 3: Save As (Custom Folder) & Copy JSON
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      icon: const Icon(Icons.copy_rounded, size: 18),
-                      label: const Text('Copy JSON'),
+                      icon: const Icon(
+                        Icons.create_new_folder_outlined,
+                        size: 16,
+                      ),
+                      label: const Text(
+                        'অন্য ফোল্ডার',
+                        style: TextStyle(fontSize: 12.5),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        final nowStr = DateTime.now()
+                            .toIso8601String()
+                            .substring(0, 10);
+                        final fileName = 'life_study_backup_$nowStr.json';
+                        final result = await AppExportService.saveWithPicker(
+                          fileName: fileName,
+                          content: jsonString,
+                          dialogTitle: 'ব্যাকআপ ফাইল সেভ করার ফোল্ডার বেছে নিন',
+                        );
+                        if (!context.mounted) return;
+                        if (result.success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.indigo.shade800,
+                              duration: const Duration(seconds: 6),
+                              content: Text(result.bengaliSummary),
+                              action: SnackBarAction(
+                                textColor: Colors.indigoAccent,
+                                label: 'পথ কপি',
+                                onPressed: () {
+                                  if (result.filePath != null) {
+                                    Clipboard.setData(
+                                      ClipboardData(text: result.filePath!),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          );
+                        } else if (!result.wasCancelled) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.red.shade800,
+                              content: Text(result.bengaliSummary),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: const Text(
+                        'Copy JSON',
+                        style: TextStyle(fontSize: 12.5),
+                      ),
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: jsonString));
                         Navigator.pop(ctx);
@@ -1996,53 +2119,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             backgroundColor: Colors.teal,
                           ),
                         );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      icon: const Icon(Icons.save_alt_rounded, size: 18),
-                      label: const Text('Save to File'),
-                      onPressed: () async {
-                        try {
-                          final dir = await getApplicationDocumentsDirectory();
-                          final nowStr = DateTime.now()
-                              .toIso8601String()
-                              .substring(0, 10);
-                          final file = File(
-                            '${dir.path}/life_study_backup_$nowStr.json',
-                          );
-                          await file.writeAsString(jsonString);
-                          if (!ctx.mounted) return;
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Backup saved successfully to:\n${file.path}',
-                              ),
-                              backgroundColor: Colors.teal.shade800,
-                              duration: const Duration(seconds: 4),
-                            ),
-                          );
-                        } catch (e) {
-                          if (!ctx.mounted) return;
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to save file: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
                       },
                     ),
                   ),
@@ -2198,12 +2274,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Navigator.pop(ctx);
                 final clipData = await Clipboard.getData(Clipboard.kTextPlain);
                 final text = clipData?.text?.trim() ?? '';
-                if (text.isEmpty || !text.startsWith('{')) {
+                if (text.isEmpty) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Clipboard does not contain valid backup JSON. Please copy the backup text first.',
+                          'Clipboard is empty. Please copy the backup JSON first.',
                         ),
                         backgroundColor: Colors.orange,
                       ),
@@ -2272,6 +2348,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final topicsCount = result['weak_topics'] ?? 0;
       final examsCount = result['exam_schedules'] ?? 0;
       final logsCount = result['daily_energy_logs'] ?? 0;
+      final mistakesCount = result['mistakes'] ?? 0;
 
       if (!context.mounted) return;
       final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -2304,6 +2381,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Text('• $topicsCount টি Weak Topics যুক্ত বা আপডেট হয়েছে'),
               Text('• $examsCount টি LiveMCQ পরীক্ষার শিডিউল রিস্টোর হয়েছে'),
               Text('• $logsCount টি Daily Energy Logs সিঙ্ক হয়েছে'),
+              if (mistakesCount > 0)
+                Text(
+                  '• $mistakesCount টি Mistake Notebook প্রশ্ন রিস্টোর হয়েছে',
+                ),
             ],
           ),
           actions: [

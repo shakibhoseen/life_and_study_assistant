@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../database/app_database.dart';
+import '../export/app_export_service.dart';
 
 class CalendarSyncService {
   CalendarSyncService._();
@@ -136,7 +137,16 @@ class CalendarSyncService {
 
     buffer.writeln('END:VCALENDAR');
 
-    final dir = targetDirectory ?? await getTemporaryDirectory();
+    Directory dir;
+    if (targetDirectory != null) {
+      dir = targetDirectory;
+    } else {
+      try {
+        dir = await AppExportService.getExportDirectory();
+      } catch (_) {
+        dir = await getTemporaryDirectory();
+      }
+    }
     final sanitizedTrack = trackName
         .replaceAll(RegExp(r'[^\w\s]+'), '_')
         .replaceAll(' ', '_');

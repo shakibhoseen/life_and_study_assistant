@@ -9,6 +9,10 @@ class ParsedRoutineItem {
   final List<String> topics;
   final String examType;
   final String trackName;
+
+  /// The exact label printed for this exam in the source routine. Keeping this
+  /// prevents two same-subject exams on one day from being treated as one.
+  final String? title;
   final String? rawReference;
 
   ParsedRoutineItem({
@@ -18,6 +22,7 @@ class ParsedRoutineItem {
     required this.topics,
     required this.examType,
     this.trackName = 'General BCS',
+    this.title,
     this.rawReference,
   });
 
@@ -59,6 +64,7 @@ class ParsedRoutineItem {
       topics: parsedTopics,
       examType: examType,
       trackName: trackName,
+      title: json['title']?.toString().trim(),
       rawReference: rawRef ?? json['raw_reference']?.toString(),
     );
   }
@@ -70,23 +76,34 @@ class ParsedRoutineItem {
     'topics': topics,
     'exam_type': examType,
     'track_name': trackName,
+    'title': title,
     'raw_reference': rawReference,
   };
 
   ExamSchedulesCompanion toCompanion({String? overrideTrack}) {
-    final title = '$subject $examType Exam';
+    final sourceTitle = title?.trim();
+    final generatedTitle = '$subject $examType Exam';
+    final scheduleTitle = (sourceTitle == null || sourceTitle.isEmpty)
+        ? generatedTitle
+        : sourceTitle;
     final topicsStr = topics.join(', ');
 
     return ExamSchedulesCompanion.insert(
       examDate: date,
       examTime: Value(examTime),
       subject: Value(subject),
-      title: title,
+      title: scheduleTitle.length > 200
+          ? scheduleTitle.substring(0, 200)
+          : scheduleTitle,
       topicsCovered: topicsStr.isNotEmpty ? topicsStr : 'General Syllabus',
       examType: Value(examType),
       trackName: Value(overrideTrack ?? trackName),
       resourceSummary: Value(
-        rawReference != null ? 'Imported routine ($trackName)' : null,
+        rawReference != null
+            ? (rawReference!.startsWith('AI Mentor')
+                  ? rawReference!
+                  : 'Imported routine ($trackName)')
+            : null,
       ),
       rawReference: Value(rawReference),
     );
