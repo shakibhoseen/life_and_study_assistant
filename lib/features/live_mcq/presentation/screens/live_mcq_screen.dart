@@ -3296,34 +3296,321 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           ref.invalidate(distinctTracksStreamProvider);
           ref.invalidate(filteredExamsStreamProvider);
 
+          final wasTruncated =
+              RoutineParserService.instance.lastParseWasTruncated;
+
           messenger.showSnackBar(
             SnackBar(
+              duration: const Duration(seconds: 6),
               backgroundColor: result.allDuplicates
                   ? Colors.amber.shade900
-                  : Colors.green.shade800,
-              content: Text(result.toBengaliMessage()),
+                  : (wasTruncated
+                      ? Colors.orange.shade900
+                      : Colors.green.shade800),
+              content: Text(
+                wasTruncated
+                    ? '⚠️ Gemini টোকেন লিমিটের কারণে আংশিক (${result.insertedCount}টি) পরীক্ষা উদ্ধার হয়েছে। বাকি পরীক্ষার জন্য ChatGPT Prompt ব্যবহার করুন।'
+                    : result.toBengaliMessage(),
+              ),
+              action: wasTruncated
+                  ? SnackBarAction(
+                      label: 'AI Prompt',
+                      textColor: Colors.amber,
+                      onPressed: () {
+                        Clipboard.setData(
+                          const ClipboardData(
+                            text: RoutineParserService.externalAiRoutinePrompt,
+                          ),
+                        );
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              '📋 External AI Prompt কপি হয়েছে! ChatGPT-তে রুটিন ফাইল সহ দিন।',
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  : null,
             ),
           );
         } else {
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text(
-                'রুটিন PDF থেকে কোনো পরীক্ষার তথ্য পাওয়া যায়নি। ফাইলটি স্পষ্ট কিনা যাচাই করুন।',
-              ),
+          if (!mounted) return;
+          _showRoutineExtractionDiagnosticDialog(
+            this.context,
+            RoutineParserException(
+              userMessage:
+                  'রুটিন PDF থেকে কোনো পরীক্ষার তথ্য পাওয়া যায়নি। ফাইলটি স্পষ্ট কিনা যাচাই করুন।',
             ),
           );
         }
       }
     } catch (e) {
       debugPrint('Error picking or parsing PDF: $e');
-      final msg = e.toString().replaceFirst('Exception: ', '');
-      messenger.showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.red.shade900,
-          content: Text(msg),
-        ),
-      );
+      if (!mounted) return;
+      _showRoutineExtractionDiagnosticDialog(this.context, e);
     }
+  }
+
+  void _showRoutineExtractionDiagnosticDialog(
+    BuildContext context,
+    dynamic error,
+  ) {
+    String userMessage = 'রুটিন নিষ্কাশন সফল হয়নি।';
+    String? technicalDetails;
+    String? rawSnippet;
+    String? finishReason;
+    int? tokens;
+    String? model;
+    bool isQuota = false;
+    bool isTooLarge = false;
+
+    if (error is RoutineParserException) {
+      userMessage = error.userMessage;
+      technicalDetails = error.technicalDetails;
+      rawSnippet = error.rawResponseSnippet;
+      finishReason = error.finishReason;
+      tokens = error.totalTokens;
+      model = error.modelName;
+      isQuota = error.isQuotaOrRateLimit;
+      isTooLarge = error.isPayloadTooLarge;
+    } else {
+      userMessage = error.toString().replaceFirst('Exception: ', '');
+      technicalDetails = error.toString();
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.redAccent, size: 24),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'রুটিন নিষ্কাশনে ত্রুটি / Diagnostic',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                userMessage,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Diagnostic Info Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E293B)
+                      : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFF334155)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '🔍 বিস্তারিত কারণ / Diagnostic Info:',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    if (model != null)
+                      Text(
+                        '• Model: $model',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                      ),
+                    if (finishReason != null)
+                      Text(
+                        '• Finish Reason: $finishReason'
+                        '${finishReason == "maxTokens" ? " (টোকেন লিমিটের কারণে আউটপুট কেটে গেছে)" : ""}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: finishReason == "maxTokens"
+                              ? Colors.amber.shade700
+                              : (isDark ? Colors.white60 : Colors.black54),
+                          fontWeight: finishReason == "maxTokens"
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    if (tokens != null && tokens > 0)
+                      Text(
+                        '• Tokens Used: $tokens',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                      ),
+                    if (technicalDetails != null &&
+                        technicalDetails.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '• Details: $technicalDetails',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontFamily: 'monospace',
+                          color: isDark
+                              ? Colors.red.shade300
+                              : Colors.red.shade800,
+                        ),
+                      ),
+                    ],
+                    if (isTooLarge) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '⚠️ ফাইল সাইজ Gemini API লিমিটের বেশি। PDF ফাইলটি ছোট করুন বা ChatGPT ব্যবহার করুন।',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber.shade700,
+                        ),
+                      ),
+                    ],
+                    if (rawSnippet != null && rawSnippet.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Gemini Raw Output:',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 120),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.black26 : Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white12
+                                : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                        child: SingleChildScrollView(
+                          child: SelectableText(
+                            rawSnippet,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+              // Helpful Recommendation Card
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.withValues(alpha: isDark ? 0.2 : 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.indigo.withValues(alpha: isDark ? 0.4 : 0.2),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.lightbulb_outline,
+                      size: 16,
+                      color: Colors.amber,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '💡 বড় বা দীর্ঘমেয়াদী রুটিনের (যেমন ১৩৫ দিনের বিসিএস রুটিন) জন্য ChatGPT বা Claude দিয়ে রুটিন নিয়ে আসুন। নিচের বাটন চেপে প্রম্পট কপি করে ChatGPT-তে আপনার রুটিন দিলেই কোনো টোকেন লিমিট ছাড়া শতভাগ নির্ভুল ফলাফল পাওয়া যাবে!',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          OutlinedButton.icon(
+            icon: const Icon(Icons.copy, size: 14),
+            label: const Text(
+              'Copy ChatGPT Prompt',
+              style: TextStyle(fontSize: 11),
+            ),
+            onPressed: () {
+              Clipboard.setData(
+                const ClipboardData(
+                  text: RoutineParserService.externalAiRoutinePrompt,
+                ),
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    '📋 Prompt কপি হয়েছে! ChatGPT-তে রুটিন ফাইল সহ দিন।',
+                  ),
+                  duration: Duration(seconds: 4),
+                ),
+              );
+            },
+          ),
+          if (isQuota || model == 'gemini-flash-lite-latest')
+            TextButton.icon(
+              icon: const Icon(Icons.settings, size: 14),
+              label: const Text(
+                'Settings (Change Model)',
+                style: TextStyle(fontSize: 11),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+            ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ঠিক আছে (Close)'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _exportCurrentTrackToIcs(BuildContext context) async {

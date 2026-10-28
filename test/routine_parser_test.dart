@@ -233,5 +233,38 @@ LiveMCQ BCS Crash Routine:
       expect(items[0].trackName, equals('100 Days BCS Challenge'));
       expect(items[1].title, equals('Day 02'));
     });
+
+    test('Object scanner recovers items even with deeply malformed/cut-off nested envelope', () async {
+      // Simulates severe cut-off inside array with broken quotes
+      const severelyBroken = '''{
+  "track_name": "52nd BCS 135-Day",
+  "exams": [
+    {"date": "2026-11-01", "subject": "Bangla", "title": "Day 01", "topics": ["কারক ও বিভক্তি"]},
+    {"date": "2026-11-02", "subject": "English", "title": "Day 02", "topics": ["Idioms"]},
+    {"date": "2026-11-03", "subject": "Math", "title": "Day 03", "topics": ["শতকরা", "লাভ''';
+
+      final items = RoutineParserService.instance.decodeResponseForTesting(
+        severelyBroken,
+      );
+      expect(items.length, greaterThanOrEqualTo(2));
+      expect(items[0].trackName, equals('52nd BCS 135-Day'));
+      expect(items[1].title, equals('Day 02'));
+    });
+
+    test('RoutineParserException contains diagnostic details and formats user message', () {
+      final ex = RoutineParserException(
+        userMessage: 'Gemini AI টোকেন সীমার কারণে উত্তর প্রদান বন্ধ করেছে।',
+        technicalDetails: 'FinishReason: maxTokens',
+        finishReason: 'maxTokens',
+        promptTokens: 1400,
+        candidateTokens: 8192,
+        totalTokens: 9592,
+        modelName: 'gemini-flash-lite-latest',
+      );
+      expect(ex.toString(), contains('টোকেন সীমার কারণে'));
+      expect(ex.finishReason, equals('maxTokens'));
+      expect(ex.totalTokens, equals(9592));
+      expect(ex.modelName, equals('gemini-flash-lite-latest'));
+    });
   });
 }

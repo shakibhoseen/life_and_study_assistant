@@ -15,6 +15,35 @@ import 'gemini_usage_tracker.dart';
 import 'models/parsed_routine_item.dart';
 import 'models/routine_import_result.dart';
 
+class RoutineParserException implements Exception {
+  final String userMessage;
+  final String? technicalDetails;
+  final String? finishReason;
+  final String? rawResponseSnippet;
+  final int? promptTokens;
+  final int? candidateTokens;
+  final int? totalTokens;
+  final String? modelName;
+  final bool isQuotaOrRateLimit;
+  final bool isPayloadTooLarge;
+
+  RoutineParserException({
+    required this.userMessage,
+    this.technicalDetails,
+    this.finishReason,
+    this.rawResponseSnippet,
+    this.promptTokens,
+    this.candidateTokens,
+    this.totalTokens,
+    this.modelName,
+    this.isQuotaOrRateLimit = false,
+    this.isPayloadTooLarge = false,
+  });
+
+  @override
+  String toString() => userMessage;
+}
+
 class RoutineParserService {
   /// Ceiling for a routine PDF handed to the model (50MB max for large multi-page scans).
   static const int maxPdfBytes = 50 * 1024 * 1024;
@@ -25,12 +54,15 @@ class RoutineParserService {
   GenerativeModel? _model;
   String? _modelName;
   String? _cachedApiKey;
+  bool _lastParseWasTruncated = false;
+
   String? get cachedApiKey => _cachedApiKey;
   String? get modelName => _modelName;
+  bool get lastParseWasTruncated => _lastParseWasTruncated;
 
   static const String _prompt = '''
 Extract all competitive examination / BCS / LiveMCQ schedules from this document.
-Return a compact JSON structure to maximize token efficiency:
+Return a clean JSON structure:
 {
   "track_name": "Program / Batch name from routine header (e.g., 52nd BCS 135-Day, 100 Days BCS, General BCS)",
   "exams": [
@@ -45,11 +77,11 @@ Return a compact JSON structure to maximize token efficiency:
   ]
 }
 Alternatively, a direct JSON array of exams [ { "date": ..., ... } ] is also acceptable.
-Rules for maximum token capacity:
-1. Output completely minified JSON on a single line (no newlines, no indentation) so all 100+ schedules fit completely within token limits.
-2. Do NOT repeat "track_name" inside individual exam objects if using the envelope format above.
-3. If the year is not mentioned, use the current ongoing year. Default time to "10:00 PM" if absent.
-4. Extract EVERY schedule row from EVERY page without omitting any row.
+Rules:
+1. Extract EVERY schedule row from EVERY page without omitting any row or date.
+2. If the year is not mentioned, use the current ongoing year. Default time to "10:00 PM" if absent.
+3. Extract accurate subject and topic names (support both English and Bengali script).
+4. Do NOT repeat "track_name" inside individual exam objects if using the envelope format above.
 5. Return ONLY the valid JSON without markdown formatting or conversational text.
 ''';
 
@@ -252,20 +284,27 @@ Rules:
 
   /// Parse exam schedules directly from a PDF routine sheet (LiveMCQ syllabus PDF)
   Future<List<ParsedRoutineItem>> parseRoutineFromPdf(File pdfFile) async {
+    _lastParseWasTruncated = false;
     await init();
     final activeModel = _modelName ?? 'gemini-flash-lite-latest';
 
-    if (_model == null) {
-      throw Exception(
-        'Gemini API Key সেট করা নেই। রুটিন PDF বিশ্লেষণ করতে Settings এ গিয়ে API Key যোগ করুন।',
+    if (_model == null || _cachedApiKey == null || _cachedApiKey!.isEmpty) {
+      throw RoutineParserException(
+        userMessage:
+            'Gemini API Key সেট করা নেই। রুটিন PDF বিশ্লেষণ করতে Settings এ গিয়ে API Key যোগ করুন।',
+        modelName: activeModel,
       );
     }
 
     final pdfBytes = await pdfFile.readAsBytes();
 
     if (pdfBytes.lengthInBytes > maxPdfBytes) {
-      throw Exception(
-        'PDF ফাইলটি অনেক বড় (${(pdfBytes.lengthInBytes / 1048576).toStringAsFixed(1)}MB)। সর্বোচ্চ ৫০MB পর্যন্ত ফাইল দেওয়া যাবে।',
+      throw RoutineParserException(
+        userMessage:
+            'PDF ফাইলটি অনেক বড় (${(pdfBytes.lengthInBytes / 1048576).toStringAsFixed(1)}MB)। সর্বোচ্চ ৫০MB পর্যন্ত ফাইল দেওয়া যাবে।',
+        technicalDetails: 'File size: ${pdfBytes.lengthInBytes} bytes',
+        modelName: activeModel,
+        isPayloadTooLarge: true,
       );
     }
 
@@ -277,7 +316,7 @@ Rules:
         ]),
       ];
 
-      // Dedicated unconstrained model for routine PDF parsing: no token limit!
+      // Dedicated unconstrained model for routine PDF parsing: no artificial token limit!
       final pdfModel = GenerativeModel(
         model: activeModel,
         apiKey: _cachedApiKey!,
@@ -289,56 +328,119 @@ Rules:
       );
 
       final response = await pdfModel.generateContent(content);
+      final candidate = response.candidates.isNotEmpty
+          ? response.candidates.first
+          : null;
+      final finishReason = candidate?.finishReason;
+      final usage = response.usageMetadata;
+      final rawText = response.text;
+
       await GeminiUsageTracker.instance.recordSuccess(
-        tokens: response.usageMetadata?.totalTokenCount ?? 0,
-        actualInputTokens: response.usageMetadata?.promptTokenCount,
-        actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
-        actualTotalTokens: response.usageMetadata?.totalTokenCount,
+        tokens: usage?.totalTokenCount ?? 0,
+        actualInputTokens: usage?.promptTokenCount,
+        actualOutputTokens: usage?.candidatesTokenCount,
+        actualTotalTokens: usage?.totalTokenCount,
         operation: 'parse_routine_pdf',
         model: activeModel,
       );
 
-      final rawText = response.text;
       final parsed = _decodeResponse(
         rawText,
         rawRef: 'PDF: ${pdfFile.path.split('/').last}',
       );
 
-      final truncated =
-          response.candidates.isNotEmpty &&
-          response.candidates.first.finishReason == FinishReason.maxTokens;
+      _lastParseWasTruncated = finishReason == FinishReason.maxTokens;
 
       debugPrint(
         'PDF routine parse: ${parsed.length} items'
-        '${truncated ? " (OUTPUT TRUNCATED BY TOKEN LIMIT -- recovered ${parsed.length} complete rows)" : ""}',
+        '${_lastParseWasTruncated ? " (OUTPUT TRUNCATED BY TOKEN LIMIT -- recovered ${parsed.length} complete rows)" : ""}',
       );
 
       if (parsed.isNotEmpty) return parsed;
 
       debugPrint(
-        'PDF routine parse: nothing usable in reply. Raw length: ${rawText?.length ?? 0}',
+        'PDF routine parse: nothing usable in reply. Raw length: ${rawText?.length ?? 0}, FinishReason: ${finishReason?.name}',
       );
-      throw Exception(
-        'রুটিন PDF থেকে কোনো পরীক্ষার তথ্য সনাক্ত করা যায়নি। ফাইলটি স্পষ্ট কিনা যাচাই করুন।',
+
+      // If empty or null response from model
+      if (rawText == null || rawText.trim().isEmpty) {
+        String msg =
+            'Gemini AI কোনো তথ্য প্রদান করেনি (Empty candidate response)।';
+        if (finishReason == FinishReason.safety) {
+          msg = 'Gemini-র Safety Filters দ্বারা রেসপন্স ব্লক হয়েছে।';
+        } else if (finishReason == FinishReason.maxTokens) {
+          msg = 'Gemini টোকেন সীমার কারণে উত্তর প্রদান বন্ধ করেছে।';
+        } else if (finishReason != null) {
+          msg =
+              'Gemini AI উত্তর প্রদান সম্পন্ন করতে পারেনি (FinishReason: ${finishReason.name})।';
+        }
+        throw RoutineParserException(
+          userMessage: msg,
+          technicalDetails:
+              'Candidates: ${response.candidates.length}, FinishReason: ${finishReason?.name ?? "none"}',
+          finishReason: finishReason?.name,
+          promptTokens: usage?.promptTokenCount,
+          candidateTokens: usage?.candidatesTokenCount,
+          totalTokens: usage?.totalTokenCount,
+          modelName: activeModel,
+        );
+      }
+
+      // If text received but 0 parsed
+      throw RoutineParserException(
+        userMessage:
+            'রুটিন PDF থেকে কোনো পরীক্ষার তথ্য সনাক্ত করা যায়নি। ফাইলটি স্পষ্ট কিনা যাচাই করুন।',
+        technicalDetails:
+            'Response received (${rawText.length} chars, ${usage?.candidatesTokenCount ?? 0} output tokens), but JSON parsing produced 0 items.',
+        rawResponseSnippet: rawText.length > 500
+            ? '${rawText.substring(0, 500)}...'
+            : rawText,
+        finishReason: finishReason?.name,
+        promptTokens: usage?.promptTokenCount,
+        candidateTokens: usage?.candidatesTokenCount,
+        totalTokens: usage?.totalTokenCount,
+        modelName: activeModel,
       );
     } catch (e) {
       debugPrint('Gemini PDF Routine parsing failed: $e');
-      if (e.toString().contains('429') ||
-          e.toString().toLowerCase().contains('quota')) {
+      if (e is RoutineParserException) {
+        rethrow;
+      }
+      final errStr = e.toString();
+      if (errStr.contains('429') || errStr.toLowerCase().contains('quota')) {
         await GeminiUsageTracker.instance.recordQuotaExceeded(
           operation: 'parse_routine_pdf',
           model: activeModel,
         );
-        throw Exception(
-          'Gemini API কোটা শেষ বা রেট লিমিট হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+        throw RoutineParserException(
+          userMessage:
+              'Gemini API ফ্রি কোটা সাময়িকভাবে শেষ বা রেট লিমিট হয়েছে (429 Quota Exceeded)। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+          technicalDetails: errStr,
+          modelName: activeModel,
+          isQuotaOrRateLimit: true,
+        );
+      } else if (errStr.contains('413') ||
+          errStr.toLowerCase().contains('too large') ||
+          errStr.contains('Request payload size')) {
+        throw RoutineParserException(
+          userMessage:
+              'PDF ফাইলটির সাইজ (${(pdfBytes.lengthInBytes / 1048576).toStringAsFixed(1)}MB) Gemini API সীমা অতিক্রম করেছে।',
+          technicalDetails: errStr,
+          modelName: activeModel,
+          isPayloadTooLarge: true,
         );
       } else {
         await GeminiUsageTracker.instance.recordError(
-          e.toString(),
+          errStr,
           operation: 'parse_routine_pdf',
           model: activeModel,
         );
-        rethrow;
+        throw RoutineParserException(
+          userMessage:
+              'Gemini AI রুটিন বিশ্লেষণে সমস্যা হয়েছে: ${errStr.replaceFirst("Exception: ", "")}',
+          technicalDetails: errStr,
+          modelName: activeModel,
+        );
       }
     }
   }
@@ -568,14 +670,14 @@ Rules:
     final List<ParsedRoutineItem> results = [];
 
     String? detectedTrack;
-    final trackMatch =
-        RegExp(r'"track_name"\s*:\s*"([^"]+)"').firstMatch(text);
+    final trackMatch = RegExp(
+      r'"(?:track_name|program_name|batch_name)"\s*:\s*"([^"]+)"',
+    ).firstMatch(text);
     if (trackMatch != null) {
       detectedTrack = trackMatch.group(1);
     }
 
-    int depth = 0;
-    int start = -1;
+    final List<int> starts = [];
     bool inString = false;
     bool escaped = false;
 
@@ -595,30 +697,27 @@ Rules:
       }
       if (!inString) {
         if (c == '{') {
-          if (depth == 0) start = i;
-          depth++;
+          starts.add(i);
         } else if (c == '}') {
-          depth--;
-          if (depth == 0 && start != -1) {
-            final candidate = text.substring(start, i + 1);
+          if (starts.isNotEmpty) {
+            final startIdx = starts.removeLast();
+            final candidate = text.substring(startIdx, i + 1);
             try {
               final decoded = jsonDecode(candidate);
-              if (decoded is Map) {
-                if (decoded.containsKey('date') ||
-                    decoded.containsKey('subject') ||
-                    decoded.containsKey('title')) {
-                  final item = ParsedRoutineItem.fromJson(
-                    Map<String, dynamic>.from(decoded),
-                    rawRef: rawRef,
-                    defaultTrack: detectedTrack,
-                  );
-                  if (_isValidRoutineItem(item)) {
-                    results.add(item);
-                  }
+              if (decoded is Map &&
+                  (decoded.containsKey('date') ||
+                      decoded.containsKey('subject') ||
+                      decoded.containsKey('title'))) {
+                final item = ParsedRoutineItem.fromJson(
+                  Map<String, dynamic>.from(decoded),
+                  rawRef: rawRef,
+                  defaultTrack: detectedTrack,
+                );
+                if (_isValidRoutineItem(item)) {
+                  results.add(item);
                 }
               }
             } catch (_) {}
-            start = -1;
           }
         }
       }
