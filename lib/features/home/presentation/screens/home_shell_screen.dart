@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:life_and_study_assistant/core/database/database_provider.dart';
 import 'package:life_and_study_assistant/core/services/sharing/sharing_intent_service.dart';
@@ -10,6 +11,7 @@ import 'package:life_and_study_assistant/features/live_mcq/presentation/provider
 import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/live_mcq_screen.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/widgets/routine_preview_sheet.dart';
 import 'package:life_and_study_assistant/features/settings/presentation/screens/settings_screen.dart';
+import 'package:life_and_study_assistant/features/topics/presentation/providers/topics_provider.dart';
 import 'package:life_and_study_assistant/features/topics/presentation/screens/topics_screen.dart';
 
 class HomeShellScreen extends ConsumerStatefulWidget {
@@ -191,42 +193,124 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final upcomingExams = ref.watch(upcomingExamsStreamProvider).value ?? [];
+    final weakTopics = ref.watch(weakTopicsStreamProvider).value ?? [];
+
+    const activeColor = Color(0xFF6366F1);
+    final navBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final borderColor =
+        isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+    final indicatorBg =
+        isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF);
+
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: navBg,
+          border: Border(
+            top: BorderSide(color: borderColor, width: 1.2),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.psychology_outlined),
-            selectedIcon: Icon(Icons.psychology),
-            label: 'AI Mentor',
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            height: 66,
+            backgroundColor: navBg,
+            indicatorColor: indicatorBg,
+            indicatorShape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              final isSelected = states.contains(WidgetState.selected);
+              return TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected
+                    ? (isDark
+                          ? const Color(0xFFA5B4FC)
+                          : const Color(0xFF4338CA))
+                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                letterSpacing: 0.1,
+              );
+            }),
+            iconTheme: WidgetStateProperty.resolveWith((states) {
+              final isSelected = states.contains(WidgetState.selected);
+              return IconThemeData(
+                size: 22,
+                color: isSelected
+                    ? activeColor
+                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+              );
+            }),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.bookmark_border),
-            selectedIcon: Icon(Icons.bookmark),
-            label: 'Weak Topics',
+          child: NavigationBar(
+            selectedIndex: _currentIndex,
+            elevation: 0,
+            onDestinationSelected: (index) {
+              if (_currentIndex != index) {
+                HapticFeedback.selectionClick();
+                setState(() {
+                  _currentIndex = index;
+                });
+              }
+            },
+            destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.space_dashboard_outlined),
+                selectedIcon: Icon(Icons.space_dashboard_rounded),
+                label: 'Dashboard',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.auto_awesome_outlined),
+                selectedIcon: Icon(Icons.auto_awesome),
+                label: 'AI Mentor',
+              ),
+              NavigationDestination(
+                icon: Badge.count(
+                  count: weakTopics.length,
+                  isLabelVisible: weakTopics.isNotEmpty,
+                  backgroundColor: const Color(0xFFEF4444),
+                  child: const Icon(Icons.radar_outlined),
+                ),
+                selectedIcon: Badge.count(
+                  count: weakTopics.length,
+                  isLabelVisible: weakTopics.isNotEmpty,
+                  backgroundColor: const Color(0xFFEF4444),
+                  child: const Icon(Icons.radar_rounded),
+                ),
+                label: 'Weak Topics',
+              ),
+              NavigationDestination(
+                icon: Badge.count(
+                  count: upcomingExams.length,
+                  isLabelVisible: upcomingExams.isNotEmpty,
+                  backgroundColor: const Color(0xFF10B981),
+                  child: const Icon(Icons.event_note_outlined),
+                ),
+                selectedIcon: Badge.count(
+                  count: upcomingExams.length,
+                  isLabelVisible: upcomingExams.isNotEmpty,
+                  backgroundColor: const Color(0xFF10B981),
+                  child: const Icon(Icons.event_note_rounded),
+                ),
+                label: 'LiveMCQ',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.tune_outlined),
+                selectedIcon: Icon(Icons.tune_rounded),
+                label: 'Settings',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.quiz_outlined),
-            selectedIcon: Icon(Icons.quiz),
-            label: 'LiveMCQ',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Automation',
-          ),
-        ],
+        ),
       ),
     );
   }
