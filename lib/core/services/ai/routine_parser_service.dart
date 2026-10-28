@@ -53,6 +53,35 @@ Rules for maximum token capacity:
 5. Return ONLY the valid JSON without markdown formatting or conversational text.
 ''';
 
+  /// Ready-to-use prompt for External AIs (ChatGPT, Claude, Gemini Web, DeepSeek).
+  ///
+  /// Users can paste this prompt alongside their routine PDF, image, or text in
+  /// ChatGPT or Claude, and paste the resulting JSON straight into the app.
+  static const String externalAiRoutinePrompt = '''
+Please extract all examination / LiveMCQ / BCS schedules from my attached routine (PDF, image, or text) into a compact JSON format.
+
+Format the output strictly as:
+{
+  "track_name": "Program or Batch name (e.g. 52nd BCS 135-Day, 100 Days BCS, General BCS)",
+  "exams": [
+    {
+      "date": "YYYY-MM-DD",
+      "exam_time": "10:00 PM",
+      "subject": "Name of Subject (e.g. Bangla, English, Mathematics, General Science)",
+      "title": "Exact exam title or serial (e.g. Day 01, Model Test 03)",
+      "topics": ["Topic 1", "Topic 2"],
+      "exam_type": "Daily"
+    }
+  ]
+}
+
+Rules:
+1. Extract EVERY schedule row from EVERY page without omitting any dates.
+2. If time is not mentioned, use "10:00 PM". If year is omitted, use the current year (2026).
+3. Do not repeat track_name inside the individual exam objects.
+4. Output strictly valid JSON code block only without extra conversational prose.
+''';
+
   Future<void> init([String? apiKey]) async {
     final prefs = await SharedPreferences.getInstance();
     var modelName =

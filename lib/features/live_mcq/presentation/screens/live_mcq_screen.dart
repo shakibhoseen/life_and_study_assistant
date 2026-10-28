@@ -90,7 +90,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           ),
           IconButton(
             icon: const Icon(Icons.playlist_add),
-            tooltip: 'Import Routine Text / Post',
+            tooltip: 'Import Routine (AI / Text / JSON)',
             onPressed: () => _showImportRoutineDialog(context),
           ),
         ],
@@ -2912,7 +2912,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 Icon(Icons.auto_awesome, color: Colors.indigo, size: 22),
                 SizedBox(width: 8),
                 Text(
-                  'Parse Routine with Gemini',
+                  'Import Routine (AI / Text)',
                   style: TextStyle(fontSize: 16),
                 ),
               ],
@@ -2974,8 +2974,121 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     ),
                   ],
                   const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(ctx)
+                          .colorScheme
+                          .primaryContainer
+                          .withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(ctx)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.smart_toy_outlined,
+                              size: 16,
+                              color: Theme.of(ctx).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            const Expanded(
+                              child: Text(
+                                'ChatGPT / Claude দিয়ে রুটিন আনবেন?',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'প্রম্পট কপি করে ChatGPT বা Claude-এ আপনার রুটিন (PDF/ছবি/টেক্সট) সহ দিন। AI যে JSON কোড দেবে তা নিচে পেস্ট করে সেভ করুন। এতে কোনো টোকেন লিমিট নেই!',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(ctx).brightness == Brightness.dark
+                                ? Colors.white70
+                                : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.copy, size: 14),
+                              label: const Text(
+                                'Copy AI Prompt',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                              ),
+                              onPressed: () {
+                                Clipboard.setData(
+                                  const ClipboardData(
+                                    text: RoutineParserService
+                                        .externalAiRoutinePrompt,
+                                  ),
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      '📋 External AI Prompt কপি হয়েছে! রুটিন সহ ChatGPT/Claude-এ পেস্ট করুন।',
+                                    ),
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              },
+                            ),
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.content_paste, size: 14),
+                              label: const Text(
+                                'Paste from Clipboard',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                              ),
+                              onPressed: () async {
+                                final data = await Clipboard.getData(
+                                  Clipboard.kTextPlain,
+                                );
+                                if (data != null &&
+                                    data.text != null &&
+                                    data.text!.isNotEmpty) {
+                                  textController.text = data.text!;
+                                  setDialogState(() {});
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Text(
-                    'Paste Facebook post text or LiveMCQ notice routine below:',
+                    'Paste Facebook post text, notice routine, or AI JSON below:',
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(ctx).brightness == Brightness.dark
@@ -2988,7 +3101,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     controller: textController,
                     maxLines: 6,
                     decoration: const InputDecoration(
-                      hintText: 'e.g.\n52nd BCS 135 Days Routine:\n28 Oct | 10:00 PM | Bangla: কারক ও বিভক্তি\n30 Oct | 10:00 PM | Math: শতকরা',
+                      hintText:
+                          'e.g.\n{"track_name": "52nd BCS", "exams": [...]}\nOR\n52nd BCS 135 Days Routine:\n28 Oct | 10:00 PM | Bangla: কারক ও বিভক্তি',
                       border: OutlineInputBorder(),
                     ),
                   ),
