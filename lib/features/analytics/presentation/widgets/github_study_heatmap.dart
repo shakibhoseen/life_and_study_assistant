@@ -36,8 +36,10 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
     }
   }
 
-  Color _getCellColor(int score) {
-    if (score == 0) return Colors.grey.shade200;
+  Color _getCellColor(int score, {required bool isDark}) {
+    if (score == 0) {
+      return isDark ? const Color(0xFF1E293B) : Colors.grey.shade200;
+    }
     if (score <= 2) return const Color(0xFF9BE9A8); // Light green
     if (score <= 5) return const Color(0xFF40C463); // Medium green
     if (score <= 9) return const Color(0xFF30A14E); // Darker green
@@ -49,6 +51,7 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
     Map<String, dynamic>? details,
     int score,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final drills = details?['drills'] ?? 0;
     final questions = details?['questions'] ?? 0;
     final correct = details?['correct'] ?? 0;
@@ -67,7 +70,7 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
               width: 14,
               height: 14,
               decoration: BoxDecoration(
-                color: _getCellColor(score),
+                color: _getCellColor(score, isDark: isDark),
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -121,6 +124,7 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
 
     final totalGridDays = _daysBack + leadingPaddingDays + 1;
     final totalWeeks = (totalGridDays / 7).ceil();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
       elevation: 2,
@@ -146,9 +150,15 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.amber.shade50,
+                    color: isDark
+                        ? const Color(0xFF451A03).withValues(alpha: 0.4)
+                        : Colors.amber.shade50,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber.shade300),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.amber.shade700
+                          : Colors.amber.shade300,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -164,7 +174,9 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.deepOrange.shade800,
+                          color: isDark
+                              ? Colors.amber.shade300
+                              : Colors.deepOrange.shade800,
                         ),
                       ),
                     ],
@@ -175,7 +187,10 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
             const SizedBox(height: 6),
             Text(
               '$activeDays active study days in the last 14 weeks ($totalDays days track)',
-              style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 11.5,
+                color: isDark ? Colors.white60 : Colors.grey.shade600,
+              ),
             ),
             const SizedBox(height: 14),
 
@@ -193,11 +208,11 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 14), // Sun
-                        _buildWeekdayLabel('Mon'),
+                        _buildWeekdayLabel('Mon', isDark: isDark),
                         const SizedBox(height: 16), // Tue
-                        _buildWeekdayLabel('Wed'),
+                        _buildWeekdayLabel('Wed', isDark: isDark),
                         const SizedBox(height: 16), // Thu
-                        _buildWeekdayLabel('Fri'),
+                        _buildWeekdayLabel('Fri', isDark: isDark),
                       ],
                     ),
                   ),
@@ -235,12 +250,16 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
                               height: 12,
                               margin: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
-                                color: _getCellColor(score),
+                                color: _getCellColor(score, isDark: isDark),
                                 borderRadius: BorderRadius.circular(2.5),
                                 border: Border.all(
                                   color: score > 0
-                                      ? Colors.black.withValues(alpha: 0.08)
-                                      : Colors.grey.shade300,
+                                      ? (isDark
+                                          ? Colors.black.withValues(alpha: 0.3)
+                                          : Colors.black.withValues(alpha: 0.08))
+                                      : (isDark
+                                          ? const Color(0xFF334155)
+                                          : Colors.grey.shade300),
                                   width: 0.5,
                                 ),
                               ),
@@ -262,18 +281,27 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
               children: [
                 Text(
                   'Less',
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.white60 : Colors.grey.shade600,
+                  ),
                 ),
                 const SizedBox(width: 4),
-                _buildLegendCell(Colors.grey.shade200),
-                _buildLegendCell(const Color(0xFF9BE9A8)),
-                _buildLegendCell(const Color(0xFF40C463)),
-                _buildLegendCell(const Color(0xFF30A14E)),
-                _buildLegendCell(const Color(0xFF216E39)),
+                _buildLegendCell(
+                  _getCellColor(0, isDark: isDark),
+                  isDark: isDark,
+                ),
+                _buildLegendCell(const Color(0xFF9BE9A8), isDark: isDark),
+                _buildLegendCell(const Color(0xFF40C463), isDark: isDark),
+                _buildLegendCell(const Color(0xFF30A14E), isDark: isDark),
+                _buildLegendCell(const Color(0xFF216E39), isDark: isDark),
                 const SizedBox(width: 4),
                 Text(
                   'More',
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.white60 : Colors.grey.shade600,
+                  ),
                 ),
               ],
             ),
@@ -356,21 +384,21 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
     );
   }
 
-  Widget _buildWeekdayLabel(String text) {
+  Widget _buildWeekdayLabel(String text, {required bool isDark}) {
     return SizedBox(
       height: 12,
       child: Text(
         text,
         style: TextStyle(
           fontSize: 9,
-          color: Colors.grey.shade500,
+          color: isDark ? Colors.white54 : Colors.grey.shade500,
           fontWeight: FontWeight.w500,
         ),
       ),
     );
   }
 
-  Widget _buildLegendCell(Color color) {
+  Widget _buildLegendCell(Color color, {required bool isDark}) {
     return Container(
       width: 10,
       height: 10,
@@ -379,7 +407,9 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
         color: color,
         borderRadius: BorderRadius.circular(2),
         border: Border.all(
-          color: Colors.black.withValues(alpha: 0.06),
+          color: isDark
+              ? const Color(0xFF334155)
+              : Colors.black.withValues(alpha: 0.06),
           width: 0.5,
         ),
       ),

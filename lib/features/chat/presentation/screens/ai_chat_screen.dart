@@ -155,6 +155,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final chatMessagesAsync = ref.watch(chatMessagesStreamProvider);
     final chatState = ref.watch(chatNotifierProvider);
     final sessions = ref.watch(chatSessionsStreamProvider).value ?? [];
@@ -208,9 +209,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                       ),
                       Text(
                         subtitleText,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Colors.black54,
+                          color: isDark ? Colors.white60 : Colors.black54,
                         ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,

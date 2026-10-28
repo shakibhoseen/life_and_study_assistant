@@ -53,10 +53,35 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: cardLight,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: borderLight, width: 1),
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: cardLight,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: cardLight,
+        modalBackgroundColor: cardLight,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dividerTheme: const DividerThemeData(color: borderLight, thickness: 1),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: primaryLight,
+        unselectedLabelColor: Color(0xFF64748B),
+        indicatorColor: primaryLight,
+      ),
+      listTileTheme: const ListTileThemeData(
+        textColor: Color(0xFF0F172A),
+        iconColor: Color(0xFF0F172A),
+      ),
+      popupMenuTheme: const PopupMenuThemeData(
+        color: cardLight,
+        surfaceTintColor: Colors.transparent,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -146,6 +171,7 @@ class AppTheme {
       ),
       popupMenuTheme: const PopupMenuThemeData(
         color: cardDark,
+        surfaceTintColor: Colors.transparent,
         textStyle: TextStyle(color: textDark),
       ),
       chipTheme: ChipThemeData(
@@ -157,9 +183,11 @@ class AppTheme {
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: cardDark,
         modalBackgroundColor: cardDark,
+        surfaceTintColor: Colors.transparent,
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: cardDark,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       inputDecorationTheme: InputDecorationTheme(
