@@ -16,8 +16,8 @@ import 'models/parsed_routine_item.dart';
 import 'models/routine_import_result.dart';
 
 class RoutineParserService {
-  /// Ceiling for a routine PDF handed to the model (20MB max supported by Gemini API).
-  static const int maxPdfBytes = 20 * 1024 * 1024;
+  /// Ceiling for a routine PDF handed to the model (50MB max for large multi-page scans).
+  static const int maxPdfBytes = 50 * 1024 * 1024;
 
   RoutineParserService._();
   static final RoutineParserService instance = RoutineParserService._();
@@ -77,7 +77,7 @@ Rules for maximum token capacity:
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
           temperature: 0.1,
-          maxOutputTokens: 8192,
+          // No token cap: let the model generate freely without artificial cutoff
         ),
       );
       debugPrint('RoutineParserService initialized with $modelName');
@@ -236,7 +236,7 @@ Rules for maximum token capacity:
 
     if (pdfBytes.lengthInBytes > maxPdfBytes) {
       throw Exception(
-        'PDF ফাইলটি অনেক বড় (${(pdfBytes.lengthInBytes / 1048576).toStringAsFixed(1)}MB)। সর্বোচ্চ ২০MB পর্যন্ত ফাইল দেওয়া যাবে।',
+        'PDF ফাইলটি অনেক বড় (${(pdfBytes.lengthInBytes / 1048576).toStringAsFixed(1)}MB)। সর্বোচ্চ ৫০MB পর্যন্ত ফাইল দেওয়া যাবে।',
       );
     }
 
@@ -248,7 +248,18 @@ Rules for maximum token capacity:
         ]),
       ];
 
-      final response = await _model!.generateContent(content);
+      // Dedicated unconstrained model for routine PDF parsing: no token limit!
+      final pdfModel = GenerativeModel(
+        model: activeModel,
+        apiKey: _cachedApiKey!,
+        generationConfig: GenerationConfig(
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+          // Completely unconstrained tokens: no maxOutputTokens limitation
+        ),
+      );
+
+      final response = await pdfModel.generateContent(content);
       await GeminiUsageTracker.instance.recordSuccess(
         tokens: response.usageMetadata?.totalTokenCount ?? 0,
         actualInputTokens: response.usageMetadata?.promptTokenCount,
