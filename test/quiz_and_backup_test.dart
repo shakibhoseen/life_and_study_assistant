@@ -623,5 +623,85 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'QuizDrillModal supports Real Exam mode with BCS negative marking',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final testQuestions = [
+          const QuizQuestion(
+            questionText: '১. বাংলাদেশের জাতীয় ফুল কোনটি?',
+            options: ['ক. গোলাপ', 'খ. শাপলা', 'গ. জবা', 'ঘ. বেলি'],
+            correctIndex: 1, // 'খ. শাপলা'
+            explanation: 'বাংলাদেশের জাতীয় ফুল হলো সাদা শাপলা।',
+          ),
+          const QuizQuestion(
+            questionText: '২. বাংলাদেশের জাতীয় পাখি কোনটি?',
+            options: ['ক. দোয়েল', 'খ. ময়না', 'গ. কোকিল', 'ঘ. টিয়া'],
+            correctIndex: 0, // 'ক. দোয়েল'
+            explanation: 'বাংলাদেশের জাতীয় পাখি হলো দোয়েল।',
+          ),
+        ];
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            child: MaterialApp(
+              home: Scaffold(
+                body: QuizDrillModal(
+                  subject: 'বাংলাদেশ বিষয়াবলী',
+                  topic: 'জাতীয় প্রতীক',
+                  customQuestions: testQuestions,
+                  initialMode: QuizMode.realExam,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Verify Real Exam UI is active
+        expect(find.text('রিয়েল এক্সাম (-০.৫০)'), findsOneWidget);
+        expect(find.byIcon(Icons.timer_outlined), findsOneWidget);
+
+        // Select question 1 correctly ('খ. শাপলা')
+        await tester.tap(find.text('খ. শাপলা'));
+        await tester.pumpAndSettle();
+
+        // In Real Exam mode, explanation is NOT shown immediately
+        expect(find.text('বাংলাদেশের জাতীয় ফুল হলো সাদা শাপলা।'), findsNothing);
+
+        // Advance to question 2 using 'পরবর্তী'
+        expect(find.text('পরবর্তী'), findsOneWidget);
+        await tester.ensureVisible(find.text('পরবর্তী'));
+        await tester.tap(find.text('পরবর্তী'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('২. বাংলাদেশের জাতীয় পাখি কোনটি?'), findsOneWidget);
+
+        // Select question 2 incorrectly ('খ. ময়না' instead of 'ক. দোয়েল')
+        await tester.tap(find.text('খ. ময়না'));
+        await tester.pumpAndSettle();
+
+        // Submit the exam
+        expect(find.text('সাবমিট করুন'), findsOneWidget);
+        await tester.ensureVisible(find.text('সাবমিট করুন'));
+        await tester.tap(find.text('সাবমিট করুন'));
+        await tester.pumpAndSettle();
+
+        // 1 correct (+1.00), 1 wrong (-0.50) => Net score = 0.50 / 2
+        expect(find.text('0.50 / 2'), findsOneWidget);
+        expect(find.text('অর্জিত নেট স্কোর (25%)'), findsOneWidget);
+        expect(find.text('📋 প্রশ্নভিত্তিক পর্যালোচনা (Detailed Review)'), findsOneWidget);
+        expect(find.text('AI ফিক্স / 🎙️ ভয়েস'), findsOneWidget);
+      },
+    );
   });
 }

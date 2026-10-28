@@ -1,16 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/services/ai/gemini_ai_service.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/quiz_batch_correction_service.dart';
+import '../../../../core/services/voice/voice_recording_service.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
 import '../providers/drill_history_provider.dart';
 
 /// Reusable modal sheet that allows students to paste external AI (ChatGPT, Claude, etc.)
-/// critiques and batch-fix or delete faulty questions with a 1-tap confirmation preview.
+/// critiques or speak voice instructions to batch-fix or delete faulty questions with a 1-tap confirmation preview.
 class QuizBatchCorrectionSheet {
   static Future<List<QuizQuestion>?> show(
     BuildContext context, {
@@ -24,6 +28,9 @@ class QuizBatchCorrectionSheet {
   }) {
     final textController = TextEditingController();
     bool isAnalyzing = false;
+    bool isRecordingVoice = false;
+    int recordingSeconds = 0;
+    Timer? recordingTimer;
     List<QuestionCorrectionItem>? parsedCorrections;
     String? statusMessage;
 
@@ -177,12 +184,187 @@ class QuizBatchCorrectionSheet {
                     ),
                     const SizedBox(height: 12),
 
+                    // Voice Recording & Quick Paste Bar
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isRecordingVoice
+                                  ? Colors.red.shade600
+                                  : const Color(0xFF6366F1),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 0,
+                            ),
+                            icon: Icon(
+                              isRecordingVoice
+                                  ? Icons.stop_circle_rounded
+                                  : Icons.mic_rounded,
+                              size: 18,
+                            ),
+                            label: Text(
+                              isRecordingVoice
+                                  ? 'রেকর্ড থামান (${(recordingSeconds ~/ 60).toString().padLeft(2, '0')}:${(recordingSeconds % 60).toString().padLeft(2, '0')})'
+                                  : '🎙️ মুখে বলুন (ভয়েস ফিক্স)',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: isAnalyzing
+                                ? null
+                                : () async {
+                                    if (isRecordingVoice) {
+                                      recordingTimer?.cancel();
+                                      final seconds = recordingSeconds;
+                                      setSheetState(() {
+                                        isRecordingVoice = false;
+                                        isAnalyzing = true;
+                                        statusMessage =
+                                            'AI আপনার কণ্ঠ বিশ্লেষণ করছে... 🎙️';
+                                      });
+                                      try {
+                                        final audioFile =
+                                            await VoiceRecordingService
+                                                .instance
+                                                .stopRecording();
+                                        if (seconds < 1 || audioFile == null) {
+                                          setSheetState(() {
+                                            isAnalyzing = false;
+                                            statusMessage =
+                                                'রেকর্ডিং খুব সংক্ষিপ্ত ছিল। স্পষ্ট করে বলে থামুন।';
+                                          });
+                                          return;
+                                        }
+
+                                        final transcribed =
+                                            await GeminiAiService.instance
+                                                .transcribeVoice(audioFile);
+                                        if (transcribed != null &&
+                                            transcribed.trim().isNotEmpty) {
+                                          textController.text =
+                                              transcribed.trim();
+                                          // Auto analyze transcribed text
+                                          final items =
+                                              await QuizBatchCorrectionService
+                                                  .instance
+                                                  .parseCorrections(
+                                                    questions: questions,
+                                                    externalAnalysis:
+                                                        transcribed.trim(),
+                                                  );
+                                          if (items.isNotEmpty) {
+                                            setSheetState(() {
+                                              isAnalyzing = false;
+                                              statusMessage = null;
+                                              parsedCorrections = items;
+                                            });
+                                            return;
+                                          } else {
+                                            setSheetState(() {
+                                              isAnalyzing = false;
+                                              statusMessage =
+                                                  'ভয়েস টেক্সট নেওয়া হয়েছে: "$transcribed"। নিচের বাটনে সংশোধন বিশ্লেষণ করুন।';
+                                            });
+                                            return;
+                                          }
+                                        } else {
+                                          setSheetState(() {
+                                            isAnalyzing = false;
+                                            statusMessage =
+                                                'কোনো স্পষ্ট কণ্ঠস্বর বোঝা যায়নি। পুনরায় চেষ্টা করুন বা টাইপ করুন।';
+                                          });
+                                        }
+                                      } catch (e) {
+                                        setSheetState(() {
+                                          isAnalyzing = false;
+                                          statusMessage =
+                                              'ভয়েস প্রসেসিং ত্রুটি: $e';
+                                        });
+                                      }
+                                    } else {
+                                      try {
+                                        await VoiceRecordingService.instance
+                                            .startRecording();
+                                        recordingSeconds = 0;
+                                        recordingTimer?.cancel();
+                                        recordingTimer = Timer.periodic(
+                                          const Duration(seconds: 1),
+                                          (_) {
+                                            setSheetState(() {
+                                              recordingSeconds++;
+                                            });
+                                          },
+                                        );
+                                        setSheetState(() {
+                                          isRecordingVoice = true;
+                                          statusMessage =
+                                              'কথা বলুন: "৩ নম্বর প্রশ্নের উত্তর গ হবে আর ৫ নম্বরটা বাদ দিন..."';
+                                        });
+                                      } catch (e) {
+                                        setSheetState(() {
+                                          statusMessage =
+                                              'মাইক্রোফোন চালু করা যায়নি: $e';
+                                        });
+                                      }
+                                    }
+                                  },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isDark
+                                ? Colors.grey.shade300
+                                : const Color(0xFF334155),
+                            side: BorderSide(
+                              color: isDark
+                                  ? Colors.white24
+                                  : Colors.grey.shade300,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          icon: const Icon(Icons.content_paste_rounded, size: 16),
+                          label: const Text(
+                            'পেস্ট',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          onPressed: isAnalyzing
+                              ? null
+                              : () async {
+                                  final data = await Clipboard.getData(
+                                    Clipboard.kTextPlain,
+                                  );
+                                  if (data?.text != null &&
+                                      data!.text!.trim().isNotEmpty) {
+                                    textController.text = data.text!.trim();
+                                  }
+                                },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
                     TextField(
                       controller: textController,
-                      maxLines: 5,
+                      maxLines: 4,
                       style: const TextStyle(fontSize: 12.5),
                       decoration: InputDecoration(
-                        hintText: 'এখানে AI-এর বিশ্লেষণ পেস্ট করুন...\nযেমন:\n"প্রশ্ন ৩ এর উত্তর খ হবে, ক নয়..."\n"প্রশ্ন ৫ তথ্যগতভাবে ভুল, বাদ দেওয়া উচিত..."',
+                        hintText:
+                            'বা এখানে সরাসরি AI-এর বিশ্লেষণ পেস্ট করুন...\nযেমন:\n"প্রশ্ন ৩ এর উত্তর খ হবে, ক নয়..."\n"প্রশ্ন ৫ তথ্যগতভাবে ভুল, বাদ দেওয়া উচিত..."',
                         hintStyle: TextStyle(
                           fontSize: 12,
                           color: isDark
@@ -630,6 +812,9 @@ class QuizBatchCorrectionSheet {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      recordingTimer?.cancel();
+      VoiceRecordingService.instance.cancelRecording();
+    });
   }
 }

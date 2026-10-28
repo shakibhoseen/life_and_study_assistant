@@ -344,13 +344,12 @@ If the text says all answers are correct or no fixes are suggested, return: []
     return const [];
   }
 
-  /// Rule-based regex parser fallback for offline use.
+  /// Rule-based regex parser fallback for offline use and spoken natural language.
   List<QuestionCorrectionItem> _parseOffline(
     List<QuizQuestion> questions,
     String text,
   ) {
     final items = <QuestionCorrectionItem>[];
-    final lines = text.split('\n');
 
     // Maps Bengali/English option letters to 0..3
     int? optionCharToIndex(String char) {
@@ -362,23 +361,38 @@ If the text says all answers are correct or no fixes are suggested, return: []
       return null;
     }
 
+    final clauses = <String>[];
+    for (final rawLine in text.split('\n')) {
+      final line = rawLine.trim();
+      if (line.isEmpty) continue;
+      final parts = line.split(RegExp(r'(?:[।.,;]|\s+(?:আর|এবং|বা|and)\s+)'));
+      for (final p in parts) {
+        if (p.trim().isNotEmpty) clauses.add(p.trim());
+      }
+    }
+
     final directPattern = RegExp(
       r'^(?:প্রশ্ন|q|question)?\s*([০-৯\d]+)[.:\s\-)–—]+\s*([কখগঘabcd])(?:\s*[-–—:]\s*(.*)|\s+.*)?$',
       caseSensitive: false,
     );
+    final spokenAssignPattern = RegExp(
+      r'^(?:প্রশ্ন|q|question)?\s*([০-৯\d]+)(?:[.:\s\-)–—]|নম্বর|নং|এ|তে|এর|টাতে|টিতে|\s)*\s*([কখগঘabcd])(?:\s*(?:হবে|সঠিক|উত্তর)|$|\s*[-–—:]\s*(.*))',
+      caseSensitive: false,
+    );
     final qPattern = RegExp(
-      r'(?:প্রশ্ন|q|question)?\s*([০-৯\d]+)[.:\s\-)–—]+.*?(?:সঠিক|উত্তর|correct|\bহবে\b|\bis\b).*?([কখগঘabcd])',
+      r'(?:প্রশ্ন|q|question)?\s*([০-৯\d]+)(?:[.:\s\-)–—]|নম্বর|নং|এর|\s)*.*?(?:সঠিক|উত্তর|correct|\bহবে\b|\bis\b).*?([কখগঘabcd])',
+      caseSensitive: false,
+    );
+    final optHobePattern = RegExp(
+      r'(?:প্রশ্ন|q|question)?\s*([০-৯\d]+)(?:[.:\s\-)–—]|নম্বর|নং|এ|এর|টাতে|টিতে|\s)*.*?\b([কখগঘabcd])\s*(?:হবে|সঠিক)',
       caseSensitive: false,
     );
     final delPattern = RegExp(
-      r'(?:প্রশ্ন|q|question)?\s*([০-৯\d]+)[.:\s\-)–—]+.*?(?:বাদ|বাতিল|ভুল প্রশ্ন|delete|remove|invalid|outdated)',
+      r'(?:প্রশ্ন|q|question)?\s*([০-৯\d]+)(?:[.:\s\-)–—]|নম্বর|নং|টা|টি|\s)*.*?(?:বাদ|বাতিল|ভুল প্রশ্ন|delete|remove|invalid|outdated)',
       caseSensitive: false,
     );
 
-    for (final rawLine in lines) {
-      final line = rawLine.trim();
-      if (line.isEmpty) continue;
-
+    for (final line in clauses) {
       final delMatch = delPattern.firstMatch(line);
       if (delMatch != null) {
         final qNumStr = delMatch.group(1)!;
@@ -386,18 +400,20 @@ If the text says all answers are correct or no fixes are suggested, return: []
             int.tryParse(BengaliMathSanitizer.toEnglishDigits(qNumStr)) ?? 0;
         final qIdx = qNum - 1;
         if (qIdx >= 0 && qIdx < questions.length) {
-          items.add(
-            QuestionCorrectionItem(
-              questionIndex: qIdx,
-              questionSnippet: questions[qIdx].questionText,
-              proposedCorrectIndex: null,
-              proposedOptionText: '',
-              oldOptionText:
-                  questions[qIdx].options[questions[qIdx].correctIndex],
-              isDelete: true,
-              reason: 'External AI প্রশ্নটি বাদ দেওয়ার পরামর্শ দিয়েছে',
-            ),
-          );
+          if (!items.any((it) => it.questionIndex == qIdx)) {
+            items.add(
+              QuestionCorrectionItem(
+                questionIndex: qIdx,
+                questionSnippet: questions[qIdx].questionText,
+                proposedCorrectIndex: null,
+                proposedOptionText: '',
+                oldOptionText:
+                    questions[qIdx].options[questions[qIdx].correctIndex],
+                isDelete: true,
+                reason: 'External AI বা ভয়েস নির্দেশনায় বাদ দেওয়া হয়েছে',
+              ),
+            );
+          }
           continue;
         }
       }
@@ -407,7 +423,12 @@ If the text says all answers are correct or no fixes are suggested, return: []
       if (match != null) {
         reason = match.group(3)?.trim();
       } else {
-        match = qPattern.firstMatch(line);
+        match = spokenAssignPattern.firstMatch(line) ??
+            qPattern.firstMatch(line) ??
+            optHobePattern.firstMatch(line);
+        if (match != null && match.groupCount >= 3) {
+          reason = match.group(3)?.trim();
+        }
       }
 
       if (match != null) {
@@ -422,7 +443,8 @@ If the text says all answers are correct or no fixes are suggested, return: []
             qIdx < questions.length &&
             optIdx != null &&
             optIdx < questions[qIdx].options.length) {
-          if (optIdx != questions[qIdx].correctIndex) {
+          if (optIdx != questions[qIdx].correctIndex &&
+              !items.any((it) => it.questionIndex == qIdx)) {
             items.add(
               QuestionCorrectionItem(
                 questionIndex: qIdx,
@@ -434,7 +456,7 @@ If the text says all answers are correct or no fixes are suggested, return: []
                 isDelete: false,
                 reason: reason != null && reason.isNotEmpty
                     ? reason
-                    : 'External AI উত্তর পরিবর্তন করার পরামর্শ দিয়েছে',
+                    : 'ভয়েস বা AI নির্দেশনায় সঠিক উত্তর সংশোধন',
               ),
             );
           }

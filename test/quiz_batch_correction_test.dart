@@ -170,4 +170,40 @@ void main() {
       expect(updated.single.questionText, contains('কপবসয়'));
     });
   });
+
+  group('Spoken Bengali voice natural language offline parsing', () {
+    test('parses spoken answer update and deletion combined with "আর"', () async {
+      // Questions are 1-based in speech: "৩ নম্বর প্রশ্নের উত্তর গ হবে আর ২ নম্বরটা বাদ দিন"
+      final items = await svc.parseCorrections(
+        questions: quiz(),
+        externalAnalysis: '৩ নম্বর প্রশ্নের উত্তর গ হবে আর ২ নম্বরটা বাদ দিন',
+      );
+
+      expect(items.length, 2);
+
+      // Question 3 -> index 2, answer গ -> index 2
+      final q3 = items.firstWhere((it) => it.questionIndex == 2);
+      expect(q3.proposedCorrectIndex, 2);
+      expect(q3.isDelete, isFalse);
+
+      // Question 2 -> index 1, delete
+      final q2 = items.firstWhere((it) => it.questionIndex == 1);
+      expect(q2.isDelete, isTrue);
+    });
+
+    test('parses short spoken style "১ এ খ আর ৩ বাদ"', () async {
+      final items = await svc.parseCorrections(
+        questions: quiz(),
+        externalAnalysis: '১ এ খ আর ৩ বাদ',
+      );
+
+      expect(items.length, 2);
+
+      final q1 = items.firstWhere((it) => it.questionIndex == 0);
+      expect(q1.proposedCorrectIndex, 1); // খ -> 1
+
+      final q3 = items.firstWhere((it) => it.questionIndex == 2);
+      expect(q3.isDelete, isTrue);
+    });
+  });
 }
