@@ -10,6 +10,7 @@ import 'package:life_and_study_assistant/core/database/tables/weak_topics_table.
 import 'package:life_and_study_assistant/features/quiz/presentation/providers/drill_history_provider.dart';
 import 'package:life_and_study_assistant/features/settings/presentation/providers/settings_provider.dart';
 import 'package:life_and_study_assistant/features/topics/presentation/providers/topics_provider.dart';
+import 'package:life_and_study_assistant/features/topics/presentation/screens/topics_screen.dart';
 import 'package:life_and_study_assistant/features/weakness_healer/domain/models/weakness_healing_model.dart';
 import 'package:life_and_study_assistant/features/weakness_healer/presentation/widgets/weakness_healing_card.dart';
 import 'package:life_and_study_assistant/features/weakness_healer/presentation/widgets/weakness_healing_drill_modal.dart';
@@ -157,6 +158,7 @@ void main() {
       expect(find.text('অটো-উইকনেস হিলিং'), findsOneWidget);
       expect(find.text('🎯 আজকের ফোকাস: সমাস ও প্রত্যয়'), findsOneWidget);
       expect(find.text('৩ মিনিটের হিলিং ড্রিল 🩺'), findsOneWidget);
+      expect(find.byIcon(Icons.more_vert), findsOneWidget);
     });
 
     testWidgets(
@@ -208,6 +210,53 @@ void main() {
         // Should be completely hidden
         expect(find.text('অটো-উইকনেস হিলিং'), findsNothing);
         expect(find.text('৩ মিনিটের হিলিং ড্রিল 🩺'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'TopicsScreen renders weak topic card and compact 3-dot without overflow on narrow width',
+      (tester) async {
+        tester.view.physicalSize = const Size(360, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final longSubjectTopic = WeakTopic(
+          id: 99,
+          subject: 'বাংলাদেশ বিষয়াবলী ও সাম্প্রতিক ঘটনাবলী',
+          topicName: 'সংবিধানের মৌলিক অধিকার ও অনুচ্ছেদ',
+          proficiencyLevel: ProficiencyLevel.weak,
+          lastReviewedAt: null,
+          notes: 'LiveMCQ test error notes',
+          createdAt: DateTime.now(),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              weakTopicsStreamProvider.overrideWith(
+                (ref) => Stream.value([longSubjectTopic]),
+              ),
+              wrongQuestionsStreamProvider.overrideWith(
+                (ref) => Stream.value([]),
+              ),
+            ],
+            child: const MaterialApp(home: TopicsScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(find.text('সংবিধানের মৌলিক অধিকার ও অনুচ্ছেদ'), findsOneWidget);
+        expect(find.text('Weak'), findsNWidgets(2)); // Filter chip + Card badge
+        expect(find.byIcon(Icons.more_vert), findsWidgets);
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
       },
     );
 
