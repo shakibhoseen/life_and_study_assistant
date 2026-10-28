@@ -11,6 +11,7 @@ import 'package:life_and_study_assistant/features/live_mcq/presentation/provider
 import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/live_mcq_screen.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/widgets/routine_preview_sheet.dart';
 import 'package:life_and_study_assistant/features/settings/presentation/screens/settings_screen.dart';
+import 'package:life_and_study_assistant/features/spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
 import 'package:life_and_study_assistant/features/topics/presentation/providers/topics_provider.dart';
 import 'package:life_and_study_assistant/features/topics/presentation/screens/topics_screen.dart';
 
@@ -21,7 +22,8 @@ class HomeShellScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeShellScreen> createState() => _HomeShellScreenState();
 }
 
-class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
+class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
   StreamSubscription<SharingImportState>? _sharingSubscription;
 
@@ -36,14 +38,35 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initSharingIntent();
     });
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // The queue holds a finite run of cards, so topping it up only on a cold
+    // start meant it quietly ran dry for anyone who leaves the app open in
+    // the background for days.
+    if (state == AppLifecycleState.resumed) {
+      ref
+          .read(spacedRepetitionNotifierProvider.notifier)
+          .refreshFlashcardSchedule();
+    }
+  }
+
   void _initSharingIntent() {
     final db = ref.read(appDatabaseProvider);
     SharingIntentService.instance.init(db);
+
+    // The push queue holds a finite run of cards, so it is topped up every
+    // time the app is opened rather than relying on a background worker.
+    Future.microtask(
+      () => ref
+          .read(spacedRepetitionNotifierProvider.notifier)
+          .refreshFlashcardSchedule(),
+    );
 
     _sharingSubscription = SharingIntentService.instance.stateStream.listen((
       state,
@@ -187,6 +210,7 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sharingSubscription?.cancel();
     super.dispose();
   }
@@ -199,19 +223,19 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
 
     const activeColor = Color(0xFF6366F1);
     final navBg = isDark ? const Color(0xFF0F172A) : Colors.white;
-    final borderColor =
-        isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
-    final indicatorBg =
-        isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF);
+    final borderColor = isDark
+        ? const Color(0xFF1E293B)
+        : const Color(0xFFE2E8F0);
+    final indicatorBg = isDark
+        ? const Color(0xFF1E293B)
+        : const Color(0xFFEEF2FF);
 
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: navBg,
-          border: Border(
-            top: BorderSide(color: borderColor, width: 1.2),
-          ),
+          border: Border(top: BorderSide(color: borderColor, width: 1.2)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),

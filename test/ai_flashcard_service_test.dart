@@ -98,23 +98,26 @@ void main() {
       expect(cards[1].back.contains('πr²'), isTrue);
     });
 
-    test('Parses bullet points or colon-separated text from external AI', () async {
-      const bulletText = '''
+    test(
+      'Parses bullet points or colon-separated text from external AI',
+      () async {
+        const bulletText = '''
 • রম্বসের ক্ষেত্রফল: ½ × d1 × d2
 • সামান্তরিকের ক্ষেত্রফল = ভূমি × উচ্চতা
 • ট্রাপিজিয়ামের ক্ষেত্রফল -> ½ × (সমান্তরাল বাহুদ্বয়ের যোগফল) × উচ্চতা
 ''';
 
-      final cards = await AiFlashcardService.instance.parseFromExternalText(
-        bulletText,
-      );
+        final cards = await AiFlashcardService.instance.parseFromExternalText(
+          bulletText,
+        );
 
-      expect(cards.length, equals(3));
-      expect(cards[0].front, contains('রম্বসের ক্ষেত্রফল'));
-      expect(cards[0].back, contains('½ × d1 × d2'));
-      expect(cards[1].front, contains('সামান্তরিকের ক্ষেত্রফল'));
-      expect(cards[2].front, contains('ট্রাপিজিয়ামের ক্ষেত্রফল'));
-    });
+        expect(cards.length, equals(3));
+        expect(cards[0].front, contains('রম্বসের ক্ষেত্রফল'));
+        expect(cards[0].back, contains('½ × d1 × d2'));
+        expect(cards[1].front, contains('সামান্তরিকের ক্ষেত্রফল'));
+        expect(cards[2].front, contains('ট্রাপিজিয়ামের ক্ষেত্রফল'));
+      },
+    );
   });
 
   group('AiFlashcardService Database Batch Persistence', () {
@@ -145,10 +148,8 @@ void main() {
 
       final initialCount = (await db.watchAllSpacedReviewItems().first).length;
 
-      final savedCount = await AiFlashcardService.instance.saveToSpacedRepetition(
-        db,
-        cards,
-      );
+      final savedCount = await AiFlashcardService.instance
+          .saveToSpacedRepetition(db, cards);
 
       expect(savedCount, equals(2));
 
@@ -200,7 +201,10 @@ void main() {
       expect(actions.first.subject, equals('গণিত'));
       expect(actions.first.topic, equals('ত্রিকোণমিতি'));
       expect(actions.first.title, equals('পিথাগোরাসের উপপাদ্য'));
-      expect(actions.first.keyRule?.contains('অতিভুজ² = লম্ব² + ভূমি²'), isTrue);
+      expect(
+        actions.first.keyRule?.contains('অতিভুজ² = লম্ব² + ভূমি²'),
+        isTrue,
+      );
 
       final cleaned = ChatAction.cleanActionTags(response);
       expect(cleaned.trim(), isEmpty);

@@ -423,7 +423,8 @@ If the text says all answers are correct or no fixes are suggested, return: []
       if (match != null) {
         reason = match.group(3)?.trim();
       } else {
-        match = spokenAssignPattern.firstMatch(line) ??
+        match =
+            spokenAssignPattern.firstMatch(line) ??
             qPattern.firstMatch(line) ??
             optHobePattern.firstMatch(line);
         if (match != null && match.groupCount >= 3) {

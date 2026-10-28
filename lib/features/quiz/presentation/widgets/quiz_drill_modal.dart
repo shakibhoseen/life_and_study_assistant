@@ -15,10 +15,7 @@ import '../../../topics/presentation/providers/topics_provider.dart';
 import '../providers/drill_history_provider.dart';
 import 'quiz_batch_correction_sheet.dart';
 
-enum QuizMode {
-  practice,
-  realExam,
-}
+enum QuizMode { practice, realExam }
 
 class QuizDrillModal extends ConsumerStatefulWidget {
   final String topic;
@@ -206,7 +203,8 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     setState(() {
       _currentIndex = index;
       _selectedOptionIndex = _userAnswers[index];
-      _hasAnswered = _mode == QuizMode.practice && _userAnswers.containsKey(index);
+      _hasAnswered =
+          _mode == QuizMode.practice && _userAnswers.containsKey(index);
     });
   }
 
@@ -224,9 +222,16 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             ),
             title: const Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.amber,
+                  size: 24,
+                ),
                 SizedBox(width: 8),
-                Text('সাবমিট নিশ্চিতকরণ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(
+                  'সাবমিট নিশ্চিতকরণ',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             content: Text(
@@ -268,7 +273,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
       setState(() {
         _currentIndex++;
         _selectedOptionIndex = _userAnswers[_currentIndex];
-        _hasAnswered = _mode == QuizMode.practice && _userAnswers.containsKey(_currentIndex);
+        _hasAnswered =
+            _mode == QuizMode.practice &&
+            _userAnswers.containsKey(_currentIndex);
       });
     } else {
       setState(() {
@@ -368,7 +375,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     if (_mode == QuizMode.realExam) {
       final net = (calcCorrect * 1.0) - (calcWrong * 0.50);
       buffer.writeln('মোড: রিয়েল এক্সাম (BCS নেগেটিভ মার্কিং -০.৫০)');
-      buffer.writeln('প্রাপ্ত নেট স্কোর: ${net.toStringAsFixed(2)} / $total.00');
+      buffer.writeln(
+        'প্রাপ্ত নেট স্কোর: ${net.toStringAsFixed(2)} / $total.00',
+      );
     } else {
       buffer.writeln('মোড: প্র্যাকটিস ড্রিল');
     }
@@ -598,8 +607,10 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                     !_isLoading &&
                     _questions.isNotEmpty) ...[
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _remainingSeconds < 60
                           ? Colors.red.withValues(alpha: 0.15)
@@ -628,8 +639,8 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: _remainingSeconds < 60
-                              ? Colors.red
-                              : const Color(0xFF6366F1),
+                                ? Colors.red
+                                : const Color(0xFF6366F1),
                           ),
                         ),
                       ],
@@ -698,8 +709,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                             boxShadow: _mode == QuizMode.practice
                                 ? [
                                     BoxShadow(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.06),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.06,
+                                      ),
                                       blurRadius: 4,
                                       offset: const Offset(0, 1),
                                     ),
@@ -751,8 +763,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                             boxShadow: _mode == QuizMode.realExam
                                 ? [
                                     BoxShadow(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.06),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.06,
+                                      ),
                                       blurRadius: 4,
                                       offset: const Offset(0, 1),
                                     ),
@@ -868,16 +881,13 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                     textColor = Colors.white;
                     border = Border.all(color: Colors.white, width: 1.5);
                   } else if (isAnswered) {
-                    bgColor = const Color(
-                      0xFF10B981,
-                    ).withValues(alpha: isDark ? 0.25 : 0.15);
+                    bgColor = const Color(0xFF10B981)
+                        .withValues(alpha: isDark ? 0.25 : 0.15);
                     textColor = isDark
                         ? const Color(0xFF6EE7B7)
                         : const Color(0xFF047857);
                     border = Border.all(
-                      color: const Color(
-                        0xFF10B981,
-                      ).withValues(alpha: 0.5),
+                      color: const Color(0xFF10B981).withValues(alpha: 0.5),
                     );
                   } else {
                     bgColor = isDark
@@ -936,7 +946,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: isRealExam
-                      ? (isDark ? Colors.indigo.shade200 : Colors.indigo.shade800)
+                      ? (isDark
+                            ? Colors.indigo.shade200
+                            : Colors.indigo.shade800)
                       : Colors.green.shade700,
                 ),
               ),
@@ -961,14 +973,10 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFF1E293B)
-                  : const Color(0xFFF8FAFC),
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isDark
-                    ? Colors.white12
-                    : const Color(0xFFE2E8F0),
+                color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
               ),
             ),
             child: Text(
@@ -994,9 +1002,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             Color borderColor = isDark
                 ? const Color(0xFF334155)
                 : const Color(0xFFE2E8F0);
-            Color bgColor = isDark
-                ? const Color(0xFF1E293B)
-                : Colors.white;
+            Color bgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
             Color textColor = isDark
                 ? const Color(0xFFF1F5F9)
                 : const Color(0xFF1E293B);
@@ -1009,9 +1015,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                 bgColor = isDark
                     ? const Color(0xFF312E81)
                     : const Color(0xFFEEF2FF);
-                textColor = isDark
-                    ? Colors.white
-                    : const Color(0xFF4338CA);
+                textColor = isDark ? Colors.white : const Color(0xFF4338CA);
                 icon = Icons.check_circle_rounded;
                 iconColor = const Color(0xFF6366F1);
               }
@@ -1031,9 +1035,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                 bgColor = isDark
                     ? Colors.red.shade900.withValues(alpha: 0.3)
                     : Colors.red.shade50;
-                textColor = isDark
-                    ? Colors.red.shade200
-                    : Colors.red.shade900;
+                textColor = isDark ? Colors.red.shade200 : Colors.red.shade900;
                 icon = Icons.cancel;
                 iconColor = Colors.red.shade700;
               }
@@ -1110,10 +1112,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                       foregroundColor: Colors.red.shade600,
                     ),
                     icon: const Icon(Icons.clear_rounded, size: 15),
-                    label: const Text(
-                      'মুছুন',
-                      style: TextStyle(fontSize: 11),
-                    ),
+                    label: const Text('মুছুন', style: TextStyle(fontSize: 11)),
                     onPressed: _clearSelectedOption,
                   ),
                 ],
@@ -1292,7 +1291,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
 
     final double netScore = (correct * 1.0) - (wrong * 0.50);
     final double maxScore = total * 1.0;
-    final int percent = maxScore > 0 ? ((netScore / maxScore) * 100).toInt() : 0;
+    final int percent = maxScore > 0
+        ? ((netScore / maxScore) * 100).toInt()
+        : 0;
     final isGood = _mode == QuizMode.realExam
         ? (percent >= 50)
         : (_correctCount >= (total * 0.6).ceil());
@@ -1355,8 +1356,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: (isGood ? Colors.green : Colors.red)
-                        .withValues(alpha: 0.3),
+                    color: (isGood ? Colors.green : Colors.red).withValues(
+                      alpha: 0.3,
+                    ),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -1386,10 +1388,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   ),
                   Text(
                     'অর্জিত নেট স্কোর (${percent.clamp(0, 100)}%)',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   const SizedBox(height: 12),
                   Container(
@@ -1687,7 +1686,8 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                 statusIcon = Icons.cancel;
               }
             } else {
-              statusLabel = 'প্রশ্ন ${i + 1}: ${isCorrect ? "সঠিক উত্তর" : "ভুল উত্তর"}';
+              statusLabel =
+                  'প্রশ্ন ${i + 1}: ${isCorrect ? "সঠিক উত্তর" : "ভুল উত্তর"}';
               statusColor = isCorrect
                   ? const Color(0xFF15803D)
                   : const Color(0xFFC2410C);
@@ -1716,7 +1716,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                             ? Colors.green.withValues(alpha: 0.4)
                             : const Color(0xFFBBF7D0))
                       : (isSkipped
-                            ? (isDark ? Colors.white12 : const Color(0xFFE2E8F0))
+                            ? (isDark
+                                  ? Colors.white12
+                                  : const Color(0xFFE2E8F0))
                             : (isDark
                                   ? Colors.orange.withValues(alpha: 0.4)
                                   : const Color(0xFFFED7AA))),

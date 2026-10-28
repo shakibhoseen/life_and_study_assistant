@@ -13,27 +13,24 @@ import '../../utils/bengali_math_sanitizer.dart';
 import 'ai_media_limits.dart';
 import 'gemini_ai_service.dart';
 import 'gemini_result_cache.dart';
+import 'gemini_usage_tracker.dart';
 
 final _flashcardSchema = Schema.object(
   properties: {
     'subject': Schema.string(
-      description:
-          'Subject name in Bengali (e.g. গণিত, বাংলা ব্যাকরণ, বাংলাদেশ বিষয়াবলী, English)',
+      description: 'Subject name in Bengali (e.g. গণিত, বাংলা ব্যাকরণ, বাংলাদেশ বিষয়াবলী, English)',
     ),
     'topic': Schema.string(
-      description:
-          'Specific topic or chapter name in Bengali (e.g. পরিমিতি ও ক্ষেত্রফল, কারক ও বিভক্তি, সংবিধান)',
+      description: 'Specific topic or chapter name in Bengali (e.g. পরিমিতি ও ক্ষেত্রফল, কারক ও বিভক্তি, সংবিধান)',
     ),
     'cards': Schema.array(
       items: Schema.object(
         properties: {
           'front': Schema.string(
-            description:
-                'Concept, formula name, or question on front of card (e.g. বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য)',
+            description: 'Concept, formula name, or question on front of card (e.g. বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য)',
           ),
           'back': Schema.string(
-            description:
-                'The formula, rule, definition, mnemonic or solution on back of card (e.g. d = √2 × a, যেখানে a হলো বাহুর দৈর্ঘ্য। ক্ষেত্রফল = d²/2)',
+            description: 'The formula, rule, definition, mnemonic or solution on back of card (e.g. d = √2 × a, যেখানে a হলো বাহুর দৈর্ঘ্য। ক্ষেত্রফল = d²/2)',
           ),
           'subject': Schema.string(description: 'Optional subject override'),
           'topic': Schema.string(description: 'Optional topic override'),
@@ -152,7 +149,8 @@ class AiFlashcardService {
           ),
         );
 
-        final systemPrompt = '''
+        final systemPrompt =
+            '''
 You are an expert tutor creating study flashcards for competitive exams in Bangladesh (BCS Preliminary, Bank, Primary Recruitment, LiveMCQ).
 User prompt: "$trimmed"
 ${subjectHint != null && subjectHint.isNotEmpty ? 'Subject context: $subjectHint' : ''}
@@ -168,6 +166,17 @@ Instructions:
         final response = await model.generateContent([
           Content.text(systemPrompt),
         ]);
+
+        // These calls used to spend tokens without recording any, so none of
+        // the flashcard work appeared in the daily total.
+        await GeminiUsageTracker.instance.recordSuccess(
+          tokens: response.usageMetadata?.totalTokenCount ?? 0,
+          actualInputTokens: response.usageMetadata?.promptTokenCount,
+          actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
+          actualTotalTokens: response.usageMetadata?.totalTokenCount,
+          operation: 'flashcard_generate',
+          model: 'gemini-flash-latest',
+        );
         final rawText = response.text?.trim() ?? '';
         final parsed = _parseJsonFlashcards(rawText, prompt);
         if (parsed.isNotEmpty) return parsed;
@@ -234,18 +243,23 @@ Instructions:
 ''';
 
         final response = await model.generateContent([
-          Content.multi([
-            TextPart(prompt),
-            DataPart(mimeType, imageBytes),
-          ]),
+          Content.multi([TextPart(prompt), DataPart(mimeType, imageBytes)]),
         ]);
+
+        // These calls used to spend tokens without recording any, so none of
+        // the flashcard work appeared in the daily total.
+        await GeminiUsageTracker.instance.recordSuccess(
+          tokens: response.usageMetadata?.totalTokenCount ?? 0,
+          actualInputTokens: response.usageMetadata?.promptTokenCount,
+          actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
+          actualTotalTokens: response.usageMetadata?.totalTokenCount,
+          operation: 'flashcard_image_ocr',
+          model: 'gemini-flash-latest',
+        );
 
         final rawText = response.text?.trim() ?? '';
         if (rawText.isNotEmpty) {
-          await GeminiResultCache.instance.put(
-            cacheKey,
-            rawText,
-          );
+          await GeminiResultCache.instance.put(cacheKey, rawText);
         }
 
         final parsed = _parseJsonFlashcards(rawText, 'Book Page OCR');
@@ -255,7 +269,10 @@ Instructions:
       }
     }
 
-    return _generateOfflineFallback('বইয়ের পাতা থেকে স্ক্যানকৃত সূত্র', subjectHint: subjectHint);
+    return _generateOfflineFallback(
+      'বইয়ের পাতা থেকে স্ক্যানকৃত সূত্র',
+      subjectHint: subjectHint,
+    );
   }
 
   /// Parses flashcards pasted from external AI (Claude/ChatGPT) or custom structured text.
@@ -301,7 +318,8 @@ Instructions:
           ),
         );
 
-        final prompt = '''
+        final prompt =
+            '''
 Parse the following unstructured text, formulas, or flashcards into structured flashcards:
 """
 $trimmed
@@ -311,6 +329,17 @@ Return ONLY a valid JSON object matching the requested schema.
 ''';
 
         final response = await model.generateContent([Content.text(prompt)]);
+
+        // These calls used to spend tokens without recording any, so none of
+        // the flashcard work appeared in the daily total.
+        await GeminiUsageTracker.instance.recordSuccess(
+          tokens: response.usageMetadata?.totalTokenCount ?? 0,
+          actualInputTokens: response.usageMetadata?.promptTokenCount,
+          actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
+          actualTotalTokens: response.usageMetadata?.totalTokenCount,
+          operation: 'flashcard_external_text',
+          model: 'gemini-flash-latest',
+        );
         final rawText = response.text?.trim() ?? '';
         final parsed = _parseJsonFlashcards(rawText, 'External AI');
         if (parsed.isNotEmpty) return parsed;
@@ -358,7 +387,8 @@ Return ONLY a valid JSON object matching the requested schema.
 
       final decoded = jsonDecode(clean);
       if (decoded is Map<String, dynamic>) {
-        final defaultSubject = decoded['subject']?.toString().trim() ?? 'সাধারণ প্রস্তুতি';
+        final defaultSubject =
+            decoded['subject']?.toString().trim() ?? 'সাধারণ প্রস্তুতি';
         final defaultTopic = decoded['topic']?.toString().trim() ?? query;
         final cardsList = decoded['cards'];
 
@@ -481,7 +511,8 @@ Return ONLY a valid JSON object matching the requested schema.
           subject: 'গণিত',
           topic: 'বৃত্ত ও পরিধি',
           front: 'বৃত্তের পরিধি ও ক্ষেত্রফল',
-          back: '• পরিধি = 2πr\n• ক্ষেত্রফল = πr²\n(r = ব্যাসার্ধ, ব্যাস d = 2r)',
+          back:
+              '• পরিধি = 2πr\n• ক্ষেত্রফল = πr²\n(r = ব্যাসার্ধ, ব্যাস d = 2r)',
         ),
       ];
     }

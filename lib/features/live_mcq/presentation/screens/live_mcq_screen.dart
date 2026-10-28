@@ -1084,159 +1084,159 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     icon: const Icon(Icons.more_vert, size: 18),
-                  onSelected: (val) {
-                    if (val == 'copy_ref') {
-                      _copyExamRef(exam.id);
-                    } else if (val == 'calendar') {
-                      CalendarSyncService.instance.addToGoogleCalendar(exam);
-                    } else if (val == 'done') {
-                      ref
-                          .read(examScheduleNotifierProvider.notifier)
-                          .markCompleted(exam.id);
-                    } else if (val == 'undone') {
-                      ref
-                          .read(examScheduleNotifierProvider.notifier)
-                          .markIncomplete(exam.id);
-                    } else if (val == 'score') {
-                      _showScoreDialog(context, exam);
-                    } else if (val == 'change_track') {
-                      _showChangeTrackDialog(context, exam);
-                    } else if (val == 'voice_mistake') {
-                      VoiceMistakeBottomSheet.show(context);
-                    } else if (val == 'delete') {
-                      ref
-                          .read(examScheduleNotifierProvider.notifier)
-                          .deleteExam(exam.id);
-                    }
-                  },
-                  itemBuilder: (ctx) => [
-                    PopupMenuItem(
-                      value: 'copy_ref',
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.tag,
-                            size: 16,
-                            color: Colors.blueGrey,
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              'আইডি কপি (${EntityRef(EntityKind.exam, exam.id).tag})',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'calendar',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_month,
-                            size: 16,
-                            color: Color(0xFF1E3A8A),
-                          ),
-                          SizedBox(width: 8),
-                          Flexible(child: Text('Add to Calendar')),
-                        ],
-                      ),
-                    ),
-                    if (!exam.completedStatus)
-                      const PopupMenuItem(
-                        value: 'done',
+                    onSelected: (val) {
+                      if (val == 'copy_ref') {
+                        _copyExamRef(exam.id);
+                      } else if (val == 'calendar') {
+                        CalendarSyncService.instance.addToGoogleCalendar(exam);
+                      } else if (val == 'done') {
+                        ref
+                            .read(examScheduleNotifierProvider.notifier)
+                            .markCompleted(exam.id);
+                      } else if (val == 'undone') {
+                        ref
+                            .read(examScheduleNotifierProvider.notifier)
+                            .markIncomplete(exam.id);
+                      } else if (val == 'score') {
+                        _showScoreDialog(context, exam);
+                      } else if (val == 'change_track') {
+                        _showChangeTrackDialog(context, exam);
+                      } else if (val == 'voice_mistake') {
+                        VoiceMistakeBottomSheet.show(context);
+                      } else if (val == 'delete') {
+                        ref
+                            .read(examScheduleNotifierProvider.notifier)
+                            .deleteExam(exam.id);
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      PopupMenuItem(
+                        value: 'copy_ref',
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.check_circle,
+                            const Icon(
+                              Icons.tag,
                               size: 16,
-                              color: Colors.green,
+                              color: Colors.blueGrey,
                             ),
-                            SizedBox(width: 8),
-                            Flexible(child: Text('Mark as Completed')),
-                          ],
-                        ),
-                      )
-                    else
-                      const PopupMenuItem(
-                        value: 'undone',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.restart_alt,
-                              size: 16,
-                              color: Colors.orange,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'আইডি কপি (${EntityRef(EntityKind.exam, exam.id).tag})',
+                              ),
                             ),
-                            SizedBox(width: 8),
-                            Flexible(child: Text('Mark as Incomplete')),
                           ],
                         ),
                       ),
-                    const PopupMenuItem(
-                      value: 'score',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.grade_outlined,
-                            size: 16,
-                            color: Colors.indigo,
-                          ),
-                          SizedBox(width: 8),
-                          Flexible(child: Text('Record Score')),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'change_track',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.bookmark_outline,
-                            size: 16,
-                            color: Colors.blueAccent,
-                          ),
-                          SizedBox(width: 8),
-                          Flexible(
-                            child: Text('ট্র্যাক পরিবর্তন (Change Track)'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'voice_mistake',
-                      child: Row(
-                        children: [
-                          Icon(Icons.mic, size: 16, color: Color(0xFF6366F1)),
-                          SizedBox(width: 8),
-                          Flexible(child: Text('Record Mistake Voice Note')),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.delete_outline,
-                            size: 16,
-                            color: Colors.red,
-                          ),
-                          SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              'Delete Exam',
-                              style: TextStyle(color: Colors.red),
+                      const PopupMenuItem(
+                        value: 'calendar',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_month,
+                              size: 16,
+                              color: Color(0xFF1E3A8A),
                             ),
-                          ),
-                        ],
+                            SizedBox(width: 8),
+                            Flexible(child: Text('Add to Calendar')),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      if (!exam.completedStatus)
+                        const PopupMenuItem(
+                          value: 'done',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                size: 16,
+                                color: Colors.green,
+                              ),
+                              SizedBox(width: 8),
+                              Flexible(child: Text('Mark as Completed')),
+                            ],
+                          ),
+                        )
+                      else
+                        const PopupMenuItem(
+                          value: 'undone',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.restart_alt,
+                                size: 16,
+                                color: Colors.orange,
+                              ),
+                              SizedBox(width: 8),
+                              Flexible(child: Text('Mark as Incomplete')),
+                            ],
+                          ),
+                        ),
+                      const PopupMenuItem(
+                        value: 'score',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.grade_outlined,
+                              size: 16,
+                              color: Colors.indigo,
+                            ),
+                            SizedBox(width: 8),
+                            Flexible(child: Text('Record Score')),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'change_track',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.bookmark_outline,
+                              size: 16,
+                              color: Colors.blueAccent,
+                            ),
+                            SizedBox(width: 8),
+                            Flexible(
+                              child: Text('ট্র্যাক পরিবর্তন (Change Track)'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'voice_mistake',
+                        child: Row(
+                          children: [
+                            Icon(Icons.mic, size: 16, color: Color(0xFF6366F1)),
+                            SizedBox(width: 8),
+                            Flexible(child: Text('Record Mistake Voice Note')),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 16,
+                              color: Colors.red,
+                            ),
+                            SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Delete Exam',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
+              ],
+            ),
+            const SizedBox(height: 6),
 
             // Exam ID Tag (tappable to copy) & Origin Source Badge
             Row(
@@ -2188,14 +2188,15 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                         isAll ? 'All Programs' : track,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.w500,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
                           color: isSelected
                               ? (isAll
-                                  ? Colors.white
-                                  : (isDark
-                                      ? Colors.white
-                                      : _getTrackColor(track)))
+                                    ? Colors.white
+                                    : (isDark
+                                          ? Colors.white
+                                          : _getTrackColor(track)))
                               : (isDark ? Colors.white70 : Colors.black87),
                         ),
                       ),
@@ -2209,12 +2210,14 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                         color: isSelected
                             ? (isAll ? Colors.indigo : _getTrackColor(track))
                             : (isDark
-                                ? const Color(0xFF334155)
-                                : Colors.grey.shade300),
+                                  ? const Color(0xFF334155)
+                                  : Colors.grey.shade300),
                         width: isSelected ? 1.5 : 1,
                       ),
                       onSelected: (_) {
-                        ref.read(selectedTrackProvider.notifier).setTrack(track);
+                        ref
+                            .read(selectedTrackProvider.notifier)
+                            .setTrack(track);
                       },
                     );
                   },
@@ -2276,10 +2279,11 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
     String trackName,
   ) async {
     final db = ref.read(appDatabaseProvider);
-    final count = await (db.select(db.examSchedules)
-          ..where((t) => t.trackName.equals(trackName)))
-        .get()
-        .then((list) => list.length);
+    final count =
+        await (db.select(db.examSchedules)
+              ..where((t) => t.trackName.equals(trackName)))
+            .get()
+            .then((list) => list.length);
 
     if (!context.mounted) return;
 
@@ -2977,15 +2981,11 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Theme.of(ctx)
-                          .colorScheme
-                          .primaryContainer
+                      color: Theme.of(ctx).colorScheme.primaryContainer
                           .withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: Theme.of(ctx)
-                            .colorScheme
-                            .primary
+                        color: Theme.of(ctx).colorScheme.primary
                             .withValues(alpha: 0.25),
                       ),
                     ),
@@ -3101,8 +3101,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     controller: textController,
                     maxLines: 6,
                     decoration: const InputDecoration(
-                      hintText:
-                          'e.g.\n{"track_name": "52nd BCS", "exams": [...]}\nOR\n52nd BCS 135 Days Routine:\n28 Oct | 10:00 PM | Bangla: কারক ও বিভক্তি',
+                      hintText: 'e.g.\n{"track_name": "52nd BCS", "exams": [...]}\nOR\n52nd BCS 135 Days Routine:\n28 Oct | 10:00 PM | Bangla: কারক ও বিভক্তি',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -3305,8 +3304,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               backgroundColor: result.allDuplicates
                   ? Colors.amber.shade900
                   : (wasTruncated
-                      ? Colors.orange.shade900
-                      : Colors.green.shade800),
+                        ? Colors.orange.shade900
+                        : Colors.green.shade800),
               content: Text(
                 wasTruncated
                     ? '⚠️ Gemini টোকেন লিমিটের কারণে আংশিক (${result.insertedCount}টি) পরীক্ষা উদ্ধার হয়েছে। বাকি পরীক্ষার জন্য ChatGPT Prompt ব্যবহার করুন।'
@@ -3339,8 +3338,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           _showRoutineExtractionDiagnosticDialog(
             this.context,
             RoutineParserException(
-              userMessage:
-                  'রুটিন PDF থেকে কোনো পরীক্ষার তথ্য পাওয়া যায়নি। ফাইলটি স্পষ্ট কিনা যাচাই করুন।',
+              userMessage: 'রুটিন PDF থেকে কোনো পরীক্ষার তথ্য পাওয়া যায়নি। ফাইলটি স্পষ্ট কিনা যাচাই করুন।',
             ),
           );
         }

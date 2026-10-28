@@ -135,6 +135,61 @@ class FlashcardService {
   ];
 
   /// Gets a flashcard item either from curated bank or dynamically from user's weak topics / mistakes
+  /// Picks a batch of distinct cards for the scheduled push series.
+  ///
+  /// Due spaced-review items come first, because those are the ones the user
+  /// actually asked to be reminded of; the curated deck fills the rest. Cards
+  /// are not repeated within a batch — the same card arriving three times in
+  /// an afternoon is how a useful nudge becomes noise.
+  Future<List<FlashcardItem>> getFlashcardBatch({
+    AppDatabase? db,
+    required int count,
+    String? preferredSubject,
+  }) async {
+    if (count <= 0) return const [];
+
+    final picked = <FlashcardItem>[];
+    final seenTitles = <String>{};
+
+    if (db != null) {
+      try {
+        for (final review in await db.getDueSpacedReviewItems()) {
+          if (picked.length >= count) break;
+          if (!seenTitles.add(review.title)) continue;
+          picked.add(
+            FlashcardItem(
+              subject: review.subject,
+              topic: review.topic,
+              title: review.title,
+              content: review.keyRule,
+              tag: 'SpacedReview',
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error loading due reviews for flashcard batch: $e');
+      }
+    }
+
+    if (picked.length < count) {
+      final pool = [...curatedFlashcards]..shuffle(Random());
+      for (final card in pool) {
+        if (picked.length >= count) break;
+        if (preferredSubject != null &&
+            preferredSubject.isNotEmpty &&
+            !card.subject.toLowerCase().contains(
+              preferredSubject.toLowerCase(),
+            )) {
+          continue;
+        }
+        if (!seenTitles.add(card.title)) continue;
+        picked.add(card);
+      }
+    }
+
+    return picked;
+  }
+
   Future<FlashcardItem> getFlashcard({
     AppDatabase? db,
     String? preferredSubject,

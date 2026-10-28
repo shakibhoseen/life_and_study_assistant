@@ -1037,102 +1037,104 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                     ),
                     tooltip: 'Options',
                     onSelected: (val) {
-                    if (val == 'toggle_mastered') {
-                      ref
-                          .read(drillHistoryNotifierProvider.notifier)
-                          .markQuestionMastered(dq.id, !dq.isMastered);
-                    } else if (val == 'ai_explain') {
-                      AiMistakeExplainerSheet.show(context, dq);
-                    } else if (val == 'copy_ref') {
-                      // Paste this into the mentor to talk about this exact
-                      // question instead of describing it again.
-                      final tag = EntityRef(EntityKind.question, dq.id).tag;
-                      Clipboard.setData(ClipboardData(text: tag));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            '$tag কপি হয়েছে — AI মেন্টরে পেস্ট করে বলুন কী সমস্যা',
+                      if (val == 'toggle_mastered') {
+                        ref
+                            .read(drillHistoryNotifierProvider.notifier)
+                            .markQuestionMastered(dq.id, !dq.isMastered);
+                      } else if (val == 'ai_explain') {
+                        AiMistakeExplainerSheet.show(context, dq);
+                      } else if (val == 'copy_ref') {
+                        // Paste this into the mentor to talk about this exact
+                        // question instead of describing it again.
+                        final tag = EntityRef(EntityKind.question, dq.id).tag;
+                        Clipboard.setData(ClipboardData(text: tag));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '$tag কপি হয়েছে — AI মেন্টরে পেস্ট করে বলুন কী সমস্যা',
+                            ),
                           ),
+                        );
+                      } else if (val == 'delete') {
+                        ref
+                            .read(drillHistoryNotifierProvider.notifier)
+                            .deleteQuestion(dq.id);
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      PopupMenuItem(
+                        value: 'toggle_mastered',
+                        child: Row(
+                          children: [
+                            Icon(
+                              dq.isMastered ? Icons.replay : Icons.check_circle,
+                              size: 16,
+                              color: dq.isMastered
+                                  ? Colors.amber
+                                  : Colors.green,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              dq.isMastered
+                                  ? 'আবার ভুল হিসেবে রাখুন'
+                                  : 'আয়ত্তে এসেছে চিহ্নিত করুন',
+                            ),
+                          ],
                         ),
-                      );
-                    } else if (val == 'delete') {
-                      ref
-                          .read(drillHistoryNotifierProvider.notifier)
-                          .deleteQuestion(dq.id);
-                    }
-                  },
-                  itemBuilder: (ctx) => [
-                    PopupMenuItem(
-                      value: 'toggle_mastered',
-                      child: Row(
-                        children: [
-                          Icon(
-                            dq.isMastered ? Icons.replay : Icons.check_circle,
-                            size: 16,
-                            color: dq.isMastered ? Colors.amber : Colors.green,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            dq.isMastered
-                                ? 'আবার ভুল হিসেবে রাখুন'
-                                : 'আয়ত্তে এসেছে চিহ্নিত করুন',
-                          ),
-                        ],
                       ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'ai_explain',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.auto_awesome,
-                            size: 16,
-                            color: Color(0xFF8B5CF6),
-                          ),
-                          SizedBox(width: 8),
-                          Text('AI ভুল বিশ্লেষণ ও শর্টকাট'),
-                        ],
+                      const PopupMenuItem(
+                        value: 'ai_explain',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.auto_awesome,
+                              size: 16,
+                              color: Color(0xFF8B5CF6),
+                            ),
+                            SizedBox(width: 8),
+                            Text('AI ভুল বিশ্লেষণ ও শর্টকাট'),
+                          ],
+                        ),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: 'copy_ref',
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.tag,
-                            size: 16,
-                            color: Colors.blueGrey,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'আইডি কপি (${EntityRef(EntityKind.question, dq.id).tag})',
-                          ),
-                        ],
+                      PopupMenuItem(
+                        value: 'copy_ref',
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.tag,
+                              size: 16,
+                              color: Colors.blueGrey,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'আইডি কপি (${EntityRef(EntityKind.question, dq.id).tag})',
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.delete_outline,
-                            size: 16,
-                            color: Colors.red,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'নোটবুক থেকে মুছুন',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ],
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 16,
+                              color: Colors.red,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'নোটবুক থেকে মুছুন',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
+              ],
+            ),
+            const SizedBox(height: 6),
 
             // Topic name
             Text(

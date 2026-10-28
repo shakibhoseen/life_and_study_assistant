@@ -1383,7 +1383,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                               ? 'যুক্ত ✓'
                               : (isRoutinePlan
                                     ? 'সংরক্ষিত'
-                                    : (isStudyTask ? 'কুইজ সম্পন্ন' : 'যোগ হয়েছে'))))
+                                    : (isStudyTask
+                                          ? 'কুইজ সম্পন্ন'
+                                          : 'যোগ হয়েছে'))))
                   : (action.type == ChatActionType.fixExam
                         ? 'সংশোধন প্রয়োগ'
                         : (action.type == ChatActionType.addFlashcard
@@ -1826,41 +1828,41 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                                             Icons.more_vert,
                                             size: 18,
                                           ),
-                                        onSelected: (val) {
-                                          if (val == 'rename') {
-                                            Navigator.pop(ctx);
-                                            _showRenameSessionDialog(
-                                              context,
-                                              session,
-                                            );
-                                          } else if (val == 'delete') {
-                                            Navigator.pop(ctx);
-                                            _confirmDeleteSession(
-                                              context,
-                                              session,
-                                            );
-                                          }
-                                        },
-                                        itemBuilder: (c) => [
-                                          const PopupMenuItem(
-                                            value: 'rename',
-                                            child: Text('Rename'),
-                                          ),
-                                          if (sessions.length > 1)
+                                          onSelected: (val) {
+                                            if (val == 'rename') {
+                                              Navigator.pop(ctx);
+                                              _showRenameSessionDialog(
+                                                context,
+                                                session,
+                                              );
+                                            } else if (val == 'delete') {
+                                              Navigator.pop(ctx);
+                                              _confirmDeleteSession(
+                                                context,
+                                                session,
+                                              );
+                                            }
+                                          },
+                                          itemBuilder: (c) => [
                                             const PopupMenuItem(
-                                              value: 'delete',
-                                              child: Text(
-                                                'Delete',
-                                                style: TextStyle(
-                                                  color: Colors.red,
+                                              value: 'rename',
+                                              child: Text('Rename'),
+                                            ),
+                                            if (sessions.length > 1)
+                                              const PopupMenuItem(
+                                                value: 'delete',
+                                                child: Text(
+                                                  'Delete',
+                                                  style: TextStyle(
+                                                    color: Colors.red,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
+                                    ],
+                                  ),
                                   onTap: () {
                                     ref
                                         .read(chatNotifierProvider.notifier)

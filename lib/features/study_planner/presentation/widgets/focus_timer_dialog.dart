@@ -196,13 +196,12 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
                     child: CircularProgressIndicator(
                       value: progress,
                       strokeWidth: 8,
-                      backgroundColor:
-                          isDark ? Colors.white12 : Colors.grey.shade200,
+                      backgroundColor: isDark
+                          ? Colors.white12
+                          : Colors.grey.shade200,
                       valueColor: AlwaysStoppedAnimation(
                         _isRunning
-                            ? (isDark
-                                ? const Color(0xFF818CF8)
-                                : Colors.indigo)
+                            ? (isDark ? const Color(0xFF818CF8) : Colors.indigo)
                             : Colors.grey,
                       ),
                     ),
@@ -243,9 +242,7 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
                         style: TextStyle(
                           fontSize: 11,
                           color: isSelected
-                              ? (isDark
-                                  ? Colors.white
-                                  : Colors.indigo.shade900)
+                              ? (isDark ? Colors.white : Colors.indigo.shade900)
                               : (isDark ? Colors.white70 : Colors.black87),
                         ),
                       ),
@@ -253,8 +250,7 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
                       selectedColor: isDark
                           ? const Color(0xFF3730A3)
                           : Colors.indigo.shade100,
-                      backgroundColor:
-                          isDark ? const Color(0xFF1E293B) : null,
+                      backgroundColor: isDark ? const Color(0xFF1E293B) : null,
                       onSelected: (_) => _changeDuration(m),
                     );
                   }).toList(),

@@ -15,10 +15,17 @@ class NotificationConstants {
   static const String studyChannelDesc =
       'Adaptive study reminders tailored to your daily energy levels and LiveMCQ schedule.';
 
-  static const String flashcardChannelId = 'office_flashcards_channel';
+  /// Version suffix because an Android channel is immutable once created.
+  ///
+  /// The first version was registered silent, for glancing at while coding,
+  /// and no code change can give an existing channel a sound — only a new
+  /// channel id can. The old one is deleted on startup so it does not linger
+  /// in the system notification settings.
+  static const String flashcardChannelId = 'office_flashcards_channel_v2';
+  static const String flashcardChannelIdLegacy = 'office_flashcards_channel';
   static const String flashcardChannelName = 'Office Micro-Flashcards & Vocab';
   static const String flashcardChannelDesc =
-      'Non-intrusive 5-second flashcard bites and vocabulary drills while coding.';
+      'Timed flashcard and vocabulary nudges for revision.';
 
   static const String spacedReviewChannelId = 'spaced_repetition_channel';
   static const String spacedReviewChannelName = 'Ebbinghaus Spaced Repetition';
@@ -31,6 +38,24 @@ class NotificationConstants {
   static const int mealNotificationId = 2001;
   static const int studyPlanNotificationId = 3001;
   static const int flashcardNotificationId = 4001;
+
+  /// Block reserved for the recurring flashcard series.
+  ///
+  /// Each card in the series needs its own id, so they are numbered from here
+  /// upward and cancelled as a block when the schedule is rebuilt.
+  static const int flashcardSeriesBaseId = 4100;
+  static const int flashcardSeriesMaxCount = 12;
+
+  /// Settings keys for the recurring push.
+  static const String prefFlashcardPushEnabled = 'flashcard_push_enabled';
+  static const String prefFlashcardPushIntervalMinutes =
+      'flashcard_push_interval_minutes';
+
+  /// The window the user allows cards to arrive in, as hours of the day.
+  static const String prefFlashcardPushStartHour = 'flashcard_push_start_hour';
+  static const String prefFlashcardPushEndHour = 'flashcard_push_end_hour';
+  static const int flashcardPushDefaultStartHour = 9;
+  static const int flashcardPushDefaultEndHour = 22;
   static const int spacedReviewNotificationId = 5001;
 
   // Action IDs for Meal Notification

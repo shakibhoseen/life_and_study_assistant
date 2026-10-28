@@ -512,87 +512,87 @@ class _MultiTrackExamCountdownCardState
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             onSelected: (val) {
-                            if (val == 'ai_fix') {
-                              QuizBatchCorrectionSheet.show(
-                                context,
-                                ref: ref,
-                                questions: customQuestions,
-                                examId: heroExam.id,
-                                topic: heroExam.topicsCovered,
-                                subject: heroExam.title,
-                              );
-                            } else if (val == 'copy_questions') {
-                              _copyExamQuestionsToClipboard(
-                                context,
-                                heroExam,
-                                customQuestions,
-                              );
-                            } else if (val == 'edit_scanner') {
-                              QuestionBankScannerModal.show(
-                                context,
-                                initialQuestions: customQuestions,
-                                initialTitle: heroExam.title,
-                                initialSubject: heroExam.subject,
-                                existingExamId: heroExam.id,
-                              );
-                            }
-                          },
-                          itemBuilder: (ctx) => [
-                            const PopupMenuItem(
-                              value: 'ai_fix',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.auto_fix_high_rounded,
-                                    color: Color(0xFF6366F1),
-                                    size: 18,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'AI ফিক্স (ব্যাচ সংশোধন)',
-                                    style: TextStyle(fontSize: 12.5),
-                                  ),
-                                ],
+                              if (val == 'ai_fix') {
+                                QuizBatchCorrectionSheet.show(
+                                  context,
+                                  ref: ref,
+                                  questions: customQuestions,
+                                  examId: heroExam.id,
+                                  topic: heroExam.topicsCovered,
+                                  subject: heroExam.title,
+                                );
+                              } else if (val == 'copy_questions') {
+                                _copyExamQuestionsToClipboard(
+                                  context,
+                                  heroExam,
+                                  customQuestions,
+                                );
+                              } else if (val == 'edit_scanner') {
+                                QuestionBankScannerModal.show(
+                                  context,
+                                  initialQuestions: customQuestions,
+                                  initialTitle: heroExam.title,
+                                  initialSubject: heroExam.subject,
+                                  existingExamId: heroExam.id,
+                                );
+                              }
+                            },
+                            itemBuilder: (ctx) => [
+                              const PopupMenuItem(
+                                value: 'ai_fix',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.auto_fix_high_rounded,
+                                      color: Color(0xFF6366F1),
+                                      size: 18,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'AI ফিক্স (ব্যাচ সংশোধন)',
+                                      style: TextStyle(fontSize: 12.5),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'copy_questions',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.copy_rounded,
-                                    color: Color(0xFF10B981),
-                                    size: 18,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'প্রশ্নসমূহ কপি করুন',
-                                    style: TextStyle(fontSize: 12.5),
-                                  ),
-                                ],
+                              const PopupMenuItem(
+                                value: 'copy_questions',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.copy_rounded,
+                                      color: Color(0xFF10B981),
+                                      size: 18,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'প্রশ্নসমূহ কপি করুন',
+                                      style: TextStyle(fontSize: 12.5),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'edit_scanner',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.edit_note_rounded,
-                                    color: Color(0xFFF59E0B),
-                                    size: 18,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'প্রশ্ন সম্পাদনা ও টেস্ট পেপার',
-                                    style: TextStyle(fontSize: 12.5),
-                                  ),
-                                ],
+                              const PopupMenuItem(
+                                value: 'edit_scanner',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit_note_rounded,
+                                      color: Color(0xFFF59E0B),
+                                      size: 18,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'প্রশ্ন সম্পাদনা ও টেস্ট পেপার',
+                                      style: TextStyle(fontSize: 12.5),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
                     ],
                   );
                 }(),

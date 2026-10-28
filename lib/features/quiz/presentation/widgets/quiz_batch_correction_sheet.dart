@@ -224,19 +224,16 @@ class QuizBatchCorrectionSheet {
                                       setSheetState(() {
                                         isRecordingVoice = false;
                                         isAnalyzing = true;
-                                        statusMessage =
-                                            'AI আপনার কণ্ঠ বিশ্লেষণ করছে... 🎙️';
+                                        statusMessage = 'AI আপনার কণ্ঠ বিশ্লেষণ করছে... 🎙️';
                                       });
                                       try {
                                         final audioFile =
-                                            await VoiceRecordingService
-                                                .instance
+                                            await VoiceRecordingService.instance
                                                 .stopRecording();
                                         if (seconds < 1 || audioFile == null) {
                                           setSheetState(() {
                                             isAnalyzing = false;
-                                            statusMessage =
-                                                'রেকর্ডিং খুব সংক্ষিপ্ত ছিল। স্পষ্ট করে বলে থামুন।';
+                                            statusMessage = 'রেকর্ডিং খুব সংক্ষিপ্ত ছিল। স্পষ্ট করে বলে থামুন।';
                                           });
                                           return;
                                         }
@@ -246,8 +243,8 @@ class QuizBatchCorrectionSheet {
                                                 .transcribeVoice(audioFile);
                                         if (transcribed != null &&
                                             transcribed.trim().isNotEmpty) {
-                                          textController.text =
-                                              transcribed.trim();
+                                          textController.text = transcribed
+                                              .trim();
                                           // Auto analyze transcribed text
                                           final items =
                                               await QuizBatchCorrectionService
@@ -275,8 +272,7 @@ class QuizBatchCorrectionSheet {
                                         } else {
                                           setSheetState(() {
                                             isAnalyzing = false;
-                                            statusMessage =
-                                                'কোনো স্পষ্ট কণ্ঠস্বর বোঝা যায়নি। পুনরায় চেষ্টা করুন বা টাইপ করুন।';
+                                            statusMessage = 'কোনো স্পষ্ট কণ্ঠস্বর বোঝা যায়নি। পুনরায় চেষ্টা করুন বা টাইপ করুন।';
                                           });
                                         }
                                       } catch (e) {
@@ -302,8 +298,7 @@ class QuizBatchCorrectionSheet {
                                         );
                                         setSheetState(() {
                                           isRecordingVoice = true;
-                                          statusMessage =
-                                              'কথা বলুন: "৩ নম্বর প্রশ্নের উত্তর গ হবে আর ৫ নম্বরটা বাদ দিন..."';
+                                          statusMessage = 'কথা বলুন: "৩ নম্বর প্রশ্নের উত্তর গ হবে আর ৫ নম্বরটা বাদ দিন..."';
                                         });
                                       } catch (e) {
                                         setSheetState(() {
@@ -334,7 +329,10 @@ class QuizBatchCorrectionSheet {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          icon: const Icon(Icons.content_paste_rounded, size: 16),
+                          icon: const Icon(
+                            Icons.content_paste_rounded,
+                            size: 16,
+                          ),
                           label: const Text(
                             'পেস্ট',
                             style: TextStyle(
@@ -363,8 +361,7 @@ class QuizBatchCorrectionSheet {
                       maxLines: 4,
                       style: const TextStyle(fontSize: 12.5),
                       decoration: InputDecoration(
-                        hintText:
-                            'বা এখানে সরাসরি AI-এর বিশ্লেষণ পেস্ট করুন...\nযেমন:\n"প্রশ্ন ৩ এর উত্তর খ হবে, ক নয়..."\n"প্রশ্ন ৫ তথ্যগতভাবে ভুল, বাদ দেওয়া উচিত..."',
+                        hintText: 'বা এখানে সরাসরি AI-এর বিশ্লেষণ পেস্ট করুন...\nযেমন:\n"প্রশ্ন ৩ এর উত্তর খ হবে, ক নয়..."\n"প্রশ্ন ৫ তথ্যগতভাবে ভুল, বাদ দেওয়া উচিত..."',
                         hintStyle: TextStyle(
                           fontSize: 12,
                           color: isDark

@@ -676,7 +676,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // In Real Exam mode, explanation is NOT shown immediately
-        expect(find.text('বাংলাদেশের জাতীয় ফুল হলো সাদা শাপলা।'), findsNothing);
+        expect(
+          find.text('বাংলাদেশের জাতীয় ফুল হলো সাদা শাপলা।'),
+          findsNothing,
+        );
 
         // Advance to question 2 using 'পরবর্তী'
         expect(find.text('পরবর্তী'), findsOneWidget);
@@ -699,7 +702,10 @@ void main() {
         // 1 correct (+1.00), 1 wrong (-0.50) => Net score = 0.50 / 2
         expect(find.text('0.50 / 2'), findsOneWidget);
         expect(find.text('অর্জিত নেট স্কোর (25%)'), findsOneWidget);
-        expect(find.text('📋 প্রশ্নভিত্তিক পর্যালোচনা (Detailed Review)'), findsOneWidget);
+        expect(
+          find.text('📋 প্রশ্নভিত্তিক পর্যালোচনা (Detailed Review)'),
+          findsOneWidget,
+        );
         expect(find.text('AI ফিক্স / 🎙️ ভয়েস'), findsOneWidget);
       },
     );

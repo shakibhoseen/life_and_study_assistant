@@ -13,10 +13,7 @@ class AiFlashcardGeneratorModal extends ConsumerStatefulWidget {
 
   const AiFlashcardGeneratorModal({super.key, this.initialPrompt});
 
-  static Future<void> show(
-    BuildContext context, {
-    String? initialPrompt,
-  }) {
+  static Future<void> show(BuildContext context, {String? initialPrompt}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -121,7 +118,8 @@ class _AiFlashcardGeneratorModalState
 
     setState(() {
       _isLoading = true;
-      _loadingStatus = 'বইয়ের পাতা স্ক্যান করে গুরুত্বপূর্ণ সূত্রগুলো বের করা হচ্ছে...';
+      _loadingStatus =
+          'বইয়ের পাতা স্ক্যান করে গুরুত্বপূর্ণ সূত্রগুলো বের করা হচ্ছে...';
     });
 
     try {
@@ -154,7 +152,9 @@ class _AiFlashcardGeneratorModalState
     });
 
     try {
-      final cards = await AiFlashcardService.instance.parseFromExternalText(text);
+      final cards = await AiFlashcardService.instance.parseFromExternalText(
+        text,
+      );
       if (mounted) {
         setState(() {
           _generatedCards = cards;
@@ -214,9 +214,8 @@ class _AiFlashcardGeneratorModalState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('সেভ করতে সমস্যা হয়েছে: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('সেভ করতে সমস্যা হয়েছে: $e')));
       }
     }
   }
@@ -395,12 +394,23 @@ class _AiFlashcardGeneratorModalState
             TabBar(
               controller: _tabController,
               labelColor: const Color(0xFF6366F1),
-              unselectedLabelColor: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              unselectedLabelColor: isDark
+                  ? Colors.grey.shade400
+                  : Colors.grey.shade600,
               indicatorColor: const Color(0xFF6366F1),
               tabs: const [
-                Tab(icon: Icon(Icons.chat_bubble_outline, size: 18), text: 'প্রম্পট'),
-                Tab(icon: Icon(Icons.camera_alt_outlined, size: 18), text: 'বইয়ের ছবি'),
-                Tab(icon: Icon(Icons.content_paste_rounded, size: 18), text: 'পেস্ট'),
+                Tab(
+                  icon: Icon(Icons.chat_bubble_outline, size: 18),
+                  text: 'প্রম্পট',
+                ),
+                Tab(
+                  icon: Icon(Icons.camera_alt_outlined, size: 18),
+                  text: 'বইয়ের ছবি',
+                ),
+                Tab(
+                  icon: Icon(Icons.content_paste_rounded, size: 18),
+                  text: 'পেস্ট',
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -419,9 +429,7 @@ class _AiFlashcardGeneratorModalState
             ),
           ] else ...[
             // Preview & Confirm Generated Cards
-            Expanded(
-              child: _buildCardsPreview(isDark),
-            ),
+            Expanded(child: _buildCardsPreview(isDark)),
           ],
         ],
       ),
@@ -464,10 +472,13 @@ class _AiFlashcardGeneratorModalState
             controller: _promptController,
             maxLines: 2,
             decoration: InputDecoration(
-              hintText: 'যেমন: বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য ও পরিমিতির সূত্র...',
+              hintText:
+                  'যেমন: বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য ও পরিমিতির সূত্র...',
               hintStyle: const TextStyle(fontSize: 13),
               filled: true,
-              fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+              fillColor: isDark
+                  ? const Color(0xFF1E293B)
+                  : const Color(0xFFF8FAFC),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
@@ -628,7 +639,9 @@ class _AiFlashcardGeneratorModalState
                   'বৃত্তের পরিধি: 2πr',
               hintStyle: const TextStyle(fontSize: 12),
               filled: true,
-              fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+              fillColor: isDark
+                  ? const Color(0xFF1E293B)
+                  : const Color(0xFFF8FAFC),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
@@ -672,10 +685,7 @@ class _AiFlashcardGeneratorModalState
           children: [
             Text(
               'তৈরিকৃত কার্ড (${cards.length}টির মধ্যে $selectedCountটি নির্বাচিত)',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
             Row(
               children: [
@@ -690,7 +700,10 @@ class _AiFlashcardGeneratorModalState
                       }
                     });
                   },
-                  child: const Text('সব নির্বাচন', style: TextStyle(fontSize: 11)),
+                  child: const Text(
+                    'সব নির্বাচন',
+                    style: TextStyle(fontSize: 11),
+                  ),
                 ),
                 TextButton(
                   style: TextButton.styleFrom(
@@ -701,7 +714,10 @@ class _AiFlashcardGeneratorModalState
                       _generatedCards = null;
                     });
                   },
-                  child: const Text('পুনরায় তৈরি', style: TextStyle(fontSize: 11)),
+                  child: const Text(
+                    'পুনরায় তৈরি',
+                    style: TextStyle(fontSize: 11),
+                  ),
                 ),
               ],
             ),

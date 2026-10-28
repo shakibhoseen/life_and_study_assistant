@@ -126,9 +126,8 @@ Rules:
     ].contains(modelName)) {
       modelName = 'gemini-flash-lite-latest';
     }
-    final key = apiKey ??
-        await _getStoredApiKey() ??
-        GeminiAiService.instance.apiKey;
+    final key =
+        apiKey ?? await _getStoredApiKey() ?? GeminiAiService.instance.apiKey;
     if (key != null && key.isNotEmpty) {
       _cachedApiKey = key;
       _modelName = modelName;
@@ -290,8 +289,7 @@ Rules:
 
     if (_model == null || _cachedApiKey == null || _cachedApiKey!.isEmpty) {
       throw RoutineParserException(
-        userMessage:
-            'Gemini API Key সেট করা নেই। রুটিন PDF বিশ্লেষণ করতে Settings এ গিয়ে API Key যোগ করুন।',
+        userMessage: 'Gemini API Key সেট করা নেই। রুটিন PDF বিশ্লেষণ করতে Settings এ গিয়ে API Key যোগ করুন।',
         modelName: activeModel,
       );
     }
@@ -388,8 +386,7 @@ Rules:
 
       // If text received but 0 parsed
       throw RoutineParserException(
-        userMessage:
-            'রুটিন PDF থেকে কোনো পরীক্ষার তথ্য সনাক্ত করা যায়নি। ফাইলটি স্পষ্ট কিনা যাচাই করুন।',
+        userMessage: 'রুটিন PDF থেকে কোনো পরীক্ষার তথ্য সনাক্ত করা যায়নি। ফাইলটি স্পষ্ট কিনা যাচাই করুন।',
         technicalDetails:
             'Response received (${rawText.length} chars, ${usage?.candidatesTokenCount ?? 0} output tokens), but JSON parsing produced 0 items.',
         rawResponseSnippet: rawText.length > 500
@@ -413,8 +410,7 @@ Rules:
           model: activeModel,
         );
         throw RoutineParserException(
-          userMessage:
-              'Gemini API ফ্রি কোটা সাময়িকভাবে শেষ বা রেট লিমিট হয়েছে (429 Quota Exceeded)। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+          userMessage: 'Gemini API ফ্রি কোটা সাময়িকভাবে শেষ বা রেট লিমিট হয়েছে (429 Quota Exceeded)। কিছুক্ষণ পর আবার চেষ্টা করুন।',
           technicalDetails: errStr,
           modelName: activeModel,
           isQuotaOrRateLimit: true,
@@ -492,8 +488,7 @@ Rules:
   List<ParsedRoutineItem> decodeResponseForTesting(
     String? rawJson, {
     String? rawRef,
-  }) =>
-      _decodeResponse(rawJson, rawRef: rawRef);
+  }) => _decodeResponse(rawJson, rawRef: rawRef);
 
   /// Helper to decode JSON response safely with token truncation recovery
   List<ParsedRoutineItem> _decodeResponse(String? rawJson, {String? rawRef}) {
@@ -561,6 +556,7 @@ Rules:
     if (decoded is List) {
       return decoded
           .whereType<Map>()
+          .where(_hasUsableDate)
           .map(
             (e) => ParsedRoutineItem.fromJson(
               Map<String, dynamic>.from(e),
@@ -570,12 +566,14 @@ Rules:
           .where(_isValidRoutineItem)
           .toList();
     } else if (decoded is Map) {
-      final defaultTrack = decoded['track_name']?.toString() ??
+      final defaultTrack =
+          decoded['track_name']?.toString() ??
           decoded['program_name']?.toString() ??
           decoded['batch_name']?.toString() ??
           decoded['routine_title']?.toString();
 
-      final list = decoded['exams'] ??
+      final list =
+          decoded['exams'] ??
           decoded['schedules'] ??
           decoded['items'] ??
           decoded['routine'] ??
@@ -584,6 +582,7 @@ Rules:
       if (list is List) {
         return list
             .whereType<Map>()
+            .where(_hasUsableDate)
             .map(
               (e) => ParsedRoutineItem.fromJson(
                 Map<String, dynamic>.from(e),
@@ -601,6 +600,19 @@ Rules:
   bool _isValidRoutineItem(ParsedRoutineItem item) {
     return item.subject.trim().isNotEmpty ||
         (item.title != null && item.title!.trim().isNotEmpty);
+  }
+
+  /// Whether this row carried a date of its own.
+  ///
+  /// [ParsedRoutineItem.fromJson] falls back to tomorrow when the date is
+  /// missing or unreadable, which is harmless for a well-formed reply and
+  /// dangerous for a salvaged one: a row whose date was cut off mid-stream
+  /// would otherwise be scheduled on a day nobody chose. Checked on the raw
+  /// map, because after construction the invented date is indistinguishable
+  /// from a real one.
+  static bool _hasUsableDate(Map raw) {
+    final value = raw['date']?.toString().trim() ?? '';
+    return value.isNotEmpty && DateTime.tryParse(value) != null;
   }
 
   String? _tryRepairTruncatedJson(String text) {
@@ -704,10 +716,9 @@ Rules:
             final candidate = text.substring(startIdx, i + 1);
             try {
               final decoded = jsonDecode(candidate);
-              if (decoded is Map &&
-                  (decoded.containsKey('date') ||
-                      decoded.containsKey('subject') ||
-                      decoded.containsKey('title'))) {
+              // A salvaged fragment needs a real date of its own; the
+              // scanner is reading objects whose tail may be missing.
+              if (decoded is Map && _hasUsableDate(decoded)) {
                 final item = ParsedRoutineItem.fromJson(
                   Map<String, dynamic>.from(decoded),
                   rawRef: rawRef,

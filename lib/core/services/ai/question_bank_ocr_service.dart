@@ -36,8 +36,7 @@ final _questionBankSchema = Schema.object(
             description: '0-based index (0, 1, 2, or 3) of the correct option',
           ),
           'explanation': Schema.string(
-            description:
-                'Printed explanation or note from the book page if present below the question, otherwise a concise educational explanation in Bengali',
+            description: 'Printed explanation or note from the book page if present below the question, otherwise a concise educational explanation in Bengali',
           ),
           'legible': Schema.boolean(
             description:
@@ -457,6 +456,17 @@ Return JSON ONLY:
       );
 
       final response = await model.generateContent([Content.text(prompt)]);
+
+      // Per-question verification is a real call too; it was the only one in
+      // this service not being counted.
+      await GeminiUsageTracker.instance.recordSuccess(
+        tokens: response.usageMetadata?.totalTokenCount ?? 0,
+        actualInputTokens: response.usageMetadata?.promptTokenCount,
+        actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
+        actualTotalTokens: response.usageMetadata?.totalTokenCount,
+        operation: 'question_verify',
+        model: modelName,
+      );
       final raw = response.text?.trim() ?? '';
       if (raw.isNotEmpty) {
         var clean = raw;

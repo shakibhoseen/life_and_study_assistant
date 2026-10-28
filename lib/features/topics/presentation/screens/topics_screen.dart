@@ -355,102 +355,107 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                     ),
                     tooltip: 'Options',
                     onSelected: (val) {
-                    if (val == 'weak') {
-                      ref
-                          .read(topicsNotifierProvider.notifier)
-                          .updateProficiency(topic.id, ProficiencyLevel.weak);
-                    } else if (val == 'moderate') {
-                      ref
-                          .read(topicsNotifierProvider.notifier)
-                          .updateProficiency(
-                            topic.id,
-                            ProficiencyLevel.moderate,
-                          );
-                    } else if (val == 'strong') {
-                      ref
-                          .read(topicsNotifierProvider.notifier)
-                          .updateProficiency(topic.id, ProficiencyLevel.strong);
-                    } else if (val == 'ask_ai') {
-                      ref
-                          .read(chatNotifierProvider.notifier)
-                          .openOrCreateTopicSession(
-                            subject: topic.subject,
-                            topic: topic.topicName,
-                            initialPrompt:
-                                'আমাকে "${topic.subject}" বিষয়ের "${topic.topicName}" টপিকটি সহজে বুঝিয়ে দাও এবং BCS পরীক্ষার কমন ফাঁদ ও বিগত বছরের প্রশ্নগুলো বলো।',
-                          );
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AiChatScreen()),
-                      );
-                    } else if (val == 'drill') {
-                      QuizDrillModal.show(
-                        context,
-                        topic: topic.topicName,
-                        subject: topic.subject,
-                      );
-                    } else if (val == 'delete') {
-                      ref
-                          .read(topicsNotifierProvider.notifier)
-                          .deleteTopic(topic.id);
-                    }
-                  },
-                  itemBuilder: (ctx) => [
-                    const PopupMenuItem(
-                      value: 'drill',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.psychology,
-                            size: 16,
-                            color: Colors.indigo,
+                      if (val == 'weak') {
+                        ref
+                            .read(topicsNotifierProvider.notifier)
+                            .updateProficiency(topic.id, ProficiencyLevel.weak);
+                      } else if (val == 'moderate') {
+                        ref
+                            .read(topicsNotifierProvider.notifier)
+                            .updateProficiency(
+                              topic.id,
+                              ProficiencyLevel.moderate,
+                            );
+                      } else if (val == 'strong') {
+                        ref
+                            .read(topicsNotifierProvider.notifier)
+                            .updateProficiency(
+                              topic.id,
+                              ProficiencyLevel.strong,
+                            );
+                      } else if (val == 'ask_ai') {
+                        ref
+                            .read(chatNotifierProvider.notifier)
+                            .openOrCreateTopicSession(
+                              subject: topic.subject,
+                              topic: topic.topicName,
+                              initialPrompt:
+                                  'আমাকে "${topic.subject}" বিষয়ের "${topic.topicName}" টপিকটি সহজে বুঝিয়ে দাও এবং BCS পরীক্ষার কমন ফাঁদ ও বিগত বছরের প্রশ্নগুলো বলো।',
+                            );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AiChatScreen(),
                           ),
-                          SizedBox(width: 8),
-                          Text('Drill 5 MCQs (AI Quiz)'),
-                        ],
+                        );
+                      } else if (val == 'drill') {
+                        QuizDrillModal.show(
+                          context,
+                          topic: topic.topicName,
+                          subject: topic.subject,
+                        );
+                      } else if (val == 'delete') {
+                        ref
+                            .read(topicsNotifierProvider.notifier)
+                            .deleteTopic(topic.id);
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'drill',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.psychology,
+                              size: 16,
+                              color: Colors.indigo,
+                            ),
+                            SizedBox(width: 8),
+                            Text('Drill 5 MCQs (AI Quiz)'),
+                          ],
+                        ),
                       ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'ask_ai',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.auto_awesome,
-                            size: 16,
-                            color: Colors.indigo,
-                          ),
-                          SizedBox(width: 8),
-                          Text('Explain with AI Mentor'),
-                        ],
+                      const PopupMenuItem(
+                        value: 'ask_ai',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.auto_awesome,
+                              size: 16,
+                              color: Colors.indigo,
+                            ),
+                            SizedBox(width: 8),
+                            Text('Explain with AI Mentor'),
+                          ],
+                        ),
                       ),
-                    ),
-                    const PopupMenuDivider(),
-                    const PopupMenuItem(
-                      value: 'weak',
-                      child: Text('Mark as Weak'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'moderate',
-                      child: Text('Mark as Moderate'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'strong',
-                      child: Text('Mark as Strong'),
-                    ),
-                    const PopupMenuDivider(),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text(
-                        'Delete',
-                        style: TextStyle(color: Colors.red),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        value: 'weak',
+                        child: Text('Mark as Weak'),
                       ),
-                    ),
-                  ],
+                      const PopupMenuItem(
+                        value: 'moderate',
+                        child: Text('Mark as Moderate'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'strong',
+                        child: Text('Mark as Strong'),
+                      ),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
+              ],
+            ),
+            const SizedBox(height: 8),
             Text(
               topic.topicName,
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
@@ -1072,7 +1077,9 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.indigo.withValues(alpha: 0.2)
                                   : Colors.indigo.shade50,
                               borderRadius: BorderRadius.circular(6),
@@ -1084,7 +1091,9 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? Colors.indigo.shade200
                                     : Colors.indigo.shade800,
                               ),
@@ -1097,7 +1106,9 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                             '• ${dq.topic}',
                             style: TextStyle(
                               fontSize: 11.5,
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.white
                                   : Colors.black87,
                               fontWeight: FontWeight.w600,
@@ -1137,290 +1148,299 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                       ),
                       tooltip: 'Options',
                       onSelected: (val) {
-                      if (val == 'details') {
-                        AiMistakeExplainerSheet.show(context, dq);
-                      } else if (val == 'delete') {
-                        ref
-                            .read(drillHistoryNotifierProvider.notifier)
-                            .deleteQuestion(dq.id);
-                      } else if (val == 'ask_ai') {
-                        ref
-                            .read(chatNotifierProvider.notifier)
-                            .openOrCreateTopicSession(
-                              subject: dq.subject,
-                              topic: dq.topic,
-                              initialPrompt:
-                                  'প্রশ্ন: "${dq.questionText}"\nসঠিক উত্তর: "$correctAns"\nএই প্রশ্নটি কেন সঠিক এবং এর পেছনের কনসেপ্টটি বিস্তারিত বুঝিয়ে দাও।',
-                            );
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const AiChatScreen()),
-                        );
-                      }
-                    },
-                    itemBuilder: (ctx) => [
-                      const PopupMenuItem(
-                        value: 'details',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              size: 16,
-                              color: Colors.blue,
+                        if (val == 'details') {
+                          AiMistakeExplainerSheet.show(context, dq);
+                        } else if (val == 'delete') {
+                          ref
+                              .read(drillHistoryNotifierProvider.notifier)
+                              .deleteQuestion(dq.id);
+                        } else if (val == 'ask_ai') {
+                          ref
+                              .read(chatNotifierProvider.notifier)
+                              .openOrCreateTopicSession(
+                                subject: dq.subject,
+                                topic: dq.topic,
+                                initialPrompt:
+                                    'প্রশ্ন: "${dq.questionText}"\nসঠিক উত্তর: "$correctAns"\nএই প্রশ্নটি কেন সঠিক এবং এর পেছনের কনসেপ্টটি বিস্তারিত বুঝিয়ে দাও।',
+                              );
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AiChatScreen(),
                             ),
-                            SizedBox(width: 8),
-                            Text('বিস্তারিত দেখুন (Details)'),
-                          ],
+                          );
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'details',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 16,
+                                color: Colors.blue,
+                              ),
+                              SizedBox(width: 8),
+                              Text('বিস্তারিত দেখুন (Details)'),
+                            ],
+                          ),
                         ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'ask_ai',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.auto_awesome,
-                              size: 16,
-                              color: Colors.indigo,
-                            ),
-                            SizedBox(width: 8),
-                            Text('Ask AI to Explain'),
-                          ],
+                        const PopupMenuItem(
+                          value: 'ask_ai',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.auto_awesome,
+                                size: 16,
+                                color: Colors.indigo,
+                              ),
+                              SizedBox(width: 8),
+                              Text('Ask AI to Explain'),
+                            ],
+                          ),
                         ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline,
-                              size: 16,
-                              color: Colors.red,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Delete from Bank',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ],
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_outline,
+                                size: 16,
+                                color: Colors.red,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Delete from Bank',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
               const SizedBox(height: 10),
 
-            // Question Text
-            Text(
-              BengaliMathSanitizer.sanitize(dq.questionText),
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Your Answer (Red)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.red.withValues(alpha: 0.18)
-                    : Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.red.withValues(alpha: 0.4)
-                      : Colors.red.shade200,
+              // Question Text
+              Text(
+                BengaliMathSanitizer.sanitize(dq.questionText),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  height: 1.4,
                 ),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.close, color: Colors.red, size: 16),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Your answer: $userAns',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.red.shade200
-                            : Colors.red.shade900,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
+              const SizedBox(height: 10),
 
-            // Correct Answer (Green)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.green.withValues(alpha: 0.18)
-                    : Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.green.withValues(alpha: 0.4)
-                      : Colors.green.shade200,
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check, color: Colors.green, size: 16),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Correct answer: $correctAns',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.greenAccent
-                            : Colors.green.shade900,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Explanation (if present)
-            if (dq.explanation.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              // Your Answer (Red)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF1E293B)
-                      : Colors.grey.shade50,
+                      ? Colors.red.withValues(alpha: 0.18)
+                      : Colors.red.shade50,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white12
-                        : Colors.grey.shade200,
+                        ? Colors.red.withValues(alpha: 0.4)
+                        : Colors.red.shade200,
                   ),
                 ),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.lightbulb_outline,
-                      size: 16,
-                      color: Colors.amber,
-                    ),
+                    const Icon(Icons.close, color: Colors.red, size: 16),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        BengaliMathSanitizer.sanitize(dq.explanation),
+                        'Your answer: $userAns',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white70
-                              : Colors.black87,
-                          height: 1.4,
+                              ? Colors.red.shade200
+                              : Colors.red.shade900,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
+              const SizedBox(height: 6),
 
-            const SizedBox(height: 12),
-
-            // Action Buttons: [ Practice This ] & [ ✓ Mastered (বুঝেছি) ]
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: const Icon(
-                    Icons.psychology,
-                    size: 14,
-                    color: Colors.indigo,
-                  ),
-                  label: const Text(
-                    'Practice This',
-                    style: TextStyle(fontSize: 11.5, color: Colors.indigo),
-                  ),
-                  onPressed: () {
-                    final quizQ = _convertDrillQuestionToQuiz(dq);
-                    QuizDrillModal.show(
-                      context,
-                      topic: dq.topic,
-                      subject: dq.subject,
-                      customQuestions: [quizQ],
-                    );
-                  },
+              // Correct Answer (Green)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.green.withValues(alpha: 0.18)
+                      : Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.green.withValues(alpha: 0.4)
+                        : Colors.green.shade200,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check, color: Colors.green, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Correct answer: $correctAns',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.greenAccent
+                              : Colors.green.shade900,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    visualDensity: VisualDensity.compact,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                  ],
+                ),
+              ),
+
+              // Explanation (if present)
+              if (dq.explanation.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1E293B)
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white12
+                          : Colors.grey.shade200,
                     ),
                   ),
-                  icon: const Icon(Icons.done_all, size: 14),
-                  label: const Text(
-                    'Mastered (বুঝেছি)',
-                    style: TextStyle(fontSize: 11.5),
-                  ),
-                  onPressed: () async {
-                    await ref
-                        .read(drillHistoryNotifierProvider.notifier)
-                        .markQuestionMastered(dq.id, true);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Marked as mastered! 🎉'),
-                          duration: const Duration(seconds: 4),
-                          action: SnackBarAction(
-                            label: 'Undo',
-                            onPressed: () {
-                              ref
-                                  .read(drillHistoryNotifierProvider.notifier)
-                                  .markQuestionMastered(dq.id, false);
-                            },
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.lightbulb_outline,
+                        size: 16,
+                        color: Colors.amber,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          BengaliMathSanitizer.sanitize(dq.explanation),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70
+                                : Colors.black87,
+                            height: 1.4,
                           ),
                         ),
-                      );
-                    }
-                  },
+                      ),
+                    ],
+                  ),
                 ),
               ],
-            ),
-          ],
+
+              const SizedBox(height: 12),
+
+              // Action Buttons: [ Practice This ] & [ ✓ Mastered (বুঝেছি) ]
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.psychology,
+                      size: 14,
+                      color: Colors.indigo,
+                    ),
+                    label: const Text(
+                      'Practice This',
+                      style: TextStyle(fontSize: 11.5, color: Colors.indigo),
+                    ),
+                    onPressed: () {
+                      final quizQ = _convertDrillQuestionToQuiz(dq);
+                      QuizDrillModal.show(
+                        context,
+                        topic: dq.topic,
+                        subject: dq.subject,
+                        customQuestions: [quizQ],
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: const Icon(Icons.done_all, size: 14),
+                    label: const Text(
+                      'Mastered (বুঝেছি)',
+                      style: TextStyle(fontSize: 11.5),
+                    ),
+                    onPressed: () async {
+                      await ref
+                          .read(drillHistoryNotifierProvider.notifier)
+                          .markQuestionMastered(dq.id, true);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Marked as mastered! 🎉'),
+                            duration: const Duration(seconds: 4),
+                            action: SnackBarAction(
+                              label: 'Undo',
+                              onPressed: () {
+                                ref
+                                    .read(drillHistoryNotifierProvider.notifier)
+                                    .markQuestionMastered(dq.id, false);
+                              },
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // ==========================================
   // DRILL HISTORY LIST

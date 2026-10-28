@@ -4,6 +4,12 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../core/config/notification_constants.dart';
+
+import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
@@ -14,7 +20,9 @@ import '../../../../core/services/background/wifi_monitor_service.dart';
 import '../../../../core/services/export/app_export_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
 import '../../../../core/theme/theme_provider.dart';
+
 import 'package:life_and_study_assistant/features/live_mcq/presentation/providers/exam_schedule_provider.dart';
+
 import '../providers/settings_provider.dart';
 import '../widgets/gemini_usage_monitor_card.dart';
 
@@ -34,6 +42,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isValidatingKey = false;
   bool _isEditingApiKey = false;
   bool _showRawKey = false;
+  bool _flashcardPushEnabled = false;
+  int _flashcardPushMinutes = 60;
+  int _flashcardStartHour = NotificationConstants.flashcardPushDefaultStartHour;
+  int _flashcardEndHour = NotificationConstants.flashcardPushDefaultEndHour;
   bool _isPinging = false;
 
   @override
@@ -46,6 +58,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // Immediately check status on screen load
     WifiMonitorService.instance.checkCurrentWifiStatus().then((_) {
       if (mounted) setState(() {});
+    });
+    _loadFlashcardPushPrefs();
+  }
+
+  Future<void> _loadFlashcardPushPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _flashcardPushEnabled =
+          prefs.getBool(NotificationConstants.prefFlashcardPushEnabled) ??
+          false;
+      _flashcardPushMinutes =
+          prefs.getInt(
+            NotificationConstants.prefFlashcardPushIntervalMinutes,
+          ) ??
+          60;
+      _flashcardStartHour =
+          prefs.getInt(NotificationConstants.prefFlashcardPushStartHour) ??
+          NotificationConstants.flashcardPushDefaultStartHour;
+      _flashcardEndHour =
+          prefs.getInt(NotificationConstants.prefFlashcardPushEndHour) ??
+          NotificationConstants.flashcardPushDefaultEndHour;
     });
   }
 
@@ -349,6 +383,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const Color(0xFF10B981),
               ),
               _buildWeaknessHealerToggleCard(settings),
+              const SizedBox(height: 18),
+
+              _buildSectionHeader(
+                'ফ্ল্যাশকার্ড পুশ',
+                Icons.style_outlined,
+                const Color(0xFF8B5CF6),
+              ),
+              _buildFlashcardPushCard(),
               const SizedBox(height: 18),
 
               // 4. Data Backup & Restore
@@ -2656,6 +2698,237 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildFlashcardPushCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    const options = <int, String>{
+      30: 'প্রতি ৩০ মিনিটে',
+      60: 'প্রতি ঘণ্টায়',
+      120: 'প্রতি ২ ঘণ্টায়',
+      180: 'প্রতি ৩ ঘণ্টায়',
+    };
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF334155) : Colors.grey.shade300,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _flashcardPushEnabled,
+              title: const Text(
+                'নিয়ম করে ফ্ল্যাশকার্ড পাঠাও',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'রিভিশনের সময় হয়ে আসা কার্ড আগে যায়, তারপর বাছাই করা ডেক। '
+                'নিচের সময়সীমার বাইরে কিছু পাঠানো হয় না।',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.4,
+                  color: isDark ? Colors.white60 : Colors.black54,
+                ),
+              ),
+              onChanged: (v) async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool(
+                  NotificationConstants.prefFlashcardPushEnabled,
+                  v,
+                );
+                if (!mounted) return;
+                setState(() => _flashcardPushEnabled = v);
+                await ref
+                    .read(spacedRepetitionNotifierProvider.notifier)
+                    .refreshFlashcardSchedule();
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      v ? 'ফ্ল্যাশকার্ড পুশ চালু হলো' : 'ফ্ল্যাশকার্ড পুশ বন্ধ',
+                    ),
+                  ),
+                );
+              },
+            ),
+            if (_flashcardPushEnabled) ...[
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 7,
+                runSpacing: 7,
+                children: options.entries.map((e) {
+                  final selected = _flashcardPushMinutes == e.key;
+                  return ChoiceChip(
+                    label: Text(e.value, style: const TextStyle(fontSize: 12)),
+                    selected: selected,
+                    onSelected: (_) async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setInt(
+                        NotificationConstants.prefFlashcardPushIntervalMinutes,
+                        e.key,
+                      );
+                      if (!mounted) return;
+                      setState(() => _flashcardPushMinutes = e.key);
+                      await ref
+                          .read(spacedRepetitionNotifierProvider.notifier)
+                          .refreshFlashcardSchedule();
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'কখন থেকে কখন পর্যন্ত পাঠানো হবে',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildHourPicker(
+                      label: 'শুরু',
+                      hour: _flashcardStartHour,
+                      isDark: isDark,
+                      onPicked: (h) => _saveFlashcardWindow(startHour: h),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildHourPicker(
+                      label: 'শেষ',
+                      hour: _flashcardEndHour,
+                      isDark: isDark,
+                      onPicked: (h) => _saveFlashcardWindow(endHour: h),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final n = await ref
+                        .read(spacedRepetitionNotifierProvider.notifier)
+                        .scheduleFlashcardTestBurst();
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          n == 0
+                              ? 'কোনো কার্ড পাওয়া গেল না'
+                              : '$n টি কার্ড ১ মিনিট পরপর আসবে। '
+                                    'অ্যাপ বন্ধ করলেও আসবে।',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.play_circle_outline, size: 17),
+                  label: const Text(
+                    '১ মিনিট পরপর পাঠিয়ে দেখুন',
+                    style: TextStyle(fontSize: 12.5),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                // Said plainly, because a queue that runs out looks like a
+                // broken feature otherwise.
+                'পরীক্ষাটি সময়সীমা মানে না, আর চলতি তালিকার জায়গা নেয় — '
+                'অ্যাপ আবার খুললে স্বাভাবিক তালিকা ফিরে আসে।\n'
+                'একবারে ${NotificationConstants.flashcardSeriesMaxCount}টি কার্ড সময় ধরে সাজানো থাকে; '
+                'অ্যাপ খুললেই তালিকাটি আবার ভরে যায়।',
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.4,
+                  color: isDark ? Colors.white38 : Colors.black45,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHourPicker({
+    required String label,
+    required int hour,
+    required bool isDark,
+    required ValueChanged<int> onPicked,
+  }) {
+    return OutlinedButton(
+      onPressed: () async {
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay(hour: hour, minute: 0),
+          helpText: '$label সময় বেছে নিন',
+        );
+        if (picked != null) onPicked(picked.hour);
+      },
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10.5,
+              color: isDark ? Colors.white54 : Colors.black45,
+            ),
+          ),
+          const SizedBox(height: 1),
+          Text(
+            TimeOfDay(hour: hour, minute: 0).format(context),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Saves one edge of the window, refusing a pair that leaves no room.
+  Future<void> _saveFlashcardWindow({int? startHour, int? endHour}) async {
+    final start = startHour ?? _flashcardStartHour;
+    final end = endHour ?? _flashcardEndHour;
+
+    if (end <= start) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('শেষ সময় শুরুর পরে হতে হবে')),
+      );
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(NotificationConstants.prefFlashcardPushStartHour, start);
+    await prefs.setInt(NotificationConstants.prefFlashcardPushEndHour, end);
+
+    if (!mounted) return;
+    setState(() {
+      _flashcardStartHour = start;
+      _flashcardEndHour = end;
+    });
+    await ref
+        .read(spacedRepetitionNotifierProvider.notifier)
+        .refreshFlashcardSchedule();
   }
 
   Widget _buildSectionHeader(String title, IconData icon, Color color) {

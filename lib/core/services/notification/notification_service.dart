@@ -8,6 +8,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../config/notification_constants.dart';
+import '../flashcards/flashcard_service.dart';
 import 'notification_action_handler.dart';
 
 class NotificationService {
@@ -20,10 +21,81 @@ class NotificationService {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
+  /// Removes the first, silent flashcard channel.
+  ///
+  /// Harmless if it was never created. Without this the user would find two
+  /// flashcard entries in Android's notification settings, one of which does
+  /// nothing.
+  Future<void> _removeLegacyFlashcardChannel() async {
+    try {
+      final android = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      await android?.deleteNotificationChannel(
+        channelId: NotificationConstants.flashcardChannelIdLegacy,
+      );
+    } catch (e) {
+      debugPrint('Could not delete the legacy flashcard channel: $e');
+    }
+  }
+
+  /// Points `tz.local` at the device's own zone.
+  ///
+  /// The timezone package starts on UTC and stays there unless told
+  /// otherwise, so every scheduled notification was being placed on UTC
+  /// wall-clock hours. In Dhaka that is a six hour shift: a "9am to 10pm"
+  /// quiet window actually ran 3pm to 4am, which is how flashcards came to be
+  /// queued for midnight.
+  ///
+  /// Resolved by matching the device's current UTC offset rather than by
+  /// adding a plugin for it. Any zone sharing the offset keeps the same wall
+  /// clock, which is all scheduling needs.
+  void _configureLocalTimeZone() {
+    final offset = DateTime.now().timeZoneOffset;
+    final now = DateTime.now().toUtc();
+
+    bool matches(String name) {
+      try {
+        return tz.TZDateTime.from(now, tz.getLocation(name)).timeZoneOffset ==
+            offset;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    // Preferred first, so the common case lands on the right name and keeps
+    // the right daylight-saving rules.
+    for (final name in const [
+      'Asia/Dhaka',
+      'Asia/Kolkata',
+      'Asia/Karachi',
+      'Asia/Dubai',
+    ]) {
+      if (matches(name)) {
+        tz.setLocalLocation(tz.getLocation(name));
+        debugPrint('Notification timezone: $name');
+        return;
+      }
+    }
+
+    for (final name in tz.timeZoneDatabase.locations.keys) {
+      if (matches(name)) {
+        tz.setLocalLocation(tz.getLocation(name));
+        debugPrint('Notification timezone: $name (matched by offset)');
+        return;
+      }
+    }
+
+    debugPrint('Notification timezone: no match, staying on UTC');
+  }
+
   Future<void> init() async {
     if (_isInitialized) return;
 
     tz.initializeTimeZones();
+    _configureLocalTimeZone();
+    await _removeLegacyFlashcardChannel();
 
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -123,7 +195,8 @@ class NotificationService {
       NotificationConstants.flashcardChannelName,
       description: NotificationConstants.flashcardChannelDesc,
       importance: Importance.defaultImportance,
-      playSound: false,
+      playSound: true,
+      enableVibration: true,
     );
 
     // Spaced Repetition (Forgetting Curve) Channel
@@ -270,7 +343,10 @@ class NotificationService {
   /// Schedules daily recurring dinner confirmation notification (Default 4:00 PM)
   /// with actionable notification buttons in tray: [Yes, Count Me In] and [No, Skip]
   Future<void> scheduleDailyDinnerReminder({
-    int hour = 16,
+    // Was 16 while tz.local was stuck on UTC, which landed at 22:00 in Dhaka.
+    // Now that the zone is real, the hour says what it means and the reminder
+    // keeps arriving at the time it always did.
+    int hour = 22,
     int minute = 0,
   }) async {
     final now = tz.TZDateTime.now(tz.local);
@@ -406,6 +482,109 @@ class NotificationService {
   }
 
   /// Non-intrusive 5-second flashcard notification for coding breaks
+  /// Lays out the next few flashcards as timed notifications.
+  ///
+  /// Scheduled ahead with their content already chosen, rather than woken by
+  /// a background task: Android gives a periodic worker no better than a
+  /// fifteen-minute floor and may defer it for far longer, and a worker would
+  /// have to reach the database from another isolate to find a card. Queuing
+  /// real cards in advance keeps the timing exact and the content real; the
+  /// app refills the queue whenever it is opened.
+  ///
+  /// Quiet hours are honoured, because a vocabulary card at 3am teaches
+  /// nothing and costs trust.
+  Future<void> scheduleFlashcardSeries({
+    required List<FlashcardItem> cards,
+    required Duration interval,
+    int startHour = 9,
+    int endHour = 22,
+
+    /// For trying the feature out: skips the quiet window so a card arrives
+    /// now rather than tomorrow morning.
+    bool ignoreQuietHours = false,
+  }) async {
+    await cancelFlashcardSeries();
+    if (cards.isEmpty || interval.inMinutes < 1) return;
+
+    final androidDetails = AndroidNotificationDetails(
+      NotificationConstants.flashcardChannelId,
+      NotificationConstants.flashcardChannelName,
+      channelDescription: NotificationConstants.flashcardChannelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          NotificationConstants.actionFlashcardGotIt,
+          '✓ মনে থাকবে',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+      ],
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(presentAlert: true),
+    );
+
+    var when = tz.TZDateTime.now(tz.local).add(interval);
+    var scheduled = 0;
+
+    for (final card in cards) {
+      if (scheduled >= NotificationConstants.flashcardSeriesMaxCount) break;
+
+      // Walk forward out of the quiet window rather than dropping the card.
+      var guard = 0;
+      while (!ignoreQuietHours &&
+          (when.hour < startHour || when.hour >= endHour) &&
+          guard < 48) {
+        when = when.add(const Duration(hours: 1));
+        guard++;
+      }
+
+      final body = (card.mnemonic != null && card.mnemonic!.isNotEmpty)
+          ? '${card.content}\n💡 ${card.mnemonic}'
+          : card.content;
+
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id: NotificationConstants.flashcardSeriesBaseId + scheduled,
+          title: '🧠 ${card.subject}: ${card.title}',
+          body: body,
+          scheduledDate: when,
+          notificationDetails: details,
+          // Inexact alarms are cheap on battery and fine an hour apart, but
+          // the OS may hold them for many minutes -- useless for a short
+          // interval where the whole point is seeing it arrive.
+          androidScheduleMode: interval.inMinutes < 15
+              ? AndroidScheduleMode.exactAllowWhileIdle
+              : AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+        scheduled++;
+      } catch (e) {
+        debugPrint('Error scheduling flashcard at $when: $e');
+      }
+
+      when = when.add(interval);
+    }
+
+    debugPrint(
+      'Flashcard series: $scheduled queued, every ${interval.inMinutes} min, '
+      '${ignoreQuietHours ? "quiet hours ignored" : "${startHour}h-${endHour}h"}',
+    );
+  }
+
+  /// Clears the whole queued series.
+  Future<void> cancelFlashcardSeries() async {
+    for (var i = 0; i < NotificationConstants.flashcardSeriesMaxCount; i++) {
+      await _notificationsPlugin.cancel(
+        id: NotificationConstants.flashcardSeriesBaseId + i,
+      );
+    }
+  }
+
   Future<void> showOfficeMicroFlashcard({
     required String subject,
     required String title,
@@ -420,8 +599,10 @@ class NotificationService {
       NotificationConstants.flashcardChannelId,
       NotificationConstants.flashcardChannelName,
       channelDescription: NotificationConstants.flashcardChannelDesc,
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
       styleInformation: BigTextStyleInformation(
         bodyText,
         htmlFormatBigText: false,

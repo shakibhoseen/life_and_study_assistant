@@ -678,8 +678,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<int> deleteExamsByTrack(String trackName) {
-    return (delete(examSchedules)..where((t) => t.trackName.equals(trackName)))
-        .go();
+    return (delete(
+      examSchedules,
+    )..where((t) => t.trackName.equals(trackName))).go();
   }
 
   Future<int> clearAllExams() => delete(examSchedules).go();

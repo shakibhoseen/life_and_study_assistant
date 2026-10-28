@@ -255,11 +255,15 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
                                 border: Border.all(
                                   color: score > 0
                                       ? (isDark
-                                          ? Colors.black.withValues(alpha: 0.3)
-                                          : Colors.black.withValues(alpha: 0.08))
+                                            ? Colors.black.withValues(
+                                                alpha: 0.3,
+                                              )
+                                            : Colors.black.withValues(
+                                                alpha: 0.08,
+                                              ))
                                       : (isDark
-                                          ? const Color(0xFF334155)
-                                          : Colors.grey.shade300),
+                                            ? const Color(0xFF334155)
+                                            : Colors.grey.shade300),
                                   width: 0.5,
                                 ),
                               ),
