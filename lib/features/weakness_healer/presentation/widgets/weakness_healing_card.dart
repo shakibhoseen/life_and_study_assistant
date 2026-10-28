@@ -161,40 +161,51 @@ class _WeaknessHealingCardState extends ConsumerState<WeaknessHealingCard> {
                     ),
                   ),
                 ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 18),
-                  tooltip: 'হিলিং কন্ট্রোল',
-                  onSelected: (val) {
-                    if (val == 'disable') {
-                      ref
-                          .read(settingsNotifierProvider.notifier)
-                          .setWeaknessHealingEnabled(false);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'অটো-উইকনেস হিলিং বন্ধ করা হয়েছে। সেটিংস থেকে পুনরায় চালু করতে পারবেন।',
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  },
-                  itemBuilder: (ctx) => [
-                    const PopupMenuItem(
-                      value: 'disable',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.pause_circle_outline,
-                            size: 16,
-                            color: Colors.amber,
-                          ),
-                          SizedBox(width: 8),
-                          Text('হিলিং ইঞ্জিন সাময়িক বন্ধ রাখুন'),
-                        ],
-                      ),
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(
+                      Icons.more_vert,
+                      size: 18,
+                      color: isDark ? Colors.white70 : Colors.black54,
                     ),
-                  ],
+                    tooltip: 'হিলিং কন্ট্রোল',
+                    onSelected: (val) {
+                      if (val == 'disable') {
+                        ref
+                            .read(settingsNotifierProvider.notifier)
+                            .setWeaknessHealingEnabled(false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'অটো-উইকনেস হিলিং বন্ধ করা হয়েছে। সেটিংস থেকে পুনরায় চালু করতে পারবেন।',
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'disable',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.pause_circle_outline,
+                              size: 16,
+                              color: Colors.amber,
+                            ),
+                            SizedBox(width: 8),
+                            Text('হিলিং ইঞ্জিন সাময়িক বন্ধ রাখুন'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

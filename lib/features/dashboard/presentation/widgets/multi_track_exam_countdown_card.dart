@@ -503,11 +503,15 @@ class _MultiTrackExamCountdownCardState
 
                       // D. Test Paper Options (Batch Fix, Copy, Edit Scanner)
                       if (isCustomMcq) ...[
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert, size: 20),
-                          tooltip: 'টেস্ট পেপার প্রশ্ন অপশন',
-                          padding: EdgeInsets.zero,
-                          onSelected: (val) {
+                        SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert, size: 20),
+                            tooltip: 'টেস্ট পেপার প্রশ্ন অপশন',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onSelected: (val) {
                             if (val == 'ai_fix') {
                               QuizBatchCorrectionSheet.show(
                                 context,
@@ -587,7 +591,8 @@ class _MultiTrackExamCountdownCardState
                             ),
                           ],
                         ),
-                      ],
+                      ),
+                    ],
                     ],
                   );
                 }(),

@@ -1018,9 +1018,19 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                       ],
                     ),
                   ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 18),
-                  onSelected: (val) {
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(
+                      Icons.more_vert,
+                      size: 18,
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
+                    onSelected: (val) {
                     if (val == 'toggle_mastered') {
                       ref
                           .read(drillHistoryNotifierProvider.notifier)
@@ -1113,9 +1123,10 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                     ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
 
             // Topic name
             Text(

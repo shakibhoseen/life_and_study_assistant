@@ -290,25 +290,29 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.indigo.withValues(alpha: 0.2)
-                        : Colors.indigo.shade50,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    topic.subject,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.indigo.shade200
-                          : Colors.indigo.shade800,
+                          ? Colors.indigo.withValues(alpha: 0.2)
+                          : Colors.indigo.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      topic.subject,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.indigo.shade200
+                            : Colors.indigo.shade800,
+                      ),
                     ),
                   ),
                 ),
@@ -331,9 +335,22 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                     ),
                   ),
                 ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 18),
-                  onSelected: (val) {
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(
+                      Icons.more_vert,
+                      size: 18,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white70
+                          : Colors.grey.shade700,
+                    ),
+                    tooltip: 'Options',
+                    onSelected: (val) {
                     if (val == 'weak') {
                       ref
                           .read(topicsNotifierProvider.notifier)
@@ -426,9 +443,10 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                     ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
             Text(
               topic.topicName,
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
@@ -1082,9 +1100,21 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                         : Colors.grey.shade600,
                   ),
                 ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 18),
-                  onSelected: (val) {
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(
+                      Icons.more_vert,
+                      size: 18,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white70
+                          : Colors.grey.shade700,
+                    ),
+                    onSelected: (val) {
                     if (val == 'delete') {
                       ref
                           .read(drillHistoryNotifierProvider.notifier)
@@ -1138,8 +1168,9 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
             const SizedBox(height: 10),
 
             // Question Text

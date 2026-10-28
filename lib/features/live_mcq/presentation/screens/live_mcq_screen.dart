@@ -1074,10 +1074,15 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   ),
                 ),
 
+                const SizedBox(width: 4),
                 // Popup menu
-                PopupMenuButton<String>(
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.more_vert, size: 18),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: const Icon(Icons.more_vert, size: 18),
                   onSelected: (val) {
                     if (val == 'copy_ref') {
                       _copyExamRef(exam.id);
@@ -1227,9 +1232,10 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
 
             // Exam ID Tag (tappable to copy) & Origin Source Badge
             Row(

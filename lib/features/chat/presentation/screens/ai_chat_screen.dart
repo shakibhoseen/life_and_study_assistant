@@ -1815,11 +1815,16 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                                             ),
                                           ),
                                         ),
-                                      PopupMenuButton<String>(
-                                        icon: const Icon(
-                                          Icons.more_vert,
-                                          size: 18,
-                                        ),
+                                      SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: PopupMenuButton<String>(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          icon: const Icon(
+                                            Icons.more_vert,
+                                            size: 18,
+                                          ),
                                         onSelected: (val) {
                                           if (val == 'rename') {
                                             Navigator.pop(ctx);
@@ -1852,8 +1857,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                                             ),
                                         ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
+                                ),
                                   onTap: () {
                                     ref
                                         .read(chatNotifierProvider.notifier)
