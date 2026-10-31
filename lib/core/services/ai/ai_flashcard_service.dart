@@ -227,7 +227,8 @@ Instructions:
 2. Front (Title): Short, focused concept, question or formula name (e.g. "বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য", "রম্বসের ক্ষেত্রফল", "ণ-ত্ব বিধানের কমন ফাঁদ", "অনুচ্ছেদ ২৭").
 3. Back (Key Rule): The exact formula, definition, shortcut, mnemonic or explanation in clear Bengali math unicode (e.g. "d = √2 × a, যেখানে a = বাহুর দৈর্ঘ্য। ক্ষেত্রফল = a² = d²/2") with practical recall tips.
 4. Clean Unicode: Use '°', '×', '²', '³', '√', 'π', '÷', '½'. Never use raw LaTeX dollar signs like '\$x^2\$'.
-5. Return ONLY a valid JSON object matching the requested schema.
+5. Memory aids: add one only where the fact is genuinely easy to forget or confuse — a pair that swaps round, an arbitrary number or date, a list whose order matters, two near-identical terms. Where a fact follows from understanding, give the reason instead. An invented device for something self-evident is worse than none, so expect this to fit perhaps half the cards.
+6. Return ONLY a valid JSON object matching the requested schema.
 ''';
 
         final response = await model.generateContent([

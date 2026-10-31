@@ -54,7 +54,8 @@ Future<void> main(List<String> args) async {
   final cap = int.parse(Platform.environment['FLASHCARD_MAX_TOKENS'] ?? '1024');
   final ask =
       Platform.environment['FLASHCARD_ASK'] ??
-      'Generate 3 to 8 high-yield flashcards focused directly on this topic or formula request.';
+      'Make as many flashcards as the user asked for. When they name a number, produce exactly that many; when they do not, produce 3 to 8. Follow any rules they set about content, wording or coverage.';
+  final rules = Platform.environment['FLASHCARD_RULES'] ?? '';
 
   final model = GenerativeModel(
     model: 'gemini-flash-latest',
@@ -78,6 +79,7 @@ Instructions:
 3. Back (Key Rule): The exact formula, definition, shortcut, mnemonic or explanation in clear Bengali math unicode with practical recall tips.
 4. Clean Unicode: Use '°', '×', '²', '³', '√', 'π', '÷', '½'. Never use raw LaTeX dollar signs.
 5. Return ONLY a valid JSON object matching the requested schema.
+$rules
 ''';
 
   final response = await model.generateContent([Content.text(systemPrompt)]);
