@@ -31,17 +31,21 @@ class FlashcardDetailSheet extends ConsumerStatefulWidget {
 }
 
 class _FlashcardDetailSheetState extends ConsumerState<FlashcardDetailSheet> {
-  bool _marked = false;
+  /// null until the card is graded, then true for recalled, false for forgot.
+  bool? _recalled;
 
-  Future<void> _markRecalled() async {
+  Future<void> _grade({required bool recalled}) async {
     final id = widget.card.reviewItemId;
     if (id != null) {
-      await ref
-          .read(spacedRepetitionNotifierProvider.notifier)
-          .advanceReview(id);
+      final notifier = ref.read(spacedRepetitionNotifierProvider.notifier);
+      // Forgetting is the signal the schedule needs most: without it a card
+      // the user could not recall is simply pushed further away.
+      recalled
+          ? await notifier.advanceReview(id)
+          : await notifier.resetReview(id);
     }
     if (!mounted) return;
-    setState(() => _marked = true);
+    setState(() => _recalled = recalled);
   }
 
   @override
@@ -208,34 +212,77 @@ class _FlashcardDetailSheetState extends ConsumerState<FlashcardDetailSheet> {
                 ),
                 const SizedBox(width: 4),
                 Expanded(
-                  child: _marked
+                  child: _recalled != null
                       ? Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
-                              Icons.check_circle,
+                            Icon(
+                              _recalled!
+                                  ? Icons.check_circle
+                                  : Icons.refresh_rounded,
                               size: 17,
-                              color: Colors.green,
+                              color: _recalled!
+                                  ? Colors.green
+                                  : Colors.orange.shade700,
                             ),
                             const SizedBox(width: 7),
-                            Text(
-                              fromReview
-                                  ? 'পরের রিভিশন পিছিয়ে দেওয়া হলো'
-                                  : 'মনে রাখা হলো',
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: Colors.green,
+                            Flexible(
+                              child: Text(
+                                _recalled!
+                                    ? (fromReview
+                                          ? 'পরের রিভিশন পিছিয়ে দেওয়া হলো'
+                                          : 'মনে রাখা হলো')
+                                    : 'কালই আবার দেখাবে',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: _recalled!
+                                      ? Colors.green
+                                      : Colors.orange.shade700,
+                                ),
                               ),
                             ),
                           ],
                         )
-                      : FilledButton.icon(
-                          onPressed: _markRecalled,
-                          icon: const Icon(Icons.done, size: 18),
-                          label: const Text('মনে থাকবে'),
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                          ),
+                      : Row(
+                          children: [
+                            if (fromReview) ...[
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _grade(recalled: false),
+                                  icon: const Icon(Icons.refresh, size: 17),
+                                  label: const Text(
+                                    'মনে নেই',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.orange.shade800,
+                                    side: BorderSide(
+                                      color: Colors.orange.shade300,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 13,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: () => _grade(recalled: true),
+                                icon: const Icon(Icons.done, size: 18),
+                                label: const Text(
+                                  'মনে থাকবে',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                 ),
               ],

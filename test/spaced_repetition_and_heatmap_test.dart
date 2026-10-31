@@ -1,11 +1,16 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:life_and_study_assistant/core/database/app_database.dart';
+import 'package:life_and_study_assistant/core/database/database_provider.dart';
 import 'package:life_and_study_assistant/core/database/tables/daily_energy_logs_table.dart';
 import 'package:life_and_study_assistant/core/database/tables/weak_topics_table.dart';
 import 'package:life_and_study_assistant/core/services/flashcards/flashcard_service.dart';
+import 'package:life_and_study_assistant/features/spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
+import 'package:life_and_study_assistant/features/spaced_repetition/presentation/screens/spaced_repetition_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -199,6 +204,119 @@ void main() {
         expect(card.subject.contains('English'), isTrue);
         expect(card.title.isNotEmpty, isTrue);
         expect(card.content.isNotEmpty, isTrue);
+      },
+    );
+  });
+
+  group('Spaced Repetition Screen Widget Tests', () {
+    testWidgets(
+      'Active Recall reveals answer on tap and filters by subject chips',
+      (tester) async {
+        final sampleItems = <SpacedReviewItem>[
+          SpacedReviewItem(
+            id: 1,
+            subject: 'Bangla',
+            topic: 'কারক ও বিভক্তি',
+            title: 'তিলে তৈল হয় — এটি কোন কারক?',
+            keyRule: 'অপাদান কারক। যা হতে কিছু উৎপন্ন হয়।',
+            intervalDays: 1,
+            repetitionLevel: 1,
+            nextReviewDate: DateTime.now().subtract(const Duration(hours: 1)),
+            lastReviewedAt: null,
+            isMastered: false,
+            createdAt: DateTime.now(),
+          ),
+          SpacedReviewItem(
+            id: 2,
+            subject: 'English',
+            topic: 'Grammar',
+            title: 'Either you or he (be) present.',
+            keyRule: 'Subject closest to verb decides: is/was.',
+            intervalDays: 3,
+            repetitionLevel: 2,
+            nextReviewDate: DateTime.now().subtract(const Duration(hours: 1)),
+            lastReviewedAt: null,
+            isMastered: false,
+            createdAt: DateTime.now(),
+          ),
+        ];
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              dueSpacedReviewsStreamProvider.overrideWith(
+                (ref) => Stream.value(sampleItems),
+              ),
+              allSpacedReviewsStreamProvider.overrideWith(
+                (ref) => Stream.value(sampleItems),
+              ),
+            ],
+            child: const MaterialApp(home: SpacedRepetitionScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Check title & active recall button visible, answer hidden
+        expect(find.text('তিলে তৈল হয় — এটি কোন কারক?'), findsOneWidget);
+        expect(
+          find.text('উত্তর দেখুন (Tap to Reveal Answer)'),
+          findsNWidgets(2),
+        );
+        expect(find.text('অপাদান কারক। যা হতে কিছু উৎপন্ন হয়।'), findsNothing);
+
+        // 2. Tap to reveal answer on the first card
+        await tester.tap(find.text('উত্তর দেখুন (Tap to Reveal Answer)').first);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('অপাদান কারক। যা হতে কিছু উৎপন্ন হয়।'),
+          findsOneWidget,
+        );
+        expect(find.text('মনে নেই'), findsOneWidget);
+        expect(find.text('মনে আছে'), findsOneWidget);
+
+        // 3. Test subject filter chips
+        expect(find.text('সকল বিষয় (2)'), findsOneWidget);
+        expect(find.text('Bangla (1)'), findsOneWidget);
+        expect(find.text('English (1)'), findsOneWidget);
+
+        // Tap 'English' filter chip
+        await tester.tap(find.text('English (1)'));
+        await tester.pumpAndSettle();
+
+        // Bangla card should now be filtered out
+        expect(find.text('তিলে তৈল হয় — এটি কোন কারক?'), findsNothing);
+        expect(find.text('Either you or he (be) present.'), findsOneWidget);
+
+        // Tap 'All' filter chip to restore
+        await tester.tap(find.text('সকল বিষয় (2)'));
+        await tester.pumpAndSettle();
+        expect(find.text('তিলে তৈল হয় — এটি কোন কারক?'), findsOneWidget);
+
+        // 4. Switch to 'সব সূত্র' tab and open detail modal
+        await tester.tap(find.text('সব সূত্র (2)'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('তিলে তৈল হয় — এটি কোন কারক?'), findsOneWidget);
+
+        // Tap list tile to open detail bottom sheet modal
+        await tester.tap(find.text('তিলে তৈল হয় — এটি কোন কারক?'));
+        await tester.pumpAndSettle();
+
+        // Detail sheet contents
+        expect(find.text('প্রশ্ন / সূত্র (Front):'), findsOneWidget);
+        expect(find.text('উত্তর ও নিয়ম (Back):'), findsOneWidget);
+        expect(
+          find.text('অপাদান কারক। যা হতে কিছু উৎপন্ন হয়।'),
+          findsOneWidget,
+        );
+        expect(find.text('বন্ধ করুন'), findsOneWidget);
+
+        // Close modal
+        await tester.tap(find.text('বন্ধ করুন'));
+        await tester.pumpAndSettle();
+        expect(find.text('প্রশ্ন / সূত্র (Front):'), findsNothing);
       },
     );
   });

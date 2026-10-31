@@ -17,16 +17,19 @@ class SpacedRepetitionScreen extends ConsumerStatefulWidget {
 class _SpacedRepetitionScreenState
     extends ConsumerState<SpacedRepetitionScreen> {
   int _tabFilterIndex = 0; // 0 = Due Today, 1 = All Tracked
+  final Set<int> _revealedCardIds = {};
+  bool _revealAllByDefault = false;
+  String _selectedSubjectFilter = 'All';
 
   String _formatDate(DateTime dt) {
     final now = DateTime.now();
     final isToday =
         dt.year == now.year && dt.month == now.month && dt.day == now.day;
-    if (isToday) return 'Today';
+    if (isToday) return 'আজ';
     final diff = dt.difference(now).inDays;
-    if (diff == 1) return 'Tomorrow';
-    if (diff > 1) return 'In $diff days';
-    if (diff < 0) return '${-diff} days overdue';
+    if (diff == 1) return 'আগামীকাল';
+    if (diff > 1) return '$diff দিন পর';
+    if (diff < 0) return '${-diff} দিন পার';
     return '${dt.day}/${dt.month}';
   }
 
@@ -35,10 +38,26 @@ class _SpacedRepetitionScreenState
     final dueItems = ref.watch(dueSpacedReviewsStreamProvider).value ?? [];
     final allItems = ref.watch(allSpacedReviewsStreamProvider).value ?? [];
 
+    if (_selectedSubjectFilter != 'All' &&
+        !allItems.any((i) => i.subject.trim() == _selectedSubjectFilter)) {
+      _selectedSubjectFilter = 'All';
+    }
+
+    final filteredDueItems = _selectedSubjectFilter == 'All'
+        ? dueItems
+        : dueItems
+              .where((i) => i.subject.trim() == _selectedSubjectFilter)
+              .toList();
+    final filteredAllItems = _selectedSubjectFilter == 'All'
+        ? allItems
+        : allItems
+              .where((i) => i.subject.trim() == _selectedSubjectFilter)
+              .toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Spaced Repetition & Flashcards',
+          'রিভিশন ও ফ্ল্যাশকার্ড',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         actions: [
@@ -73,12 +92,12 @@ class _SpacedRepetitionScreenState
                 ButtonSegment<int>(
                   value: 0,
                   icon: const Icon(Icons.alarm, size: 16),
-                  label: Text('Due for Review (${dueItems.length})'),
+                  label: Text('আজ দেখার (${dueItems.length})'),
                 ),
                 ButtonSegment<int>(
                   value: 1,
                   icon: const Icon(Icons.layers_outlined, size: 16),
-                  label: Text('All Tracked Rules (${allItems.length})'),
+                  label: Text('সব সূত্র (${allItems.length})'),
                 ),
               ],
               selected: {_tabFilterIndex},
@@ -88,14 +107,97 @@ class _SpacedRepetitionScreenState
                 });
               },
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
+
+            // Subject Filter Chip Row
+            _buildSubjectFilterChips(allItems),
+            const SizedBox(height: 4),
 
             // 4. Content List
             if (_tabFilterIndex == 0)
-              _buildDueItemsList(dueItems)
+              _buildDueItemsList(filteredDueItems)
             else
-              _buildAllItemsList(allItems),
+              _buildAllItemsList(filteredAllItems),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubjectFilterChips(List<SpacedReviewItem> allItems) {
+    final Map<String, int> counts = {'All': allItems.length};
+    for (final item in allItems) {
+      final s = item.subject.trim();
+      if (s.isNotEmpty) {
+        counts[s] = (counts[s] ?? 0) + 1;
+      }
+    }
+
+    if (counts.length <= 1) return const SizedBox.shrink();
+
+    final subjects = counts.keys.toList();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: subjects.map((subj) {
+            final count = counts[subj] ?? 0;
+            final isSelected = _selectedSubjectFilter == subj;
+            final label = subj == 'All'
+                ? 'সকল বিষয় ($count)'
+                : '$subj ($count)';
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: _buildSubjectFilterBadge(
+                label: label,
+                isSelected: isSelected,
+                onTap: () {
+                  setState(() {
+                    _selectedSubjectFilter = subj;
+                  });
+                },
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubjectFilterBadge({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF6366F1).withValues(alpha: 0.18)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF6366F1)
+                : (isDark ? Colors.white24 : Colors.grey.shade400),
+            width: isSelected ? 1.4 : 1.0,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected
+                ? const Color(0xFF6366F1)
+                : (isDark ? Colors.white70 : Colors.black87),
+          ),
         ),
       ),
     );
@@ -348,19 +450,82 @@ class _SpacedRepetitionScreenState
       );
     }
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: dueItems.length,
-      itemBuilder: (context, index) {
-        final item = dueItems[index];
-        return _buildDueItemCard(item);
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10, left: 2, right: 2),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Active Recall মেমোরি টেস্ট',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white70
+                      : Colors.black54,
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _revealAllByDefault = !_revealAllByDefault;
+                  });
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _revealAllByDefault
+                            ? Icons.visibility
+                            : Icons.visibility_off_outlined,
+                        size: 14,
+                        color: const Color(0xFF6366F1),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _revealAllByDefault
+                            ? 'সব উত্তর দৃশ্যমান'
+                            : 'উত্তর লুকানো 🔒',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF6366F1),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: dueItems.length,
+          itemBuilder: (context, index) {
+            final item = dueItems[index];
+            return _buildDueItemCard(item);
+          },
+        ),
+      ],
     );
   }
 
   Widget _buildDueItemCard(SpacedReviewItem item) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isRevealed =
+        _revealAllByDefault || _revealedCardIds.contains(item.id);
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
@@ -438,7 +603,7 @@ class _SpacedRepetitionScreenState
             ),
             const SizedBox(height: 10),
 
-            // Title
+            // Title (Front of Flashcard)
             Text(
               BengaliMathSanitizer.sanitize(item.title),
               style: const TextStyle(
@@ -446,106 +611,198 @@ class _SpacedRepetitionScreenState
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
 
-            // Key Rule / Flashcard Content Container
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
+            if (!isRevealed) ...[
+              // Active Recall: Tap to Reveal Button
+              InkWell(
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isDark ? Colors.white12 : Colors.grey.shade200,
+                onTap: () {
+                  setState(() {
+                    _revealedCardIds.add(item.id);
+                  });
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.visibility_outlined,
+                        size: 18,
+                        color: isDark
+                            ? const Color(0xFFA5B4FC)
+                            : const Color(0xFF4F46E5),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'উত্তর দেখুন (Tap to Reveal Answer)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? const Color(0xFFA5B4FC)
+                              : const Color(0xFF4F46E5),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              child: Text(
-                BengaliMathSanitizer.sanitize(item.keyRule),
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.45,
-                  color: isDark ? Colors.white70 : Colors.black87,
+            ] else ...[
+              // Key Rule / Flashcard Content Container (Back of Flashcard)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? Colors.white12 : Colors.grey.shade200,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'উত্তর ও নিয়ম:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white54 : Colors.black45,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _revealedCardIds.remove(item.id);
+                            });
+                          },
+                          child: Text(
+                            'ঢাকুন 🙈',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.white38 : Colors.grey,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      BengaliMathSanitizer.sanitize(item.keyRule),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.45,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // Actions: [ Forgot (Reset to 1d) ] vs [ Remembered (+Interval) ]
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red.shade700,
-                      side: BorderSide(color: Colors.red.shade300),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+              // Actions: [ Forgot (Reset to 1d) ] vs [ Remembered (+Interval) ]
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                        side: BorderSide(color: Colors.red.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text(
-                      'Forgot (Reset 1d)',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text(
+                        'মনে নেই',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    onPressed: () async {
-                      await ref
-                          .read(spacedRepetitionNotifierProvider.notifier)
-                          .resetReview(item.id);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '"${item.title}" reset to 1-day interval to reinforce memory.',
+                      onPressed: () async {
+                        setState(() {
+                          _revealedCardIds.remove(item.id);
+                        });
+                        await ref
+                            .read(spacedRepetitionNotifierProvider.notifier)
+                            .resetReview(item.id);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '"${item.title}" কালই আবার দেখাবে।',
+                              ),
+                              duration: const Duration(seconds: 2),
                             ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    },
+                          );
+                        }
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade700,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    icon: const Icon(Icons.done_all, size: 16),
-                    label: const Text(
-                      'Remembered (+Interval)',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
+                      icon: const Icon(Icons.done_all, size: 16),
+                      label: const Text(
+                        'মনে আছে',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    onPressed: () async {
-                      await ref
-                          .read(spacedRepetitionNotifierProvider.notifier)
-                          .advanceReview(item.id);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '🎉 Memory strengthened! Next review in ${item.intervalDays * 2} days.',
+                      onPressed: () async {
+                        setState(() {
+                          _revealedCardIds.remove(item.id);
+                        });
+                        await ref
+                            .read(spacedRepetitionNotifierProvider.notifier)
+                            .advanceReview(item.id);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '🎉 পাকা হলো! পরেরবার ${item.intervalDays * 2} দিন পর।',
+                              ),
+                              duration: const Duration(seconds: 2),
                             ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    },
+                          );
+                        }
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -597,6 +854,7 @@ class _SpacedRepetitionScreenState
               horizontal: 14,
               vertical: 6,
             ),
+            onTap: () => _showRuleDetailModal(context, item),
             leading: CircleAvatar(
               backgroundColor: item.isMastered
                   ? (Theme.of(context).brightness == Brightness.dark
@@ -669,6 +927,165 @@ class _SpacedRepetitionScreenState
           ),
         );
       },
+    );
+  }
+
+  void _showRuleDetailModal(BuildContext context, SpacedReviewItem item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.indigo.withValues(alpha: 0.25)
+                        : Colors.indigo.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    item.subject,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? Colors.indigo.shade200
+                          : Colors.indigo.shade800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.topic,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (item.isMastered)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.green.withValues(alpha: 0.2)
+                          : Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      '✓ Mastered',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'প্রশ্ন / সূত্র (Front):',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              BengaliMathSanitizer.sanitize(item.title),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'উত্তর ও নিয়ম (Back):',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : Colors.grey.shade300,
+                ),
+              ),
+              child: Text(
+                BengaliMathSanitizer.sanitize(item.keyRule),
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  size: 14,
+                  color: Colors.grey.shade500,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'পরবর্তী রিভিশন: ${_formatDate(item.nextReviewDate)} (লেভেল ${item.repetitionLevel}, ব্যবধান: ${item.intervalDays} দিন)',
+                  style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('বন্ধ করুন'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
