@@ -7,7 +7,9 @@ import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/models/voice_mistake_result.dart';
 import '../../../../core/services/ai/voice_mistake_parser_service.dart';
 import '../../../../core/services/overlay/live_mcq_bubble_service.dart';
+import '../../../../core/services/voice/device_dictation_service.dart';
 import '../../../../core/services/voice/voice_recording_service.dart';
+import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../quiz/presentation/providers/drill_history_provider.dart';
 import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
@@ -33,7 +35,17 @@ class _VoiceMistakeBottomSheetState
     extends ConsumerState<VoiceMistakeBottomSheet> {
   final TextEditingController _textController = TextEditingController();
   bool _isRecording = false;
+
+  // Same reasoning as the bubble: the handset transcribes as you speak,
+  // which is instant and free, while uploading the audio was measured at up
+  // to 159 seconds and fails outright while the model is busy.
+  bool _isDictating = false;
   bool _isProcessing = false;
+
+  // Measured at up to 159 seconds on a real recording. A spinner
+  // with no number on it is indistinguishable from a hang.
+  Timer? _parseTimer;
+  int _parseSeconds = 0;
   int _recordSeconds = 0;
   Timer? _recordTimer;
   VoiceMistakeResult? _parsedResult;
@@ -62,6 +74,78 @@ class _VoiceMistakeBottomSheetState
     super.dispose();
   }
 
+  /// Listens through the phone's own recogniser, writing into the same field
+  /// the user can type in.
+  Future<void> _startDictation() async {
+    final ok = await DeviceDictationService.instance.init();
+    if (!mounted) return;
+
+    if (!ok) {
+      setState(() {
+        _statusMessage =
+            'ফোনে ভয়েস টাইপিং পাওয়া যায়নি। রেকর্ড করে পাঠাতে পারেন।';
+      });
+      return;
+    }
+
+    // Said plainly, because without the pack the recogniser does not fail
+    // — it writes Bengali speech as English-sounding words, and the user is
+    // left blaming their own pronunciation.
+
+    setState(() {
+      _isDictating = true;
+      _statusMessage = 'শুনছি… প্রশ্ন ও সঠিক উত্তর বলুন';
+    });
+
+    await DeviceDictationService.instance.listen(
+      // Carry on from what is already in the box rather than
+      // clearing it.
+      seed: _textController.text,
+      onResult: (text, isFinal) {
+        if (!mounted) return;
+        setState(() {
+          _textController.text = text;
+          // isFinal now means the user pressed stop, not that a pause ended
+          // an utterance.
+          _statusMessage = isFinal
+              ? 'শোনা শেষ — দেখে নিয়ে পাঠান'
+              : 'শুনছি… $text';
+          if (isFinal) _isDictating = false;
+        });
+      },
+    );
+  }
+
+  Future<void> _stopDictation() async {
+    await DeviceDictationService.instance.stop();
+    if (!mounted) return;
+
+    // stop() banks the utterance in flight, so the service holds the whole
+    // sentence even though the field only ever saw the last piece.
+    final heard = DeviceDictationService.instance.committedText.trim();
+    _textController.text = heard;
+    if (heard.isEmpty) {
+      // A network error on Bengali is not the user mumbling: without a
+      // connection the online recogniser has nothing to answer with, and
+      // this handset has no Bangla offline.
+      final err = DeviceDictationService.instance.lastError ?? '';
+      final offline = err.contains('network') || err.contains('error_network');
+      setState(() {
+        _isDictating = false;
+        _statusMessage = offline
+            ? 'বাংলা লেখার জন্য ইন্টারনেট লাগবে (ফোনে অফলাইন বাংলা নেই)।\n'
+                  'নেট ছাড়া চাইলে মাইকে লম্বা চাপ দিয়ে রেকর্ড করুন।'
+            : 'কিছু শোনা যায়নি। আবার বলুন।';
+      });
+      return;
+    }
+
+    setState(() {
+      _isDictating = false;
+      _statusMessage = 'শোনা শেষ — দেখে নিয়ে পাঠান';
+    });
+  }
+
   Future<void> _startRecording() async {
     try {
       final hasPerm = await LiveMcqBubbleService.instance
@@ -78,7 +162,12 @@ class _VoiceMistakeBottomSheetState
         }
       }
 
-      await VoiceRecordingService.instance.startRecording();
+      // Mono 16 kHz: speech needs no more, and a recording a fraction of
+      // the size spends a fraction of the time being uploaded. Gemini bills
+      // audio by duration, so this costs nothing in tokens.
+      await VoiceRecordingService.instance.startRecording(
+        config: VoiceRecordingService.speechConfig,
+      );
       setState(() {
         _isRecording = true;
         _recordSeconds = 0;
@@ -105,7 +194,20 @@ class _VoiceMistakeBottomSheetState
     setState(() {
       _isRecording = false;
       _isProcessing = true;
-      _statusMessage = 'Gemini AI is analyzing voice note...';
+      _parseSeconds = 0;
+      _statusMessage = _parseStatus(0);
+    });
+
+    _parseTimer?.cancel();
+    _parseTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted || !_isProcessing) {
+        t.cancel();
+        return;
+      }
+      setState(() {
+        _parseSeconds++;
+        _statusMessage = _parseStatus(_parseSeconds);
+      });
     });
 
     try {
@@ -113,6 +215,7 @@ class _VoiceMistakeBottomSheetState
       if (recordedDuration < 1) {
         setState(() {
           _isProcessing = false;
+          _parseTimer?.cancel();
           _statusMessage =
               'রেকর্ডিং সংক্ষিপ্ত ছিল। মুখে প্রশ্নটি বলে তারপর থামুন।';
         });
@@ -130,6 +233,7 @@ class _VoiceMistakeBottomSheetState
         } else {
           setState(() {
             _isProcessing = false;
+            _parseTimer?.cancel();
             _statusMessage =
                 'কোনো কথা বা প্রশ্ন শনাক্ত করা যায়নি। দয়া করে আবার বলুন।';
           });
@@ -137,15 +241,39 @@ class _VoiceMistakeBottomSheetState
       } else {
         setState(() {
           _isProcessing = false;
+          _parseTimer?.cancel();
           _statusMessage = 'No audio captured';
         });
       }
+    } on VoiceParseException catch (e) {
+      // Say what actually went wrong. "Please speak again" for a server
+      // fault sends the user round the same loop.
+      setState(() {
+        _isProcessing = false;
+        _parseTimer?.cancel();
+        _statusMessage = e.userMessage;
+      });
     } catch (e) {
       setState(() {
         _isProcessing = false;
-        _statusMessage = 'Error: $e';
+        _parseTimer?.cancel();
+        _statusMessage = 'সমস্যা হয়েছে: $e';
       });
     }
+  }
+
+  /// What to say while the model is still thinking.
+  ///
+  /// The stage and the usual wait turn "frozen" into "working"; the number
+  /// moving is what says the app is alive at all.
+  String _parseStatus(int seconds) {
+    if (seconds < 5) return 'ভয়েস পাঠানো হচ্ছে… ${seconds}s';
+    if (seconds < 90) {
+      return 'Gemini শুনছে ও প্রশ্ন সাজাচ্ছে… ${seconds}s\n'
+          'সাধারণত ৩০–৯০ সেকেন্ড লাগে।';
+    }
+    return 'এখনো চলছে… ${seconds}s\n'
+        'লম্বা রেকর্ডিং হলে দুই মিনিটের বেশি লাগতে পারে।';
   }
 
   Future<void> _parseTextMistake() async {
@@ -165,6 +293,7 @@ class _VoiceMistakeBottomSheetState
       } else {
         setState(() {
           _isProcessing = false;
+          _parseTimer?.cancel();
           _statusMessage =
               'কোনো প্রশ্ন শনাক্ত করা যায়নি। আরও সুনির্দিষ্ট করে লিখুন।';
         });
@@ -172,6 +301,7 @@ class _VoiceMistakeBottomSheetState
     } catch (e) {
       setState(() {
         _isProcessing = false;
+        _parseTimer?.cancel();
         _statusMessage = 'Error: $e';
       });
     }
@@ -193,6 +323,7 @@ class _VoiceMistakeBottomSheetState
       setState(() {
         _parsedResult = result;
         _isProcessing = false;
+        _parseTimer?.cancel();
         _statusMessage = 'Saved to Mistake Bank & Spaced Repetition ✓';
         _textController.clear();
       });
@@ -425,8 +556,15 @@ class _VoiceMistakeBottomSheetState
               child: Column(
                 children: [
                   GestureDetector(
-                    onTap: _isRecording
+                    // Tap dictates on the device; a long press falls back to
+                    // recording and uploading the audio.
+                    onTap: _isDictating
+                        ? _stopDictation
+                        : _isRecording
                         ? _stopRecordingAndParse
+                        : _startDictation,
+                    onLongPress: _isRecording || _isDictating
+                        ? null
                         : _startRecording,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
@@ -434,7 +572,7 @@ class _VoiceMistakeBottomSheetState
                       height: 80,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _isRecording
+                        color: (_isRecording || _isDictating)
                             ? const Color(0xFFEF4444)
                             : const Color(0xFF10B981),
                         boxShadow: [
@@ -450,7 +588,7 @@ class _VoiceMistakeBottomSheetState
                         ],
                       ),
                       child: Icon(
-                        _isRecording ? Icons.stop : Icons.mic,
+                        (_isRecording || _isDictating) ? Icons.stop : Icons.mic,
                         color: Colors.white,
                         size: 40,
                       ),
@@ -458,9 +596,11 @@ class _VoiceMistakeBottomSheetState
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    _isRecording
+                    _isDictating
+                        ? 'শুনছি…'
+                        : _isRecording
                         ? 'Recording... ${_formatTimer(_recordSeconds)}'
-                        : 'Tap Mic to Speak Mistake',
+                        : 'চেপে বলুন — ফোনই লিখে দেবে',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -469,7 +609,9 @@ class _VoiceMistakeBottomSheetState
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _statusMessage ?? 'মুখে বলুন: "১২ নম্বর প্রশ্নে মানস সরোবর থেকে উৎপন্ন নদী ছিল ব্রহ্মপুত্র"',
+                    _statusMessage ??
+                        'মুখে বলুন: "১২ নম্বর প্রশ্নে মানস সরোবর থেকে উৎপন্ন নদী ছিল ব্রহ্মপুত্র"\n'
+                            '(দীর্ঘক্ষণ চেপে ধরলে রেকর্ড করে পাঠাবে)',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 11.5,
@@ -485,15 +627,9 @@ class _VoiceMistakeBottomSheetState
 
             // Processing state
             if (_isProcessing) ...[
-              const Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Color(0xFF10B981),
-                  ),
-                ),
+              const AiProgressPipelineWidget(
+                type: AiTaskType.audio,
+                isCompact: true,
               ),
               const SizedBox(height: 16),
             ],

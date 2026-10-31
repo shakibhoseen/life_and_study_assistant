@@ -58,6 +58,7 @@ dependencies:
   record: ^7.1.2
   flutter_overlay_window: ^1.0.2
   crypto: ^3.0.3
+  speech_to_text: ^7.5.0
 
 # shared_preferences_android 2.5.0 switched its implementation to Pigeon JNI.
 # In debug builds the Java-side registrar is not yet attached when main() first

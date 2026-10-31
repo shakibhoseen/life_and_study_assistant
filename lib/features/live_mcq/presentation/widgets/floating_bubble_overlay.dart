@@ -6,6 +6,7 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/ai/models/voice_mistake_result.dart';
 import '../../../../core/services/ai/voice_mistake_parser_service.dart';
+import '../../../../core/services/voice/device_dictation_service.dart';
 import '../../../../core/services/voice/voice_recording_service.dart';
 
 class FloatingBubbleOverlay extends StatefulWidget {
@@ -20,6 +21,21 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
   bool _isExpanded = false;
   bool _isRecording = false;
   bool _isProcessing = false;
+
+  // Measured on a real recording, this call ran to 159 seconds. Without a
+  // clock on screen that is indistinguishable from the app having hung, so
+  // the wait is counted out loud and given an honest expectation.
+  Timer? _parseTimer;
+  int _parseSeconds = 0;
+
+  // The handset transcribes as the user speaks, with no keyboard to open and
+  // nothing to upload. Sending the audio to Gemini instead was measured at up
+  // to 159 seconds, and the point of the bubble is to stay out of the way
+  // while the user is reading the exam.
+  final TextEditingController _typedController = TextEditingController();
+  bool _isTyping = false;
+  bool _isDictating = false;
+  String _heardText = '';
   int _recordSeconds = 0;
   Timer? _recordTimer;
   StreamSubscription? _overlaySub;
@@ -38,6 +54,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
             _isExpanded = false;
             _isRecording = false;
             _isProcessing = false;
+            _parseTimer?.cancel();
             _statusMessage = null;
             _lastResult = null;
           });
@@ -55,6 +72,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
           _isExpanded = false;
           _isRecording = false;
           _isProcessing = false;
+          _parseTimer?.cancel();
           _statusMessage = null;
         });
         WidgetsBinding.instance.scheduleFrame();
@@ -67,6 +85,8 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
     WidgetsBinding.instance.removeObserver(this);
     _overlaySub?.cancel();
     _recordTimer?.cancel();
+    _parseTimer?.cancel();
+    _typedController.dispose();
     super.dispose();
   }
 
@@ -84,7 +104,158 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
         false,
       );
     } else {
+      // Collapsed, the bubble must not take focus or it would swallow taps
+      // meant for the app underneath.
+      _isTyping = false;
+      await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
       await FlutterOverlayWindow.resizeOverlay(110, 110, true);
+    }
+  }
+
+  /// Listens through the phone's own recogniser and shows the words as they
+  /// arrive.
+  Future<void> _startDictation() async {
+    final ok = await DeviceDictationService.instance.init();
+    if (!mounted) return;
+
+    if (!ok) {
+      setState(() {
+        _statusMessage =
+            'ফোনে ভয়েস টাইপিং পাওয়া যায়নি। রেকর্ড করে পাঠাতে পারেন।';
+      });
+      return;
+    }
+
+    // Said plainly, because without the pack the recogniser does not fail
+    // — it writes Bengali speech as English-sounding words, and the user is
+    // left blaming their own pronunciation.
+
+    setState(() {
+      _isDictating = true;
+      _heardText = '';
+      _statusMessage = 'শুনছি… প্রশ্ন ও সঠিক উত্তর বলুন';
+    });
+
+    await DeviceDictationService.instance.listen(
+      // Carry on from what is already in the box rather than
+      // clearing it.
+      seed: _typedController.text,
+      onResult: (text, isFinal) {
+        if (!mounted) return;
+        setState(() {
+          _heardText = text;
+          _typedController.text = text;
+          // isFinal now means the user pressed stop, not that a pause ended
+          // an utterance, so the session stays open while they think.
+          _statusMessage = isFinal ? 'শোনা শেষ' : 'শুনছি… $text';
+        });
+        // Left for the user to send rather than fired automatically: a
+        // half-heard sentence saved on its own is worse than one more tap.
+        if (isFinal) setState(() => _isDictating = false);
+      },
+    );
+  }
+
+  Future<void> _stopDictation() async {
+    await DeviceDictationService.instance.stop();
+    if (!mounted) return;
+
+    // stop() banks the utterance in flight, so the service holds the whole
+    // sentence even though the screen only ever saw the last piece.
+    final heard = DeviceDictationService.instance.committedText.trim();
+    _heardText = heard;
+    _typedController.text = heard;
+    if (heard.isEmpty) {
+      // A network error on Bengali is not the user mumbling: without a
+      // connection the online recogniser has nothing to answer with, and
+      // this handset has no Bangla offline.
+      final err = DeviceDictationService.instance.lastError ?? '';
+      final offline = err.contains('network') || err.contains('error_network');
+      setState(() {
+        _isDictating = false;
+        _statusMessage = offline
+            ? 'বাংলা লেখার জন্য ইন্টারনেট লাগবে (ফোনে অফলাইন বাংলা নেই)।\n'
+                  'নেট ছাড়া চাইলে মাইকে লম্বা চাপ দিয়ে রেকর্ড করুন।'
+            : 'কিছু শোনা যায়নি। আবার বলুন।';
+      });
+      return;
+    }
+
+    setState(() {
+      _isDictating = false;
+      _statusMessage = 'শোনা শেষ — দেখে নিয়ে পাঠান';
+    });
+  }
+
+  /// Opens a field the user can dictate into with the keyboard's own mic.
+  ///
+  /// The overlay is created non-focusable so it does not steal taps from the
+  /// app beneath it, which also means no keyboard. Focus is taken only while
+  /// typing and given straight back.
+  Future<void> _startTyping() async {
+    await FlutterOverlayWindow.updateFlag(OverlayFlag.focusPointer);
+    if (!mounted) return;
+    setState(() {
+      _isTyping = true;
+      _statusMessage = null;
+    });
+  }
+
+  Future<void> _cancelTyping() async {
+    await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
+    if (!mounted) return;
+    setState(() {
+      _isTyping = false;
+      _typedController.clear();
+    });
+  }
+
+  /// Sends dictated or typed text instead of audio.
+  Future<void> _parseTypedMistake() async {
+    final text = _typedController.text.trim();
+    if (text.isEmpty || _isProcessing) return;
+
+    setState(() {
+      _isProcessing = true;
+      _statusMessage = 'প্রশ্ন সাজানো হচ্ছে…';
+    });
+
+    try {
+      final result = await VoiceMistakeParserService.instance
+          .parseMistakeFromText(text);
+
+      if (result == null) {
+        setState(() {
+          _isProcessing = false;
+          _statusMessage =
+              'লেখাটি থেকে প্রশ্ন বোঝা গেল না। আরেকটু বিস্তারিত লিখুন।';
+        });
+        return;
+      }
+
+      final db = AppDatabase();
+      await VoiceMistakeParserService.instance.saveVoiceMistakeToDatabase(
+        db,
+        result,
+      );
+      await db.close();
+      await FlutterOverlayWindow.shareData('mistake_added');
+      await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
+
+      if (!mounted) return;
+      setState(() {
+        _lastResult = result;
+        _isProcessing = false;
+        _isTyping = false;
+        _typedController.clear();
+        _statusMessage = 'Saved to Mistake Bank ✓';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isProcessing = false;
+        _statusMessage = 'সমস্যা হয়েছে: $e';
+      });
     }
   }
 
@@ -99,7 +270,12 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
         return;
       }
 
-      await VoiceRecordingService.instance.startRecording();
+      // Mono 16 kHz: speech needs no more, and a recording a fraction of
+      // the size spends a fraction of the time being uploaded. Gemini bills
+      // audio by duration, so this costs nothing in tokens.
+      await VoiceRecordingService.instance.startRecording(
+        config: VoiceRecordingService.speechConfig,
+      );
       setState(() {
         _isRecording = true;
         _recordSeconds = 0;
@@ -126,7 +302,20 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
     setState(() {
       _isRecording = false;
       _isProcessing = true;
-      _statusMessage = 'ভয়েস বিশ্লেষণ করা হচ্ছে...';
+      _parseSeconds = 0;
+      _statusMessage = _parseStatus(0);
+    });
+
+    _parseTimer?.cancel();
+    _parseTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted || !_isProcessing) {
+        t.cancel();
+        return;
+      }
+      setState(() {
+        _parseSeconds++;
+        _statusMessage = _parseStatus(_parseSeconds);
+      });
     });
 
     try {
@@ -136,6 +325,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
       if (recordedDuration < 1) {
         setState(() {
           _isProcessing = false;
+          _parseTimer?.cancel();
           _statusMessage =
               'রেকর্ডিং সংক্ষিপ্ত ছিল। প্রশ্নটি মুখে বলে তারপর থামুন।';
         });
@@ -143,6 +333,10 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
       }
 
       if (audioFile != null) {
+        final size = await audioFile.length();
+        debugPrint(
+          'Bubble voice: ${size ~/ 1024} KB, ${recordedDuration}s recorded',
+        );
         final result = await VoiceMistakeParserService.instance
             .parseMistakeFromAudio(
               audioFile,
@@ -152,6 +346,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
         if (result == null) {
           setState(() {
             _isProcessing = false;
+            _parseTimer?.cancel();
             _statusMessage = 'কোনো কথা বা প্রশ্ন শনাক্ত করা যায়নি। আবার বলুন।';
           });
           return;
@@ -171,20 +366,45 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
         setState(() {
           _lastResult = result;
           _isProcessing = false;
+          _parseTimer?.cancel();
           _statusMessage = 'Saved to Mistake Bank ✓';
         });
       } else {
         setState(() {
           _isProcessing = false;
+          _parseTimer?.cancel();
           _statusMessage = 'No audio captured';
         });
       }
+    } on VoiceParseException catch (e) {
+      // Same reason as the sheet: a busy server is not the user mumbling.
+      setState(() {
+        _isProcessing = false;
+        _parseTimer?.cancel();
+        _statusMessage = e.userMessage;
+      });
     } catch (e) {
       setState(() {
         _isProcessing = false;
-        _statusMessage = 'Parse error: $e';
+        _parseTimer?.cancel();
+        _statusMessage = 'সমস্যা হয়েছে: $e';
       });
     }
+  }
+
+  /// What to say while the model is still thinking.
+  ///
+  /// Naming the stage and the usual wait is the difference between "it is
+  /// working" and "it has frozen"; the number moving is what says the app is
+  /// alive at all.
+  String _parseStatus(int seconds) {
+    if (seconds < 5) return 'ভয়েস পাঠানো হচ্ছে… ${seconds}s';
+    if (seconds < 90) {
+      return 'Gemini শুনছে ও প্রশ্ন সাজাচ্ছে… ${seconds}s\n'
+          'সাধারণত ৩০–৯০ সেকেন্ড লাগে।';
+    }
+    return 'এখনো চলছে… ${seconds}s\n'
+        'লম্বা রেকর্ডিং হলে দুই মিনিটের বেশি লাগতে পারে।';
   }
 
   String _formatTimer(int seconds) {
@@ -359,7 +579,17 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
           // Central Microphone Action
           if (!_isProcessing && _lastResult == null) ...[
             GestureDetector(
-              onTap: _isRecording ? _stopRecordingAndParse : _startRecording,
+              // The phone transcribes as you speak, so this is the fast
+              // path. Recording and uploading audio is still available
+              // underneath for when dictation is not installed.
+              onTap: _isDictating
+                  ? _stopDictation
+                  : _isRecording
+                  ? _stopRecordingAndParse
+                  : _startDictation,
+              onLongPress: _isRecording || _isDictating
+                  ? null
+                  : _startRecording,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 width: 76,
@@ -379,7 +609,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                   ],
                 ),
                 child: Icon(
-                  _isRecording ? Icons.stop : Icons.mic,
+                  (_isRecording || _isDictating) ? Icons.stop : Icons.mic,
                   color: Colors.white,
                   size: 38,
                 ),
@@ -387,9 +617,11 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
             ),
             const SizedBox(height: 10),
             Text(
-              _isRecording
+              _isDictating
+                  ? 'শুনছি…'
+                  : _isRecording
                   ? 'Recording: ${_formatTimer(_recordSeconds)}'
-                  : 'Tap to Speak Mistake',
+                  : 'চেপে বলুন — ফোনই লিখে দেবে',
               style: TextStyle(
                 color: _isRecording ? Colors.redAccent : Colors.white,
                 fontWeight: FontWeight.bold,
@@ -403,6 +635,122 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.grey, fontSize: 10.5),
             ),
+
+            // The keyboard's own mic transcribes on the device, so this is
+            // immediate and does not depend on the model being free.
+            if (!_isRecording) ...[
+              const SizedBox(height: 14),
+              if (!_isTyping && _heardText.isNotEmpty && !_isDictating) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Text(
+                    _heardText,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () => setState(() {
+                        _heardText = '';
+                        _typedController.clear();
+                        _statusMessage = null;
+                      }),
+                      child: const Text(
+                        'আবার বলুন',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: _startTyping,
+                      child: const Text(
+                        'ঠিক করুন',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: _isProcessing ? null : _parseTypedMistake,
+                      icon: const Icon(Icons.send, size: 16),
+                      label: const Text(
+                        'যোগ করুন',
+                        style: TextStyle(fontSize: 12.5),
+                      ),
+                      style: FilledButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
+                ),
+              ] else if (!_isTyping && !_isDictating)
+                TextButton.icon(
+                  onPressed: _startTyping,
+                  icon: const Icon(
+                    Icons.keyboard_alt_outlined,
+                    size: 18,
+                    color: Colors.white70,
+                  ),
+                  label: const Text(
+                    'অথবা লিখুন',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                )
+              else ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: TextField(
+                    controller: _typedController,
+                    autofocus: true,
+                    maxLines: 3,
+                    minLines: 2,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'কীবোর্ডের 🎙 চেপে প্রশ্ন ও সঠিক উত্তর বলুন',
+                      hintStyle: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 11.5,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white10,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: _cancelTyping,
+                      child: const Text(
+                        'বাতিল',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    FilledButton.icon(
+                      onPressed: _isProcessing ? null : _parseTypedMistake,
+                      icon: const Icon(Icons.send, size: 16),
+                      label: const Text(
+                        'যোগ করুন',
+                        style: TextStyle(fontSize: 12.5),
+                      ),
+                      style: FilledButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ],
 
           // Loading / Parsing indicator

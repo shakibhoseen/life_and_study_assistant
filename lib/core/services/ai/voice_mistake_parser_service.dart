@@ -13,6 +13,27 @@ import '../../utils/bengali_math_sanitizer.dart';
 import 'gemini_usage_tracker.dart';
 import 'models/voice_mistake_result.dart';
 
+/// Why a voice note could not be turned into a question.
+///
+/// Returning null for everything made a server error look like the user
+/// mumbling: the sheet said "কোনো কথা শনাক্ত করা যায়নি" whether the audio
+/// was silent or the model was down, so the user re-recorded against a fault
+/// that had nothing to do with them.
+class VoiceParseException implements Exception {
+  final String userMessage;
+  final String technicalDetails;
+  final bool isTransient;
+
+  const VoiceParseException({
+    required this.userMessage,
+    required this.technicalDetails,
+    this.isTransient = false,
+  });
+
+  @override
+  String toString() => 'VoiceParseException: $technicalDetails';
+}
+
 class VoiceMistakeParserService {
   VoiceMistakeParserService._();
   static final VoiceMistakeParserService instance =
@@ -84,6 +105,15 @@ Rules:
         ),
       );
       debugPrint('VoiceMistakeParserService initialized with $modelName');
+    } else {
+      // The bubble runs in its own Flutter engine. If plugins are not
+      // registered there, SharedPreferences comes back empty and the key is
+      // invisible — which looks from the outside exactly like voice input
+      // being broken only from the bubble.
+      debugPrint(
+        'VoiceMistakeParserService: NO API KEY visible in this isolate '
+        '(prefs readable: ${prefs.getKeys().isNotEmpty})',
+      );
     }
   }
 
@@ -129,7 +159,24 @@ Rules:
           Content.multi([TextPart(prompt), DataPart(mimeType, audioBytes)]),
         ];
 
-        final response = await _model!.generateContent(content);
+        // One retry, because a 503 here means the server was momentarily
+        // busy and the user would otherwise be told to speak again for no
+        // reason. Audio calls are slow, so one is enough.
+        GenerateContentResponse response;
+        try {
+          response = await _model!.generateContent(content);
+        } catch (e) {
+          final lower = e.toString().toLowerCase();
+          if (!lower.contains('503') &&
+              !lower.contains('unavailable') &&
+              !lower.contains('high demand') &&
+              !lower.contains('overloaded')) {
+            rethrow;
+          }
+          debugPrint('Voice audio: server busy, retrying once');
+          await Future<void>.delayed(const Duration(seconds: 4));
+          response = await _model!.generateContent(content);
+        }
         await GeminiUsageTracker.instance.recordSuccess(
           tokens: response.usageMetadata?.totalTokenCount ?? 0,
           actualInputTokens: response.usageMetadata?.promptTokenCount,
@@ -143,28 +190,55 @@ Rules:
           response.text,
           spokenRef: 'Voice note: ${audioFile.path.split('/').last}',
         );
-        if (result != null) return result;
+        // A clean reply with nothing in it really does mean no question was
+        // spoken, which is the one case worth asking the user to repeat.
+        return result;
       } catch (e) {
         debugPrint('Gemini Voice Mistake Audio analysis error: $e');
-        if (e.toString().contains('429') ||
-            e.toString().toLowerCase().contains('quota')) {
+        final text = e.toString();
+        final lower = text.toLowerCase();
+
+        if (text.contains('429') || lower.contains('quota')) {
           await GeminiUsageTracker.instance.recordQuotaExceeded(
             operation: 'voice_mistake_audio',
             model: activeModel,
           );
-        } else {
-          await GeminiUsageTracker.instance.recordError(
-            e.toString(),
-            operation: 'voice_mistake_audio',
-            model: activeModel,
+          throw VoiceParseException(
+            userMessage: 'আজকের API কোটা শেষ। পরে আবার চেষ্টা করুন।',
+            technicalDetails: text,
           );
         }
+
+        await GeminiUsageTracker.instance.recordError(
+          text,
+          operation: 'voice_mistake_audio',
+          model: activeModel,
+        );
+
+        // 503 and overload are the server saying "not now", not the audio
+        // being unusable. Worth saying so, and worth retrying.
+        final transient =
+            text.contains('503') ||
+            lower.contains('unavailable') ||
+            lower.contains('high demand') ||
+            lower.contains('overloaded') ||
+            lower.contains('connection closed') ||
+            lower.contains('timeout');
+
+        throw VoiceParseException(
+          userMessage: transient
+              ? 'Gemini সার্ভার এই মুহূর্তে ব্যস্ত। আপনার রেকর্ডিং ঠিকই আছে — আবার চেষ্টা করুন।'
+              : 'ভয়েস বিশ্লেষণ করা গেল না। ইন্টারনেট বা API key দেখুন।',
+          technicalDetails: text,
+          isTransient: transient,
+        );
       }
     }
 
-    // Audio cannot be understood offline without an on-device Speech-to-Text model.
-    // If Gemini was offline or returned no discernible question, do NOT invent a fake question. Return null.
-    return null;
+    throw const VoiceParseException(
+      userMessage: 'Gemini API key সেট করা নেই, তাই ভয়েস বিশ্লেষণ সম্ভব নয়।',
+      technicalDetails: 'model was null',
+    );
   }
 
   /// Parse user's typed or transcribed voice text into structured mistake question.
