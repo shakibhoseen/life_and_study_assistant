@@ -158,6 +158,22 @@ class AiFlashcardItem {
   }
 }
 
+/// A generation run that produced nothing usable.
+///
+/// Flashcards used to fall back to a canned deck keyed off a word in the
+/// prompt, and to a single card whose front was the prompt itself when no
+/// word matched. Asking for fifteen cards on the heart produced one card
+/// headed with the whole request, which looks like an answer and is not one.
+class FlashcardGenerationException implements Exception {
+  /// Shown to the user as it is.
+  final String userMessage;
+
+  const FlashcardGenerationException(this.userMessage);
+
+  @override
+  String toString() => 'FlashcardGenerationException: $userMessage';
+}
+
 class AiFlashcardService {
   AiFlashcardService._();
   static final AiFlashcardService instance = AiFlashcardService._();
@@ -191,7 +207,12 @@ class AiFlashcardService {
             responseMimeType: 'application/json',
             responseSchema: _flashcardSchema,
             temperature: 0.2,
-            maxOutputTokens: 1024,
+            // Measured against a real request for ১৫টি Bengali cards on the
+            // heart: at 1024 the reply was cut after one unfinished card,
+            // and the budget went mostly on reasoning before any of it was
+            // written. Bengali costs about 1.5 characters a token, and a
+            // card with a mnemonic runs long, so the room has to be real.
+            maxOutputTokens: 8192,
           ),
         );
 
@@ -202,7 +223,7 @@ User prompt: "$trimmed"
 ${subjectHint != null && subjectHint.isNotEmpty ? 'Subject context: $subjectHint' : ''}
 
 Instructions:
-1. Generate 3 to 8 high-yield flashcards focused directly on this topic or formula request.
+1. Make as many flashcards as the user asked for. When they name a number, produce exactly that many; when they do not, produce 3 to 8. Follow any rules they set about content, wording or coverage.
 2. Front (Title): Short, focused concept, question or formula name (e.g. "বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য", "রম্বসের ক্ষেত্রফল", "ণ-ত্ব বিধানের কমন ফাঁদ", "অনুচ্ছেদ ২৭").
 3. Back (Key Rule): The exact formula, definition, shortcut, mnemonic or explanation in clear Bengali math unicode (e.g. "d = √2 × a, যেখানে a = বাহুর দৈর্ঘ্য। ক্ষেত্রফল = a² = d²/2") with practical recall tips.
 4. Clean Unicode: Use '°', '×', '²', '³', '√', 'π', '÷', '½'. Never use raw LaTeX dollar signs like '\$x^2\$'.
@@ -223,16 +244,33 @@ Instructions:
           operation: 'flashcard_generate',
           model: 'gemini-flash-latest',
         );
+        if (response.candidates.isNotEmpty &&
+            response.candidates.first.finishReason == FinishReason.maxTokens) {
+          throw const FlashcardGenerationException(
+            'কার্ডগুলো লেখা শেষ হওয়ার আগেই জায়গা ফুরিয়েছে। '
+            'কম কার্ড চান, বা বিষয়টা ভাগ করে নিন।',
+          );
+        }
+
         final rawText = response.text?.trim() ?? '';
         final parsed = _parseJsonFlashcards(rawText, prompt);
         if (parsed.isNotEmpty) return parsed;
+        throw const FlashcardGenerationException(
+          'এই প্রম্পট থেকে কোনো কার্ড তৈরি হয়নি। একটু অন্যভাবে লিখে দেখুন।',
+        );
+      } on FlashcardGenerationException {
+        rethrow;
       } catch (e) {
         debugPrint('Gemini generateFromPrompt error: $e');
+        throw const FlashcardGenerationException(
+          'কার্ড তৈরি করা গেল না। ইন্টারনেট দেখে আবার চেষ্টা করুন।',
+        );
       }
     }
 
-    // Offline rule-based fallback
-    return _generateOfflineFallback(trimmed, subjectHint: subjectHint);
+    throw const FlashcardGenerationException(
+      'Gemini API কী বসানো নেই। সেটিংসে কী দিন, তারপর আবার চেষ্টা করুন।',
+    );
   }
 
   /// Extracts formulas and rules from an image of a textbook page or lecture sheet.
@@ -271,7 +309,10 @@ Instructions:
             responseMimeType: 'application/json',
             responseSchema: _flashcardSchema,
             temperature: 0.1,
-            maxOutputTokens: 1200,
+            // A dense page can carry a dozen cards, and reasoning is drawn
+            // from this budget before any of them is written; 1200 cut the
+            // reply mid-card.
+            maxOutputTokens: 4096,
           ),
         );
 
@@ -321,6 +362,14 @@ Return ONLY a valid JSON object matching the requested schema.
           model: 'gemini-flash-latest',
         );
 
+        if (response.candidates.isNotEmpty &&
+            response.candidates.first.finishReason == FinishReason.maxTokens) {
+          throw const FlashcardGenerationException(
+            'পাতায় মনে রাখার মতো জিনিস অনেক, পুরোটা লেখা শেষ হয়নি। '
+            'অর্ধেক পাতা করে তুলুন।',
+          );
+        }
+
         final rawText = response.text?.trim() ?? '';
         if (rawText.isNotEmpty) {
           await GeminiResultCache.instance.put(cacheKey, rawText);
@@ -328,6 +377,8 @@ Return ONLY a valid JSON object matching the requested schema.
 
         final parsed = _parseJsonFlashcards(rawText, 'Book Page OCR');
         if (parsed.isNotEmpty) return parsed;
+      } on FlashcardGenerationException {
+        rethrow;
       } catch (e) {
         debugPrint('Gemini extractFromBookImage error: $e');
       }
@@ -522,91 +573,6 @@ Return ONLY a valid JSON object matching the requested schema.
     }
 
     return items;
-  }
-
-  List<AiFlashcardItem> _generateOfflineFallback(
-    String query, {
-    String? subjectHint,
-  }) {
-    final qLower = query.toLowerCase();
-
-    if (qLower.contains('বর্গক্ষেত্র') || qLower.contains('square')) {
-      return [
-        AiFlashcardItem(
-          subject: 'গণিত',
-          topic: 'পরিমিতি ও জ্যামিতি',
-          front: 'বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য (Diagonal)',
-          back: 'd = √2 × a (যেখানে a হলো বাহুর দৈর্ঘ্য)।\n• উদাহরণ: বাহু ৪ সেমি হলে কর্ণ = ৪√২ সেমি।',
-        ),
-        AiFlashcardItem(
-          subject: 'গণিত',
-          topic: 'পরিমিতি ও জ্যামিতি',
-          front: 'বর্গক্ষেত্রের ক্ষেত্রফল (Area)',
-          back: 'A = a² = d² ÷ 2\n• বাহু জানা থাকলে: a²\n• কর্ণ d জানা থাকলে: d² ÷ 2 (শর্টকাট!)',
-        ),
-        AiFlashcardItem(
-          subject: 'গণিত',
-          topic: 'পরিমিতি ও জ্যামিতি',
-          front: 'বর্গক্ষেত্রের পরিসীমা (Perimeter)',
-          back: 'P = 4a (চারটি বাহুর সমষ্টি)',
-        ),
-      ];
-    }
-
-    if (qLower.contains('ত্রিভুজ') || qLower.contains('triangle')) {
-      return [
-        AiFlashcardItem(
-          subject: 'গণিত',
-          topic: 'জ্যামিতি ও ক্ষেত্রফল',
-          front: 'সমকোণী ত্রিভুজের ক্ষেত্রফল',
-          back: 'ক্ষেত্রফল = ½ × ভূমি × উচ্চতা\n• পিথাগোরাস সূত্র: অতিভুজ² = ভূমি² + লম্ব²',
-        ),
-        AiFlashcardItem(
-          subject: 'গণিত',
-          topic: 'জ্যামিতি ও ক্ষেত্রফল',
-          front: 'সমবাহু ত্রিভুজের ক্ষেত্রফল',
-          back: 'ক্ষেত্রফল = (√3 ÷ 4) × a²\n• উচ্চতা h = (√3 ÷ 2) × a',
-        ),
-      ];
-    }
-
-    if (qLower.contains('বৃত্ত') || qLower.contains('circle')) {
-      return [
-        AiFlashcardItem(
-          subject: 'গণিত',
-          topic: 'বৃত্ত ও পরিধি',
-          front: 'বৃত্তের পরিধি ও ক্ষেত্রফল',
-          back:
-              '• পরিধি = 2πr\n• ক্ষেত্রফল = πr²\n(r = ব্যাসার্ধ, ব্যাস d = 2r)',
-        ),
-      ];
-    }
-
-    if (qLower.contains('কারক') || qLower.contains('সমাস')) {
-      return [
-        AiFlashcardItem(
-          subject: 'বাংলা ব্যাকরণ',
-          topic: 'কারক ও বিভক্তি',
-          front: 'অপাদান কারক চেনার শর্টকাট',
-          back: 'যা থেকে কোনো কিছু বিচ্যুত, উৎপন্ন, জাত, ভীত, স্খলিত হয়।\n• উদাহরণ: "তিলে তৈল হয়" (উৎপন্ন = অপাদান), "পাপে বিরত হও" (বিচ্যুত = অপাদান)',
-        ),
-        AiFlashcardItem(
-          subject: 'বাংলা ব্যাকরণ',
-          topic: 'কারক ও বিভক্তি',
-          front: 'অধিকরণ কারক চেনার শর্টকাট',
-          back: 'ক্রিয়া সম্পাদনের স্থান, কাল বা বিষয়কে অধিকরণ কারক বলে।\n• উদাহরণ: "তিলে তৈল আছে" (ব্যাপ্তি = অধিকরণ), "প্রভাতে সূর্য ওঠে" (কাল = অধিকরণ)',
-        ),
-      ];
-    }
-
-    return [
-      AiFlashcardItem(
-        subject: subjectHint ?? 'সাধারণ প্রস্তুতি',
-        topic: query,
-        front: query,
-        back: 'গুরুত্বপূর্ণ সূত্র, সংজ্ঞা বা শর্টকাট নোট সংরক্ষণ করুন। (AI Key সংযুক্ত থাকলে গভীর শর্টকাট জেনারেট হবে)',
-      ),
-    ];
   }
 
   Future<Uint8List> _prepareImageBytes(File file, int maxDimension) async {

@@ -103,6 +103,13 @@ class _AiFlashcardGeneratorModalState
           _isLoading = false;
         });
       }
+    } on FlashcardGenerationException catch (e) {
+      // Already phrased for the user, and says what to do next.
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.userMessage)));
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -132,6 +139,13 @@ class _AiFlashcardGeneratorModalState
           _isLoading = false;
         });
       }
+    } on FlashcardGenerationException catch (e) {
+      // Already phrased for the user, and says what to do next.
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.userMessage)));
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -160,6 +174,13 @@ class _AiFlashcardGeneratorModalState
           _generatedCards = cards;
           _isLoading = false;
         });
+      }
+    } on FlashcardGenerationException catch (e) {
+      // Already phrased for the user, and says what to do next.
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.userMessage)));
       }
     } catch (e) {
       if (mounted) {

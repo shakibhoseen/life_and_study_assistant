@@ -36,34 +36,30 @@ void main() {
     });
   });
 
-  group('AiFlashcardService Offline Generation', () {
-    test('Generates geometry formulas for square query', () async {
-      final cards = await AiFlashcardService.instance.generateFromPrompt(
-        'বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য',
-      );
-
-      expect(cards.isNotEmpty, isTrue);
-      expect(cards.any((c) => c.front.contains('বর্গক্ষেত্র')), isTrue);
-      expect(cards.any((c) => c.back.contains('√2')), isTrue);
-    });
-
-    test('Generates formulas for right-angled triangle query', () async {
-      final cards = await AiFlashcardService.instance.generateFromPrompt(
-        'সমকোণী ত্রিভুজ সূত্র',
-      );
-
-      expect(cards.isNotEmpty, isTrue);
-      expect(cards.any((c) => c.back.contains('অতিভুজ')), isTrue);
-    });
-
-    test('Generates grammar rules for ণ-ত্ব বিধান query', () async {
-      final cards = await AiFlashcardService.instance.generateFromPrompt(
-        'ণ-ত্ব বিধান',
-      );
-
-      expect(cards.isNotEmpty, isTrue);
-      expect(cards.any((c) => c.front.contains('ণ-ত্ব বিধান')), isTrue);
-    });
+  group('AiFlashcardService failure reporting', () {
+    // Without a key nothing can be generated. What matters is that the
+    // service says so: it used to answer a geometry prompt from a canned
+    // deck, and anything else with a single card whose front was the user's
+    // own prompt, both indistinguishable from cards the model had written.
+    for (final prompt in const [
+      'বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য',
+      'সমকোণী ত্রিভুজ সূত্র',
+      'ণ-ত্ব বিধান',
+      'রক্তসংবহন থেকে ১৫টি কার্ড বানাও',
+    ]) {
+      test('"$prompt" reports the missing key rather than inventing cards', () {
+        expect(
+          AiFlashcardService.instance.generateFromPrompt(prompt),
+          throwsA(
+            isA<FlashcardGenerationException>().having(
+              (e) => e.userMessage,
+              'userMessage',
+              contains('কী'),
+            ),
+          ),
+        );
+      });
+    }
   });
 
   group('AiFlashcardService External AI Text Parsing', () {
