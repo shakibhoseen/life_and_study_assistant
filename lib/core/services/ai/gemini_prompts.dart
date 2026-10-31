@@ -68,8 +68,10 @@ final studyPlanSchema = Schema.object(
 );
 
 class GeminiPrompts {
-  /// Upper bound on study-sheet text handed to the model.
-  static const int maxStudySheetChars = 6000;
+  /// Past this much text a study sheet is worth telling the user about
+  /// before the call goes out. It is not a cut: the whole sheet is sent, and
+  /// stopping is theirs to decide.
+  static const int largeStudySheetChars = 6000;
 
   /// Shared instruction for the non-chat services.
   ///
@@ -126,11 +128,10 @@ Fill every field of the required schema. Echo back today's date, the energy leve
     required String rawContent,
     String? subject,
   }) {
-    // A pasted sheet or OCR dump can be arbitrarily long; past this much the
-    // extra text stops adding exam value and only adds cost.
-    final content = rawContent.length > maxStudySheetChars
-        ? '${rawContent.substring(0, maxStudySheetChars)}…'
-        : rawContent;
+    // The sheet goes whole. Trimming it to save tokens quietly dropped the
+    // end of a long chapter, and the summary that came back looked complete,
+    // so there was no way to tell what had been left out.
+    final content = rawContent;
 
     return '''
 Analyze the following study sheet / topic summary text for a BCS / Competitive Exam candidate${subject != null ? ' in subject $subject' : ''}:

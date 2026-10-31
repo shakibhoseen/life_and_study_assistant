@@ -836,23 +836,16 @@ void main() {
       expect(GeminiPrompts.systemInstruction.contains('Unicode'), isTrue);
     });
 
-    test(
-      'an oversized study sheet is truncated before it reaches the model',
-      () {
-        final huge = 'অধ্যায় ' * 5000;
-        final prompt = GeminiPrompts.buildStudySheetSummaryPrompt(
-          rawContent: huge,
-          subject: 'বাংলা',
-        );
+    test('an oversized study sheet reaches the model whole', () {
+      final huge = 'অধ্যায় ' * 5000;
+      final prompt = GeminiPrompts.buildStudySheetSummaryPrompt(
+        rawContent: huge,
+        subject: 'বাংলা',
+      );
 
-        expect(huge.length, greaterThan(GeminiPrompts.maxStudySheetChars));
-        expect(
-          prompt.length,
-          lessThan(GeminiPrompts.maxStudySheetChars + 2000),
-        );
-        expect(prompt.contains('…'), isTrue);
-      },
-    );
+      expect(huge.length, greaterThan(GeminiPrompts.largeStudySheetChars));
+      expect(prompt.contains(huge), isTrue);
+    });
 
     test('a normal study sheet passes through untouched', () {
       const normal = 'সমাস হলো একাধিক পদের মিলন।';

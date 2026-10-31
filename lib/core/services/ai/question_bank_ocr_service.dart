@@ -64,6 +64,28 @@ final _questionBankSchema = Schema.object(
   requiredProperties: ['title', 'subject', 'questions'],
 );
 
+/// A scan that did not produce the user's page.
+///
+/// It replaces a fallback deck of three hard-coded questions about সূর্য,
+/// কারক and মুজিবনগর that used to be returned whenever the scan failed. They
+/// arrived titled with the user's own filename and were indistinguishable
+/// from a real read, so a failed scan looked like a page of questions the
+/// book did not contain.
+class QuestionBankExtractException implements Exception {
+  /// Shown to the user as it is.
+  final String userMessage;
+
+  /// For the log, not the screen.
+  final String? technicalDetails;
+
+  const QuestionBankExtractException(this.userMessage, {this.technicalDetails});
+
+  @override
+  String toString() =>
+      'QuestionBankExtractException: $userMessage'
+      '${technicalDetails == null ? '' : ' ($technicalDetails)'}';
+}
+
 class QuestionBankOcrService {
   QuestionBankOcrService._();
   static final QuestionBankOcrService instance = QuestionBankOcrService._();
@@ -112,13 +134,8 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
   }) async {
     final apiKey = await _getStoredApiKey();
     if (apiKey == null || apiKey.isEmpty) {
-      debugPrint(
-        'No API Key for QuestionBankOcrService; using offline fallback.',
-      );
-      return _fallbackGenerateResult(
-        questionImage,
-        answerKeyImage: answerKeyImage,
-        subjectHint: subjectHint,
+      throw const QuestionBankExtractException(
+        'Gemini API কী বসানো নেই। সেটিংসে কী দিন, তারপর আবার স্ক্যান করুন।',
       );
     }
 
@@ -199,6 +216,7 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
         DataPart(answerMime, answerBytes),
     ];
 
+    Object? lastError;
     for (final modelName in modelsToTry) {
       try {
         final model = GenerativeModel(
@@ -227,6 +245,16 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
           model: modelName,
         );
 
+        if (response.candidates.isNotEmpty &&
+            response.candidates.first.finishReason == FinishReason.maxTokens) {
+          // The reply was cut mid-JSON, so it decodes to nothing. Trying the
+          // next model only repeats the same cut on the same crowded page.
+          throw const QuestionBankExtractException(
+            'পাতায় প্রশ্ন অনেক বেশি, পুরোটা পড়া শেষ হয়নি। '
+            'অর্ধেক পাতা করে তুলুন।',
+          );
+        }
+
         final rawText = response.text;
         final result = _decodeResponse(
           rawText,
@@ -237,16 +265,18 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
           await GeminiResultCache.instance.put(cacheKey, rawText);
           return result;
         }
+      } on QuestionBankExtractException {
+        rethrow;
       } catch (e) {
         debugPrint('QuestionBankOcrService model $modelName failed: $e');
+        lastError = e;
       }
     }
 
-    // Fallback if network or model failed
-    return _fallbackGenerateResult(
-      questionImage,
-      answerKeyImage: answerKeyImage,
-      subjectHint: subjectHint,
+    throw QuestionBankExtractException(
+      'পাতাটা পড়া গেল না। ইন্টারনেট দেখে আবার চেষ্টা করুন, '
+      'অথবা আলো ভালো রেখে আরেকবার ছবি তুলুন।',
+      technicalDetails: lastError?.toString(),
     );
   }
 
@@ -336,60 +366,6 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
     if (lower.endsWith('.png')) return 'image/png';
     if (lower.endsWith('.webp')) return 'image/webp';
     return 'image/jpeg';
-  }
-
-  QuestionBankExtractResult _fallbackGenerateResult(
-    File imageFile, {
-    File? answerKeyImage,
-    String? subjectHint,
-  }) {
-    final fileName = imageFile.path.split('/').last;
-    final subject =
-        (subjectHint != null &&
-            subjectHint.isNotEmpty &&
-            subjectHint != 'Auto Detect')
-        ? subjectHint
-        : 'বাংলা ব্যাকরণ';
-
-    return QuestionBankExtractResult(
-      title: 'প্রশ্ন ব্যাংক অনুশীলন: $fileName',
-      subject: subject,
-      rawReference: 'Offline: $fileName',
-      hasSeparateAnswerKey: answerKeyImage != null,
-      questions: const [
-        QuizQuestion(
-          questionText: '১. "সূর্য" শব্দের সমার্থক শব্দ নিচের কোনটি?',
-          options: ['ক. সুধাকর', 'খ. তপন', 'গ. শশাঙ্ক', 'ঘ. বিধু'],
-          correctIndex: 1,
-          explanation: 'তপন, ভাস্কর, রবি, মিহির ইত্যাদি সূর্যের সমার্থক শব্দ। সুধাকর ও শশাঙ্ক চাঁদের সমার্থক।',
-          subject: 'বাংলা ব্যাকরণ',
-        ),
-        QuizQuestion(
-          questionText: '২. "পাপে বিরত হও"—এখানে "পাপে" কোন কারকে কোন বিভক্তি?',
-          options: [
-            'ক. করণে ৭মী',
-            'খ. অপাদানে ৭মী',
-            'গ. কর্মে ৭মী',
-            'ঘ. অধিকরণে ৭মী',
-          ],
-          correctIndex: 1,
-          explanation: 'যা থেকে কোনো কিছু বিচ্যুত, বিরত, মুক্ত বা ভীত হয়, তা অপাদান কারক।',
-          subject: 'বাংলা ব্যাকরণ',
-        ),
-        QuizQuestion(
-          questionText: '৩. মুজিবনগর সরকার কোন তারিখে শপথ গ্রহণ করেছিল?',
-          options: [
-            'ক. ১০ এপ্রিল ১৯৭১',
-            'খ. ১৭ এপ্রিল ১৯৭১',
-            'গ. ২৬ মার্চ ১৯৭১',
-            'ঘ. ১৬ ডিসেম্বর ১৯৭১',
-          ],
-          correctIndex: 1,
-          explanation: '১৯৭১ সালের ১০ এপ্রিল সরকার গঠিত হয় এবং ১৭ এপ্রিল মেহেরপুরের বৈদ্যনাথতলায় শপথ গ্রহণ করে।',
-          subject: 'বাংলাদেশ বিষয়াবলী',
-        ),
-      ],
-    );
   }
 
   /// Independently verifies if a question and its marked answer are factually correct.

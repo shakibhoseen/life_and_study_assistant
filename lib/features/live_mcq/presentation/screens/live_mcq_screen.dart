@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,19 +10,24 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/services/ai/ai_cancellation.dart';
 import '../../../../core/services/ai/entity_ref.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
+import '../../../../core/services/ai/gemini_prompts.dart';
 import '../../../../core/services/ai/models/study_sheet_summary.dart';
 import '../../../../core/services/ai/routine_parser_service.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/calendar/calendar_sync_service.dart';
-import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
-import '../../../quiz/presentation/widgets/quiz_batch_correction_sheet.dart';
 import '../../../quiz/presentation/widgets/question_bank_scanner_modal.dart';
 import '../../domain/models/exam_source_info.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/exam_schedule_provider.dart';
+import '../widgets/exam_source_badge.dart';
+import '../widgets/live_mcq_timeline_filter_bar.dart';
+import '../widgets/live_mcq_track_filter_bar.dart';
+import '../widgets/study_sheet_summary_card.dart';
+import '../widgets/test_paper_card_summary.dart';
 import '../widgets/voice_mistake_bottom_sheet.dart';
 
 class LiveMcqScreen extends ConsumerStatefulWidget {
@@ -39,6 +45,9 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
   final TextEditingController _searchController = TextEditingController();
   bool _isSummarizing = false;
   StudySheetSummary? _summaryResult;
+  AiCancellation? _summaryCancellation;
+  Timer? _summaryTicker;
+  int _summarySeconds = 0;
   final Set<int> _expandedTestPaperExams = {};
 
   @override
@@ -49,6 +58,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
 
   @override
   void dispose() {
+    _summaryTicker?.cancel();
+    _summaryCancellation?.cancel();
     _tabController.dispose();
     _studySheetController.dispose();
     _subjectController.dispose();
@@ -308,217 +319,21 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
     required int completedCount,
     required int allCount,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111827) : Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
-          ),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Search Input Bar
-          Container(
-            height: 38,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: TextField(
-              controller: _searchController,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 9,
-                ),
-                hintText: 'Search by topic, subject or routine...',
-                hintStyle: TextStyle(
-                  fontSize: 12.5,
-                  color: isDark ? Colors.white54 : Colors.grey.shade500,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  size: 18,
-                  color: isDark ? Colors.white54 : Colors.grey,
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.clear,
-                          size: 16,
-                          color: isDark ? Colors.white70 : Colors.grey.shade700,
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                          ref
-                              .read(examSearchQueryProvider.notifier)
-                              .setQuery('');
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-              ),
-              onChanged: (val) {
-                ref.read(examSearchQueryProvider.notifier).setQuery(val);
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Timeline Filter Chips Row
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildTimelineChip(
-                  label: 'Upcoming',
-                  count: upcomingCount,
-                  icon: Icons.upcoming,
-                  isSelected: currentFilter == ExamTimelineFilter.upcoming,
-                  activeColor: isDark
-                      ? const Color(0xFF3B82F6)
-                      : const Color(0xFF1E3A8A),
-                  onTap: () => ref
-                      .read(examTimelineFilterProvider.notifier)
-                      .setFilter(ExamTimelineFilter.upcoming),
-                ),
-                const SizedBox(width: 8),
-                _buildTimelineChip(
-                  label: 'Past',
-                  count: pastCount,
-                  icon: Icons.history,
-                  isSelected: currentFilter == ExamTimelineFilter.past,
-                  activeColor: isDark
-                      ? const Color(0xFFF43F5E)
-                      : const Color(0xFFBE123C),
-                  onTap: () => ref
-                      .read(examTimelineFilterProvider.notifier)
-                      .setFilter(ExamTimelineFilter.past),
-                ),
-                const SizedBox(width: 8),
-                _buildTimelineChip(
-                  label: 'Completed',
-                  count: completedCount,
-                  icon: Icons.check_circle_outline,
-                  isSelected: currentFilter == ExamTimelineFilter.completed,
-                  activeColor: isDark
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFF047857),
-                  onTap: () => ref
-                      .read(examTimelineFilterProvider.notifier)
-                      .setFilter(ExamTimelineFilter.completed),
-                ),
-                const SizedBox(width: 8),
-                _buildTimelineChip(
-                  label: 'All',
-                  count: allCount,
-                  icon: Icons.list_alt,
-                  isSelected: currentFilter == ExamTimelineFilter.all,
-                  activeColor: isDark
-                      ? const Color(0xFF64748B)
-                      : const Color(0xFF475569),
-                  onTap: () => ref
-                      .read(examTimelineFilterProvider.notifier)
-                      .setFilter(ExamTimelineFilter.all),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineChip({
-    required String label,
-    required int count,
-    required IconData icon,
-    required bool isSelected,
-    required Color activeColor,
-    required VoidCallback onTap,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? activeColor
-              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? activeColor
-                : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
-            width: isSelected ? 1.4 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 13,
-              color: isSelected
-                  ? Colors.white
-                  : (isDark
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFF64748B)),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected
-                    ? Colors.white
-                    : (isDark
-                          ? const Color(0xFFE2E8F0)
-                          : const Color(0xFF334155)),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.25)
-                    : (isDark
-                          ? const Color(0xFF0F172A)
-                          : const Color(0xFFE2E8F0)),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '$count',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark
-                            ? const Color(0xFFCBD5E1)
-                            : const Color(0xFF475569)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return LiveMcqTimelineFilterBar(
+      searchController: _searchController,
+      currentFilter: currentFilter,
+      upcomingCount: upcomingCount,
+      pastCount: pastCount,
+      completedCount: completedCount,
+      allCount: allCount,
+      onFilterChanged: (filter) =>
+          ref.read(examTimelineFilterProvider.notifier).setFilter(filter),
+      onSearchChanged: (val) =>
+          ref.read(examSearchQueryProvider.notifier).setQuery(val),
+      onSearchClear: () {
+        _searchController.clear();
+        ref.read(examSearchQueryProvider.notifier).setQuery('');
+      },
     );
   }
 
@@ -1527,341 +1342,19 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
     List<QuizQuestion> questions,
     bool isDark,
   ) {
-    final isExpanded = _expandedTestPaperExams.contains(exam.id);
-
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF1E293B).withValues(alpha: 0.6)
-            : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Row
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4F46E5)
-                      .withValues(alpha: isDark ? 0.2 : 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.menu_book_rounded,
-                  size: 16,
-                  color: Color(0xFF4F46E5),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'টেস্ট পেপার প্রশ্নমালা (${BengaliMathSanitizer.toBengaliDigits('${questions.length}')}টি MCQ)',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    if (isExpanded) {
-                      _expandedTestPaperExams.remove(exam.id);
-                    } else {
-                      _expandedTestPaperExams.add(exam.id);
-                    }
-                  });
-                },
-                borderRadius: BorderRadius.circular(6),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 3,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        isExpanded ? 'সংক্ষেপ' : 'প্রশ্ন দেখুন',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? const Color(0xFFA5B4FC)
-                              : const Color(0xFF4F46E5),
-                        ),
-                      ),
-                      Icon(
-                        isExpanded
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
-                        size: 16,
-                        color: isDark
-                            ? const Color(0xFFA5B4FC)
-                            : const Color(0xFF4F46E5),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          // If Expanded: Show the list of questions cleanly formatted
-          if (isExpanded) ...[
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
-            ...List.generate(questions.length, (idx) {
-              final q = questions[idx];
-              final hasLeadingNumber = RegExp(r'^(\d+|[০-৯]+)\.')
-                  .hasMatch(q.questionText.trim());
-              final displayText = hasLeadingNumber
-                  ? q.questionText
-                  : '${idx + 1}. ${q.questionText}';
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      displayText,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: q.options.asMap().entries.map((optEntry) {
-                        final isCorrect = optEntry.key == q.correctIndex;
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isCorrect
-                                ? (isDark
-                                      ? Colors.green.shade900.withValues(
-                                          alpha: 0.3,
-                                        )
-                                      : Colors.green.shade50)
-                                : (isDark
-                                      ? const Color(0xFF0F172A)
-                                      : Colors.white),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: isCorrect
-                                  ? Colors.green
-                                  : (isDark
-                                        ? Colors.white12
-                                        : Colors.grey.shade300),
-                              width: isCorrect ? 1.2 : 0.8,
-                            ),
-                          ),
-                          child: Text(
-                            optEntry.value,
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: isCorrect
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: isCorrect
-                                  ? (isDark
-                                        ? Colors.green.shade300
-                                        : Colors.green.shade800)
-                                  : (isDark ? Colors.white70 : Colors.black87),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    if (q.explanation.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        '💡 ব্যাখ্যা: ${q.explanation}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontStyle: FontStyle.italic,
-                          color: isDark
-                              ? Colors.amber.shade200
-                              : Colors.amber.shade900,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            }),
-          ] else ...[
-            const SizedBox(height: 6),
-            Text(
-              '১ম প্রশ্ন: ${questions.first.questionText}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white60 : Colors.black54,
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 8),
-
-          // Bottom Action Row
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  foregroundColor: isDark
-                      ? const Color(0xFFA5B4FC)
-                      : const Color(0xFF4F46E5),
-                  side: BorderSide(
-                    color: isDark
-                        ? const Color(0xFF6366F1)
-                        : const Color(0xFF4F46E5),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                icon: const Icon(Icons.edit_note, size: 14),
-                label: const Text(
-                  'সম্পাদনা',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () => QuestionBankScannerModal.show(
-                  context,
-                  initialQuestions: questions,
-                  initialTitle: exam.title,
-                  initialSubject: exam.subject,
-                  existingExamId: exam.id,
-                ),
-              ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  foregroundColor: isDark
-                      ? const Color(0xFFA5B4FC)
-                      : const Color(0xFF4F46E5),
-                  side: BorderSide(
-                    color: isDark
-                        ? const Color(0xFF6366F1)
-                        : const Color(0xFF4F46E5),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                icon: const Icon(Icons.copy_rounded, size: 13),
-                label: const Text(
-                  'কপি',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () => _copyExamQuestionsToClipboard(exam, questions),
-              ),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  backgroundColor: const Color(0xFF6366F1),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                icon: const Icon(Icons.auto_fix_high_rounded, size: 13),
-                label: const Text(
-                  'AI ফিক্স',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () => QuizBatchCorrectionSheet.show(
-                  context,
-                  ref: ref,
-                  questions: questions,
-                  examId: exam.id,
-                  topic: exam.topicsCovered,
-                  subject: exam.title,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _copyExamQuestionsToClipboard(
-    ExamSchedule exam,
-    List<QuizQuestion> questions,
-  ) {
-    final buffer = StringBuffer();
-    buffer.writeln('পরীক্ষা: ${exam.title}');
-    buffer.writeln('রেফারেন্স: E-${exam.id}');
-    if (exam.subject.isNotEmpty) buffer.writeln('বিষয়: ${exam.subject}');
-    buffer.writeln('মোট প্রশ্ন: ${questions.length}টি');
-    buffer.writeln('==============================\n');
-
-    for (int i = 0; i < questions.length; i++) {
-      final q = questions[i];
-      buffer.writeln('প্রশ্ন ${i + 1}: ${q.questionText}');
-      for (int optIdx = 0; optIdx < q.options.length; optIdx++) {
-        final optChar = optIdx == 0
-            ? 'ক'
-            : (optIdx == 1 ? 'খ' : (optIdx == 2 ? 'গ' : 'ঘ'));
-        buffer.writeln('  $optChar. ${q.options[optIdx]}');
-      }
-      final correctAns =
-          q.correctIndex >= 0 && q.correctIndex < q.options.length
-          ? q.options[q.correctIndex]
-          : 'Unknown';
-      buffer.writeln('• সঠিক উত্তর: $correctAns');
-      if (q.explanation.isNotEmpty) {
-        buffer.writeln('• ব্যাখ্যা: ${q.explanation}');
-      }
-      buffer.writeln('');
-    }
-    buffer.writeln('==============================');
-    buffer.writeln(
-      'নির্দেশনা: উপরের প্রশ্ন ও উত্তরগুলো যাচাই করে কোনো ভুল বা অসঙ্গতি থাকলে চিহ্নিত করুন।',
-    );
-
-    Clipboard.setData(ClipboardData(text: buffer.toString()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Color(0xFF10B981),
-        content: Text(
-          'পরীক্ষার সকল প্রশ্ন ক্লিপবোর্ডে কপি হয়েছে! অন্য AI-তে পেস্ট করতে পারেন।',
-        ),
-      ),
+    return TestPaperCardSummary(
+      exam: exam,
+      questions: questions,
+      isExpanded: _expandedTestPaperExams.contains(exam.id),
+      onToggleExpand: () {
+        setState(() {
+          if (_expandedTestPaperExams.contains(exam.id)) {
+            _expandedTestPaperExams.remove(exam.id);
+          } else {
+            _expandedTestPaperExams.add(exam.id);
+          }
+        });
+      },
     );
   }
 
@@ -1917,60 +1410,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
   }
 
   Widget _buildSourceBadge(ExamSourceInfo source, bool isDark) {
-    Color bg;
-    Color border;
-    Color text;
-
-    switch (source.kind) {
-      case ExamSourceKind.aiMentor:
-        bg = isDark ? const Color(0xFF2E1065) : const Color(0xFFF3E8FF);
-        border = isDark ? const Color(0xFF7E22CE) : const Color(0xFFD8B4FE);
-        text = isDark ? const Color(0xFFD8B4FE) : const Color(0xFF6B21A8);
-        break;
-      case ExamSourceKind.aiStudyPlan:
-        bg = isDark ? const Color(0xFF042F2E) : const Color(0xFFCCFBF1);
-        border = isDark ? const Color(0xFF0F766E) : const Color(0xFF5EEAD4);
-        text = isDark ? const Color(0xFF5EEAD4) : const Color(0xFF0F766E);
-        break;
-      case ExamSourceKind.manual:
-        bg = isDark ? const Color(0xFF451A03) : const Color(0xFFFEF3C7);
-        border = isDark ? const Color(0xFFB45309) : const Color(0xFFFDE68A);
-        text = isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E);
-        break;
-      case ExamSourceKind.pdfImport:
-        bg = isDark ? const Color(0xFF172554) : const Color(0xFFEFF6FF);
-        border = isDark ? const Color(0xFF1D4ED8) : const Color(0xFFBFDBFE);
-        text = isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF);
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: border, width: 0.8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(source.icon, size: 10.5, color: text),
-          const SizedBox(width: 3.5),
-          Flexible(
-            child: Text(
-              source.label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: text,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-        ],
-      ),
-    );
+    return ExamSourceBadge(source: source, isDark: isDark);
   }
 
   void _showChangeTrackDialog(BuildContext context, ExamSchedule exam) {
@@ -2138,293 +1578,17 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
     AsyncValue<List<String>> tracksAsync,
     String selectedTrack,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return tracksAsync.when(
-      loading: () => const SizedBox(height: 48),
-      error: (_, _) => const SizedBox.shrink(),
-      data: (tracks) {
-        final allTracks = ['All', ...tracks];
-        return Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF111827) : Colors.white,
-            border: Border(
-              bottom: BorderSide(
-                color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
-              ),
-            ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: allTracks.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final track = allTracks[index];
-                    final isSelected = selectedTrack == track;
-                    final isAll = track == 'All';
-
-                    return ChoiceChip(
-                      showCheckmark: false,
-                      avatar: isAll
-                          ? Icon(
-                              Icons.layers,
-                              size: 14,
-                              color: isSelected ? Colors.white : Colors.indigo,
-                            )
-                          : Icon(
-                              Icons.bookmark,
-                              size: 14,
-                              color: isSelected
-                                  ? _getTrackColor(track)
-                                  : Colors.grey,
-                            ),
-                      selected: isSelected,
-                      label: Text(
-                        isAll ? 'All Programs' : track,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          color: isSelected
-                              ? (isAll
-                                    ? Colors.white
-                                    : (isDark
-                                          ? Colors.white
-                                          : _getTrackColor(track)))
-                              : (isDark ? Colors.white70 : Colors.black87),
-                        ),
-                      ),
-                      selectedColor: isAll
-                          ? Colors.indigo
-                          : _getTrackBackgroundColor(track, isDark),
-                      backgroundColor: isDark
-                          ? const Color(0xFF1E293B)
-                          : Colors.grey.shade50,
-                      side: BorderSide(
-                        color: isSelected
-                            ? (isAll ? Colors.indigo : _getTrackColor(track))
-                            : (isDark
-                                  ? const Color(0xFF334155)
-                                  : Colors.grey.shade300),
-                        width: isSelected ? 1.5 : 1,
-                      ),
-                      onSelected: (_) {
-                        ref
-                            .read(selectedTrackProvider.notifier)
-                            .setTrack(track);
-                      },
-                    );
-                  },
-                ),
-              ),
-              if (selectedTrack != 'All') ...[
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: Tooltip(
-                    message: '“$selectedTrack” ট্র্যাকের সব পরীক্ষা মুছুন',
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () => _confirmDeleteTrack(context, selectedTrack),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.red.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.delete_outline,
-                              size: 14,
-                              color: Colors.red,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'ট্র্যাক মুছুন',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
+    return LiveMcqTrackFilterBar(
+      tracksAsync: tracksAsync,
+      selectedTrack: selectedTrack,
     );
   }
 
-  Future<void> _confirmDeleteTrack(
-    BuildContext context,
-    String trackName,
-  ) async {
-    final db = ref.read(appDatabaseProvider);
-    final count =
-        await (db.select(db.examSchedules)
-              ..where((t) => t.trackName.equals(trackName)))
-            .get()
-            .then((list) => list.length);
+  Color _getTrackColor(String track) =>
+      LiveMcqTrackFilterBar.getTrackColor(track);
 
-    if (!context.mounted) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'ট্র্যাকের সব পরীক্ষা মুছবেন?',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.bookmark, color: Colors.red, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      trackName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: Colors.red,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'এই ট্র্যাকে মোট $countটি পরীক্ষা রয়েছে।\n\n'
-              'ডিলিট করলে এই ট্র্যাকের সবগুলো পরীক্ষা একবারে মুছে যাবে। অন্য কোনো ট্র্যাক বা পরীক্ষা অক্ষত থাকবে।\n\n'
-              'আপনি কি নিশ্চিতভাবে এই ট্র্যাকের সব পরীক্ষা মুছে ফেলতে চান?',
-              style: const TextStyle(fontSize: 12.5, height: 1.4),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('বাতিল'),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.delete_forever, size: 16),
-            label: Text('হ্যাঁ, $countটি পরীক্ষা মুছুন'),
-            onPressed: () => Navigator.pop(ctx, true),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && context.mounted) {
-      final deletedCount = await ref
-          .read(examScheduleNotifierProvider.notifier)
-          .deleteExamsByTrack(trackName);
-
-      // Reset filter to All Programs
-      ref.read(selectedTrackProvider.notifier).setTrack('All');
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red.shade800,
-            behavior: SnackBarBehavior.floating,
-            content: Text(
-              '“$trackName” ট্র্যাকের $deletedCountটি পরীক্ষা সফলভাবে মুছে ফেলা হয়েছে।',
-            ),
-          ),
-        );
-      }
-    }
-  }
-
-  Color _getTrackColor(String track) {
-    final lower = track.toLowerCase();
-    if (lower.contains('vocab')) return Colors.orange.shade800;
-    if (lower.contains('friday') ||
-        lower.contains('mega') ||
-        lower.contains('model')) {
-      return Colors.teal.shade800;
-    }
-    if (lower.contains('135') ||
-        lower.contains('140') ||
-        lower.contains('200') ||
-        lower.contains('bcs')) {
-      return Colors.deepPurple.shade700;
-    }
-    if (lower.contains('primary')) return Colors.blue.shade800;
-    return Colors.indigo.shade800;
-  }
-
-  Color _getTrackBackgroundColor(String track, [bool isDark = false]) {
-    final lower = track.toLowerCase();
-    if (lower.contains('vocab')) {
-      return isDark
-          ? Colors.orange.withValues(alpha: 0.2)
-          : Colors.orange.shade50;
-    }
-    if (lower.contains('friday') ||
-        lower.contains('mega') ||
-        lower.contains('model')) {
-      return isDark ? Colors.teal.withValues(alpha: 0.2) : Colors.teal.shade50;
-    }
-    if (lower.contains('135') ||
-        lower.contains('140') ||
-        lower.contains('200') ||
-        lower.contains('bcs')) {
-      return isDark
-          ? Colors.deepPurple.withValues(alpha: 0.2)
-          : Colors.deepPurple.shade50;
-    }
-    if (lower.contains('primary')) {
-      return isDark ? Colors.blue.withValues(alpha: 0.2) : Colors.blue.shade50;
-    }
-    return isDark
-        ? Colors.indigo.withValues(alpha: 0.2)
-        : Colors.indigo.shade50;
-  }
+  Color _getTrackBackgroundColor(String track, [bool isDark = false]) =>
+      LiveMcqTrackFilterBar.getTrackBackgroundColor(track, isDark);
 
   Widget _buildSummarizerTab() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -2458,6 +1622,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           TextField(
             controller: _studySheetController,
             maxLines: 5,
+            // The size line below has to keep up with the typing it reports.
+            onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
               labelText: 'Paste study sheet text or topics here...',
               border: OutlineInputBorder(),
@@ -2465,27 +1631,56 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: _isSummarizing
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.auto_awesome),
-              label: Text(
-                _isSummarizing
-                    ? 'Synthesizing with AI...'
-                    : 'Generate 5-Point Summary',
+          if (_isSummarizing)
+            // A wait of unknown length reads as a hang. The seconds show it
+            // is working, and the stop button means the user is never held
+            // here against their will.
+            Row(
+              children: [
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'AI পড়ছে… ${_summarySeconds}s',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _cancelSummarizer,
+                  icon: const Icon(Icons.stop_circle_outlined, size: 18),
+                  label: const Text('থামাও'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red.shade700,
+                  ),
+                ),
+              ],
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('৫ পয়েন্টে সারাংশ বানাও'),
+                onPressed: _runSummarizer,
               ),
-              onPressed: _isSummarizing ? null : _runSummarizer,
             ),
-          ),
+          if (!_isSummarizing && _studySheetLength > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                _studySheetLength > GeminiPrompts.largeStudySheetChars
+                    ? 'লেখাটা বড় — $_studySheetLength অক্ষর, পুরোটাই পাঠানো হবে'
+                    : '$_studySheetLength অক্ষর',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.white54 : Colors.black45,
+                ),
+              ),
+            ),
           const SizedBox(height: 20),
           if (_summaryResult != null) _buildSummaryDisplay(_summaryResult!),
         ],
@@ -2493,222 +1688,62 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
     );
   }
 
+  int get _studySheetLength => _studySheetController.text.trim().length;
+
+  void _cancelSummarizer() {
+    _summaryCancellation?.cancel();
+  }
+
+  void _endSummaryRun() {
+    _summaryTicker?.cancel();
+    _summaryTicker = null;
+    _summaryCancellation = null;
+    if (mounted) setState(() => _isSummarizing = false);
+  }
+
   Future<void> _runSummarizer() async {
     final text = _studySheetController.text.trim();
     if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please paste some study text first.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('আগে কিছু লেখা বসান।')));
       return;
     }
 
+    final cancellation = AiCancellation();
     setState(() {
       _isSummarizing = true;
+      _summaryCancellation = cancellation;
+      _summarySeconds = 0;
+    });
+    _summaryTicker?.cancel();
+    _summaryTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _summarySeconds++);
     });
 
-    final summary = await GeminiAiService.instance.summarizeStudySheet(
-      content: text,
-      subject: _subjectController.text.trim(),
-    );
-
-    setState(() {
-      _isSummarizing = false;
-      _summaryResult = summary;
-    });
+    try {
+      final summary = await GeminiAiService.instance.summarizeStudySheet(
+        content: text,
+        subject: _subjectController.text.trim(),
+        cancellation: cancellation,
+      );
+      if (!mounted) return;
+      setState(() => _summaryResult = summary);
+    } on AiCancelledException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('থামানো হলো। যা খরচ হয়ে গেছে তা ফেরত আসে না।'),
+        ),
+      );
+    } finally {
+      _endSummaryRun();
+    }
   }
 
   Widget _buildSummaryDisplay(StudySheetSummary summary) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF334155) : Colors.transparent,
-        ),
-      ),
-      color: isDark ? const Color(0xFF111827) : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.stars, color: Colors.amber, size: 22),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    summary.title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Divider(
-              height: 24,
-              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-            ),
-            Text(
-              '🎯 5 High-Yield Bullet Points:',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...summary.highYieldPoints.asMap().entries.map((entry) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${entry.key + 1}. ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? const Color(0xFF818CF8) : Colors.indigo,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        BengaliMathSanitizer.sanitize(entry.value),
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.4,
-                          color: isDark
-                              ? const Color(0xFFE2E8F0)
-                              : const Color(0xFF1E293B),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-            if (summary.recurringPastQuestions.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Text(
-                '🔄 Recurring Past Exam Traps:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 6),
-              ...summary.recurringPastQuestions.map(
-                (q) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '• ',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? const Color(0xFF818CF8)
-                              : Colors.indigo,
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          BengaliMathSanitizer.sanitize(q),
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 1.35,
-                            color: isDark
-                                ? const Color(0xFFCBD5E1)
-                                : const Color(0xFF334155),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-            if (summary.mnemonics.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Text(
-                '🧠 Memory Shortcut (Mnemonic):',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 6),
-              ...summary.mnemonics.map(
-                (m) => Container(
-                  margin: const EdgeInsets.only(bottom: 4),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.purple.withValues(alpha: 0.25)
-                        : Colors.purple.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.purple.withValues(alpha: 0.5)
-                          : Colors.purple.shade100,
-                    ),
-                  ),
-                  child: Text(
-                    m,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark
-                          ? Colors.purple.shade200
-                          : Colors.purple.shade900,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark
-                      ? const Color(0xFF3B82F6)
-                      : const Color(0xFF1E3A8A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 11,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                icon: const Icon(Icons.psychology, size: 18),
-                label: const Text(
-                  '🎯 5-Question LiveMCQ Drill',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onPressed: () {
-                  QuizDrillModal.show(
-                    context,
-                    topic: summary.title,
-                    subject: _subjectController.text.trim().isNotEmpty
-                        ? _subjectController.text.trim()
-                        : 'LiveMCQ Study Sheet',
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+    return StudySheetSummaryCard(
+      summary: summary,
+      subject: _subjectController.text.trim(),
     );
   }
 

@@ -80,39 +80,42 @@ void main() {
     });
   });
 
-  group('QuestionBankOcrService Offline Fallback Tests', () {
-    test(
-      'extractQuestionBank returns offline fallback when no API key is present',
-      () async {
-        final tempFile = File('${Directory.systemTemp.path}/test_qb_page.jpg');
-        await tempFile.writeAsBytes([
-          0xFF,
-          0xD8,
-          0xFF,
-          0xE0,
-          0x00,
-          0x10,
-          0x4A,
-          0x46,
-        ]);
+  group('QuestionBankOcrService failure reporting', () {
+    test('extractQuestionBank reports a missing API key instead of inventing a page', () async {
+      final tempFile = File('${Directory.systemTemp.path}/test_qb_page.jpg');
+      await tempFile.writeAsBytes([
+        0xFF,
+        0xD8,
+        0xFF,
+        0xE0,
+        0x00,
+        0x10,
+        0x4A,
+        0x46,
+      ]);
 
-        try {
-          final result = await QuestionBankOcrService.instance
-              .extractQuestionBank(
-                questionImage: tempFile,
-                subjectHint: 'বাংলা ব্যাকরণ',
-              );
-
-          expect(result.questions, isNotEmpty);
-          expect(result.subject, 'বাংলা ব্যাকরণ');
-          expect(result.questions.first.options.length, 4);
-        } finally {
-          if (await tempFile.exists()) {
-            await tempFile.delete();
-          }
+      try {
+        // A scan that cannot run must say so. Returning a stand-in page
+        // here would be indistinguishable from having read the book.
+        await expectLater(
+          QuestionBankOcrService.instance.extractQuestionBank(
+            questionImage: tempFile,
+            subjectHint: 'বাংলা ব্যাকরণ',
+          ),
+          throwsA(
+            isA<QuestionBankExtractException>().having(
+              (e) => e.userMessage,
+              'userMessage',
+              contains('কী'),
+            ),
+          ),
+        );
+      } finally {
+        if (await tempFile.exists()) {
+          await tempFile.delete();
         }
-      },
-    );
+      }
+    });
   });
 
   group('QuestionBankScannerModal Widget Tests', () {
@@ -173,16 +176,32 @@ void main() {
       await tempFile.writeAsBytes([0xFF, 0xD8, 0xFF, 0xE0]);
 
       try {
-        final res = await QuestionBankOcrService.instance.extractQuestionBank(
-          questionImage: tempFile,
-          subjectHint: 'বাংলা ব্যাকরণ',
-        );
+        // What this test is about is persistence, so the questions stand in
+        // for a scan rather than coming from one.
+        const scanned = [
+          QuizQuestion(
+            questionText: '"পাপে বিরত হও" — "পাপে" কোন কারকে কোন বিভক্তি?',
+            options: [
+              'ক. করণে ৭মী',
+              'খ. অপাদানে ৭মী',
+              'গ. কর্মে ৭মী',
+              'ঘ. অধিকরণে ৭মী',
+            ],
+            correctIndex: 1,
+            explanation: 'যা থেকে কিছু বিরত হয়, তা অপাদান কারক।',
+            subject: 'বাংলা ব্যাকরণ',
+          ),
+          QuizQuestion(
+            questionText: '"সূর্য" শব্দের সমার্থক কোনটি?',
+            options: ['ক. সুধাকর', 'খ. তপন', 'গ. শশাঙ্ক', 'ঘ. বিধু'],
+            correctIndex: 1,
+            explanation: 'তপন সূর্যের সমার্থক; সুধাকর ও শশাঙ্ক চাঁদের।',
+            subject: 'বাংলা ব্যাকরণ',
+          ),
+        ];
 
-        expect(res.questions.length, greaterThanOrEqualTo(2));
-
-        // Insert directly using database companion to test persistence and retrieval
         final questionsJson = jsonEncode(
-          res.questions.map((q) => q.toJson()).toList(),
+          scanned.map((q) => q.toJson()).toList(),
         );
         await db.insertExamSchedulesDeduplicated([
           ExamSchedulesCompanion.insert(
@@ -209,11 +228,8 @@ void main() {
         final loadedQuestions = decodedList
             .map((e) => QuizQuestion.fromJson(e as Map<String, dynamic>))
             .toList();
-        expect(loadedQuestions.length, res.questions.length);
-        expect(
-          loadedQuestions.first.questionText,
-          res.questions.first.questionText,
-        );
+        expect(loadedQuestions.length, scanned.length);
+        expect(loadedQuestions.first.questionText, scanned.first.questionText);
         expect(loadedQuestions.first.options.length, 4);
       } finally {
         if (await tempFile.exists()) {

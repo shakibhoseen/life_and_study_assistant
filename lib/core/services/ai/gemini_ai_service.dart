@@ -17,6 +17,7 @@ import 'gemini_usage_tracker.dart';
 import 'models/adaptive_study_plan.dart';
 import 'models/study_sheet_summary.dart';
 import 'models/study_task.dart';
+import 'ai_cancellation.dart';
 
 /// Output shape is set per call rather than on the model, because this one
 /// service produces both strict JSON (study plan, sheet summary) and prose
@@ -407,6 +408,7 @@ class GeminiAiService {
   Future<StudySheetSummary> summarizeStudySheet({
     required String content,
     String? subject,
+    AiCancellation? cancellation,
   }) async {
     await init();
 
@@ -437,9 +439,12 @@ class GeminiAiService {
           subject: subject,
         );
 
-        final response = await _model!.generateContent([
+        final call = _model!.generateContent([
           Content.text(promptText),
         ], generationConfig: _jsonConfig);
+        final response = cancellation == null
+            ? await call
+            : await cancellation.guard(call);
 
         await GeminiUsageTracker.instance.recordSuccess(
           tokens: response.usageMetadata?.totalTokenCount ?? 0,
@@ -458,6 +463,10 @@ class GeminiAiService {
           await GeminiResultCache.instance.put(cacheKey, cleanJson);
           return StudySheetSummary.fromJson(decoded);
         }
+      } on AiCancelledException {
+        // The user stopped waiting; a local fallback summary would be a
+        // result they did not ask for.
+        rethrow;
       } catch (e) {
         debugPrint(
           'Gemini summarization failed: $e. Falling back to local summary.',

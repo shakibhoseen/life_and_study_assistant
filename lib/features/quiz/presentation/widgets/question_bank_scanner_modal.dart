@@ -14,6 +14,7 @@ import '../../../../core/services/ai/models/question_bank_extract_result.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/question_bank_ocr_service.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
+import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
 import 'quiz_batch_correction_sheet.dart';
 import 'quiz_drill_modal.dart';
@@ -176,6 +177,15 @@ class _QuestionBankScannerModalState
           _titleController.text = res.title;
           _isScanning = false;
           _savedToRoutine = false;
+        });
+      }
+    } on QuestionBankExtractException catch (e) {
+      // Already phrased for the user, and says what to do next.
+      debugPrint('Question bank scan failed: $e');
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+          _errorMessage = e.userMessage;
         });
       }
     } catch (e) {
@@ -1037,37 +1047,16 @@ class _QuestionBankScannerModalState
   // LOADING STATE
   // ========================================================
   Widget _buildScanningState(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(
-              width: 44,
-              height: 44,
-              child: CircularProgressIndicator(
-                strokeWidth: 3.5,
-                color: Color(0xFF4F46E5),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Gemini Vision প্রশ্ন পাতা স্ক্যান করছে...',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'প্রশ্ন, ৪টি অপশন ও উত্তরমালা স্বয়ংক্রিয়ভাবে সাজানো হচ্ছে',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.white60 : Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return AiProgressPipelineWidget(
+      type: AiTaskType.image,
+      isCompact: false,
+      onCancel: () {
+        if (mounted) {
+          setState(() {
+            _isScanning = false;
+          });
+        }
+      },
     );
   }
 
