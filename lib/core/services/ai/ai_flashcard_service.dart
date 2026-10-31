@@ -14,6 +14,7 @@ import 'ai_media_limits.dart';
 import 'gemini_ai_service.dart';
 import 'gemini_result_cache.dart';
 import 'gemini_usage_tracker.dart';
+import '../../utils/embedded_json.dart';
 
 final _flashcardSchema = Schema.object(
   properties: {
@@ -157,6 +158,36 @@ class AiFlashcardItem {
     );
   }
 }
+
+/// The shape to ask another assistant for, so the paste needs no model call.
+///
+/// Anything readable is accepted — plain lines, a table, prose — but those
+/// have to be read by a model first, which costs tokens and takes a wait.
+/// JSON in this shape is read on the phone, free and instantly, so the
+/// cheapest route is to ask for it up front.
+const String externalFlashcardPromptTemplate = '''
+নিচের বিষয়ে ফ্ল্যাশকার্ড বানাও: [এখানে আপনার বিষয় লিখুন]
+
+উত্তরটা অবশ্যই ঠিক এই JSON গঠনে দেবে, অন্য কোনো লেখা ছাড়া:
+
+{
+  "subject": "বিষয়ের নাম",
+  "topic": "অধ্যায় বা টপিকের নাম",
+  "cards": [
+    {
+      "front": "প্রশ্ন বা ধারণার নাম",
+      "back": "উত্তর, সূত্র বা নিয়ম",
+      "priority": "high",
+      "why": "কেন মুখস্থ রাখা দরকার, এক লাইনে"
+    }
+  ]
+}
+
+নিয়ম:
+- priority হবে high, medium বা low — পরীক্ষায় কতটা সরাসরি আসে সেই অনুযায়ী।
+- স্মরণকৌশল দেবে শুধু সেখানে যেখানে তথ্যটা গুলিয়ে যায় বা মুখস্থ ছাড়া উপায় নেই; যা বুঝলেই মনে থাকে সেখানে কারণটা লিখবে।
+- গণিতের চিহ্ন ইউনিকোডে: °, ×, ², ³, √, π, ÷। LaTeX লিখবে না।
+''';
 
 /// A generation run that produced nothing usable.
 ///
@@ -393,22 +424,34 @@ Return ONLY a valid JSON object matching the requested schema.
   }
 
   /// Parses flashcards pasted from external AI (Claude/ChatGPT) or custom structured text.
+  /// Whether the last [parseFromExternalText] needed a model call.
+  ///
+  /// A paste that is already this app's JSON is read on the phone and costs
+  /// nothing, which is worth telling the user so they can keep asking the
+  /// other assistant for that shape.
+  bool lastParseWasFree = false;
+
   Future<List<AiFlashcardItem>> parseFromExternalText(String text) async {
+    lastParseWasFree = false;
     final trimmed = text.trim();
     if (trimmed.isEmpty) return const [];
 
-    // 1. Try direct JSON parsing
-    var clean = trimmed;
-    if (clean.startsWith('```json')) clean = clean.substring(7);
-    if (clean.startsWith('```')) clean = clean.substring(3);
-    if (clean.endsWith('```')) clean = clean.substring(0, clean.length - 3);
-    clean = clean.trim();
+    // 1. Try the JSON the paste already holds, which costs nothing.
+    //
+    // A reply from another assistant usually wraps its JSON in a sentence and
+    // a fenced block. Stripping only a leading fence missed all of those and
+    // sent the text to a model to be read a second time, so the span is found
+    // wherever it sits.
+    final clean = extractFirstJson(trimmed) ?? trimmed;
 
     try {
       final decoded = jsonDecode(clean);
       if (decoded is Map<String, dynamic>) {
         final parsed = _parseJsonFlashcards(clean, 'External AI');
-        if (parsed.isNotEmpty) return parsed;
+        if (parsed.isNotEmpty) {
+          lastParseWasFree = true;
+          return parsed;
+        }
       } else if (decoded is List) {
         final items = <AiFlashcardItem>[];
         for (final item in decoded) {
@@ -416,7 +459,10 @@ Return ONLY a valid JSON object matching the requested schema.
             items.add(AiFlashcardItem.fromJson(item));
           }
         }
-        if (items.isNotEmpty) return items;
+        if (items.isNotEmpty) {
+          lastParseWasFree = true;
+          return items;
+        }
       }
     } catch (_) {}
 
@@ -465,7 +511,8 @@ Return ONLY a valid JSON object matching the requested schema.
       }
     }
 
-    // 3. Fallback regex line-by-line parsing
+    // 3. Fallback regex line-by-line parsing, which also costs nothing.
+    lastParseWasFree = true;
     return _parseTextWithRegex(trimmed);
   }
 

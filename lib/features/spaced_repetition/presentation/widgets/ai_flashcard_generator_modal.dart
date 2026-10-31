@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -169,11 +170,23 @@ class _AiFlashcardGeneratorModalState
       final cards = await AiFlashcardService.instance.parseFromExternalText(
         text,
       );
+      final wasFree = AiFlashcardService.instance.lastParseWasFree;
       if (mounted) {
         setState(() {
           _generatedCards = cards;
           _isLoading = false;
         });
+        if (cards.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                wasFree
+                    ? '${cards.length}টি কার্ড — ফোনেই পড়া হয়েছে, টোকেন খরচ হয়নি'
+                    : '${cards.length}টি কার্ড — AI দিয়ে পড়তে হয়েছে',
+              ),
+            ),
+          );
+        }
       }
     } on FlashcardGenerationException catch (e) {
       // Already phrased for the user, and says what to do next.
@@ -648,6 +661,65 @@ class _AiFlashcardGeneratorModalState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Any format works, but one of them is free, so it is offered up
+          // front rather than left for the user to discover.
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF14532D).withValues(alpha: 0.35)
+                  : const Color(0xFFECFDF5),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isDark ? Colors.green.shade900 : Colors.green.shade200,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'যেকোনো ফরম্যাট চলবে — সাধারণ লেখা, টেবিল, নোট। '
+                  'তবে JSON হলে ফোনেই পড়া হয়, কোনো টোকেন খরচ হয় না।',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: isDark
+                        ? Colors.green.shade200
+                        : Colors.green.shade900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(
+                        const ClipboardData(
+                          text: externalFlashcardPromptTemplate,
+                        ),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'প্রম্পট কপি হয়েছে — ChatGPT বা Claude-এ পেস্ট করুন',
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_all_rounded, size: 16),
+                    label: const Text(
+                      'বাইরের AI-এর জন্য প্রম্পট কপি করুন',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           TextField(
             controller: _pasteController,
             maxLines: 6,

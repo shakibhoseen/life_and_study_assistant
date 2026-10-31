@@ -63,6 +63,35 @@ void main() {
   });
 
   group('AiFlashcardService External AI Text Parsing', () {
+    test('a chat reply with prose around the JSON costs nothing', () async {
+      const pasted = '''
+অবশ্যই! রক্তসংবহন নিয়ে আপনার কার্ডগুলো এই নিন:
+
+```json
+{
+  "subject": "সাধারণ বিজ্ঞান",
+  "topic": "রক্তসংবহন",
+  "cards": [
+    {"front": "হৃদপিণ্ডে কয়টি প্রকোষ্ঠ?", "back": "৪টি — ২ অলিন্দ, ২ নিলয়"},
+    {"front": "ফুসফুসীয় ধমনি কী বহন করে?", "back": "CO₂-যুক্ত রক্ত"}
+  ]
+}
+```
+
+আরও লাগলে বলবেন!
+''';
+
+      final cards = await AiFlashcardService.instance.parseFromExternalText(
+        pasted,
+      );
+
+      expect(cards.length, 2);
+      expect(cards.first.front, contains('প্রকোষ্ঠ'));
+      // No key is configured in tests, so a model call could not have
+      // happened; what matters is that it was not even needed.
+      expect(AiFlashcardService.instance.lastParseWasFree, isTrue);
+    });
+
     test('Parses JSON generated from ChatGPT or Claude', () async {
       const jsonSnippet = '''
 ```json
