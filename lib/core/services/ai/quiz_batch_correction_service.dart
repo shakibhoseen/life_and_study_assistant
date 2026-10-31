@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/notification_constants.dart';
 import '../../database/app_database.dart';
 import '../../utils/bengali_math_sanitizer.dart';
+import '../../utils/embedded_json.dart';
 import 'gemini_ai_service.dart';
 import 'gemini_usage_tracker.dart';
 import 'models/quiz_question.dart';
@@ -181,6 +182,35 @@ final _correctionSchema = Schema.array(
   ),
 );
 
+/// The shape to ask another assistant for, so the paste needs no model call.
+///
+/// Plain Bengali ("প্রশ্ন ৩ এর উত্তর খ হবে") is still read, by the model or
+/// by the regex reader. This shape is read on the phone, free and at once.
+String externalCorrectionPromptTemplate(int questionCount) =>
+    '''
+উপরে কপি করা প্রশ্নগুলো যাচাই করো। যেগুলোতে ভুল আছে শুধু সেগুলোর জন্য উত্তর দেবে, ঠিক এই JSON গঠনে, অন্য কোনো লেখা ছাড়া:
+
+[
+  {
+    "question_index": 0,
+    "proposed_correct_index": 1,
+    "is_delete": false,
+    "new_question_text": "",
+    "new_options": [],
+    "new_explanation": "",
+    "reason": "কেন বদলাচ্ছ, এক লাইনে বাংলায়"
+  }
+]
+
+নিয়ম:
+- question_index শূন্য থেকে শুরু, ০ থেকে ${questionCount - 1} পর্যন্ত।
+- উত্তর ঠিক থাকলে সেই প্রশ্নটা তালিকায় রাখবে না।
+- প্রশ্ন বা অপশন নিজেই ভুল হলে new_question_text বা new_options-এ ঠিক করা রূপটা দেবে; নইলে ফাঁকা রাখবে।
+- প্রশ্নটা পুরোপুরি অচল হলে is_delete সত্য করবে।
+- কিছু অনুমান করে লিখবে না।
+- সব ঠিক থাকলে ফাঁকা তালিকা দেবে: []
+''';
+
 class QuizBatchCorrectionService {
   QuizBatchCorrectionService._();
   static final QuizBatchCorrectionService instance =
@@ -198,11 +228,44 @@ class QuizBatchCorrectionService {
   }
 
   /// Parses external AI feedback/analysis into structured question corrections.
+  /// Whether the last [parseCorrections] needed a model call.
+  bool lastParseWasFree = false;
+
   Future<List<QuestionCorrectionItem>> parseCorrections({
     required List<QuizQuestion> questions,
     required String externalAnalysis,
   }) async {
     if (questions.isEmpty || externalAnalysis.trim().isEmpty) return const [];
+    lastParseWasFree = false;
+
+    // A paste that is already in this shape needs no model: the prompt the
+    // sheet hands out asks for exactly it, so the reply can be read straight
+    // back in at no cost. Prose is still welcome, it just has to be read.
+    final embedded = extractFirstJson(externalAnalysis);
+    if (embedded != null) {
+      try {
+        final decoded = jsonDecode(embedded);
+        if (decoded is List) {
+          final direct = <QuestionCorrectionItem>[];
+          for (final item in decoded) {
+            if (item is Map<String, dynamic>) {
+              final parsed = QuestionCorrectionItem.tryFromJson(
+                item,
+                questions,
+              );
+              if (parsed != null) direct.add(parsed);
+            }
+          }
+          if (direct.isNotEmpty) {
+            debugPrint('Batch correction read directly: ${direct.length}');
+            lastParseWasFree = true;
+            return direct;
+          }
+        }
+      } catch (_) {
+        // Not this shape; fall through to the model.
+      }
+    }
 
     final apiKey = await _getApiKey();
     if (apiKey != null && apiKey.isNotEmpty) {
@@ -237,7 +300,8 @@ class QuizBatchCorrectionService {
       }
     }
 
-    // Offline / Regex fallback
+    // Offline / Regex fallback, which also costs nothing.
+    lastParseWasFree = true;
     final offline = _parseOffline(questions, externalAnalysis);
     debugPrint(
       'Batch correction: fell back to offline parsing, '

@@ -306,4 +306,45 @@ LiveMCQ BCS Crash Routine:
       expect(ex.modelName, equals('gemini-flash-lite-latest'));
     });
   });
+
+  group('Free routine import', () {
+    final svc = RoutineParserService.instance;
+
+    test('accepts routine JSON wrapped in a chat reply', () {
+      const reply = '''
+এই নিন আপনার রুটিন:
+
+```json
+[
+  {"date": "2026-11-10", "title": "বাংলা মডেল টেস্ট", "topics": "কারক"},
+  {"date": "2026-11-12", "title": "গণিত মডেল টেস্ট", "topics": "পরিমিতি"}
+]
+```
+
+শুভকামনা!
+''';
+      expect(svc.debugLooksLikeRoutineJson(reply), isTrue);
+    });
+
+    test(
+      'refuses a cut-off reply rather than importing only its first exam',
+      () {
+        // The first balanced span here is one complete exam. Treating that as
+        // the whole routine would quietly drop the rest.
+        const cut = '''
+[
+  {"date": "2026-11-10", "title": "বাংলা মডেল টেস্ট", "topics": "কারক"},
+  {"date": "2026-11-12", "title": "গণিত মডেল
+''';
+        expect(svc.debugLooksLikeRoutineJson(cut), isFalse);
+      },
+    );
+
+    test('refuses plain prose', () {
+      expect(
+        svc.debugLooksLikeRoutineJson('১০ তারিখে বাংলা পরীক্ষা আছে।'),
+        isFalse,
+      );
+    });
+  });
 }

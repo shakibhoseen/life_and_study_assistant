@@ -352,6 +352,35 @@ class QuizBatchCorrectionSheet {
                                   }
                                 },
                         ),
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                          ),
+                          icon: const Icon(Icons.copy_all_rounded, size: 15),
+                          label: const Text(
+                            'প্রম্পট',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          onPressed: () {
+                            // Plain Bengali still works; this shape is simply
+                            // the one that costs nothing to read.
+                            Clipboard.setData(
+                              ClipboardData(
+                                text: externalCorrectionPromptTemplate(
+                                  questions.length,
+                                ),
+                              ),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'প্রম্পট কপি হয়েছে — প্রশ্নগুলোর সাথে বাইরের AI-তে দিন',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -455,9 +484,15 @@ class QuizBatchCorrectionSheet {
                                     statusMessage = 'কোনো সুনির্দিষ্ট প্রশ্ন সংশোধন চিহ্নিত করা যায়নি। অনুগ্রহ করে বিশ্লেষণ টেক্সটটি যাচাই করুন।';
                                   });
                                 } else {
+                                  final wasFree = QuizBatchCorrectionService
+                                      .instance
+                                      .lastParseWasFree;
                                   setSheetState(() {
                                     isAnalyzing = false;
                                     parsedCorrections = items;
+                                    statusMessage = wasFree
+                                        ? '${items.length}টি সংশোধন — ফোনেই পড়া হয়েছে, টোকেন খরচ হয়নি'
+                                        : '${items.length}টি সংশোধন — AI দিয়ে পড়তে হয়েছে';
                                   });
                                 }
                               } catch (e) {

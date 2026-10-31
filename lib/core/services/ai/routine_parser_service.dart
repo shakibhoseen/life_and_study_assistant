@@ -14,6 +14,7 @@ import 'ai_media_limits.dart';
 import 'gemini_usage_tracker.dart';
 import 'models/parsed_routine_item.dart';
 import 'models/routine_import_result.dart';
+import '../../utils/embedded_json.dart';
 
 class RoutineParserException implements Exception {
   final String userMessage;
@@ -448,14 +449,16 @@ Rules:
   /// is missing: handed an unrelated JSON array it would happily produce
   /// exams dated tomorrow. A real routine row carries a parseable date.
   bool _looksLikeRoutineJson(String text) {
-    var cleaned = text.trim();
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned
-          .replaceFirst(RegExp(r'^```(?:json)?\s*', caseSensitive: false), '')
-          .replaceFirst(RegExp(r'\s*```$'), '')
-          .trim();
-    }
-    if (!cleaned.startsWith('[') && !cleaned.startsWith('{')) return false;
+    // A reply pasted from another assistant carries a sentence before the
+    // JSON and an offer of help after it. Requiring the text to begin with a
+    // brace meant those paid a model to re-read what was already there.
+    final cleaned = extractFirstJson(text);
+    if (cleaned == null) return false;
+    // A cut-off reply also yields a balanced span — its first complete item.
+    // Importing that would silently keep one exam and lose the others, so a
+    // span with more JSON left after it is not treated as the whole routine.
+    final rest = text.substring(text.indexOf(cleaned) + cleaned.length);
+    if (rest.contains('{') || rest.contains('[')) return false;
 
     try {
       final decoded = jsonDecode(cleaned);
@@ -483,6 +486,10 @@ Rules:
     }
   }
 
+  /// Testing bridge for the free-import check.
+  @visibleForTesting
+  bool debugLooksLikeRoutineJson(String text) => _looksLikeRoutineJson(text);
+
   /// Testing bridge for decoding response and token truncation recovery
   @visibleForTesting
   List<ParsedRoutineItem> decodeResponseForTesting(
@@ -504,6 +511,13 @@ Rules:
       cleaned = cleaned.substring(0, cleaned.length - 3);
     }
     cleaned = cleaned.trim();
+    // Only when prose surrounds the JSON is a balanced span pulled out. On a
+    // reply cut off by the token cap the first balanced span is one complete
+    // item out of many, and taking it would quietly import a single exam and
+    // drop the rest; the recovery below needs the whole cut-off text.
+    if (!cleaned.startsWith('[') && !cleaned.startsWith('{')) {
+      cleaned = extractFirstJson(cleaned) ?? cleaned;
+    }
 
     // 1. Fast path: Standard complete JSON
     try {
