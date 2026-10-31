@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -20,6 +22,32 @@ class NotificationService {
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
+
+  /// Cards whose notification the user tapped.
+  ///
+  /// The tap arrives in a plugin callback with no access to the widget tree,
+  /// so it is published here and the shell listens, the same way shared files
+  /// are handled.
+  final StreamController<FlashcardItem> _tappedFlashcards =
+      StreamController<FlashcardItem>.broadcast();
+  Stream<FlashcardItem> get tappedFlashcards => _tappedFlashcards.stream;
+
+  void publishTappedFlashcard(FlashcardItem card) {
+    _tappedFlashcards.add(card);
+  }
+
+  /// The card from a notification that launched the app from cold.
+  ///
+  /// A tap that starts the process arrives before anything is listening, so
+  /// it is read back once the shell is up instead of being lost.
+  Future<FlashcardItem?> takeLaunchFlashcard() async {
+    final details = await _notificationsPlugin
+        .getNotificationAppLaunchDetails();
+    if (details?.didNotificationLaunchApp != true) return null;
+    final response = details!.notificationResponse;
+    if (response?.actionId != null) return null;
+    return FlashcardItem.tryFromPayload(response?.payload);
+  }
 
   /// Removes the first, silent flashcard channel.
   ///
@@ -555,6 +583,7 @@ class NotificationService {
           body: body,
           scheduledDate: when,
           notificationDetails: details,
+          payload: jsonEncode(card.toPayload()),
           // Inexact alarms are cheap on battery and fine an hour apart, but
           // the OS may hold them for many minutes -- useless for a short
           // interval where the whole point is seeing it arrive.

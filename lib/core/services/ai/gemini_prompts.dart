@@ -201,6 +201,7 @@ Multi-day routine:
 
 Tag rules:
 - Tags are proposals the user taps to apply; never claim you already saved anything.
+- ADD_TOPIC marks a topic WEAK, which feeds the weak-topic list and the study plan. Use it only when the user says they find it hard, keep forgetting it, or got it wrong. Asking what something means is not weakness: explain it, and offer ADD_FLASHCARD instead if it is worth remembering.
 - ADD_FLASHCARD: emit when discussing difficult rules, math formulas, grammar mnemonics, or when user asks to remember a formula/shortcut.
 - Priority: When asked to add/schedule an exam, quiz or self-test, emit ADD_EXAM (or ROUTINE_PLAN); do NOT emit ADD_TOPIC. Use ADD_TOPIC only when discussing weak topics.
 - ADD_EXAM: single exam with a real date. Never invent dates.

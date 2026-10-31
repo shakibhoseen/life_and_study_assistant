@@ -34,6 +34,13 @@ final _flashcardSchema = Schema.object(
           ),
           'subject': Schema.string(description: 'Optional subject override'),
           'topic': Schema.string(description: 'Optional topic override'),
+          'priority': Schema.enumString(
+            enumValues: ['high', 'medium', 'low'],
+            description: 'How directly the exam asks this',
+          ),
+          'why': Schema.string(
+            description: 'One short Bengali clause: why memorise this',
+          ),
         },
         requiredProperties: ['front', 'back'],
       ),
@@ -42,11 +49,40 @@ final _flashcardSchema = Schema.object(
   requiredProperties: ['subject', 'topic', 'cards'],
 );
 
+/// How directly the exam asks for a card, as judged when it was extracted.
+enum CardPriority {
+  high,
+  medium,
+  low;
+
+  static CardPriority parse(String? raw) =>
+      switch ((raw ?? '').trim().toLowerCase()) {
+        'high' => CardPriority.high,
+        'low' => CardPriority.low,
+        _ => CardPriority.medium,
+      };
+
+  String get label => switch (this) {
+    CardPriority.high => 'সরাসরি আসে',
+    CardPriority.medium => 'কাজে লাগে',
+    CardPriority.low => 'কম আসে',
+  };
+}
+
 class AiFlashcardItem {
   final String subject;
   final String topic;
   final String front;
   final String back;
+
+  final CardPriority priority;
+
+  /// Why this was judged worth memorising, in the extractor's own words.
+  ///
+  /// Shown rather than stored: the user is choosing which cards to keep, and
+  /// a reason they can read beats a rating they cannot question.
+  final String? why;
+
   bool isSelected;
 
   AiFlashcardItem({
@@ -54,6 +90,8 @@ class AiFlashcardItem {
     required this.topic,
     required this.front,
     required this.back,
+    this.priority = CardPriority.medium,
+    this.why,
     this.isSelected = true,
   });
 
@@ -102,12 +140,20 @@ class AiFlashcardItem {
         json['answer']?.toString().trim() ??
         '';
 
+    final reason = json['why']?.toString().trim();
+
     return AiFlashcardItem(
       subject: (s != null && s.isNotEmpty) ? s : defaultSubject,
       topic: (t != null && t.isNotEmpty) ? t : defaultTopic,
       front: BengaliMathSanitizer.sanitize(f),
       back: BengaliMathSanitizer.sanitize(b),
-      isSelected: json['is_selected'] != false,
+      priority: CardPriority.parse(json['priority']?.toString()),
+      why: (reason == null || reason.isEmpty) ? null : reason,
+      // The extractor is asked to put the ones that matter first, so the
+      // low-priority tail starts unticked rather than being saved by default.
+      isSelected:
+          json['is_selected'] != false &&
+          CardPriority.parse(json['priority']?.toString()) != CardPriority.low,
     );
   }
 }
@@ -230,16 +276,34 @@ Instructions:
         );
 
         const prompt = '''
-You are an expert OCR tutor and formula extractor for Bangladeshi competitive exams (BCS, Bank, Primary, Govt Job).
-Analyze this textbook page, lecture sheet, formula table or handwritten note:
+You are an expert tutor for Bangladeshi competitive exams (BCS, Bank, Primary, Govt Job), deciding what on this page is worth memorising.
 
-Instructions:
-1. Extract ALL key formulas, mathematical shortcuts, grammar rules, scientific principles, constitutional articles, or mnemonics visible on the page.
-2. For EACH formula/rule:
-   - Front: The concept, formula name or question (e.g. "বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য", "পিথাগোরাসের উপপাদ্য", "রম্বসের ক্ষেত্রফল", "ণ-ত্ব বিধানের ব্যতিক্রম").
-   - Back: The exact formula, rule statement, condition, example or mnemonic as printed on the page.
-3. Clean Bengali Unicode: Use '°', '×', '²', '³', '√', 'π', '÷'. Avoid raw LaTeX syntax.
-4. Return ONLY a valid JSON object matching the requested schema.
+The image is a textbook page, lecture sheet, formula table or handwritten note.
+
+JUDGE, do not transcribe. A page holds far more text than is worth carrying in someone's head, and a card for every line buries the ones that matter.
+
+Make a card ONLY for:
+- a formula, equation or constant;
+- a rule, law or definition stated precisely;
+- a classification or list the exam asks directly (সমাসের প্রকার, কারকের প্রশ্নসূত্র);
+- a fixed fact: a year, an article number, a named first/largest/longest;
+- a shortcut or trap the page itself points out.
+
+Do NOT make a card for:
+- narrative or explanatory prose, worked examples, or practice questions;
+- anything you cannot read clearly off the page;
+- something you already made a card for on this page.
+
+For EACH card:
+- front: the concept, formula name, or the question it answers.
+- back: the formula, rule or fact as the page states it, with its conditions.
+- priority: "high" if the exam asks it directly and it is easy to forget, "medium" if it supports those, "low" if worth knowing but rarely asked.
+- why: one short Bengali clause saying why it is worth memorising.
+
+Put the highest priority first. Five well-chosen cards beat twenty. If the page holds nothing worth memorising, return an empty cards array rather than filling it.
+
+Clean Bengali Unicode: use '°', '×', '²', '³', '√', 'π', '÷'. Never raw LaTeX.
+Return ONLY a valid JSON object matching the requested schema.
 ''';
 
         final response = await model.generateContent([
@@ -269,10 +333,11 @@ Instructions:
       }
     }
 
-    return _generateOfflineFallback(
-      'বইয়ের পাতা থেকে স্ক্যানকৃত সূত্র',
-      subjectHint: subjectHint,
-    );
+    // Nothing was read off the page, so there is nothing to offer. The old
+    // fallback returned a placeholder card titled "বইয়ের পাতা থেকে স্ক্যানকৃত
+    // সূত্র", which looked exactly like a card the page itself had produced.
+    debugPrint('Book page flashcards: nothing extracted, saving nothing');
+    return const [];
   }
 
   /// Parses flashcards pasted from external AI (Claude/ChatGPT) or custom structured text.

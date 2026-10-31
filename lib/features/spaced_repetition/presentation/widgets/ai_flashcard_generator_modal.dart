@@ -796,6 +796,58 @@ class _AiFlashcardGeneratorModalState
                             ),
                             const SizedBox(height: 6),
 
+                            // How directly the exam asks for this, and why it
+                            // was picked. Shown because the user is choosing
+                            // what to keep, and a reason they can read beats a
+                            // rating they cannot question.
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: switch (card.priority) {
+                                      CardPriority.high => Colors.green,
+                                      CardPriority.medium => Colors.blueGrey,
+                                      CardPriority.low => Colors.grey,
+                                    }.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    card.priority.label,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: switch (card.priority) {
+                                        CardPriority.high => Colors.green,
+                                        CardPriority.medium => Colors.blueGrey,
+                                        CardPriority.low => Colors.grey,
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                if ((card.why ?? '').isNotEmpty) ...[
+                                  const SizedBox(width: 7),
+                                  Expanded(
+                                    child: Text(
+                                      card.why!,
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        height: 1.35,
+                                        color: isDark
+                                            ? Colors.white54
+                                            : Colors.black54,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 7),
+
                             // Front (Question / Concept)
                             Text(
                               'সামনে: ${card.front}',

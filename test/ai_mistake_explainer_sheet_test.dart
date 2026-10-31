@@ -92,7 +92,10 @@ void main() {
         'Bangladesh Affairs|জাতীয় প্রতীক|পতাকার অনুপাত কত?|৩:২~৫:৩~২:১~৪:৩';
     final cacheKey = GeminiResultCache.instance.computeKeyFromString(
       operation: 'mcq_independent_solve',
-      promptVersion: 'v1.0',
+      // Must track the version in GeminiAiService: the cache key includes it,
+      // so a prompt change makes a seeded reply invisible and the widget then
+      // tries a real network call.
+      promptVersion: 'v1.1',
       model: 'gemini-flash-lite-latest',
       payloadText: payload,
     );

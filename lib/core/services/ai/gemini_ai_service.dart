@@ -651,7 +651,9 @@ Write every reasoning in Bengali, one sentence. Never cite a source or a URL.
     final payload = '$subject|$topic|$questionText|${options.join("~")}';
     final cacheKey = GeminiResultCache.instance.computeKeyFromString(
       operation: 'mcq_independent_solve',
-      promptVersion: 'v1.0',
+      // Bumped with the option-equivalence rule: replies cached under the old
+      // prompt answered a different question.
+      promptVersion: 'v1.1',
       model: _selectedModel,
       payloadText: payload,
     );
@@ -688,6 +690,8 @@ Topic: $topic
 Question: $questionText
 Options:
 $numbered
+
+BEFORE choosing, compare the options to each other. If any two express the SAME value written differently -- a ratio and its reduced form (10:6 and 5:3), a fraction and a decimal, the same quantity in different units -- then the question has no single answer. Set ambiguity to "multiple_correct" and say which two options collide.
 
 Pick the option you believe is correct and put its number in chosen_index (0-based).
 
@@ -742,6 +746,7 @@ Write reasoning in Bengali, one or two sentences. Never cite a source or a URL.
       storedIndex: correctIndex,
       storedExplanation: explanation,
       optionCount: options.length,
+      options: options,
       userDecided: userDecided,
     );
   }

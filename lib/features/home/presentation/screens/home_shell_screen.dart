@@ -11,6 +11,9 @@ import 'package:life_and_study_assistant/features/live_mcq/presentation/provider
 import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/live_mcq_screen.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/widgets/routine_preview_sheet.dart';
 import 'package:life_and_study_assistant/features/settings/presentation/screens/settings_screen.dart';
+import 'package:life_and_study_assistant/core/services/notification/notification_service.dart';
+import 'package:life_and_study_assistant/core/services/flashcards/flashcard_service.dart';
+import 'package:life_and_study_assistant/features/spaced_repetition/presentation/widgets/flashcard_detail_sheet.dart';
 import 'package:life_and_study_assistant/features/spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
 import 'package:life_and_study_assistant/features/topics/presentation/providers/topics_provider.dart';
 import 'package:life_and_study_assistant/features/topics/presentation/screens/topics_screen.dart';
@@ -26,6 +29,7 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
     with WidgetsBindingObserver {
   int _currentIndex = 0;
   StreamSubscription<SharingImportState>? _sharingSubscription;
+  StreamSubscription<FlashcardItem>? _flashcardTapSubscription;
 
   final List<Widget> _screens = const [
     DashboardScreen(),
@@ -50,9 +54,10 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
     // start meant it quietly ran dry for anyone who leaves the app open in
     // the background for days.
     if (state == AppLifecycleState.resumed) {
-      ref
-          .read(spacedRepetitionNotifierProvider.notifier)
-          .refreshFlashcardSchedule();
+      final notifier = ref.read(spacedRepetitionNotifierProvider.notifier);
+      notifier.applyPendingReviewAdvances().then(
+        (_) => notifier.refreshFlashcardSchedule(),
+      );
     }
   }
 
@@ -62,11 +67,23 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
 
     // The push queue holds a finite run of cards, so it is topped up every
     // time the app is opened rather than relying on a background worker.
-    Future.microtask(
-      () => ref
-          .read(spacedRepetitionNotifierProvider.notifier)
-          .refreshFlashcardSchedule(),
-    );
+    Future.microtask(() async {
+      final notifier = ref.read(spacedRepetitionNotifierProvider.notifier);
+      await notifier.applyPendingReviewAdvances();
+      await notifier.refreshFlashcardSchedule();
+
+      // A tap that started the app from cold arrives before anything is
+      // listening, so it is collected here rather than lost.
+      final launched = await NotificationService.instance.takeLaunchFlashcard();
+      if (launched != null && mounted) {
+        await FlashcardDetailSheet.show(context, launched);
+      }
+    });
+
+    _flashcardTapSubscription = NotificationService.instance.tappedFlashcards
+        .listen((card) {
+          if (mounted) FlashcardDetailSheet.show(context, card);
+        });
 
     _sharingSubscription = SharingIntentService.instance.stateStream.listen((
       state,
@@ -212,6 +229,7 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _sharingSubscription?.cancel();
+    _flashcardTapSubscription?.cancel();
     super.dispose();
   }
 

@@ -66,12 +66,67 @@ class SpacedRepetitionNotifier extends Notifier<void> {
     return _db.deleteSpacedReviewItem(id);
   }
 
+  /// Applies the "মনে থাকবে" taps that arrived while the app was not running.
+  ///
+  /// The notification action can land in a background isolate, which has no
+  /// database of its own, so it only records the id and this drains the list.
+  Future<int> applyPendingReviewAdvances() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pending =
+        prefs.getStringList(
+          NotificationConstants.prefPendingReviewAdvanceIds,
+        ) ??
+        const <String>[];
+    if (pending.isEmpty) return 0;
+
+    var applied = 0;
+    for (final raw in pending) {
+      final id = int.tryParse(raw);
+      if (id == null) continue;
+      try {
+        if (await _db.advanceSpacedReview(id)) applied++;
+      } catch (e) {
+        debugPrint('Could not advance review $id: $e');
+      }
+    }
+
+    await prefs.remove(NotificationConstants.prefPendingReviewAdvanceIds);
+    debugPrint('Applied $applied pending review advances');
+    return applied;
+  }
+
+  DateTime? _lastScheduleRefresh;
+  bool _refreshInFlight = false;
+
+  /// How close together two refreshes have to be before the second is
+  /// pointless. Resume fires more than once on a single return to the app,
+  /// and each refresh cancels and re-books twelve notifications.
+  static const Duration _refreshCooldown = Duration(seconds: 30);
+
   /// Rebuilds the queue of scheduled flashcard pushes.
   ///
   /// Called whenever the app opens and whenever the setting changes, because
   /// the queue is finite by design: it holds a day's worth and is topped up
   /// on the next launch.
-  Future<void> refreshFlashcardSchedule() async {
+  Future<void> refreshFlashcardSchedule({bool force = false}) async {
+    if (_refreshInFlight) return;
+    final last = _lastScheduleRefresh;
+    if (!force &&
+        last != null &&
+        DateTime.now().difference(last) < _refreshCooldown) {
+      return;
+    }
+    _refreshInFlight = true;
+
+    try {
+      await _refreshFlashcardSchedule();
+      _lastScheduleRefresh = DateTime.now();
+    } finally {
+      _refreshInFlight = false;
+    }
+  }
+
+  Future<void> _refreshFlashcardSchedule() async {
     final prefs = await SharedPreferences.getInstance();
     final enabled =
         prefs.getBool(NotificationConstants.prefFlashcardPushEnabled) ?? false;
@@ -117,6 +172,9 @@ class SpacedRepetitionNotifier extends Notifier<void> {
       interval: const Duration(minutes: 1),
       ignoreQuietHours: true,
     );
+    // The burst replaced the real queue, so the next refresh has work to do
+    // however recently one ran.
+    _lastScheduleRefresh = null;
     return cards.length;
   }
 

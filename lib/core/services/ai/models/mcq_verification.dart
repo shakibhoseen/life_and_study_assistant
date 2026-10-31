@@ -1,4 +1,5 @@
 import '../claim_math_checker.dart';
+import '../option_equivalence.dart';
 import 'chat_verification_result.dart';
 import 'verification_result.dart';
 
@@ -155,10 +156,27 @@ class McqVerification {
     required int storedIndex,
     required String storedExplanation,
     required int optionCount,
+    List<String> options = const [],
     bool userDecided = false,
   }) {
     final mathCheck = ClaimMathChecker.check(storedExplanation);
     const noSources = 'External sources not checked';
+
+    // Settled here rather than asked of the model, which spots a reduced
+    // ratio among the options only some of the time. Two options holding one
+    // value means the question has no single answer, whatever was picked.
+    final collision = OptionEquivalence.describe(options);
+    if (collision != null) {
+      return McqVerification(
+        verdict: VerificationVerdict.inconclusive,
+        solve: solve,
+        storedIndex: storedIndex,
+        explanationCheck: mathCheck,
+        evidence: ClaimEvidence.none,
+        limitations:
+            '$collision, তাই প্রশ্নটির একটিমাত্র সঠিক উত্তর নেই · $noSources',
+      );
+    }
 
     // A question that does not have one defensible answer is not a question
     // to correct.

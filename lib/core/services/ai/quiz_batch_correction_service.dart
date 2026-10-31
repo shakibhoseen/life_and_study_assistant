@@ -27,12 +27,23 @@ class QuestionCorrectionItem {
   /// A replacement option set, for the same reason.
   final List<String>? newOptions;
 
+  /// A replacement explanation, for when the answer is right but the reason
+  /// printed beneath it is not.
+  final String? newExplanation;
+
   final String reason;
   bool isSelected;
 
   /// Whether this rewrites the question itself rather than only re-pointing
   /// the answer.
   bool get rewritesQuestion => newQuestionText != null || newOptions != null;
+
+  /// Whether this changes anything at all.
+  bool get hasEdit =>
+      isDelete ||
+      rewritesQuestion ||
+      newExplanation != null ||
+      proposedCorrectIndex != null;
 
   QuestionCorrectionItem({
     required this.questionIndex,
@@ -43,6 +54,7 @@ class QuestionCorrectionItem {
     this.isDelete = false,
     this.newQuestionText,
     this.newOptions,
+    this.newExplanation,
     required this.reason,
     this.isSelected = true,
   });
@@ -56,6 +68,7 @@ class QuestionCorrectionItem {
     'is_delete': isDelete,
     'new_question_text': newQuestionText,
     'new_options': newOptions,
+    'new_explanation': newExplanation,
     'reason': reason,
   };
 
@@ -90,6 +103,9 @@ class QuestionCorrectionItem {
     final rawNewText = json['new_question_text']?.toString().trim() ?? '';
     final newQuestionText = rawNewText.isEmpty ? null : rawNewText;
 
+    final rawNewExplanation = json['new_explanation']?.toString().trim() ?? '';
+    final newExplanation = rawNewExplanation.isEmpty ? null : rawNewExplanation;
+
     final effectiveOptions = newOptions ?? q.options;
 
     String oldOpt = '';
@@ -113,6 +129,7 @@ class QuestionCorrectionItem {
       isDelete: isDel,
       newQuestionText: newQuestionText,
       newOptions: newOptions,
+      newExplanation: newExplanation,
       reason: BengaliMathSanitizer.sanitize(
         json['reason']?.toString() ?? 'External AI সংশোধন',
       ),
@@ -146,6 +163,11 @@ final _correctionSchema = Schema.array(
         items: Schema.string(),
         description: 'Corrected full option list, or empty array to keep them',
       ),
+      'new_explanation': Schema.string(
+        description:
+            'Corrected explanation when the printed one is wrong, or empty '
+            'string to keep it',
+      ),
       'reason': Schema.string(description: 'One short Bengali sentence'),
     },
     requiredProperties: [
@@ -153,6 +175,7 @@ final _correctionSchema = Schema.array(
       'is_delete',
       'new_question_text',
       'new_options',
+      'new_explanation',
       'reason',
     ],
   ),
@@ -266,6 +289,7 @@ For each correction, identify:
 - new_question_text: the corrected question text when the analysis says the QUESTION ITSELF is wrong, garbled or unreadable. Empty string when the question text is fine.
 - new_options: the corrected full option list when the analysis says the OPTIONS are wrong, duplicated or do not contain the answer. Empty array when the options are fine.
     * Only rewrite when the analysis actually supplies or clearly implies the correct wording. Never invent a question or an option to fill a gap — recommend deletion instead.
+- new_explanation: the corrected explanation when the analysis says the EXPLANATION is wrong, even if the answer itself is fine. A wrong explanation teaches the wrong thing, so it is worth fixing on its own. Empty string when the explanation is fine.
 - reason: concise 1-sentence Bengali reason explaining why this question was corrected or discarded.
 
 Return JSON array ONLY:
@@ -498,11 +522,7 @@ If the text says all answers are correct or no fixes are suggested, return: []
           ? proposed
           : (oldQ.correctIndex < options.length ? oldQ.correctIndex : 0);
 
-      if (item.newOptions == null &&
-          item.newQuestionText == null &&
-          proposed == null) {
-        continue;
-      }
+      if (!item.hasEdit) continue;
 
       updatedList[item.questionIndex] = oldQ.copyWith(
         questionText: item.newQuestionText ?? oldQ.questionText,
@@ -514,9 +534,13 @@ If the text says all answers are correct or no fixes are suggested, return: []
         answerSource: proposed != null || item.rewritesQuestion
             ? AnswerSource.solved
             : oldQ.answerSource,
-        explanation: item.reason.isNotEmpty
-            ? '${oldQ.explanation.isNotEmpty ? "${oldQ.explanation} • " : ""}${item.reason}'
-            : oldQ.explanation,
+        // A replacement explanation stands on its own; the reason is a note
+        // about the edit, not a substitute for the explanation.
+        explanation:
+            item.newExplanation ??
+            (item.reason.isNotEmpty
+                ? '${oldQ.explanation.isNotEmpty ? "${oldQ.explanation} • " : ""}${item.reason}'
+                : oldQ.explanation),
       );
     }
 
@@ -602,6 +626,14 @@ If the text says all answers are correct or no fixes are suggested, return: []
   }
 
   /// Applies corrections directly to a list of Mistake Notebook questions (DrillQuestion).
+  static List<String> _decodeOptions(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) return decoded.map((e) => e.toString()).toList();
+    } catch (_) {}
+    return const [];
+  }
+
   Future<bool> applyCorrectionsToMistakeQuestions(
     AppDatabase db, {
     required List<DrillQuestion> drillQuestions,
@@ -620,15 +652,40 @@ If the text says all answers are correct or no fixes are suggested, return: []
           await (db.delete(
             db.drillQuestions,
           )..where((t) => t.id.equals(dq.id))).go();
-        } else if (item.proposedCorrectIndex != null) {
-          await db.acceptAnswerCorrection(
-            dq.id,
-            correctedIndex: item.proposedCorrectIndex!,
-            correctedExplanation: item.reason.isNotEmpty
-                ? '${dq.explanation.isNotEmpty ? "${dq.explanation} • " : ""}${item.reason}'
-                : dq.explanation,
-          );
+          continue;
         }
+
+        // This path used to apply only the answer index, dropping any new
+        // wording or option set on the floor. That was worse than doing
+        // nothing: an index meant for a corrected option list was written
+        // against the old one, so "তঞ্চঙ্গ্যা at 2" landed on whatever sat
+        // at 2 before.
+        final existingOptions = _decodeOptions(dq.optionsJson);
+        final options = item.newOptions ?? existingOptions;
+        final proposed = item.proposedCorrectIndex;
+        final correctIndex =
+            (proposed != null && proposed >= 0 && proposed < options.length)
+            ? proposed
+            : null;
+
+        if (item.newQuestionText == null &&
+            item.newOptions == null &&
+            item.newExplanation == null &&
+            correctIndex == null) {
+          continue;
+        }
+
+        await db.applyQuestionEdit(
+          dq.id,
+          questionText: item.newQuestionText,
+          options: item.newOptions,
+          correctIndex: correctIndex,
+          explanation:
+              item.newExplanation ??
+              (item.reason.isNotEmpty
+                  ? '${dq.explanation.isNotEmpty ? "${dq.explanation} • " : ""}${item.reason}'
+                  : null),
+        );
       }
       return true;
     } catch (e) {

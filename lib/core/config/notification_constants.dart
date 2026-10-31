@@ -52,6 +52,11 @@ class NotificationConstants {
       'flashcard_push_interval_minutes';
 
   /// The window the user allows cards to arrive in, as hours of the day.
+  /// Review items the user marked as recalled from a notification, waiting
+  /// for the app to run and advance them.
+  static const String prefPendingReviewAdvanceIds =
+      'pending_review_advance_ids';
+
   static const String prefFlashcardPushStartHour = 'flashcard_push_start_hour';
   static const String prefFlashcardPushEndHour = 'flashcard_push_end_hour';
   static const int flashcardPushDefaultStartHour = 9;

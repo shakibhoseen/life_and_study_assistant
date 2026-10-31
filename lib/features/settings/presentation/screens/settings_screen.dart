@@ -2749,7 +2749,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 setState(() => _flashcardPushEnabled = v);
                 await ref
                     .read(spacedRepetitionNotifierProvider.notifier)
-                    .refreshFlashcardSchedule();
+                    .refreshFlashcardSchedule(force: true);
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -2780,7 +2780,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       setState(() => _flashcardPushMinutes = e.key);
                       await ref
                           .read(spacedRepetitionNotifierProvider.notifier)
-                          .refreshFlashcardSchedule();
+                          .refreshFlashcardSchedule(force: true);
                     },
                   );
                 }).toList(),
@@ -2928,7 +2928,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
     await ref
         .read(spacedRepetitionNotifierProvider.notifier)
-        .refreshFlashcardSchedule();
+        .refreshFlashcardSchedule(force: true);
   }
 
   Widget _buildSectionHeader(String title, IconData icon, Color color) {
