@@ -2,6 +2,14 @@ import 'package:drift/drift.dart';
 
 enum ProficiencyLevel { weak, moderate, strong }
 
+@TableIndex(
+  name: 'idx_weak_topics_subject_topic',
+  columns: {#subject, #topicName},
+)
+@TableIndex(
+  name: 'idx_weak_topics_proficiency',
+  columns: {#proficiencyLevel, #lastReviewedAt},
+)
 class WeakTopics extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get subject => text().withLength(min: 1, max: 100)();

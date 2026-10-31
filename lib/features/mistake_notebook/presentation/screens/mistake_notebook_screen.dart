@@ -697,6 +697,34 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                 color: isDark ? Colors.white60 : Colors.black54,
               ),
             ),
+            if (_searchQuery.isEmpty) ...[
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4F46E5),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  QuizDrillModal.show(
+                    context,
+                    topic: 'Quick Practice',
+                    subject: 'General Knowledge',
+                  );
+                },
+                icon: const Icon(Icons.flash_on, size: 16),
+                label: const Text(
+                  'কুইজ ড্রিল শুরু করুন ⚡',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ),
+            ],
           ],
         ),
       ),

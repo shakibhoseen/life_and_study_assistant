@@ -98,9 +98,8 @@ String _buildPrompt() {
   for (var i = 0; i < quiz.length; i++) {
     final q = quiz[i];
     final options = (q['options']! as List).cast<String>();
-    final opts = [
-      for (var k = 0; k < options.length; k++) '$k:${options[k]}',
-    ].join(', ');
+    final opts = [for (var k = 0; k < options.length; k++) '$k:${options[k]}']
+        .join(', ');
     list.writeln(
       '$i. "${q['question']}" | options: [$opts] '
       '| current_correct_index: ${q['correct_index']}',
@@ -165,10 +164,8 @@ Future<void> main(List<String> args) async {
 
   final corrections = jsonDecode(response.text!) as List;
   File(args.first).writeAsStringSync(
-    const JsonEncoder.withIndent('  ').convert({
-      'quiz': quiz,
-      'corrections': corrections,
-    }),
+    const JsonEncoder.withIndent('  ')
+        .convert({'quiz': quiz, 'corrections': corrections}),
   );
   stderr.writeln('${corrections.length} corrections written to ${args.first}');
 }

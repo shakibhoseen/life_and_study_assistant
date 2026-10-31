@@ -12,6 +12,7 @@ import '../../../../core/database/database_provider.dart';
 import '../../../../core/database/tables/weak_topics_table.dart';
 import '../../../../core/services/ai/models/study_sheet_result.dart';
 import '../../../../core/services/ai/study_sheet_ocr_service.dart';
+import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
 import 'quiz_drill_modal.dart';
@@ -417,38 +418,12 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
 
                     // Loading State
                     if (_isAnalyzing) ...[
-                      const SizedBox(height: 24),
-                      Center(
-                        child: Column(
-                          children: [
-                            const SizedBox(
-                              width: 36,
-                              height: 36,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3,
-                                color: Color(0xFF6366F1),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            const Text(
-                              'Gemini Vision is analyzing your study page...',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Extracting key formulas, mnemonics & formulating 5-MCQ drill',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade500,
-                              ),
-                            ),
-                          ],
-                        ),
+                      const SizedBox(height: 16),
+                      const AiProgressPipelineWidget(
+                        type: AiTaskType.image,
+                        isCompact: false,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                     ],
 
                     // Results Extracted

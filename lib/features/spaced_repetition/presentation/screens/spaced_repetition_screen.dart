@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -444,6 +445,30 @@ class _SpacedRepetitionScreenState
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF4F46E5),
+                  side: const BorderSide(color: Color(0xFF4F46E5)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _tabFilterIndex = 1;
+                  });
+                },
+                icon: const Icon(Icons.style_outlined, size: 16),
+                label: const Text(
+                  'সকল সংরক্ষিত ফ্ল্যাশকার্ড দেখুন',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ),
             ],
           ),
         ),
@@ -618,6 +643,7 @@ class _SpacedRepetitionScreenState
               InkWell(
                 borderRadius: BorderRadius.circular(10),
                 onTap: () {
+                  HapticFeedback.selectionClick();
                   setState(() {
                     _revealedCardIds.add(item.id);
                   });
@@ -742,6 +768,7 @@ class _SpacedRepetitionScreenState
                         ),
                       ),
                       onPressed: () async {
+                        HapticFeedback.lightImpact();
                         setState(() {
                           _revealedCardIds.remove(item.id);
                         });
@@ -781,6 +808,7 @@ class _SpacedRepetitionScreenState
                         ),
                       ),
                       onPressed: () async {
+                        HapticFeedback.mediumImpact();
                         setState(() {
                           _revealedCardIds.remove(item.id);
                         });

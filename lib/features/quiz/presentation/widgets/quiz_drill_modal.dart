@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -12,6 +13,8 @@ import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/quiz_generator_service.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
+import '../../../../core/widgets/celebration_confetti.dart';
+import '../../../analytics/presentation/providers/study_streak_provider.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
 import '../providers/drill_history_provider.dart';
 import 'quiz_batch_correction_sheet.dart';
@@ -276,6 +279,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     }
 
     _examTimer?.cancel();
+    HapticFeedback.mediumImpact();
     setState(() {
       _isFinished = true;
     });
@@ -293,6 +297,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             _userAnswers.containsKey(_currentIndex);
       });
     } else {
+      HapticFeedback.mediumImpact();
       setState(() {
         _isFinished = true;
       });
@@ -364,6 +369,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             scorePercentage: percent,
             questions: questionsCompanions,
           );
+      ref.invalidate(studyStreakProvider);
     } catch (e) {
       debugPrint('Error persisting drill session: $e');
     }
@@ -1332,10 +1338,12 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
       }
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      child: Column(
-        children: [
+    return CelebrationConfetti(
+      trigger: isGood,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        child: Column(
+          children: [
           if (_mode == QuizMode.realExam) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -1846,15 +1854,34 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
 
                   if (q.explanation.isNotEmpty) ...[
                     const SizedBox(height: 6),
-                    Text(
-                      '💡 ব্যাখ্যা: ${BengaliMathSanitizer.sanitize(q.explanation)}',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: isDark
-                            ? Colors.amber.shade200
-                            : Colors.brown.shade800,
-                        height: 1.4,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('💡 ', style: TextStyle(fontSize: 12)),
+                        Expanded(
+                          child: MarkdownBody(
+                            data: BengaliMathSanitizer.sanitize(q.explanation),
+                            styleSheet: MarkdownStyleSheet.fromTheme(
+                              Theme.of(context),
+                            ).copyWith(
+                              p: TextStyle(
+                                fontSize: 11.5,
+                                color: isDark
+                                    ? Colors.amber.shade200
+                                    : Colors.brown.shade800,
+                                height: 1.4,
+                              ),
+                              strong: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? Colors.amberAccent
+                                    : const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ],
@@ -1954,6 +1981,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
           ),
         ],
       ),
+    ),
     );
   }
 }

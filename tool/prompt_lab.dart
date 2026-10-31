@@ -14,6 +14,7 @@
 //   dart run tool/prompt_lab.dart text  "<prompt>"        a plain prompt
 //   dart run tool/prompt_lab.dart image <file> "<prompt>" a prompt over an image
 //   dart run tool/prompt_lab.dart pdf   <file> "<prompt>" a prompt over a PDF
+//   dart run tool/prompt_lab.dart audio <file> "<prompt>" a prompt over audio
 import 'dart:convert';
 import 'dart:io';
 
@@ -29,7 +30,9 @@ Future<void> main(List<String> args) async {
   }
 
   if (args.isEmpty) {
-    stderr.writeln('Usage: dart run tool/prompt_lab.dart <text|image|pdf> ...');
+    stderr.writeln(
+      'Usage: dart run tool/prompt_lab.dart <text|image|pdf|audio> ...',
+    );
     exit(2);
   }
 
@@ -55,17 +58,24 @@ Future<void> main(List<String> args) async {
       content = [Content.text(args[1])];
       break;
 
+    case 'audio':
     case 'image':
     case 'pdf':
       if (args.length < 3) _die('$mode needs a file and a prompt');
       final file = File(args[1]);
       if (!file.existsSync()) _die('no such file: ${args[1]}');
       final bytes = await file.readAsBytes();
-      final mime = mode == 'pdf'
-          ? 'application/pdf'
-          : (args[1].toLowerCase().endsWith('.png')
-                ? 'image/png'
-                : 'image/jpeg');
+      final lower = args[1].toLowerCase();
+      final mime = switch (mode) {
+        'pdf' => 'application/pdf',
+        'audio' =>
+          lower.endsWith('.mp3')
+              ? 'audio/mpeg'
+              : lower.endsWith('.wav')
+              ? 'audio/wav'
+              : 'audio/mp4',
+        _ => lower.endsWith('.png') ? 'image/png' : 'image/jpeg',
+      };
       stderr.writeln('${bytes.length ~/ 1024} KB as $mime');
       content = [
         Content.multi([TextPart(args[2]), DataPart(mime, bytes)]),

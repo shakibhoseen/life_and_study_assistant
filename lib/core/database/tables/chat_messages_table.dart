@@ -1,5 +1,9 @@
 import 'package:drift/drift.dart';
 
+@TableIndex(
+  name: 'idx_chat_messages_session_time',
+  columns: {#sessionId, #timestamp},
+)
 class ChatMessages extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get sessionId => integer().nullable()();

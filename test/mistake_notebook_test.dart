@@ -10,6 +10,7 @@ import 'package:life_and_study_assistant/core/database/database_provider.dart';
 import 'package:life_and_study_assistant/features/mistake_notebook/domain/models/mistake_folder.dart';
 import 'package:life_and_study_assistant/features/mistake_notebook/presentation/screens/mistake_notebook_screen.dart';
 import 'package:life_and_study_assistant/features/mistake_notebook/presentation/widgets/nightly_review_modal.dart';
+import 'package:life_and_study_assistant/features/mistake_notebook/presentation/widgets/save_to_flashcard_sheet.dart';
 import 'package:life_and_study_assistant/features/quiz/presentation/providers/drill_history_provider.dart';
 
 void main() {
@@ -355,6 +356,62 @@ void main() {
         // Completion screen shown
         expect(find.text('দারুণ কাজ! আজকের রিভিশন শেষ! 🎉'), findsOneWidget);
         expect(find.text('Mistake Notebook এ ফিরে যান'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'SaveToFlashcardSheet converts mistake question into spaced repetition flashcard with zero token cost',
+      (tester) async {
+        final sampleQuestion = DrillQuestion(
+          id: 99,
+          subject: 'Bangla Grammar',
+          topic: 'সমাস',
+          questionText: 'উপকূল কোন সমাস?',
+          optionsJson: jsonEncode([
+            'অব্যয়ীভাব',
+            'দ্বন্দ্ব',
+            'তৎপুরুষ',
+            'বহুব্রীহি',
+          ]),
+          correctIndex: 0,
+          selectedIndex: 1,
+          isCorrect: false,
+          explanation: 'কূলের সমীপে = উপকূল (অব্যয়ীভাব সমাস)।',
+          isMastered: false,
+          attemptedAt: DateTime.now(),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            child: MaterialApp(
+              home: Scaffold(
+                body: SaveToFlashcardSheet(question: sampleQuestion),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('ফ্ল্যাশকার্ডে রূপান্তর'), findsOneWidget);
+        expect(find.text('উপকূল কোন সমাস?'), findsOneWidget);
+        expect(find.textContaining('সঠিক উত্তর: অব্যয়ীভাব'), findsOneWidget);
+
+        // Tap Save
+        await tester.tap(find.text('ফ্ল্যাশকার্ডে সেভ'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Verify inserted into database
+        final saved = await db.select(db.spacedReviewItems).get();
+        expect(saved.any((f) => f.title == 'উপকূল কোন সমাস?'), isTrue);
+        final item = saved.firstWhere((f) => f.title == 'উপকূল কোন সমাস?');
+        expect(item.subject, equals('Bangla Grammar'));
+        expect(item.topic, equals('সমাস'));
+        expect(item.intervalDays, equals(1));
+        expect(item.repetitionLevel, equals(1));
+        expect(item.keyRule, contains('সঠিক উত্তর: অব্যয়ীভাব'));
       },
     );
   });

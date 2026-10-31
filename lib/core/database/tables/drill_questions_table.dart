@@ -1,5 +1,10 @@
 import 'package:drift/drift.dart';
 
+@TableIndex(
+  name: 'idx_drill_questions_correct_mastered',
+  columns: {#isCorrect, #isMastered},
+)
+@TableIndex(name: 'idx_drill_questions_record_id', columns: {#drillRecordId})
 class DrillQuestions extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get drillRecordId => integer().nullable()();

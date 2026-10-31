@@ -5265,6 +5265,38 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DrillQuestionsTable drillQuestions = $DrillQuestionsTable(this);
   late final $SpacedReviewItemsTable spacedReviewItems =
       $SpacedReviewItemsTable(this);
+  late final Index idxWeakTopicsSubjectTopic = Index(
+    'idx_weak_topics_subject_topic',
+    'CREATE INDEX idx_weak_topics_subject_topic ON weak_topics (subject, topic_name)',
+  );
+  late final Index idxWeakTopicsProficiency = Index(
+    'idx_weak_topics_proficiency',
+    'CREATE INDEX idx_weak_topics_proficiency ON weak_topics (proficiency_level, last_reviewed_at)',
+  );
+  late final Index idxExamSchedulesStatusDate = Index(
+    'idx_exam_schedules_status_date',
+    'CREATE INDEX idx_exam_schedules_status_date ON exam_schedules (completed_status, exam_date)',
+  );
+  late final Index idxExamSchedulesTrackDate = Index(
+    'idx_exam_schedules_track_date',
+    'CREATE INDEX idx_exam_schedules_track_date ON exam_schedules (track_name, exam_date)',
+  );
+  late final Index idxChatMessagesSessionTime = Index(
+    'idx_chat_messages_session_time',
+    'CREATE INDEX idx_chat_messages_session_time ON chat_messages (session_id, timestamp)',
+  );
+  late final Index idxDrillQuestionsCorrectMastered = Index(
+    'idx_drill_questions_correct_mastered',
+    'CREATE INDEX idx_drill_questions_correct_mastered ON drill_questions (is_correct, is_mastered)',
+  );
+  late final Index idxDrillQuestionsRecordId = Index(
+    'idx_drill_questions_record_id',
+    'CREATE INDEX idx_drill_questions_record_id ON drill_questions (drill_record_id)',
+  );
+  late final Index idxSpacedReviewNextDate = Index(
+    'idx_spaced_review_next_date',
+    'CREATE INDEX idx_spaced_review_next_date ON spaced_review_items (next_review_date, is_mastered)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5279,6 +5311,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     drillRecords,
     drillQuestions,
     spacedReviewItems,
+    idxWeakTopicsSubjectTopic,
+    idxWeakTopicsProficiency,
+    idxExamSchedulesStatusDate,
+    idxExamSchedulesTrackDate,
+    idxChatMessagesSessionTime,
+    idxDrillQuestionsCorrectMastered,
+    idxDrillQuestionsRecordId,
+    idxSpacedReviewNextDate,
   ];
 }
 

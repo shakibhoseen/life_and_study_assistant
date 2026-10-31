@@ -18,9 +18,12 @@ import '../../../../core/services/ai/models/verification_result.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../domain/chat_verifiability.dart';
 import '../../domain/models/chat_action.dart';
+import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../providers/chat_provider.dart';
 
 import '../../../../core/services/voice/voice_recording_service.dart';
+import '../widgets/chat_thinking_indicator.dart';
+import '../widgets/chat_user_bubble.dart';
 
 class AiChatScreen extends ConsumerStatefulWidget {
   const AiChatScreen({super.key});
@@ -348,7 +351,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                     if (index == messages.length &&
                         chatState.isSending &&
                         !chatState.isStreaming) {
-                      return _buildThinkingIndicator();
+                      return _buildThinkingIndicator(messages);
                     }
 
                     final message = messages[index];
@@ -633,71 +636,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   }
 
   Widget _buildUserBubble(ChatMessage message) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: InkWell(
-        onLongPress: () => _copyMessageText(message.textContent),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12, left: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.indigo.shade600,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(4),
-              bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(16),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                message.textContent,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _formatDateTime(message.timestamp),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 10,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: () => _copyMessageText(message.textContent),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(2),
-                      child: Icon(
-                        Icons.copy_rounded,
-                        size: 12,
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    return ChatUserBubble(
+      message: message,
+      onCopy: () => _copyMessageText(message.textContent),
+      formattedTime: _formatDateTime(message.timestamp),
     );
   }
 
@@ -888,8 +830,49 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             ),
             const SizedBox(height: 10),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: isStreaming
+                  ? MainAxisAlignment.spaceBetween
+                  : MainAxisAlignment.end,
               children: [
+                if (isStreaming)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.indigo.withValues(alpha: 0.25),
+                        width: 0.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 8,
+                          height: 8,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: Colors.indigo,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'AI সরাসরি লিখছে (Streaming)...',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? Colors.indigo.shade200
+                                : Colors.indigo.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 InkWell(
                   onTap: () => _copyMessageText(message.textContent),
                   borderRadius: BorderRadius.circular(8),
@@ -1405,44 +1388,21 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     );
   }
 
-  Widget _buildThinkingIndicator() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? const Color(0xFF334155) : Colors.grey.shade200,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.indigo,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Gemini is thinking...',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.white70 : Colors.black54,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Widget _buildThinkingIndicator([List<ChatMessage>? messages]) {
+    AiTaskType type = AiTaskType.text;
+    if (messages != null && messages.isNotEmpty) {
+      final lastText = messages.last.textContent.toLowerCase();
+      if (lastText.contains('image') ||
+          lastText.contains('ছবি') ||
+          lastText.contains('scan')) {
+        type = AiTaskType.image;
+      } else if (lastText.contains('voice') ||
+          lastText.contains('ভয়েস') ||
+          lastText.contains('audio')) {
+        type = AiTaskType.audio;
+      }
+    }
+    return ChatThinkingIndicator(type: type);
   }
 
   Future<void> _toggleVoice() async {

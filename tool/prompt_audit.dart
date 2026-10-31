@@ -78,7 +78,6 @@ final _correctionSchema = Schema.array(
   ),
 );
 
-
 final _flashcardSchema = Schema.object(
   properties: {
     'subject': Schema.string(description: 'Subject name in Bengali'),
@@ -96,7 +95,8 @@ final _flashcardSchema = Schema.object(
   requiredProperties: ['subject', 'topic', 'cards'],
 );
 
-String _flashcards(String userPrompt) => '''
+String _flashcards(String userPrompt) =>
+    '''
 You are an expert tutor creating study flashcards for competitive exams in Bangladesh (BCS Preliminary, Bank, Primary Recruitment, LiveMCQ).
 User prompt: "$userPrompt"
 
@@ -108,15 +108,13 @@ Instructions:
 5. Return ONLY a valid JSON object matching the requested schema.
 ''';
 
-
 /// Reads the mentor instruction out of the source file itself.
 ///
 /// A copy on disk goes stale the moment the prompt changes, and then the
 /// audit quietly measures the wrong text — which happened once already.
 String _chatInstruction() {
-  final src = File(
-    'lib/core/services/ai/gemini_prompts.dart',
-  ).readAsStringSync();
+  final src = File('lib/core/services/ai/gemini_prompts.dart')
+      .readAsStringSync();
   const marker = "static const String chatStaticInstruction = '''";
   final start = src.indexOf(marker) + marker.length;
   final end = src.indexOf("''';", start);
@@ -126,9 +124,7 @@ String _chatInstruction() {
 String _mentor(String userMessage, {String context = ''}) =>
     '${_chatInstruction()}\n$context\n\nUser: $userMessage';
 
-
-String _prompt(String name) =>
-    File('$_promptDir/$name.txt').readAsStringSync();
+String _prompt(String name) => File('$_promptDir/$name.txt').readAsStringSync();
 
 const _promptDir =
     '/private/tmp/claude-501/-Users-shakib-Documents-work-flutter-app-life-and-study-assistant/683910d2-c4ed-4057-b19d-9e9919a2a859/scratchpad/prompts';
@@ -291,7 +287,9 @@ final _cases = <Case>[
     schema: _flashcardSchema,
     temperature: 0.3,
     maxOutputTokens: 1200,
-    prompt: _flashcards('বর্গক্ষেত্র ও রম্বসের ক্ষেত্রফলের সূত্র মনে রাখার কার্ড দাও'),
+    prompt: _flashcards(
+      'বর্গক্ষেত্র ও রম্বসের ক্ষেত্রফলের সূত্র মনে রাখার কার্ড দাও',
+    ),
     check: (j) {
       final cards = j['cards'] as List?;
       if (cards == null || cards.length < 3) {
@@ -355,7 +353,8 @@ final _cases = <Case>[
     maxOutputTokens: 700,
     prompt: _mentor(
       'আজকে অফিসে খুব ধকল গেছে, মাথা কাজ করছে না। ১৫ মিনিটে কী পড়তে পারি?',
-      context: 'Schedule: regular office workday.\n'
+      context:
+          'Schedule: regular office workday.\n'
           'Energy: Low. Office fatigue 8/10.',
     ),
     check: (j) {
@@ -398,7 +397,11 @@ final _cases = <Case>[
       final text = j['__text'] as String;
       if (!text.contains('[[ACTION:ADD_TOPIC')) return 'no ADD_TOPIC tag';
       // The tag is a proposal the user taps; saying it is done is a lie.
-      for (final claim in ['যোগ করে দিয়েছি', 'সেভ করে দিয়েছি', 'যুক্ত করে দিয়েছি']) {
+      for (final claim in [
+        'যোগ করে দিয়েছি',
+        'সেভ করে দিয়েছি',
+        'যুক্ত করে দিয়েছি',
+      ]) {
         if (text.contains(claim)) return 'claimed it already saved: "$claim"';
       }
       return null;
@@ -452,7 +455,7 @@ final _cases = <Case>[
       return quoted
           ? null
           : 'did not quote the arithmetic claim, so the local check has '
-              'nothing to verify';
+                'nothing to verify';
     },
   ),
   Case(
@@ -604,10 +607,12 @@ Return JSON array ONLY.
 ''',
     check: (j) {
       final items = j['__array'] as List?;
-      if (items == null || items.isEmpty) return null; // leaving it alone is fine
+      if (items == null || items.isEmpty) {
+        return null; // leaving it alone is fine
+      }
       final first = items.first as Map;
-      final rewrote = (first['new_question_text'] as String?)?.isNotEmpty ??
-          false;
+      final rewrote =
+          (first['new_question_text'] as String?)?.isNotEmpty ?? false;
       if (first['is_delete'] == true) return null;
       if (rewrote) {
         return 'invented a replacement question: '

@@ -1,10 +1,12 @@
 // ignore_for_file: avoid_print
 import 'dart:io';
 import 'dart:math';
+
 import 'package:image/image.dart' as img;
 
 void main() {
-  final sourcePath = '/Users/shakib/.gemini/antigravity/brain/76833eef-983f-401e-b66d-d3ad2b4dfb88/life_and_study_assistant_icon_1793070855898.jpg';
+  final sourcePath =
+      '/Users/shakib/.gemini/antigravity/brain/76833eef-983f-401e-b66d-d3ad2b4dfb88/life_and_study_assistant_icon_1793070855898.jpg';
   final sourceFile = File(sourcePath);
   if (!sourceFile.existsSync()) {
     print('Source file does not exist: $sourcePath');
@@ -23,7 +25,11 @@ void main() {
   // 1. Create a pristine transparent foreground emblem
   // This extracts the golden star, open book, and emerald vitality ring with true alpha transparency.
   print('Extracting transparent emblem layer with soft antialiasing...');
-  final pureEmblem1024 = img.Image(width: sourceImg.width, height: sourceImg.height, numChannels: 4);
+  final pureEmblem1024 = img.Image(
+    width: sourceImg.width,
+    height: sourceImg.height,
+    numChannels: 4,
+  );
 
   // Calculate center of the emblem
   const cx = 511.0;
@@ -57,7 +63,11 @@ void main() {
       if (alpha == 0) {
         pureEmblem1024.setPixel(x, y, img.ColorRgba8(0, 0, 0, 0));
       } else {
-        pureEmblem1024.setPixel(x, y, img.ColorRgba8(p.r.toInt(), p.g.toInt(), p.b.toInt(), alpha));
+        pureEmblem1024.setPixel(
+          x,
+          y,
+          img.ColorRgba8(p.r.toInt(), p.g.toInt(), p.b.toInt(), alpha),
+        );
       }
     }
   }
@@ -113,7 +123,11 @@ void main() {
           } else if (distSq > (radius - 1) * (radius - 1)) {
             final alpha = ((radius - sqrt(distSq)) * 255).clamp(0, 255).toInt();
             final p = canvas.getPixel(x, y);
-            canvas.setPixel(x, y, img.ColorRgba8(p.r.toInt(), p.g.toInt(), p.b.toInt(), alpha));
+            canvas.setPixel(
+              x,
+              y,
+              img.ColorRgba8(p.r.toInt(), p.g.toInt(), p.b.toInt(), alpha),
+            );
           }
         }
       }
@@ -125,10 +139,12 @@ void main() {
   // 3. Master Branding Assets
   print('Writing master branding assets...');
   final icon1024 = renderIcon(1024, 0.72, transparentBg: false);
-  File('assets/branding/app_icon_1024.png').writeAsBytesSync(img.encodePng(icon1024));
+  File('assets/branding/app_icon_1024.png')
+      .writeAsBytesSync(img.encodePng(icon1024));
 
   final icon512 = renderIcon(512, 0.72, transparentBg: false);
-  File('assets/branding/playstore_icon_512.png').writeAsBytesSync(img.encodePng(icon512));
+  File('assets/branding/playstore_icon_512.png')
+      .writeAsBytesSync(img.encodePng(icon512));
 
   // 4. Android Mipmap Densities
   final androidDensities = {
@@ -150,16 +166,24 @@ void main() {
 
     // Legacy square icon: single solid canvas, zero borders
     final legacySquare = renderIcon(legacySize, 0.72, transparentBg: false);
-    File('${dir.path}/ic_launcher.png').writeAsBytesSync(img.encodePng(legacySquare));
+    File('${dir.path}/ic_launcher.png')
+        .writeAsBytesSync(img.encodePng(legacySquare));
 
     // Legacy round icon: single circular canvas
-    final legacyRound = renderIcon(legacySize, 0.72, transparentBg: false, circularMask: true);
-    File('${dir.path}/ic_launcher_round.png').writeAsBytesSync(img.encodePng(legacyRound));
+    final legacyRound = renderIcon(
+      legacySize,
+      0.72,
+      transparentBg: false,
+      circularMask: true,
+    );
+    File('${dir.path}/ic_launcher_round.png')
+        .writeAsBytesSync(img.encodePng(legacyRound));
 
     // Adaptive icon foreground: TRANSPARENT canvas! Emblem is scaled to 0.65 (safe zone is 0.66)
     // Because canvas is transparent, Android system launcher will render ONLY the emblem over the solid background!
     final adaptiveFg = renderIcon(adaptiveFgSize, 0.65, transparentBg: true);
-    File('${dir.path}/ic_launcher_foreground.png').writeAsBytesSync(img.encodePng(adaptiveFg));
+    File('${dir.path}/ic_launcher_foreground.png')
+        .writeAsBytesSync(img.encodePng(adaptiveFg));
   }
 
   // 5. Android Adaptive XML in mipmap-anydpi-v26
@@ -174,7 +198,8 @@ void main() {
 ''';
 
   File('${anyDpiDir.path}/ic_launcher.xml').writeAsStringSync(icLauncherXml);
-  File('${anyDpiDir.path}/ic_launcher_round.xml').writeAsStringSync(icLauncherXml);
+  File('${anyDpiDir.path}/ic_launcher_round.xml')
+      .writeAsStringSync(icLauncherXml);
 
   // 6. Update values/colors.xml with #061332
   final valuesDir = Directory('android/app/src/main/res/values');
@@ -211,9 +236,12 @@ void main() {
 
     for (final entry in iosSizes.entries) {
       final imgFile = renderIcon(entry.value, 0.72, transparentBg: false);
-      File('${iosDir.path}/${entry.key}').writeAsBytesSync(img.encodePng(imgFile));
+      File('${iosDir.path}/${entry.key}')
+          .writeAsBytesSync(img.encodePng(imgFile));
     }
   }
 
-  print('SUCCESS: All Android adaptive, legacy, and iOS icons generated flawlessly with zero extra layers!');
+  print(
+    'SUCCESS: All Android adaptive, legacy, and iOS icons generated flawlessly with zero extra layers!',
+  );
 }

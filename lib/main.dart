@@ -44,6 +44,10 @@ void main() async {
   // 5. Initialize Gemini AI Service
   await GeminiAiService.instance.init();
 
+  // 6. Preload theme mode to eliminate startup flicker
+  ThemeModeNotifier.initialMode =
+      await ThemeModeNotifier.loadInitialThemeMode();
+
   runApp(const ProviderScope(child: LifeAndStudyApp()));
 }
 

@@ -1,5 +1,9 @@
 import 'package:drift/drift.dart';
 
+@TableIndex(
+  name: 'idx_spaced_review_next_date',
+  columns: {#nextReviewDate, #isMastered},
+)
 class SpacedReviewItems extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get subject => text().withLength(min: 1, max: 100)();

@@ -7,6 +7,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../analytics/presentation/providers/study_streak_provider.dart';
 import '../../../analytics/presentation/widgets/github_study_heatmap.dart';
 import '../../../focus/presentation/screens/pomodoro_focus_screen.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
@@ -42,6 +43,7 @@ class DashboardScreen extends ConsumerWidget {
     final settings = ref.watch(settingsNotifierProvider).value;
     final hasGeminiKey = GeminiAiService.instance.hasApiKey;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final streak = ref.watch(studyStreakProvider).value ?? 0;
     final modelName = settings?.geminiModel ?? 'gemini-flash-lite-latest';
     final pillLabel = hasGeminiKey
         ? (modelName.contains('pro') ? 'Gemini Pro 🧠' : 'Gemini Flash ⚡')
@@ -59,6 +61,7 @@ class DashboardScreen extends ConsumerWidget {
                 width: 32,
                 height: 32,
                 fit: BoxFit.cover,
+                semanticLabel: 'অ্যাপ লোগো',
                 errorBuilder: (_, _, _) =>
                     const Icon(Icons.school, size: 28, color: Colors.indigo),
               ),
@@ -94,6 +97,49 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? (streak > 0
+                      ? Colors.orange.withValues(alpha: 0.18)
+                      : Colors.white10)
+                  : (streak > 0
+                      ? Colors.orange.shade50
+                      : const Color(0xFFF1F5F9)),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? (streak > 0 ? Colors.orangeAccent : Colors.white24)
+                    : (streak > 0
+                        ? Colors.orange.shade300
+                        : const Color(0xFFCBD5E1)),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  streak > 0 ? '🔥' : '⚡',
+                  style: const TextStyle(fontSize: 11),
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  streak > 0 ? '$streak দিন' : 'স্ট্রিক',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? (streak > 0 ? Colors.orangeAccent : Colors.white70)
+                        : (streak > 0
+                            ? Colors.orange.shade900
+                            : const Color(0xFF475569)),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Container(
             margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -146,6 +192,7 @@ class DashboardScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(upcomingExamsStreamProvider);
           ref.invalidate(weakTopicsStreamProvider);
+          ref.invalidate(studyStreakProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

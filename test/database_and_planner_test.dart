@@ -25,6 +25,19 @@ void main() {
   });
 
   group('Drift Local Database Tests', () {
+    test('Database schema creates performance indexes', () async {
+      final rows = await db
+          .customSelect("SELECT name FROM sqlite_master WHERE type = 'index'")
+          .get();
+      final indexNames = rows.map((r) => r.read<String>('name')).toSet();
+
+      expect(indexNames, contains('idx_chat_messages_session_time'));
+      expect(indexNames, contains('idx_exam_schedules_status_date'));
+      expect(indexNames, contains('idx_drill_questions_correct_mastered'));
+      expect(indexNames, contains('idx_spaced_review_next_date'));
+      expect(indexNames, contains('idx_weak_topics_subject_topic'));
+    });
+
     test('Can insert and retrieve weak topics', () async {
       final id = await db.insertWeakTopic(
         WeakTopicsCompanion.insert(

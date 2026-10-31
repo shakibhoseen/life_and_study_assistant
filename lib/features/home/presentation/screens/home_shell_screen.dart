@@ -236,8 +236,6 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final upcomingExams = ref.watch(upcomingExamsStreamProvider).value ?? [];
-    final weakTopics = ref.watch(weakTopicsStreamProvider).value ?? [];
 
     const activeColor = Color(0xFF6366F1);
     final navBg = isDark ? const Color(0xFF0F172A) : Colors.white;
@@ -309,46 +307,87 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
                 icon: Icon(Icons.space_dashboard_outlined),
                 selectedIcon: Icon(Icons.space_dashboard_rounded),
                 label: 'Dashboard',
+                tooltip: 'ড্যাশবোর্ড',
               ),
               const NavigationDestination(
                 icon: Icon(Icons.auto_awesome_outlined),
                 selectedIcon: Icon(Icons.auto_awesome),
                 label: 'AI Mentor',
+                tooltip: 'এআই মেন্টর চ্যাট',
               ),
               NavigationDestination(
-                icon: Badge.count(
-                  count: weakTopics.length,
-                  isLabelVisible: weakTopics.isNotEmpty,
-                  backgroundColor: const Color(0xFFEF4444),
-                  child: const Icon(Icons.radar_outlined),
+                icon: Consumer(
+                  builder: (context, ref, _) {
+                    final count = ref.watch(
+                      weakTopicsStreamProvider.select(
+                        (s) => s.value?.length ?? 0,
+                      ),
+                    );
+                    return Badge.count(
+                      count: count,
+                      isLabelVisible: count > 0,
+                      backgroundColor: const Color(0xFFEF4444),
+                      child: const Icon(Icons.radar_outlined),
+                    );
+                  },
                 ),
-                selectedIcon: Badge.count(
-                  count: weakTopics.length,
-                  isLabelVisible: weakTopics.isNotEmpty,
-                  backgroundColor: const Color(0xFFEF4444),
-                  child: const Icon(Icons.radar_rounded),
+                selectedIcon: Consumer(
+                  builder: (context, ref, _) {
+                    final count = ref.watch(
+                      weakTopicsStreamProvider.select(
+                        (s) => s.value?.length ?? 0,
+                      ),
+                    );
+                    return Badge.count(
+                      count: count,
+                      isLabelVisible: count > 0,
+                      backgroundColor: const Color(0xFFEF4444),
+                      child: const Icon(Icons.radar_rounded),
+                    );
+                  },
                 ),
                 label: 'Weak Topics',
+                tooltip: 'দুর্বল টপিক তালিকা',
               ),
               NavigationDestination(
-                icon: Badge.count(
-                  count: upcomingExams.length,
-                  isLabelVisible: upcomingExams.isNotEmpty,
-                  backgroundColor: const Color(0xFF10B981),
-                  child: const Icon(Icons.event_note_outlined),
+                icon: Consumer(
+                  builder: (context, ref, _) {
+                    final count = ref.watch(
+                      upcomingExamsStreamProvider.select(
+                        (s) => s.value?.length ?? 0,
+                      ),
+                    );
+                    return Badge.count(
+                      count: count,
+                      isLabelVisible: count > 0,
+                      backgroundColor: const Color(0xFF10B981),
+                      child: const Icon(Icons.event_note_outlined),
+                    );
+                  },
                 ),
-                selectedIcon: Badge.count(
-                  count: upcomingExams.length,
-                  isLabelVisible: upcomingExams.isNotEmpty,
-                  backgroundColor: const Color(0xFF10B981),
-                  child: const Icon(Icons.event_note_rounded),
+                selectedIcon: Consumer(
+                  builder: (context, ref, _) {
+                    final count = ref.watch(
+                      upcomingExamsStreamProvider.select(
+                        (s) => s.value?.length ?? 0,
+                      ),
+                    );
+                    return Badge.count(
+                      count: count,
+                      isLabelVisible: count > 0,
+                      backgroundColor: const Color(0xFF10B981),
+                      child: const Icon(Icons.event_note_rounded),
+                    );
+                  },
                 ),
                 label: 'LiveMCQ',
+                tooltip: 'লাইভ এমসিকিউ হাব',
               ),
               const NavigationDestination(
                 icon: Icon(Icons.tune_outlined),
                 selectedIcon: Icon(Icons.tune_rounded),
                 label: 'Settings',
+                tooltip: 'অ্যাপ সেটিংস',
               ),
             ],
           ),

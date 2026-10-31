@@ -14,6 +14,7 @@ import '../../../../core/services/ai/models/verification_mark.dart';
 import '../../../../core/services/ai/models/verification_result.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
+import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 
 class AiMistakeExplainerSheet extends ConsumerStatefulWidget {
   final DrillQuestion question;
@@ -1642,18 +1643,9 @@ class _AiMistakeExplainerSheetState
             // Content
             Expanded(
               child: _isLoading
-                  ? const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(strokeWidth: 3),
-                          SizedBox(height: 14),
-                          Text(
-                            'Gemini AI আপনার ভুলটি বিশ্লেষণ করছে...',
-                            style: TextStyle(fontSize: 13, color: Colors.grey),
-                          ),
-                        ],
-                      ),
+                  ? const AiProgressPipelineWidget(
+                      type: AiTaskType.explainer,
+                      isCompact: false,
                     )
                   : SingleChildScrollView(
                       controller: _bodyScroll,

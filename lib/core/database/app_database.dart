@@ -33,7 +33,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'life_and_study_assistant');
@@ -100,6 +100,33 @@ class AppDatabase extends _$AppDatabase {
           'UPDATE drill_questions '
           'SET is_correct = (selected_index = correct_index) '
           'WHERE corrected_at IS NOT NULL',
+        );
+      }
+      if (from < 13) {
+        // Add performance indexes for chat messages, exams, drill questions, spaced review, and weak topics
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_time ON chat_messages(session_id, timestamp);',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_exam_schedules_status_date ON exam_schedules(completed_status, exam_date);',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_exam_schedules_track_date ON exam_schedules(track_name, exam_date);',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_drill_questions_correct_mastered ON drill_questions(is_correct, is_mastered);',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_drill_questions_record_id ON drill_questions(drill_record_id);',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_spaced_review_next_date ON spaced_review_items(next_review_date, is_mastered);',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_weak_topics_subject_topic ON weak_topics(subject, topic_name);',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_weak_topics_proficiency ON weak_topics(proficiency_level, last_reviewed_at);',
         );
       }
     },
@@ -329,24 +356,32 @@ class AppDatabase extends _$AppDatabase {
   Future<int> insertWeakTopic(WeakTopicsCompanion entry) async {
     final subject = entry.subject.value;
     final topic = entry.topicName.value;
-    final key = _topicKey(subject, topic);
+    final normSubject = subject.trim().toLowerCase();
+    final normTopic = topic.trim().toLowerCase();
 
-    final existing = await select(weakTopics).get();
-    for (final row in existing) {
-      if (_topicKey(row.subject, row.topicName) != key) continue;
+    final match =
+        await (select(weakTopics)
+              ..where(
+                (t) =>
+                    t.subject.trim().lower().equals(normSubject) &
+                    t.topicName.trim().lower().equals(normTopic),
+              )
+              ..limit(1))
+            .getSingleOrNull();
 
+    if (match != null) {
       final incomingNote = entry.notes.present ? (entry.notes.value ?? '') : '';
-      final currentNote = row.notes ?? '';
+      final currentNote = match.notes ?? '';
       if (incomingNote.trim().isNotEmpty &&
           !currentNote.contains(incomingNote.trim())) {
         final merged = currentNote.trim().isEmpty
             ? incomingNote.trim()
             : '$currentNote\n${incomingNote.trim()}';
-        await (update(weakTopics)..where((t) => t.id.equals(row.id))).write(
+        await (update(weakTopics)..where((t) => t.id.equals(match.id))).write(
           WeakTopicsCompanion(notes: Value(merged)),
         );
       }
-      return row.id;
+      return match.id;
     }
 
     return into(weakTopics).insert(entry);
@@ -515,16 +550,21 @@ class AppDatabase extends _$AppDatabase {
         : 'general bcs';
     final newTitle = entry.title.value.trim().toLowerCase();
 
-    final existing = await select(examSchedules).get();
+    final dayStart = DateTime(newDate.year, newDate.month, newDate.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+
+    final existing =
+        await (select(examSchedules)..where(
+              (e) =>
+                  e.examDate.isBiggerOrEqualValue(dayStart) &
+                  e.examDate.isSmallerThanValue(dayEnd),
+            ))
+            .get();
     for (final e in existing) {
-      final isSameDate =
-          e.examDate.year == newDate.year &&
-          e.examDate.month == newDate.month &&
-          e.examDate.day == newDate.day;
       final isSameTrack = e.trackName.trim().toLowerCase() == newTrack;
       final isSameTitle = e.title.trim().toLowerCase() == newTitle;
 
-      if (isSameDate && isSameTrack && isSameTitle) {
+      if (isSameTrack && isSameTitle) {
         return e.id;
       }
     }
@@ -547,7 +587,23 @@ class AppDatabase extends _$AppDatabase {
       );
     }
 
-    final allExisting = await select(examSchedules).get();
+    final dates = entries.map((e) => e.examDate.value).toList();
+    final minDate = dates.reduce((a, b) => a.isBefore(b) ? a : b);
+    final maxDate = dates.reduce((a, b) => a.isAfter(b) ? a : b);
+    final rangeStart = DateTime(minDate.year, minDate.month, minDate.day);
+    final rangeEnd = DateTime(
+      maxDate.year,
+      maxDate.month,
+      maxDate.day,
+    ).add(const Duration(days: 1));
+
+    final allExisting =
+        await (select(examSchedules)..where(
+              (e) =>
+                  e.examDate.isBiggerOrEqualValue(rangeStart) &
+                  e.examDate.isSmallerThanValue(rangeEnd),
+            ))
+            .get();
     int inserted = 0;
     int skipped = 0;
     int updated = 0;
@@ -837,17 +893,24 @@ class AppDatabase extends _$AppDatabase {
     final normSub = subject.trim().toLowerCase();
     final normTop = topic.trim().toLowerCase();
 
-    final all = await select(chatSessions).get();
-    for (final s in all) {
-      final sSub = (s.subject ?? '').trim().toLowerCase();
-      final sTop = (s.topic ?? '').trim().toLowerCase();
-      if (sSub == normSub && sTop == normTop) {
-        await (update(chatSessions)..where((entry) => entry.id.equals(s.id)))
-            .write(ChatSessionsCompanion(updatedAt: Value(DateTime.now())));
-        return (select(
-          chatSessions,
-        )..where((entry) => entry.id.equals(s.id))).getSingle();
-      }
+    final match =
+        await (select(chatSessions)
+              ..where(
+                (s) =>
+                    s.subject.isNotNull() &
+                    s.topic.isNotNull() &
+                    s.subject.trim().lower().equals(normSub) &
+                    s.topic.trim().lower().equals(normTop),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+
+    if (match != null) {
+      await (update(chatSessions)..where((entry) => entry.id.equals(match.id)))
+          .write(ChatSessionsCompanion(updatedAt: Value(DateTime.now())));
+      return (select(
+        chatSessions,
+      )..where((entry) => entry.id.equals(match.id))).getSingle();
     }
 
     final title = '$subject: $topic';

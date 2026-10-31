@@ -1,5 +1,13 @@
 import 'package:drift/drift.dart';
 
+@TableIndex(
+  name: 'idx_exam_schedules_status_date',
+  columns: {#completedStatus, #examDate},
+)
+@TableIndex(
+  name: 'idx_exam_schedules_track_date',
+  columns: {#trackName, #examDate},
+)
 class ExamSchedules extends Table {
   IntColumn get id => integer().autoIncrement()();
   DateTimeColumn get examDate => dateTime()(); // parsed date of exam
