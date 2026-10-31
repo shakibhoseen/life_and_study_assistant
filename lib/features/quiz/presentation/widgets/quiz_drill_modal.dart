@@ -11,6 +11,7 @@ import '../../../../core/database/tables/weak_topics_table.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/quiz_generator_service.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
+import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
 import '../providers/drill_history_provider.dart';
 import 'quiz_batch_correction_sheet.dart';
@@ -70,6 +71,7 @@ class QuizDrillModal extends ConsumerStatefulWidget {
 class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
   late QuizMode _mode;
   bool _isLoading = true;
+  String? _loadError;
   List<QuizQuestion> _questions = [];
   int _currentIndex = 0;
   int? _selectedOptionIndex;
@@ -108,13 +110,17 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
       return;
     }
 
-    setState(() => _isLoading = true);
-    final questions = await QuizGeneratorService.instance.generateQuiz(
-      topic: widget.topic,
-      subject: widget.subject,
-      count: 5,
-    );
-    if (mounted) {
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+    try {
+      final questions = await QuizGeneratorService.instance.generateQuiz(
+        topic: widget.topic,
+        subject: widget.subject,
+        count: 5,
+      );
+      if (!mounted) return;
       setState(() {
         _questions = questions;
         _isLoading = false;
@@ -122,6 +128,15 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
       if (_mode == QuizMode.realExam) {
         _startExamTimer();
       }
+    } on QuizGenerationException catch (e) {
+      // Nothing is shown rather than something invented: a drill the user
+      // answers is scored and remembered, so a made-up question would end up
+      // in the mistake notebook as a topic they are weak at.
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _loadError = e.userMessage;
+      });
     }
   }
 
@@ -821,33 +836,43 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
   }
 
   Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(color: Colors.indigo),
-          const SizedBox(height: 16),
-          Text(
-            'Crafting high-yield MCQs for you...',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade700,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Topic: ${widget.topic}',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-        ],
-      ),
+    return AiProgressPipelineWidget(
+      type: AiTaskType.drill,
+      isCompact: false,
+      customSubtitle: 'টপিক: ${widget.topic} • ${widget.subject}',
     );
   }
 
   Widget _buildQuizState() {
+    if (_loadError != null) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 36,
+              color: Colors.orange.shade700,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _loadError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13.5),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _loadQuestions,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('আবার চেষ্টা'),
+            ),
+          ],
+        ),
+      );
+    }
     if (_questions.isEmpty) {
-      return const Center(child: Text('No questions available.'));
+      return const Center(child: Text('কোনো প্রশ্ন নেই।'));
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;

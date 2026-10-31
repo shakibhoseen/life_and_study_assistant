@@ -51,20 +51,23 @@ void main() {
       expect(restored.explanation, equals(q.explanation));
     });
 
-    test('QuizGeneratorService produces 5 valid questions offline for Bangla topic', () async {
-      final questions = await QuizGeneratorService.instance.generateQuiz(
-        topic: 'কারক ও বিভক্তি',
-        subject: 'Bangla Grammar',
+    // A drill is answered, scored and written to the mistake notebook, so a
+    // question the model did not write must never reach it. Without a key
+    // there is nothing to serve, and saying so is the only honest answer.
+    for (final topic in const ['কারক ও বিভক্তি', 'রক্তসংবহন ও হৃদপিণ্ড']) {
+      test(
+        'generateQuiz reports failure for "$topic" rather than inventing',
+        () {
+          expect(
+            QuizGeneratorService.instance.generateQuiz(
+              topic: topic,
+              subject: 'Bangla Grammar',
+            ),
+            throwsA(isA<QuizGenerationException>()),
+          );
+        },
       );
-
-      expect(questions.length, equals(5));
-      for (final q in questions) {
-        expect(q.questionText.isNotEmpty, isTrue);
-        expect(q.options.length, equals(4));
-        expect(q.correctIndex, inInclusiveRange(0, 3));
-        expect(q.explanation.isNotEmpty, isTrue);
-      }
-    });
+    }
   });
 
   group('Data Backup & Restore Offline JSON Tests', () {

@@ -9,6 +9,25 @@ import '../../utils/bengali_math_sanitizer.dart';
 import 'gemini_usage_tracker.dart';
 import 'models/quiz_question.dart';
 
+/// A drill that could not be built.
+///
+/// It replaces a fallback that invented questions. For a topic it recognised
+/// the fallback served a canned MCQ; for anything else it generated placeholder
+/// questions — "[বিষয় - টপিক] সংক্রান্ত প্রস্তুতিমূলক প্রশ্ন #১" with options
+/// like "মূল সংজ্ঞা ও প্রাথমিক বৈশিষ্ট্য" and a correct answer chosen at
+/// random. Those were scored, written to the drill record, and a wrong answer
+/// landed in the mistake notebook, so a failed call quietly taught nothing and
+/// corrupted the record of what the user is weak at.
+class QuizGenerationException implements Exception {
+  /// Shown to the user as it is.
+  final String userMessage;
+
+  const QuizGenerationException(this.userMessage);
+
+  @override
+  String toString() => 'QuizGenerationException: $userMessage';
+}
+
 class QuizGeneratorService {
   QuizGeneratorService._();
   static final QuizGeneratorService instance = QuizGeneratorService._();
@@ -22,13 +41,8 @@ class QuizGeneratorService {
     final apiKey = prefs.getString(NotificationConstants.prefGeminiApiKey);
 
     if (apiKey == null || apiKey.isEmpty) {
-      debugPrint(
-        'No API Key for QuizGeneratorService, using offline fallback.',
-      );
-      return _generateOfflineFallbackQuiz(
-        topic: topic,
-        subject: subject,
-        count: count,
+      throw const QuizGenerationException(
+        'Gemini API কী বসানো নেই। সেটিংসে কী দিন, তারপর আবার চেষ্টা করুন।',
       );
     }
 
@@ -63,6 +77,7 @@ JSON Structure:
       'gemini-flash-latest',
     ];
 
+    Object? lastError;
     for (final modelName in modelsToTry) {
       try {
         final model = GenerativeModel(
@@ -115,13 +130,13 @@ JSON Structure:
         }
       } catch (e) {
         debugPrint('QuizGeneratorService error with $modelName: $e');
+        lastError = e;
       }
     }
 
-    return _generateOfflineFallbackQuiz(
-      topic: topic,
-      subject: subject,
-      count: count,
+    debugPrint('Quiz generation failed for "$topic": $lastError');
+    throw const QuizGenerationException(
+      'প্রশ্ন তৈরি করা গেল না। ইন্টারনেট দেখে আবার চেষ্টা করুন।',
     );
   }
 
@@ -136,135 +151,5 @@ JSON Structure:
       text = text.substring(0, text.length - 3);
     }
     return text.trim();
-  }
-
-  List<QuizQuestion> _generateOfflineFallbackQuiz({
-    required String topic,
-    required String subject,
-    int count = 5,
-  }) {
-    final lower = topic.toLowerCase();
-    if (lower.contains('কারক') || lower.contains('বিভক্তি')) {
-      return const [
-        QuizQuestion(
-          questionText: '‘পাপে বিরত হও’ — ‘পাপে’ কোন কারকে কোন বিভক্তি?',
-          options: [
-            'ক. কর্মে ৭মী',
-            'খ. অপাদানে ৭মী',
-            'খ. করণে ৭মী',
-            'ঘ. অধিকরণে ৭মী',
-          ],
-          correctIndex: 1,
-          explanation: 'যা থেকে কিছু চ্যুত, চলিত, ভীত বা নিবৃত্ত/বিরত হয়, তাকে অপাদান কারক বলে। ‘পাপে’ অপাদানে ৭মী।',
-          subject: 'বাংলা ব্যাকরণ',
-        ),
-        QuizQuestion(
-          questionText: '‘ঘোড়াকে চাবুক মার’ — ‘চাবুক’ কোন কারক?',
-          options: [
-            'ক. কর্ম কারক',
-            'খ. করণ কারক',
-            'গ. অপাদান কারক',
-            'ঘ. ভাবাধিকরণ',
-          ],
-          correctIndex: 1,
-          explanation: 'ক্রিয়া সম্পাদনের যন্ত্র, সহায়ক বা উপায়কে করণ কারক বলে। চাবুক দ্বারা মারা হচ্ছে, তাই করণ কারক।',
-          subject: 'বাংলা ব্যাকরণ',
-        ),
-        QuizQuestion(
-          questionText: '‘তিলে তৈল হয়’ — এখানে ‘তিলে’ কোন কারক?',
-          options: [
-            'ক. অধিকরণ কারক',
-            'খ. অপাদান কারক',
-            'গ. করণ কারক',
-            'ঘ. কর্ম কারক',
-          ],
-          correctIndex: 1,
-          explanation: 'তিল থেকে তেল উৎপন্ন বা জাত হয়, তাই এটি অপাদান কারক (তিলে তৈল আছে হলে অধিকরণ হতো)।',
-          subject: 'বাংলা ব্যাকরণ',
-        ),
-        QuizQuestion(
-          questionText:
-              '‘সূর্যোদয়ে অন্ধকার দূরীভূত হয়’ — ‘সূর্যোদয়ে’ কোন কারক?',
-          options: [
-            'ক. কালাধিকরণ',
-            'খ. আধারাধিকরণ',
-            'গ. ভাবাধিকরণ',
-            'ঘ. বৈষয়িক অধিকরণ',
-          ],
-          correctIndex: 2,
-          explanation: 'একটি ক্রিয়ার প্রকাশে অন্য ক্রিয়া সম্পন্ন হলে তাকে ভাবাধিকরণ (বা ভাবে সপ্তমী) বলে।',
-          subject: 'বাংলা ব্যাকরণ',
-        ),
-        QuizQuestion(
-          questionText: '‘রাজায় রাজায় যুদ্ধ, উলুখাগড়ার প্রাণান্ত’ — ‘রাজায় রাজায়’ কোন ধরণের কর্তা?',
-          options: [
-            'ক. প্রযোজক কর্তা',
-            'খ. ব্যতিহার কর্তা',
-            'গ. মুখ্য কর্তা',
-            'ঘ. কর্মবাচ্যের কর্তা',
-          ],
-          correctIndex: 1,
-          explanation: 'দুটো কর্তা যখন একই সাথে পরস্পরের বিরুদ্ধে কাজ করে, তখন তাকে ব্যতিহার কর্তা বলে।',
-          subject: 'বাংলা ব্যাকরণ',
-        ),
-      ];
-    } else if (lower.contains('সমাস')) {
-      return const [
-        QuizQuestion(
-          questionText: '‘জায় ও পতি’ = ‘দম্পতি’ — এটি কোন সমাসের উদাহরণ?',
-          options: [
-            'ক. বহুব্রীহি',
-            'খ. দ্বন্দ্ব',
-            'গ. কর্মধারয়',
-            'ঘ. তৎপুরুষ',
-          ],
-          correctIndex: 1,
-          explanation: 'যে সমাসে উভয় পদের অর্থের প্রাধান্য বজায় থাকে, তাকে দ্বন্দ্ব সমাস বলে।',
-          subject: 'বাংলা ব্যাকরণ',
-        ),
-        QuizQuestion(
-          questionText: '‘নীল যে অম্বর’ = ‘নীলাম্বর’ — এটি কোন সমাস?',
-          options: [
-            'ক. মধ্যপদলোপী কর্মধারয়',
-            'খ. সাধারণ কর্মধারয়',
-            'গ. বহুব্রীহি',
-            'ঘ. দ্বিগু',
-          ],
-          correctIndex: 1,
-          explanation: 'বিশেষ্য ও বিশেষণের সমন্বয়ে যে সমাস হয় এবং পরপদের অর্থ প্রধান থাকে, তা কর্মধারয় সমাস।',
-          subject: 'বাংলা ব্যাকরণ',
-        ),
-        QuizQuestion(
-          questionText: '‘উপকণ্ঠ’ শব্দটির সঠিক ব্যাসবাক্য কোনটি?',
-          options: [
-            'ক. কণ্ঠের সদৃশ',
-            'খ. কণ্ঠের সমীপে',
-            'গ. কণ্ঠকে অতিক্রম না করে',
-            'ঘ. কণ্ঠের পশ্চাৎ',
-          ],
-          correctIndex: 1,
-          explanation:
-              '‘উপকণ্ঠ’ অব্যয়ীভাব সমাস, যার ব্যাসবাক্য হলো ‘কণ্ঠের সমীপে’।',
-          subject: 'বাংলা ব্যাকরণ',
-        ),
-      ];
-    }
-
-    // Generic high-yield fallback questions
-    return List.generate(count, (index) {
-      return QuizQuestion(
-        questionText:
-            '[$subject - $topic] সংক্রান্ত প্রস্তুতিমূলক প্রশ্ন #${index + 1}: বিগত বিসিএস পরীক্ষায় নিচের কোন তথ্যটি প্রায়ই আসে?',
-        options: [
-          'ক. মূল সংজ্ঞা ও প্রাথমিক বৈশিষ্ট্য',
-          'খ. ব্যতিক্রমী সূত্র ও প্রয়োগ (High-Yield)',
-          'গ. ইতিহাস ও সূচনা পর্ব',
-          'ঘ. অপ্রচলিত তাত্ত্বিক বিশ্লেষণ',
-        ],
-        correctIndex: 1,
-        explanation: 'বিসিএস ও লাইভএমসিকিউ পরীক্ষায় সাধারণ তথ্যের চেয়ে ব্যতিক্রমী নিয়ম ও সাম্প্রতিক প্রয়োগ থেকে সর্বোচ্চ প্রশ্ন আসে।',
-        subject: subject,
-      );
-    });
   }
 }

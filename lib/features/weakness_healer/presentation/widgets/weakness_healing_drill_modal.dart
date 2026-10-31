@@ -8,6 +8,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/tables/weak_topics_table.dart';
 import '../../../../core/services/ai/quiz_generator_service.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
+import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../quiz/presentation/providers/drill_history_provider.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
 
@@ -118,18 +119,9 @@ class _WeaknessHealingDrillModalState
       } catch (_) {}
     }
 
-    // Fallback if still empty
-    if (items.isEmpty) {
-      items.add(
-        _HealingQuestionItem(
-          questionText:
-              '${widget.topic.topicName} সম্পর্কিত গুরুত্বপূর্ণ নিয়ম কোনটি?',
-          options: const ['নিয়ম ১', 'নিয়ম ২', 'নিয়ম ৩', 'নিয়ম ৪'],
-          correctIndex: 0,
-          explanation: 'এই নিয়মটি পরীক্ষার জন্য অত্যন্ত গুরুত্বপূর্ণ।',
-        ),
-      );
-    }
+    // Nothing is invented to fill a gap: a healing drill is answered and
+    // scored, so a made-up question would be recorded as a topic the user
+    // got wrong. An empty drill is reported instead.
 
     if (mounted) {
       setState(() {
@@ -293,18 +285,9 @@ class _WeaknessHealingDrillModalState
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(strokeWidth: 3),
-                    SizedBox(height: 16),
-                    Text(
-                      'দুর্বল টপিকের হিলিং প্রশ্ন প্রস্তুত হচ্ছে...',
-                      style: TextStyle(fontSize: 13, color: Colors.grey),
-                    ),
-                  ],
-                ),
+            ? const AiProgressPipelineWidget(
+                type: AiTaskType.drill,
+                isCompact: false,
               )
             : (_isCompleted
                   ? _buildCompletionScreen(isDark)
@@ -314,6 +297,37 @@ class _WeaknessHealingDrillModalState
   }
 
   Widget _buildQuestionView(bool isDark) {
+    if (_questions.isEmpty) {
+      // Reached when nothing could be gathered and nothing was invented to
+      // cover for it.
+      return Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 38,
+              color: Colors.orange.shade700,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'এই টপিকের জন্য ড্রিল তৈরি করা গেল না।\n'
+              'ইন্টারনেট দেখে আবার চেষ্টা করুন।',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13.5),
+            ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close, size: 18),
+              label: const Text('বন্ধ করুন'),
+            ),
+          ],
+        ),
+      );
+    }
+
     final currentQ = _questions[_currentIndex];
     final total = _questions.length;
 
