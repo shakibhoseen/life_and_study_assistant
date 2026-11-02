@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:life_and_study_assistant/core/services/media/photo_capture_service.dart';
 
@@ -62,7 +61,7 @@ void main() {
   });
 
   tearDown(() async {
-    service.runCrop = (path, ui) async => path;
+    service.runCrop = (context, photo, title) async => photo;
     service.runRotate = (context, photo) async => photo;
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
   });
@@ -73,7 +72,7 @@ void main() {
       ..writeAsBytesSync([0xFF, 0xD8, 0xFF]);
 
     service.picker = _FakePicker(XFile(shot.path));
-    service.runCrop = (path, ui) async => trimmed.path;
+    service.runCrop = (context, photo, title) async => trimmed;
 
     final result = await service.captureAndCrop(
       source: ImageSource.camera,
@@ -88,9 +87,9 @@ void main() {
     final picker = _FakePicker(null);
     service.picker = picker;
     var cropOpened = false;
-    service.runCrop = (path, ui) async {
+    service.runCrop = (context, photo, title) async {
       cropOpened = true;
-      return path;
+      return photo;
     };
 
     final result = await service.captureAndCrop(
@@ -109,7 +108,7 @@ void main() {
   ) async {
     final context = await _context(tester);
     service.picker = _FakePicker(XFile(shot.path));
-    service.runCrop = (path, ui) async => null;
+    service.runCrop = (context, photo, title) async => null;
 
     final result = await service.captureAndCrop(
       source: ImageSource.camera,
@@ -120,28 +119,37 @@ void main() {
     expect(result?.path, shot.path);
   });
 
-  testWidgets('a crop screen that is not there does not cost the photo', (
-    tester,
-  ) async {
-    final context = await _context(tester);
-    service.picker = _FakePicker(XFile(shot.path));
-    // What a missing UCropActivity throws on a device.
-    service.runCrop = (path, ui) async =>
-        throw PlatformException(code: 'ActivityNotFoundException');
+  testWidgets(
+    'a crop screen that will not open falls back to the built-in one',
+    (tester) async {
+      final context = await _context(tester);
+      service.picker = _FakePicker(XFile(shot.path));
+      // What a missing UCropActivity throws on a device.
+      service.runCrop = (context, photo, title) async =>
+          throw PlatformException(code: 'ActivityNotFoundException');
 
-    final result = await service.captureAndCrop(
-      source: ImageSource.camera,
-      context: context,
-    );
+      final pending = service.captureAndCrop(
+        source: ImageSource.camera,
+        context: context,
+      );
+      await tester.pumpAndSettle();
 
-    expect(result?.path, shot.path);
-  });
+      // The built-in screen opened in its place, rather than the page going to
+      // the model untrimmed.
+      expect(find.text('কেটে নিন'), findsWidgets);
+
+      // Backing out of it still keeps the photo.
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect((await pending)?.path, shot.path);
+    },
+  );
 
   testWidgets('a photo already taken can be trimmed again', (tester) async {
     final context = await _context(tester);
     final narrower = File('${tmp.path}/half.jpg')
       ..writeAsBytesSync([0xFF, 0xD8, 0xFF]);
-    service.runCrop = (path, ui) async => narrower.path;
+    service.runCrop = (context, photo, title) async => narrower;
 
     final result = await service.cropExisting(
       path: shot.path,
@@ -159,9 +167,9 @@ void main() {
       order.add('rotate');
       return photo;
     };
-    service.runCrop = (path, ui) async {
+    service.runCrop = (context, photo, title) async {
       order.add('crop');
-      return path;
+      return photo;
     };
 
     await service.captureAndCrop(source: ImageSource.camera, context: context);
@@ -175,9 +183,9 @@ void main() {
     service.picker = _FakePicker(XFile(shot.path));
     service.runRotate = (context, photo) async => null;
     var cropOpened = false;
-    service.runCrop = (path, ui) async {
+    service.runCrop = (context, photo, title) async {
       cropOpened = true;
-      return path;
+      return photo;
     };
 
     final result = await service.captureAndCrop(
@@ -258,10 +266,9 @@ void main() {
     final context = await _context(tester);
     service.picker = _FakePicker(XFile(shot.path));
     String? shownTitle;
-    service.runCrop = (path, ui) async {
-      final android = ui.whereType<AndroidUiSettings>().first;
-      shownTitle = android.toMap()['android.toolbar_title'] as String?;
-      return path;
+    service.runCrop = (context, photo, title) async {
+      shownTitle = title;
+      return photo;
     };
 
     await service.captureAndCrop(

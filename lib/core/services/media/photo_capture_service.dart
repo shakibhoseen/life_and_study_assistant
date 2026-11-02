@@ -5,6 +5,7 @@ import 'package:image/image.dart' as img;
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'photo_crop_screen.dart';
 import 'photo_rotate_screen.dart';
 
 import '../ai/ai_media_limits.dart';
@@ -39,16 +40,50 @@ class PhotoCaptureService {
   /// The crop step, replaceable so the paths around it can be tested without
   /// a device. It returns the cropped path, or null when the user backs out.
   @visibleForTesting
-  Future<String?> Function(String sourcePath, List<PlatformUiSettings> ui)
-  runCrop = (sourcePath, ui) async {
+  Future<File?> Function(BuildContext context, File photo, String title)
+  runCrop = _uCrop;
+
+  /// The crop screen, which is uCrop by way of image_cropper.
+  ///
+  /// It re-fits the photo to the frame as the frame changes, which reads as
+  /// the picture zooming itself. That is its design and, once understood, the
+  /// screen is the better of the two: pinch to zoom, a dial for straightening
+  /// a degree or two, and a frame that can be dragged anywhere.
+  ///
+  /// [PhotoCropScreen] stays as the fallback below rather than as a second
+  /// choice to make. Its picture never moves on its own, which is the right
+  /// behaviour when the real screen could not open at all.
+  static Future<File?> _uCrop(
+    BuildContext context,
+    File photo,
+    String title,
+  ) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cropped = await ImageCropper().cropImage(
-      sourcePath: sourcePath,
+      sourcePath: photo.path,
       compressFormat: ImageCompressFormat.jpg,
       compressQuality: AiMediaLimits.jpegQuality,
-      uiSettings: ui,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: title,
+          toolbarColor: isDark
+              ? const Color(0xFF1E293B)
+              : const Color(0xFF6366F1),
+          toolbarWidgetColor: Colors.white,
+          statusBarLight: !isDark,
+          backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.black,
+          activeControlsWidgetColor: const Color(0xFF6366F1),
+          // A page is rarely a tidy rectangle on the desk, so the user frames
+          // it themselves rather than being held to a ratio.
+          lockAspectRatio: false,
+          freeStyleCropEnabled: true,
+          hideBottomControls: false,
+        ),
+        IOSUiSettings(title: title, aspectRatioLockEnabled: false),
+      ],
     );
-    return cropped?.path;
-  };
+    return cropped == null ? null : File(cropped.path);
+  }
 
   /// A photo from [source], after the user has trimmed and straightened it.
   ///
@@ -117,36 +152,32 @@ class PhotoCaptureService {
   /// The first crop is rarely the last: a scan that comes back short is
   /// usually fixed by taking a narrower part of the same photo, and making
   /// the user shoot it again loses the framing they already had.
+  /// Reopens the trim screen on a photo already taken.
+  ///
+  /// The first crop is rarely the last: a scan that comes back short is
+  /// usually fixed by taking a narrower part of the same photo, and making
+  /// the user shoot it again loses the framing they already had.
   Future<File?> cropExisting({
     required String path,
     required BuildContext context,
     String title = 'কেটে নিন',
   }) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     try {
-      final croppedPath = await runCrop(path, [
-        AndroidUiSettings(
-          toolbarTitle: title,
-          toolbarColor: isDark
-              ? const Color(0xFF1E293B)
-              : const Color(0xFF6366F1),
-          toolbarWidgetColor: Colors.white,
-          statusBarLight: !isDark,
-          backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.black,
-          activeControlsWidgetColor: const Color(0xFF6366F1),
-          // A page is rarely a tidy rectangle on the desk, so the user
-          // frames it themselves rather than being held to a ratio.
-          lockAspectRatio: false,
-          hideBottomControls: false,
-        ),
-        IOSUiSettings(title: title, aspectRatioLockEnabled: false),
-      ]);
-      // Backing out of the crop keeps the photo as shot rather than losing it.
-      return File(croppedPath ?? path);
+      final trimmed = await runCrop(context, File(path), title);
+      // Backing out of the trim keeps the photo as shot, not lost.
+      return trimmed ?? File(path);
     } catch (e) {
-      // A missing crop screen must not cost the user their photo.
-      debugPrint('Crop unavailable, using the photo as shot: $e');
-      return File(path);
+      // The crop screen could not open — a missing activity, most likely.
+      // Rather than hand back an untrimmed page, fall back to the screen
+      // that needs nothing from the platform.
+      debugPrint('Crop screen failed, falling back to the built-in one: $e');
+      if (!context.mounted) return File(path);
+      final trimmed = await PhotoCropScreen.show(
+        context,
+        File(path),
+        title: title,
+      );
+      return trimmed ?? File(path);
     }
   }
 }

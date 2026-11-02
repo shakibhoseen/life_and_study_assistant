@@ -76,8 +76,8 @@
             </intent-filter>
         </activity>
 
-        <!-- Crop screen for image_cropper. Without this the crop call throws
-             ActivityNotFoundException and the photo goes to the model uncropped. -->
+        <!-- Crop screen for image_cropper. image_cropper ships its own
+             CmUCropActivity; this declares the base one it falls back to. -->
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"

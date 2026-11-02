@@ -16,11 +16,9 @@ void main() {
 
   test('a crop screen is declared', () {
     final xml = manifest.readAsStringSync();
-    // image_cropper ships its own CmUCropActivity, so this entry is a second
-    // one rather than the only one — checked on the built APK, which carries
-    // both. It is kept because the base UCropActivity is what a crop started
-    // without the plugin's subclass resolves to, and an undeclared activity
-    // fails at the moment the user taps, which nothing earlier would catch.
+    // image_cropper ships its own CmUCropActivity, so this is a second entry
+    // rather than the only one. An undeclared activity fails at the moment
+    // the user taps, which nothing earlier would catch.
     expect(xml, contains('com.yalantis.ucrop.UCropActivity'));
   });
 
