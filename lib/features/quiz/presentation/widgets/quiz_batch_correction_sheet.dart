@@ -12,6 +12,7 @@ import '../../../../core/services/ai/quiz_batch_correction_service.dart';
 import '../../../../core/services/voice/voice_recording_service.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
 import '../providers/drill_history_provider.dart';
+import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 
 /// Reusable modal sheet that allows students to paste external AI (ChatGPT, Claude, etc.)
 /// critiques or speak voice instructions to batch-fix or delete faulty questions with a 1-tap confirmation preview.
@@ -428,6 +429,17 @@ class QuizBatchCorrectionSheet {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
+                    ],
+
+                    // The button's own spinner said only "wait". This
+                    // counts the seconds so a slow call is visibly working
+                    // rather than hung.
+                    if (isAnalyzing) ...[
+                      const AiProgressPipelineWidget(
+                        type: AiTaskType.text,
+                        isCompact: true,
+                      ),
+                      const SizedBox(height: 10),
                     ],
 
                     ElevatedButton.icon(

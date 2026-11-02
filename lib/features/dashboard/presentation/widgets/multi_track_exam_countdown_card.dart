@@ -13,6 +13,7 @@ import '../../../live_mcq/presentation/screens/live_mcq_screen.dart';
 import '../../../quiz/presentation/widgets/question_bank_scanner_modal.dart';
 import '../../../quiz/presentation/widgets/quiz_batch_correction_sheet.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
+import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 
 class MultiTrackExamCountdownCard extends ConsumerStatefulWidget {
   final List<ExamSchedule> exams;
@@ -1060,19 +1061,11 @@ class _AiCheatSheetBottomSheetState extends State<_AiCheatSheetBottomSheet> {
 
           // Content
           if (_isLoading) ...[
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 36),
-                child: Column(
-                  children: [
-                    CircularProgressIndicator(strokeWidth: 2.5),
-                    SizedBox(height: 12),
-                    Text(
-                      'Gemini AI is crafting your high-yield cheat sheet...',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: AiProgressPipelineWidget(
+                type: AiTaskType.text,
+                customStatus: 'চিট শিট তৈরি হচ্ছে…',
               ),
             ),
           ] else ...[

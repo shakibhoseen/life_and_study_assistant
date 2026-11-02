@@ -9,6 +9,8 @@ import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/ai_flashcard_service.dart';
 import '../providers/spaced_repetition_provider.dart';
 import '../../../../core/services/media/photo_capture_service.dart';
+import '../../../../core/services/ai/ai_cancellation.dart';
+import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 
 class AiFlashcardGeneratorModal extends ConsumerStatefulWidget {
   final String? initialPrompt;
@@ -41,6 +43,8 @@ class _AiFlashcardGeneratorModalState
   bool _isLoading = false;
   String? _loadingStatus;
   List<AiFlashcardItem>? _generatedCards;
+  AiCancellation? _cancellation;
+  AiTaskType _loadingTaskType = AiTaskType.text;
 
   final List<String> _quickPromptChips = const [
     'বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য ও সূত্র',
@@ -92,16 +96,32 @@ class _AiFlashcardGeneratorModalState
 
     setState(() {
       _isLoading = true;
+      _cancellation = AiCancellation();
+      _loadingTaskType = AiTaskType.text;
       _loadingStatus = 'AI ফ্ল্যাশ কার্ড ও সূত্র তৈরি করছে...';
     });
 
     try {
-      final cards = await AiFlashcardService.instance.generateFromPrompt(query);
+      final cards = await AiFlashcardService.instance.generateFromPrompt(
+        query,
+        cancellation: _cancellation,
+      );
       if (mounted) {
         setState(() {
           _generatedCards = cards;
           _isLoading = false;
         });
+      }
+    } on AiCancelledException {
+      // The user stopped the wait. Nothing was asked for, so nothing is said
+      // beyond confirming it stopped.
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('থামানো হলো। যা খরচ হয়ে গেছে তা ফেরত আসে না।'),
+          ),
+        );
       }
     } on FlashcardGenerationException catch (e) {
       // Already phrased for the user, and says what to do next.
@@ -125,6 +145,8 @@ class _AiFlashcardGeneratorModalState
 
     setState(() {
       _isLoading = true;
+      _cancellation = AiCancellation();
+      _loadingTaskType = AiTaskType.image;
       _loadingStatus =
           'বইয়ের পাতা স্ক্যান করে গুরুত্বপূর্ণ সূত্রগুলো বের করা হচ্ছে...';
     });
@@ -132,12 +154,24 @@ class _AiFlashcardGeneratorModalState
     try {
       final cards = await AiFlashcardService.instance.extractFromBookImage(
         _selectedImage!,
+        cancellation: _cancellation,
       );
       if (mounted) {
         setState(() {
           _generatedCards = cards;
           _isLoading = false;
         });
+      }
+    } on AiCancelledException {
+      // The user stopped the wait. Nothing was asked for, so nothing is said
+      // beyond confirming it stopped.
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('থামানো হলো। যা খরচ হয়ে গেছে তা ফেরত আসে না।'),
+          ),
+        );
       }
     } on FlashcardGenerationException catch (e) {
       // Already phrased for the user, and says what to do next.
@@ -162,12 +196,15 @@ class _AiFlashcardGeneratorModalState
 
     setState(() {
       _isLoading = true;
+      _cancellation = AiCancellation();
+      _loadingTaskType = AiTaskType.text;
       _loadingStatus = 'টেক্সট থেকে ফ্ল্যাশ কার্ড সাজানো হচ্ছে...';
     });
 
     try {
       final cards = await AiFlashcardService.instance.parseFromExternalText(
         text,
+        cancellation: _cancellation,
       );
       final wasFree = AiFlashcardService.instance.lastParseWasFree;
       if (mounted) {
@@ -186,6 +223,17 @@ class _AiFlashcardGeneratorModalState
             ),
           );
         }
+      }
+    } on AiCancelledException {
+      // The user stopped the wait. Nothing was asked for, so nothing is said
+      // beyond confirming it stopped.
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('থামানো হলো। যা খরচ হয়ে গেছে তা ফেরত আসে না।'),
+          ),
+        );
       }
     } on FlashcardGenerationException catch (e) {
       // Already phrased for the user, and says what to do next.
@@ -470,31 +518,20 @@ class _AiFlashcardGeneratorModalState
   }
 
   Widget _buildLoadingState(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(
-              strokeWidth: 3,
-              color: Color(0xFF6366F1),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _loadingStatus ?? 'প্রসেস হচ্ছে...',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white70 : Colors.black87,
-              ),
-            ),
-          ],
-        ),
+    // A bare spinner says only "wait", with no sense of how long or whether
+    // anything is happening. The pipeline counts the seconds, names the
+    // stage, and gives the user a way out.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: AiProgressPipelineWidget(
+        type: _loadingTaskType,
+        customStatus: _loadingStatus,
+        onCancel: _cancelLoading,
       ),
     );
   }
+
+  void _cancelLoading() => _cancellation?.cancel();
 
   Widget _buildPromptTab(bool isDark) {
     return SingleChildScrollView(

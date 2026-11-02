@@ -15,6 +15,7 @@ import 'gemini_ai_service.dart';
 import 'gemini_result_cache.dart';
 import 'gemini_usage_tracker.dart';
 import '../../utils/embedded_json.dart';
+import 'ai_cancellation.dart';
 
 final _flashcardSchema = Schema.object(
   properties: {
@@ -224,6 +225,7 @@ class AiFlashcardService {
   Future<List<AiFlashcardItem>> generateFromPrompt(
     String prompt, {
     String? subjectHint,
+    AiCancellation? cancellation,
   }) async {
     final trimmed = prompt.trim();
     if (trimmed.isEmpty) return const [];
@@ -262,9 +264,10 @@ Instructions:
 6. Return ONLY a valid JSON object matching the requested schema.
 ''';
 
-        final response = await model.generateContent([
-          Content.text(systemPrompt),
-        ]);
+        final call = model.generateContent([Content.text(systemPrompt)]);
+        final response = cancellation == null
+            ? await call
+            : await cancellation.guard(call);
 
         // These calls used to spend tokens without recording any, so none of
         // the flashcard work appeared in the daily total.
@@ -290,6 +293,8 @@ Instructions:
         throw const FlashcardGenerationException(
           'এই প্রম্পট থেকে কোনো কার্ড তৈরি হয়নি। একটু অন্যভাবে লিখে দেখুন।',
         );
+      } on AiCancelledException {
+        rethrow;
       } on FlashcardGenerationException {
         rethrow;
       } catch (e) {
@@ -310,6 +315,7 @@ Instructions:
     File imageFile, {
     String? subjectHint,
     CaptureDetail detail = CaptureDetail.high,
+    AiCancellation? cancellation,
   }) async {
     final apiKey = await _getApiKey();
     if (apiKey != null && apiKey.isNotEmpty) {
@@ -379,9 +385,12 @@ Clean Bengali Unicode: use '°', '×', '²', '³', '√', 'π', '÷'. Never raw 
 Return ONLY a valid JSON object matching the requested schema.
 ''';
 
-        final response = await model.generateContent([
+        final call = model.generateContent([
           Content.multi([TextPart(prompt), DataPart(mimeType, imageBytes)]),
         ]);
+        final response = cancellation == null
+            ? await call
+            : await cancellation.guard(call);
 
         // These calls used to spend tokens without recording any, so none of
         // the flashcard work appeared in the daily total.
@@ -409,6 +418,8 @@ Return ONLY a valid JSON object matching the requested schema.
 
         final parsed = _parseJsonFlashcards(rawText, 'Book Page OCR');
         if (parsed.isNotEmpty) return parsed;
+      } on AiCancelledException {
+        rethrow;
       } on FlashcardGenerationException {
         rethrow;
       } catch (e) {
@@ -431,7 +442,10 @@ Return ONLY a valid JSON object matching the requested schema.
   /// other assistant for that shape.
   bool lastParseWasFree = false;
 
-  Future<List<AiFlashcardItem>> parseFromExternalText(String text) async {
+  Future<List<AiFlashcardItem>> parseFromExternalText(
+    String text, {
+    AiCancellation? cancellation,
+  }) async {
     lastParseWasFree = false;
     final trimmed = text.trim();
     if (trimmed.isEmpty) return const [];
@@ -491,7 +505,10 @@ $trimmed
 Return ONLY a valid JSON object matching the requested schema.
 ''';
 
-        final response = await model.generateContent([Content.text(prompt)]);
+        final call = model.generateContent([Content.text(prompt)]);
+        final response = cancellation == null
+            ? await call
+            : await cancellation.guard(call);
 
         // These calls used to spend tokens without recording any, so none of
         // the flashcard work appeared in the daily total.
@@ -506,6 +523,8 @@ Return ONLY a valid JSON object matching the requested schema.
         final rawText = response.text?.trim() ?? '';
         final parsed = _parseJsonFlashcards(rawText, 'External AI');
         if (parsed.isNotEmpty) return parsed;
+      } on AiCancelledException {
+        rethrow;
       } catch (e) {
         debugPrint('Gemini parseFromExternalText error: $e');
       }
