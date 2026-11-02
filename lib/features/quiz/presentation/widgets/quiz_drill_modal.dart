@@ -19,6 +19,8 @@ import '../../../topics/presentation/providers/topics_provider.dart';
 import '../providers/drill_history_provider.dart';
 import 'quiz_batch_correction_sheet.dart';
 import '../../../../core/widgets/ai_key_missing_notice.dart';
+import '../../../../core/database/database_provider.dart';
+import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
 
 enum QuizMode { practice, realExam }
 
@@ -1316,6 +1318,56 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     );
   }
 
+  bool _mistakesSaved = false;
+
+  /// Puts what was answered wrong into the revision schedule.
+  ///
+  /// Due tomorrow, because a question just got wrong is the one most worth
+  /// seeing again soonest.
+  Future<void> _saveMistakesToReview() async {
+    final db = ref.read(appDatabaseProvider);
+    final wrong = <DrillQuestion>[];
+    for (var i = 0; i < _questions.length; i++) {
+      final answer = _userAnswers[i];
+      if (answer == null || answer < 0) continue;
+      if (answer == _questions[i].correctIndex) continue;
+      final q = _questions[i];
+      wrong.add(
+        DrillQuestion(
+          id: 0,
+          subject: (q.subject ?? '').isEmpty ? widget.subject : q.subject!,
+          topic: widget.topic,
+          questionText: q.questionText,
+          optionsJson: jsonEncode(q.options),
+          correctIndex: q.correctIndex,
+          selectedIndex: answer,
+          isCorrect: false,
+          explanation: q.explanation,
+          isMastered: false,
+          attemptedAt: DateTime.now(),
+        ),
+      );
+    }
+
+    final added = await db.addMistakesToReview(wrong);
+    // Cards are pushed from a queue built at startup, so a new card only
+    // reaches the user once that queue is rebuilt.
+    await ref
+        .read(spacedRepetitionNotifierProvider.notifier)
+        .refreshFlashcardSchedule(force: true);
+    if (!mounted) return;
+    setState(() => _mistakesSaved = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          added == wrong.length
+              ? '$added টি প্রশ্ন কাল থেকে রিভিশনে আসবে'
+              : '$added টি যোগ হলো, বাকিগুলো আগেই ছিল',
+        ),
+      ),
+    );
+  }
+
   Widget _buildResultsState() {
     final total = _questions.length;
     int correct = 0;
@@ -1356,6 +1408,31 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         child: Column(
           children: [
+            // The point of a drill is that what you got wrong comes back.
+            // Until now that loop closed one question at a time, by hand,
+            // from the notebook — so in practice it did not close.
+            if (wrong > 0) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _mistakesSaved ? null : _saveMistakesToReview,
+                    icon: Icon(
+                      _mistakesSaved
+                          ? Icons.check_circle_outline
+                          : Icons.event_repeat_rounded,
+                      size: 18,
+                    ),
+                    label: Text(
+                      _mistakesSaved
+                          ? 'রিভিশনে যোগ হয়েছে'
+                          : 'ভুল $wrong টি রিভিশনে যোগ করুন',
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (_mode == QuizMode.realExam) ...[
               Container(
                 padding: const EdgeInsets.symmetric(

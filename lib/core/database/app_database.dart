@@ -1797,6 +1797,66 @@ class AppDatabase extends _$AppDatabase {
     return rows > 0;
   }
 
+  /// Turns questions the user got wrong into cards that will come back.
+  ///
+  /// This is the loop the app is for — get it wrong, see it again until you
+  /// know it — and until now it only closed one question at a time, by hand,
+  /// from the notebook. A drill of twenty with six wrong meant six separate
+  /// trips, so in practice the wrong answers sat in the notebook and were
+  /// never revised.
+  ///
+  /// Returns how many were added. A question already in the deck is skipped
+  /// rather than duplicated, so running this twice on the same drill is safe.
+  Future<int> addMistakesToReview(List<DrillQuestion> wrong) async {
+    if (wrong.isEmpty) return 0;
+
+    var added = 0;
+    for (final question in wrong) {
+      final title = question.questionText.trim();
+      if (title.isEmpty) continue;
+
+      final existing =
+          await (select(spacedReviewItems)
+                ..where((t) => t.title.equals(title))
+                ..limit(1))
+              .getSingleOrNull();
+      if (existing != null) continue;
+
+      final answer = _correctOptionText(question);
+      if (answer.isEmpty) continue;
+
+      await insertSpacedReviewItem(
+        SpacedReviewItemsCompanion.insert(
+          subject: question.subject,
+          topic: question.topic,
+          title: title,
+          keyRule: question.explanation.trim().isEmpty
+              ? answer
+              : '$answer\n\n${question.explanation.trim()}',
+          repetitionLevel: const Value(1),
+          intervalDays: const Value(1),
+          // Tomorrow, which is the point: a question just got wrong is the
+          // one most worth seeing again soonest.
+          nextReviewDate: DateTime.now().add(const Duration(days: 1)),
+        ),
+      );
+      added++;
+    }
+    return added;
+  }
+
+  String _correctOptionText(DrillQuestion question) {
+    try {
+      final decoded = jsonDecode(question.optionsJson);
+      if (decoded is List &&
+          question.correctIndex >= 0 &&
+          question.correctIndex < decoded.length) {
+        return decoded[question.correctIndex].toString().trim();
+      }
+    } catch (_) {}
+    return '';
+  }
+
   Future<bool> advanceSpacedReview(int id) async {
     final item = await (select(
       spacedReviewItems,
