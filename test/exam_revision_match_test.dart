@@ -22,6 +22,38 @@ void main() {
       expect(picked.single.label, 'আধুনিক যুগের লেখকগণ');
     });
 
+    test('a Bengali ending does not hide a match', () {
+      // Checked against the real data: the exam says "বাংলা সাহিত্যের আধুনিক
+      // যুগের", the weak topic says "বাংলা সাহিত্য". Matching whole words
+      // exactly, those are different words and the card stayed empty the
+      // night before a literature exam.
+      final picked = revisionForExam(
+        examTitle: 'পরীক্ষা - ৭২',
+        examTopics:
+            'বাংলা সাহিত্যের আধুনিক যুগের লেখকগণ, গুরুত্বপূর্ণ লেখকগণ: '
+            'রবীন্দ্রনাথ ঠাকুর, ফররুখ আহমদ',
+        candidates: [
+          c('বাংলা সাহিত্য', 'মধ্যযুগ (মঙ্গলকাব্য ও ভারতচন্দ্র রায়গুণাকর)'),
+          c('গাণিতিক যুক্তি', 'বৃত্ত ও পরিধি'),
+        ],
+      );
+
+      expect(picked.length, 1);
+      expect(picked.single.subject, 'বাংলা সাহিত্য');
+    });
+
+    test('a short word in common is still not a match', () {
+      // The shared part has to run at least four characters, so কার does not
+      // drag in কারক.
+      final picked = revisionForExam(
+        examTitle: 'কম্পিউটার',
+        examTopics: 'ডাটাবেজ সিস্টেম ও নেটওয়ার্ক',
+        candidates: [c('বাংলা ব্যাকরণ', 'কারক ও বিভক্তি')],
+      );
+
+      expect(picked, isEmpty);
+    });
+
     test('the closest match comes first', () {
       final picked = revisionForExam(
         examTitle: 'গণিত',

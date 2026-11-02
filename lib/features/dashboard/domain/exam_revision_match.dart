@@ -36,7 +36,7 @@ List<RevisionCandidate> revisionForExam({
   for (final candidate in candidates) {
     final words = _meaningfulWords('${candidate.subject} ${candidate.label}');
     if (words.isEmpty) continue;
-    final shared = words.where(examWords.contains).length;
+    final shared = words.where((w) => _matchesAny(w, examWords)).length;
     // One shared word is a coincidence — a stray number, or a word that
     // joins every sentence.
     if (shared < 2) continue;
@@ -45,6 +45,26 @@ List<RevisionCandidate> revisionForExam({
 
   scored.sort((a, b) => b.$1.compareTo(a.$1));
   return [for (final entry in scored.take(limit)) entry.$2];
+}
+
+/// Whether [word] is the same word as one of [others], allowing for the
+/// endings Bengali adds.
+///
+/// Checked against the real data and it matters: an exam listed
+/// "বাংলা সাহিত্যের আধুনিক যুগের লেখকগণ" while the weak topic said
+/// "বাংলা সাহিত্য". Matching whole words exactly, সাহিত্য and সাহিত্যের are
+/// two different words and the exam found nothing to suggest.
+///
+/// One word has to start the other and the shared part has to run at least
+/// four characters, so কার does not match কারক.
+bool _matchesAny(String word, Set<String> others) {
+  for (final other in others) {
+    if (word == other) return true;
+    final shorter = word.length < other.length ? word : other;
+    final longer = word.length < other.length ? other : word;
+    if (shorter.length >= 4 && longer.startsWith(shorter)) return true;
+  }
+  return false;
 }
 
 /// Words worth matching on, with the ones that join every sentence removed.
