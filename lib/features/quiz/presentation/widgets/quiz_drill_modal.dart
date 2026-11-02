@@ -23,6 +23,8 @@ import '../../../../core/database/database_provider.dart';
 import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
 import '../../domain/weak_topic_signal.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 enum QuizMode { practice, realExam }
 
 class QuizDrillModal extends ConsumerStatefulWidget {
@@ -96,7 +98,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
   void initState() {
     super.initState();
     _mode = widget.initialMode;
-    _loadQuestions();
+    // The remembered size is read first so the drill is the length the user
+    // last chose, not five every time.
+    _loadDrillSize().then((_) => _loadQuestions());
   }
 
   @override
@@ -125,7 +129,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
       final questions = await QuizGeneratorService.instance.generateQuiz(
         topic: widget.topic,
         subject: widget.subject,
-        count: 5,
+        count: _drillSize,
       );
       if (!mounted) return;
       setState(() {
@@ -1321,6 +1325,68 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
 
   bool _mistakesSaved = false;
 
+  /// How many questions an AI drill asks for.
+  ///
+  /// It was fixed at five with no way to change it, which is a short practice
+  /// and nothing like a model test. The generator handles larger sets well —
+  /// measured at fifteen, comfortably inside its token budget — so the size
+  /// is the user's to pick, and the pick is remembered for next time.
+  int _drillSize = 5;
+
+  static const _drillSizes = [5, 10, 20];
+
+  Future<void> _loadDrillSize() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getInt('drill_question_count');
+    if (saved != null && mounted) setState(() => _drillSize = saved);
+  }
+
+  Future<void> _setDrillSize(int size) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('drill_question_count', size);
+    if (!mounted) return;
+    setState(() => _drillSize = size);
+    await _loadQuestions();
+  }
+
+  /// Offered on the result screen, where the user has just seen how the last
+  /// size felt, rather than before they know what they are choosing.
+  Widget _buildSizeChooser(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'আবার অনুশীলন করুন',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final size in _drillSizes)
+                OutlinedButton(
+                  onPressed: () => _setDrillSize(size),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: Text(
+                    '$size টি প্রশ্ন',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Puts what was answered wrong into the revision schedule.
   ///
   /// Due tomorrow, because a question just got wrong is the one most worth
@@ -1464,6 +1530,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                 ),
               ),
             ],
+            if (widget.customQuestions == null) _buildSizeChooser(isDark),
             if (_mode == QuizMode.realExam) ...[
               Container(
                 padding: const EdgeInsets.symmetric(
