@@ -42,6 +42,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _showRawKey = false;
   bool _flashcardPushEnabled = false;
   int _flashcardPushMinutes = 60;
+  int _flashcardQueuedCount = 0;
+  int _flashcardSlotsPerDay = 0;
   int _flashcardStartHour = NotificationConstants.flashcardPushDefaultStartHour;
   int _flashcardEndHour = NotificationConstants.flashcardPushDefaultEndHour;
   bool _isPinging = false;
@@ -67,6 +69,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _flashcardPushEnabled =
           prefs.getBool(NotificationConstants.prefFlashcardPushEnabled) ??
           false;
+      _flashcardQueuedCount =
+          prefs.getInt(NotificationConstants.prefFlashcardQueuedCount) ?? 0;
+      _flashcardSlotsPerDay =
+          prefs.getInt(NotificationConstants.prefFlashcardSlotsPerDay) ?? 0;
       _flashcardPushMinutes =
           prefs.getInt(
             NotificationConstants.prefFlashcardPushIntervalMinutes,
@@ -1896,6 +1902,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               },
             ),
             if (_flashcardPushEnabled) ...[
+              // The queue is only rebuilt when the app is opened, so how deep
+              // it is decides how long the pushes last. Leaving that invisible
+              // is what made the feature look broken after a quiet weekend.
+              if (_flashcardQueuedCount > 0 && _flashcardSlotsPerDay > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 2),
+                  child: Text(
+                    '$_flashcardQueuedCount টি কার্ড সাজানো আছে — '
+                    'অ্যাপ না খুললেও প্রায় '
+                    '${(_flashcardQueuedCount / _flashcardSlotsPerDay).toStringAsFixed(1)} '
+                    'দিন চলবে',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: _flashcardQueuedCount < _flashcardSlotsPerDay
+                          ? Colors.orange.shade800
+                          : Colors.green.shade700,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 4),
               Wrap(
                 spacing: 7,

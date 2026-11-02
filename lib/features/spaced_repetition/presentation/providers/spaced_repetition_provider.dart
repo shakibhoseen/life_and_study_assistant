@@ -12,6 +12,7 @@ import '../../../../core/config/notification_constants.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/services/notification/notification_service.dart';
+import '../../../../core/services/flashcards/push_queue_depth.dart';
 
 final allSpacedReviewsStreamProvider = StreamProvider<List<SpacedReviewItem>>((
   ref,
@@ -169,21 +170,44 @@ class SpacedRepetitionNotifier extends Notifier<void> {
         prefs.getInt(NotificationConstants.prefFlashcardPushIntervalMinutes) ??
         60;
 
-    final cards = await FlashcardService.instance.getFlashcardBatch(
-      db: _db,
-      count: NotificationConstants.flashcardSeriesMaxCount,
+    final startHour =
+        prefs.getInt(NotificationConstants.prefFlashcardPushStartHour) ??
+        NotificationConstants.flashcardPushDefaultStartHour;
+    final endHour =
+        prefs.getInt(NotificationConstants.prefFlashcardPushEndHour) ??
+        NotificationConstants.flashcardPushDefaultEndHour;
+
+    // The queue is only rebuilt when the app is opened, so it has to outlast
+    // a few days of not opening it. A fixed twelve covered about one day at
+    // hourly pushes, after which the pushes simply stopped.
+    final depth = flashcardQueueDepth(
+      startHour: startHour,
+      endHour: endHour,
+      intervalMinutes: minutes,
     );
 
-    await NotificationService.instance.scheduleFlashcardSeries(
+    final cards = await FlashcardService.instance.getFlashcardBatch(
+      db: _db,
+      count: depth,
+    );
+
+    final queued = await NotificationService.instance.scheduleFlashcardSeries(
       cards: cards,
       interval: Duration(minutes: minutes),
-      startHour:
-          prefs.getInt(NotificationConstants.prefFlashcardPushStartHour) ??
-          NotificationConstants.flashcardPushDefaultStartHour,
-      endHour:
-          prefs.getInt(NotificationConstants.prefFlashcardPushEndHour) ??
-          NotificationConstants.flashcardPushDefaultEndHour,
+      startHour: startHour,
+      endHour: endHour,
     );
+
+    // Kept so Settings can say how long the queue lasts: fewer cards than
+    // slots means the pushes stop sooner than the user would guess.
+    final perDay = flashcardQueueDepth(
+      startHour: startHour,
+      endHour: endHour,
+      intervalMinutes: minutes,
+      daysOfCover: 1,
+    );
+    await prefs.setInt(NotificationConstants.prefFlashcardQueuedCount, queued);
+    await prefs.setInt(NotificationConstants.prefFlashcardSlotsPerDay, perDay);
   }
 
   /// Queues a few cards a minute apart so the feature can be seen working.

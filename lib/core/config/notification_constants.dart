@@ -44,7 +44,12 @@ class NotificationConstants {
   /// Each card in the series needs its own id, so they are numbered from here
   /// upward and cancelled as a block when the schedule is rebuilt.
   static const int flashcardSeriesBaseId = 4100;
-  static const int flashcardSeriesMaxCount = 12;
+
+  /// Upper bound on how many pushes are queued at once.
+  ///
+  /// The depth actually used is worked out from the user's window and
+  /// interval; this only stops a very short interval filling the queue.
+  static const int flashcardSeriesMaxCount = 60;
 
   /// Settings keys for the recurring push.
   static const String prefFlashcardPushEnabled = 'flashcard_push_enabled';
@@ -63,6 +68,11 @@ class NotificationConstants {
   /// can arrive in a background isolate where the database is not open, so
   /// the id waits here until the app next runs.
   static const String prefPendingReviewResetIds = 'pending_review_reset_ids';
+
+  /// How many pushes the last refresh managed to queue, and how many slots a
+  /// day the user's settings give, so Settings can say how long it lasts.
+  static const String prefFlashcardQueuedCount = 'flashcard_queued_count';
+  static const String prefFlashcardSlotsPerDay = 'flashcard_slots_per_day';
 
   static const String prefFlashcardPushStartHour = 'flashcard_push_start_hour';
   static const String prefFlashcardPushEndHour = 'flashcard_push_end_hour';

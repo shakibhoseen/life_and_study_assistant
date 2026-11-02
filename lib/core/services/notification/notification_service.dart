@@ -521,7 +521,12 @@ class NotificationService {
   ///
   /// Quiet hours are honoured, because a vocabulary card at 3am teaches
   /// nothing and costs trust.
-  Future<void> scheduleFlashcardSeries({
+  /// Returns how many pushes were actually queued.
+  ///
+  /// Fewer than asked for means the deck ran out, which is worth saying:
+  /// the queue is only rebuilt when the app is opened, so a short one is how
+  /// long the pushes will last.
+  Future<int> scheduleFlashcardSeries({
     required List<FlashcardItem> cards,
     required Duration interval,
     int startHour = 9,
@@ -532,7 +537,7 @@ class NotificationService {
     bool ignoreQuietHours = false,
   }) async {
     await cancelFlashcardSeries();
-    if (cards.isEmpty || interval.inMinutes < 1) return;
+    if (cards.isEmpty || interval.inMinutes < 1) return 0;
 
     final androidDetails = AndroidNotificationDetails(
       NotificationConstants.flashcardChannelId,
@@ -611,6 +616,7 @@ class NotificationService {
       'Flashcard series: $scheduled queued, every ${interval.inMinutes} min, '
       '${ignoreQuietHours ? "quiet hours ignored" : "${startHour}h-${endHour}h"}',
     );
+    return scheduled;
   }
 
   /// Clears the whole queued series.
