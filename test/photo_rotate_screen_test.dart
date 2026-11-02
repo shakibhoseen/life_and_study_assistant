@@ -34,19 +34,27 @@ void main() {
   /// Rotation reads and writes a real file, and a widget test's fake async
   /// never runs that, so the tap has to happen inside runAsync or the screen
   /// keeps showing the photo it started with.
-  Future<void> turn(WidgetTester tester, IconData icon) async {
-    await tester.runAsync(() async {
-      await tester.tap(find.byIcon(icon));
-      await tester.pump();
-      // Long enough for the decode, rotate and encode to land.
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-    });
-    await tester.pumpAndSettle();
-  }
-
   File shownFile(WidgetTester tester) {
     final image = tester.widget<Image>(find.byType(Image).first);
     return (image.image as FileImage).file;
+  }
+
+  Future<void> turn(WidgetTester tester, IconData icon) async {
+    final before = shownFile(tester).path;
+    await tester.runAsync(() async {
+      await tester.tap(find.byIcon(icon));
+      // Waits for the work rather than for a fixed time: a decode, rotate
+      // and encode takes as long as the machine takes, and a fixed delay
+      // that is long enough alone is not long enough under a full suite.
+      final deadline = DateTime.now().add(const Duration(seconds: 10));
+      while (DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        await tester.pump();
+        if (shownFile(tester).path != before) return;
+      }
+      fail('the photo did not change after $before');
+    });
+    await tester.pumpAndSettle();
   }
 
   testWidgets('the whole photo is shown, never cropped to fit', (tester) async {

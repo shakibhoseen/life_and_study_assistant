@@ -295,6 +295,20 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     widget.onCompleted?.call();
   }
 
+  /// Moves on without an answer.
+  ///
+  /// Recorded as skipped rather than wrong: it does not count against the
+  /// score, because not knowing something is not the same as getting it
+  /// wrong. It does go into the revision deck, which is the whole point of
+  /// admitting it.
+  void _skipQuestion() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _userAnswers[_currentIndex] = -1;
+    });
+    _nextQuestion();
+  }
+
   void _nextQuestion() {
     if (_currentIndex < _questions.length - 1) {
       setState(() {
@@ -1198,6 +1212,27 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                 ],
               ],
             ),
+          ] else if (!_hasAnswered) ...[
+            // A question the user simply does not know had no way past it:
+            // practice mode only moved on once an option was picked, so the
+            // choice was to guess or to abandon the drill.
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _skipQuestion,
+                icon: const Icon(Icons.skip_next_rounded, size: 18),
+                label: Text(
+                  _currentIndex == _questions.length - 1
+                      ? 'জানি না — ফলাফল দেখুন'
+                      : 'জানি না — পরেরটা',
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.orange.shade800,
+                ),
+              ),
+            ),
           ] else if (_hasAnswered) ...[
             // Explanation Box (Practice Mode Only)
             const SizedBox(height: 10),
@@ -1396,8 +1431,10 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     final wrong = <DrillQuestion>[];
     for (var i = 0; i < _questions.length; i++) {
       final answer = _userAnswers[i];
-      if (answer == null || answer < 0) continue;
-      if (answer == _questions[i].correctIndex) continue;
+      // Skipped counts here even though it does not count against the score:
+      // "I did not know this" is the clearest case for seeing it again.
+      if (answer == null) continue;
+      if (answer >= 0 && answer == _questions[i].correctIndex) continue;
       final q = _questions[i];
       wrong.add(
         DrillQuestion(
@@ -1424,12 +1461,14 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     final weak = weakTopicsFromDrill(
       tallyByTopic([
         for (var i = 0; i < _questions.length; i++)
-          if (_userAnswers[i] != null && _userAnswers[i]! >= 0)
+          if (_userAnswers[i] != null)
             (
               subject: (_questions[i].subject ?? '').isEmpty
                   ? widget.subject
                   : _questions[i].subject!,
               topic: widget.topic,
+              // Skipped counts as not knowing it, which is what the weak
+              // list is for.
               wasWrong: _userAnswers[i] != _questions[i].correctIndex,
             ),
       ]),
@@ -1508,7 +1547,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             // The point of a drill is that what you got wrong comes back.
             // Until now that loop closed one question at a time, by hand,
             // from the notebook — so in practice it did not close.
-            if (wrong > 0) ...[
+            if (wrong + skipped > 0) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: SizedBox(
@@ -1524,7 +1563,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                     label: Text(
                       _mistakesSaved
                           ? 'রিভিশনে যোগ হয়েছে'
-                          : 'ভুল $wrong টি রিভিশনে যোগ করুন',
+                          : 'যেগুলো পারিনি (${wrong + skipped} টি) রিভিশনে যোগ করুন',
                     ),
                   ),
                 ),

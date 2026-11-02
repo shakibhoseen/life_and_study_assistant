@@ -99,6 +99,27 @@ void main() {
     },
   );
 
+  test('a skipped question goes in too', () async {
+    // "I did not know this" is the clearest case for seeing it again, even
+    // though it does not count against the drill's score.
+    final skipped = DrillQuestion(
+      id: 2,
+      subject: 'বাংলা',
+      topic: 'সমাস',
+      questionText: 'দ্বিগু সমাস কাকে বলে?',
+      optionsJson: '["সংখ্যাবাচক","কর্মধারয়","তৎপুরুষ","বহুব্রীহি"]',
+      correctIndex: 0,
+      selectedIndex: -1,
+      isCorrect: false,
+      explanation: '',
+      isMastered: false,
+      attemptedAt: DateTime.now(),
+    );
+
+    expect(await db.addMistakesToReview([skipped]), 1);
+    expect(await cardTitled('দ্বিগু সমাস কাকে বলে?'), isNotNull);
+  });
+
   test('nothing wrong means nothing added', () async {
     expect(await db.addMistakesToReview([]), 0);
   });
