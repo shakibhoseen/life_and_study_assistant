@@ -21,6 +21,7 @@ import 'quiz_batch_correction_sheet.dart';
 import '../../../../core/widgets/ai_key_missing_notice.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
+import '../../domain/weak_topic_signal.dart';
 
 enum QuizMode { practice, realExam }
 
@@ -1350,6 +1351,33 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     }
 
     final added = await db.addMistakesToReview(wrong);
+
+    // The weak-topics list and the healing drill built on it were fed by
+    // spoken mistakes, the chat and hand-typed entries — never by what the
+    // user actually gets wrong in a drill.
+    final weak = weakTopicsFromDrill(
+      tallyByTopic([
+        for (var i = 0; i < _questions.length; i++)
+          if (_userAnswers[i] != null && _userAnswers[i]! >= 0)
+            (
+              subject: (_questions[i].subject ?? '').isEmpty
+                  ? widget.subject
+                  : _questions[i].subject!,
+              topic: widget.topic,
+              wasWrong: _userAnswers[i] != _questions[i].correctIndex,
+            ),
+      ]),
+    );
+    for (final topic in weak) {
+      await db.insertWeakTopic(
+        WeakTopicsCompanion.insert(
+          subject: topic.subject,
+          topicName: topic.topic,
+          proficiencyLevel: ProficiencyLevel.weak,
+          notes: Value('ড্রিলে ${topic.asked}টির মধ্যে ${topic.wrong}টি ভুল'),
+        ),
+      );
+    }
     // Cards are pushed from a queue built at startup, so a new card only
     // reaches the user once that queue is rebuilt.
     await ref
@@ -1360,9 +1388,12 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          added == wrong.length
-              ? '$added টি প্রশ্ন কাল থেকে রিভিশনে আসবে'
-              : '$added টি যোগ হলো, বাকিগুলো আগেই ছিল',
+          [
+            added == wrong.length
+                ? '$added টি প্রশ্ন কাল থেকে রিভিশনে আসবে'
+                : '$added টি যোগ হলো, বাকিগুলো আগেই ছিল',
+            if (weak.isNotEmpty) '"${weak.first.topic}" দুর্বল তালিকায় গেল',
+          ].join(' · '),
         ),
       ),
     );
