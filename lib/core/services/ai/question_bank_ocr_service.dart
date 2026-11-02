@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -137,10 +138,12 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
       ) +
       (pages - 1) * detail.approxTokens;
 
+  /// [onTokens] is called with the running total while the reply streams.
   Future<QuestionBankExtractResult> extractQuestionBank({
     required File questionImage,
     File? answerKeyImage,
     String? subjectHint,
+    void Function(int tokensSoFar)? onTokens,
     // A question bank page is a full page of small Bengali print, which is
     // what the high preset is for. At 1024 the conjuncts and matras blur and
     // the model starts filling the gaps with invented text.
@@ -247,22 +250,45 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
           ),
         );
 
-        final response = await model.generateContent([
-          Content.multi(contentParts),
-        ]);
+        final buffer = StringBuffer();
+        int promptTokens = 0;
+        int outputTokens = 0;
+        int totalTokens = 0;
+        var wasCut = false;
 
-        lastCallTokens = response.usageMetadata?.totalTokenCount;
+        await for (final chunk in model.generateContentStream([
+          Content.multi(contentParts),
+        ])) {
+          buffer.write(chunk.text ?? '');
+          final usage = chunk.usageMetadata;
+          // Each chunk carries the running totals, not its own share.
+          promptTokens = math.max(promptTokens, usage?.promptTokenCount ?? 0);
+          outputTokens = math.max(
+            outputTokens,
+            usage?.candidatesTokenCount ?? 0,
+          );
+          final chunkTotal = usage?.totalTokenCount ?? 0;
+          if (chunkTotal > totalTokens) {
+            totalTokens = chunkTotal;
+            onTokens?.call(totalTokens);
+          }
+          if (chunk.candidates.isNotEmpty &&
+              chunk.candidates.first.finishReason == FinishReason.maxTokens) {
+            wasCut = true;
+          }
+        }
+
+        lastCallTokens = totalTokens > 0 ? totalTokens : null;
         await GeminiUsageTracker.instance.recordSuccess(
-          tokens: response.usageMetadata?.totalTokenCount ?? 0,
-          actualInputTokens: response.usageMetadata?.promptTokenCount,
-          actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
-          actualTotalTokens: response.usageMetadata?.totalTokenCount,
+          tokens: totalTokens,
+          actualInputTokens: promptTokens > 0 ? promptTokens : null,
+          actualOutputTokens: outputTokens > 0 ? outputTokens : null,
+          actualTotalTokens: totalTokens > 0 ? totalTokens : null,
           operation: 'question_bank_ocr',
           model: modelName,
         );
 
-        if (response.candidates.isNotEmpty &&
-            response.candidates.first.finishReason == FinishReason.maxTokens) {
+        if (wasCut) {
           // The reply was cut mid-JSON, so it decodes to nothing. Trying the
           // next model only repeats the same cut on the same crowded page.
           throw const QuestionBankExtractException(
@@ -271,13 +297,13 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
           );
         }
 
-        final rawText = response.text;
+        final rawText = buffer.toString();
         final result = _decodeResponse(
           rawText,
           rawRef: 'Page: ${questionImage.path.split('/').last}',
           hasSeparateAnswerKey: answerKeyImage != null,
         );
-        if (result != null && rawText != null) {
+        if (result != null && rawText.isNotEmpty) {
           await GeminiResultCache.instance.put(cacheKey, rawText);
           return result;
         }

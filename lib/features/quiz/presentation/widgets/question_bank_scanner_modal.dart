@@ -170,11 +170,14 @@ class _QuestionBankScannerModalState
     }
   }
 
+  int? _liveTokens;
+
   Future<void> _scanQuestionBank() async {
     if (_questionImage == null) return;
 
     setState(() {
       _isScanning = true;
+      _liveTokens = null;
       _errorMessage = null;
       _result = null;
       _verifications.clear();
@@ -183,6 +186,11 @@ class _QuestionBankScannerModalState
 
     try {
       final res = await QuestionBankOcrService.instance.extractQuestionBank(
+        // The model's own running figure, replacing the estimate as soon as
+        // the first chunk reports one.
+        onTokens: (soFar) {
+          if (mounted) setState(() => _liveTokens = soFar);
+        },
         questionImage: _questionImage!,
         answerKeyImage: _answerKeyImage,
         subjectHint: _selectedSubject,
@@ -1102,11 +1110,13 @@ class _QuestionBankScannerModalState
       type: AiTaskType.image,
       isCompact: false,
       // What the call is worth, so the wait reads as work being done.
-      liveTokens: QuestionBankOcrService.instance.estimateTokensFor(
-        _detail,
-        pages: _answerKeyImage == null ? 1 : 2,
-      ),
-      liveTokensAreEstimate: true,
+      liveTokens:
+          _liveTokens ??
+          QuestionBankOcrService.instance.estimateTokensFor(
+            _detail,
+            pages: _answerKeyImage == null ? 1 : 2,
+          ),
+      liveTokensAreEstimate: _liveTokens == null,
       onCancel: () {
         if (mounted) {
           setState(() {
