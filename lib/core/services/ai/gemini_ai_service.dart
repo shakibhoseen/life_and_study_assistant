@@ -1275,6 +1275,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
 
     if (isOffDay) {
       return AdaptiveStudyPlan(
+        isLocallyBuilt: true,
         date: today,
         energyLevel: 'Weekend/Off-Day',
         fatigueScore: 0,
@@ -1323,6 +1324,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
 
     if (isLowEnergy) {
       return AdaptiveStudyPlan(
+        isLocallyBuilt: true,
         date: today,
         energyLevel: 'Low',
         fatigueScore: fatigueScore,
@@ -1350,6 +1352,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
       );
     } else if (isMediumEnergy) {
       return AdaptiveStudyPlan(
+        isLocallyBuilt: true,
         date: today,
         energyLevel: 'Medium',
         fatigueScore: fatigueScore,
@@ -1384,6 +1387,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
       );
     } else {
       return AdaptiveStudyPlan(
+        isLocallyBuilt: true,
         date: today,
         energyLevel: 'High',
         fatigueScore: fatigueScore,

@@ -14,6 +14,14 @@ class AdaptiveStudyPlan {
   final String familyAndWellbeingAdvice;
   final String? burnoutWarning;
 
+  /// Whether the phone built this plan from the user's own weak topics and
+  /// exams because the model could not be reached.
+  ///
+  /// The content is honest either way — it is drawn from real data, not
+  /// invented — but the card used to call every plan an "Adaptive AI
+  /// Routine", so a plan the model never saw carried its name.
+  final bool isLocallyBuilt;
+
   AdaptiveStudyPlan({
     required this.date,
     required this.energyLevel,
@@ -25,6 +33,7 @@ class AdaptiveStudyPlan {
     required this.tasks,
     required this.familyAndWellbeingAdvice,
     this.burnoutWarning,
+    this.isLocallyBuilt = false,
   });
 
   factory AdaptiveStudyPlan.fromJson(Map<String, dynamic> json) {

@@ -83,13 +83,29 @@ class StudyPlanCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Tonight’s Adaptive AI Routine',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Tonight’s Adaptive AI Routine',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          // The plan is drawn from real weak topics and exams
+                          // either way, but a plan the model never saw should
+                          // not be presented under its name.
+                          if (plan.isLocallyBuilt)
+                            Text(
+                              'ফোনেই সাজানো — AI-তে পৌঁছানো যায়নি',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     IconButton(
