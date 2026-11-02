@@ -496,13 +496,19 @@ class QuizBatchCorrectionSheet {
                                     statusMessage = 'কোনো সুনির্দিষ্ট প্রশ্ন সংশোধন চিহ্নিত করা যায়নি। অনুগ্রহ করে বিশ্লেষণ টেক্সটটি যাচাই করুন।';
                                   });
                                 } else {
-                                  final wasFree = QuizBatchCorrectionService
-                                      .instance
-                                      .lastParseWasFree;
+                                  final service =
+                                      QuizBatchCorrectionService.instance;
+                                  final wasFree = service.lastParseWasFree;
+                                  final wasCut = service.lastReplyWasCut;
                                   setSheetState(() {
                                     isAnalyzing = false;
                                     parsedCorrections = items;
-                                    statusMessage = wasFree
+                                    // A cut reply means these are some of the
+                                    // corrections, not all of them.
+                                    statusMessage = wasCut
+                                        ? '${items.length}টি সংশোধন পাওয়া গেছে, কিন্তু লেখা শেষ হয়নি — '
+                                              'কম প্রশ্ন নিয়ে আবার চালান'
+                                        : wasFree
                                         ? '${items.length}টি সংশোধন — ফোনেই পড়া হয়েছে, টোকেন খরচ হয়নি'
                                         : '${items.length}টি সংশোধন — AI দিয়ে পড়তে হয়েছে';
                                   });

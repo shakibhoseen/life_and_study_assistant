@@ -231,12 +231,21 @@ class QuizBatchCorrectionService {
   /// Whether the last [parseCorrections] needed a model call.
   bool lastParseWasFree = false;
 
+  /// Whether the last reply ran out of room before it finished.
+  ///
+  /// A cut reply is not an empty one. Some corrections decode and the rest
+  /// are simply absent, so applying what came back looks like applying all of
+  /// them. The sheet says so rather than leaving the user to find out when a
+  /// question they know is wrong is still wrong.
+  bool lastReplyWasCut = false;
+
   Future<List<QuestionCorrectionItem>> parseCorrections({
     required List<QuizQuestion> questions,
     required String externalAnalysis,
   }) async {
     if (questions.isEmpty || externalAnalysis.trim().isEmpty) return const [];
     lastParseWasFree = false;
+    lastReplyWasCut = false;
 
     // A paste that is already in this shape needs no model: the prompt the
     // sheet hands out asks for exactly it, so the reply can be read straight
@@ -379,7 +388,11 @@ If the text says all answers are correct or no fixes are suggested, return: []
         temperature: 0.1,
         // A page of Bengali corrections runs well past 1024, and a cut-off
         // array decodes to nothing, which looked like "it got them all wrong".
-        maxOutputTokens: 4096,
+        // Reasoning is drawn from this allowance before a single correction
+        // is written — a streamed run showed roughly a thousand tokens gone
+        // before the first word — so a page's worth of corrections needs
+        // real room behind it.
+        maxOutputTokens: 8192,
       ),
     );
 
@@ -396,10 +409,10 @@ If the text says all answers are correct or no fixes are suggested, return: []
       model: 'gemini-flash-latest',
     );
 
-    final truncated =
+    lastReplyWasCut =
         response.candidates.isNotEmpty &&
         response.candidates.first.finishReason == FinishReason.maxTokens;
-    if (truncated) {
+    if (lastReplyWasCut) {
       debugPrint(
         'Batch correction: OUTPUT TRUNCATED — some corrections are missing',
       );

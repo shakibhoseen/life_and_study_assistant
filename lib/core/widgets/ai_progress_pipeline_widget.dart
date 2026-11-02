@@ -83,38 +83,49 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
       icon: Icons.edit_note_rounded,
       startSecond: 5.0,
     ),
+    // Nothing here promises the answer is moments away. The step this
+    // replaces said "কিছুক্ষণের মধ্যেই উত্তর চলে আসবে" for as long as the
+    // wait lasted, however long that was.
     const AiWorkflowStep(
-      title: 'চূড়ান্ত পর্যবেক্ষণ ও ফরম্যাটিং...',
-      subtitle: 'কিছুক্ষণের মধ্যেই উত্তর চলে আসবে',
-      icon: Icons.auto_awesome,
-      startSecond: 9.0,
+      title: 'ভেবে দেখছে...',
+      subtitle: 'লম্বা উত্তরে এই ধাপে সময় লাগে',
+      icon: Icons.psychology_outlined,
+      startSecond: 12.0,
     ),
   ];
 
+  /// Timed against a real page read, not guessed.
+  ///
+  /// A streamed run took three minutes and six seconds, and the first word of
+  /// the reply did not appear for a hundred seconds: the model reads, then
+  /// reasons for a long time, then writes quickly. These steps used to be
+  /// timed 0, 2, 6 and 10 seconds, so the last of them sat on screen for
+  /// three minutes saying the result was nearly ready. Claiming "almost done"
+  /// for the whole wait is worse than saying nothing.
   static final List<AiWorkflowStep> _imageSteps = [
     const AiWorkflowStep(
-      title: 'ছবি অপটিমাইজ ও প্রস্তুত হচ্ছে...',
-      subtitle: 'ইমেজ কম্প্রেস ও উচ্চ রেজ্যুলেশন প্রস্তুত করা হচ্ছে',
+      title: 'ছবি প্রস্তুত হচ্ছে...',
+      subtitle: 'কাটা অংশটুকু পাঠানোর মাপে আনা হচ্ছে',
       icon: Icons.cloud_upload_outlined,
       startSecond: 0.0,
     ),
     const AiWorkflowStep(
-      title: 'প্রশ্ন ও অপশনগুলো স্ক্যান করা হচ্ছে...',
-      subtitle: 'Gemini Vision লেখার প্রতিটি অংশ শনাক্ত করছে',
+      title: 'পাতাটা পড়া হচ্ছে...',
+      subtitle: 'লেখা, অপশন ও সূত্রগুলো শনাক্ত করা হচ্ছে',
       icon: Icons.document_scanner_outlined,
-      startSecond: 2.2,
+      startSecond: 4.0,
     ),
     const AiWorkflowStep(
-      title: 'সঠিক উত্তর ও গাণিতিক সূত্র যাচাই হচ্ছে...',
-      subtitle: 'ব্যাখ্যা ও সঠিক অপশন নিশ্চিত করা হচ্ছে',
-      icon: Icons.verified_outlined,
-      startSecond: 6.0,
+      title: 'ভেবে দেখছে — এই ধাপটাই সবচেয়ে লম্বা',
+      subtitle: 'উত্তর লেখার আগে মিলিয়ে নিচ্ছে, মিনিট দুয়েক লাগতে পারে',
+      icon: Icons.psychology_outlined,
+      startSecond: 20.0,
     ),
     const AiWorkflowStep(
-      title: 'টেস্ট পেপারের ফরম্যাটে সাজানো হচ্ছে...',
-      subtitle: 'ফলাফল সম্পূর্ণ প্রস্তুত হচ্ছে',
-      icon: Icons.fact_check_outlined,
-      startSecond: 10.0,
+      title: 'উত্তর লেখা হচ্ছে...',
+      subtitle: 'টোকেনের সংখ্যা বাড়তে থাকলে বুঝবেন লেখা শুরু হয়েছে',
+      icon: Icons.edit_note_rounded,
+      startSecond: 100.0,
     ),
   ];
 

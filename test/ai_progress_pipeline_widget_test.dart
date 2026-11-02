@@ -58,19 +58,16 @@ void main() {
         );
 
         // Initial image step
-        expect(find.text('ছবি অপটিমাইজ ও প্রস্তুত হচ্ছে...'), findsWidgets);
+        expect(find.text('ছবি প্রস্তুত হচ্ছে...'), findsWidgets);
         expect(find.text('বাতিল করুন'), findsOneWidget);
 
         // Tap cancel
         await tester.tap(find.text('বাতিল করুন'));
         expect(cancelled, isTrue);
 
-        // Advance time by 3 seconds to see vision step
-        await tester.pump(const Duration(seconds: 3));
-        expect(
-          find.text('প্রশ্ন ও অপশনগুলো স্ক্যান করা হচ্ছে...'),
-          findsWidgets,
-        );
+        // Reading the page starts at 4s, measured against a real call.
+        await tester.pump(const Duration(seconds: 5));
+        expect(find.text('পাতাটা পড়া হচ্ছে...'), findsWidgets);
       },
     );
 
@@ -150,5 +147,28 @@ void main() {
         );
       },
     );
+  });
+
+  testWidgets('a long wait says the model is thinking, not nearly done', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: AiProgressPipelineWidget(
+            type: AiTaskType.image,
+            isCompact: false,
+          ),
+        ),
+      ),
+    );
+
+    // A measured page read takes about three minutes, nearly all of it
+    // before the first word. Half a minute in, the screen must not be
+    // claiming the result is ready.
+    await tester.pump(const Duration(seconds: 30));
+
+    expect(find.textContaining('ভেবে দেখছে'), findsWidgets);
+    expect(find.textContaining('সম্পূর্ণ প্রস্তুত'), findsNothing);
   });
 }
