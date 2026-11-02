@@ -20,6 +20,7 @@ import 'quiz_batch_correction_sheet.dart';
 import 'quiz_drill_modal.dart';
 import '../../../../core/services/media/photo_capture_service.dart';
 import '../../../../core/widgets/ai_key_missing_notice.dart';
+import '../../domain/merge_scanned_pages.dart';
 
 class QuestionBankScannerModal extends ConsumerStatefulWidget {
   final List<QuizQuestion>? initialQuestions;
@@ -125,6 +126,27 @@ class _QuestionBankScannerModalState
     super.dispose();
   }
 
+  /// Reads another page into the same set.
+  ///
+  /// A model test spread over three pages is one test, so the pages add up
+  /// here rather than becoming three separate papers to drill apart.
+  Future<void> _addAnotherPage() async {
+    final picked = await PhotoCaptureService.instance.captureAndCrop(
+      source: ImageSource.camera,
+      context: context,
+      title: 'পরের পাতার প্রশ্ন কেটে নিন',
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _questionImage = picked;
+      // The answer key belongs to the page it was shot with; a later page
+      // brings its own or none.
+      _answerKeyImage = null;
+      _errorMessage = null;
+    });
+    await _scanQuestionBank(append: true);
+  }
+
   Future<void> _rotate({required bool isAnswerKey}) async {
     final current = isAnswerKey ? _answerKeyImage : _questionImage;
     if (current == null) return;
@@ -196,16 +218,27 @@ class _QuestionBankScannerModalState
 
   int? _liveTokens;
 
-  Future<void> _scanQuestionBank() async {
+  /// How many pages have been read into this set so far.
+  ///
+  /// A full model test rarely fits on one page, and scanning the second one
+  /// used to replace the first: the questions list was rebuilt from each
+  /// reply, so a fifty-question test came out as whatever was on the last
+  /// page photographed.
+  int _pagesScanned = 0;
+
+  Future<void> _scanQuestionBank({bool append = false}) async {
     if (_questionImage == null) return;
 
     setState(() {
       _isScanning = true;
       _liveTokens = null;
       _errorMessage = null;
-      _result = null;
-      _verifications.clear();
-      _verifyingIndices.clear();
+      if (!append) {
+        _result = null;
+        _pagesScanned = 0;
+        _verifications.clear();
+        _verifyingIndices.clear();
+      }
     });
 
     try {
@@ -222,20 +255,30 @@ class _QuestionBankScannerModalState
       );
 
       final spent = QuestionBankOcrService.instance.lastCallTokens;
+      final merge = mergeScannedPage(
+        existing: append ? _editableQuestions : const [],
+        fromPage: res.questions,
+      );
+      final duplicates = merge.duplicates;
+
       if (mounted) {
         setState(() {
           _result = res;
-          _editableQuestions = List<QuizQuestion>.from(res.questions);
-          _titleController.text = res.title;
+          _editableQuestions = merge.questions;
+          if (!append) _titleController.text = res.title;
+          _pagesScanned += 1;
           _isScanning = false;
           _savedToRoutine = false;
         });
         if (spent != null && spent > 0) {
-          // The estimate during the wait was a guess; this is the bill.
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '${res.questions.length}টি প্রশ্ন — $spent টোকেন খরচ হয়েছে',
+                append
+                    ? 'পাতা $_pagesScanned — ${merge.added}টি নতুন প্রশ্ন যোগ হলো'
+                          '${duplicates > 0 ? ', $duplicates টি আগেই ছিল' : ''}'
+                          ' · মোট ${_editableQuestions.length}টি · $spent টোকেন'
+                    : '${merge.added}টি প্রশ্ন — $spent টোকেন খরচ হয়েছে',
               ),
             ),
           );
@@ -1220,6 +1263,35 @@ class _QuestionBankScannerModalState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // A model test is usually spread over several pages, so adding
+              // the next one is offered right where the first one lands.
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _pagesScanned > 1
+                          ? 'পাতা $_pagesScanned · মোট ${_editableQuestions.length}টি প্রশ্ন'
+                          : '${_editableQuestions.length}টি প্রশ্ন',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _isScanning ? null : _addAnotherPage,
+                    icon: const Icon(Icons.add_a_photo_outlined, size: 16),
+                    label: const Text(
+                      'আরেক পাতা',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   Container(
