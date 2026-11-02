@@ -103,18 +103,18 @@ class DashboardScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: isDark
                   ? (streak > 0
-                      ? Colors.orange.withValues(alpha: 0.18)
-                      : Colors.white10)
+                        ? Colors.orange.withValues(alpha: 0.18)
+                        : Colors.white10)
                   : (streak > 0
-                      ? Colors.orange.shade50
-                      : const Color(0xFFF1F5F9)),
+                        ? Colors.orange.shade50
+                        : const Color(0xFFF1F5F9)),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isDark
                     ? (streak > 0 ? Colors.orangeAccent : Colors.white24)
                     : (streak > 0
-                        ? Colors.orange.shade300
-                        : const Color(0xFFCBD5E1)),
+                          ? Colors.orange.shade300
+                          : const Color(0xFFCBD5E1)),
               ),
             ),
             child: Row(
@@ -133,8 +133,8 @@ class DashboardScreen extends ConsumerWidget {
                     color: isDark
                         ? (streak > 0 ? Colors.orangeAccent : Colors.white70)
                         : (streak > 0
-                            ? Colors.orange.shade900
-                            : const Color(0xFF475569)),
+                              ? Colors.orange.shade900
+                              : const Color(0xFF475569)),
                   ),
                 ),
               ],

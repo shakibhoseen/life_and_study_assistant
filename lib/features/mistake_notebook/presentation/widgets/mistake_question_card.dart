@@ -445,8 +445,10 @@ class MistakeQuestionCard extends ConsumerWidget {
                     MarkdownBody(
                       data: BengaliMathSanitizer.sanitize(dq.explanation),
                       selectable: true,
-                      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
-                          .copyWith(
+                      styleSheet:
+                          MarkdownStyleSheet.fromTheme(
+                            Theme.of(context),
+                          ).copyWith(
                             p: TextStyle(
                               fontSize: 11.5,
                               height: 1.45,

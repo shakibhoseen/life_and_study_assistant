@@ -1344,644 +1344,662 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         child: Column(
           children: [
-          if (_mode == QuizMode.realExam) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
+            if (_mode == QuizMode.realExam) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.timer_rounded,
+                      size: 16,
+                      color: Color(0xFF6366F1),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'রিয়েল এক্সাম ফলাফল (BCS ফরম্যাট: ভুল উত্তরে -০.৫০)',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? const Color(0xFFA5B4FC)
+                            : const Color(0xFF4338CA),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.timer_rounded,
-                    size: 16,
-                    color: Color(0xFF6366F1),
+              const SizedBox(height: 12),
+              // Score Banner
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isGood
+                        ? [const Color(0xFF065F46), const Color(0xFF047857)]
+                        : [const Color(0xFF991B1B), const Color(0xFFB91C1C)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'রিয়েল এক্সাম ফলাফল (BCS ফরম্যাট: ভুল উত্তরে -০.৫০)',
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isGood ? Colors.green : Colors.red).withValues(
+                        alpha: 0.3,
+                      ),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      isGood
+                          ? '🎉 চমৎকার পারফর্মেন্স!'
+                          : '⚠️ আরেকটু মনোযোগ প্রয়োজন',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${netScore.toStringAsFixed(2)} / ${maxScore.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    Text(
+                      'অর্জিত নেট স্কোর (${percent.clamp(0, 100)}%)',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        percent >= 70
+                            ? '🏆 প্রিলি কাট-মার্ক উত্তীর্ণ রেঞ্জ'
+                            : (percent >= 45
+                                  ? '👍 সন্তোষজনক, নেগেটিভ মার্কিং কমানো প্রয়োজন'
+                                  : '📚 দুর্বল টপিকগুলোতে পুনরায় রিভিশন দিন'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              // 4 Stats Grid
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMiniStat(
+                      icon: Icons.check_circle_rounded,
+                      color: Colors.green,
+                      label: 'সঠিক',
+                      value: '$correct (+$correct.00)',
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildMiniStat(
+                      icon: Icons.cancel_rounded,
+                      color: Colors.red,
+                      label: 'ভুল',
+                      value: '$wrong (-${(wrong * 0.50).toStringAsFixed(2)})',
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMiniStat(
+                      icon: Icons.skip_next_rounded,
+                      color: Colors.orange,
+                      label: 'স্কিপড',
+                      value: '$skipped (0.00)',
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildMiniStat(
+                      icon: Icons.timer_outlined,
+                      color: Colors.indigo,
+                      label: 'ব্যয়িত সময়',
+                      value: '${timeSpent ~/ 60}মি ${timeSpent % 60}সে',
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ] else ...[
+              // Result Header Circle (Practice Mode)
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: isGood
+                      ? (isDark
+                            ? Colors.green.withValues(alpha: 0.2)
+                            : Colors.green.shade50)
+                      : (isDark
+                            ? Colors.amber.withValues(alpha: 0.2)
+                            : Colors.amber.shade50),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isGood ? Icons.military_tech : Icons.refresh,
+                  color: isGood ? Colors.green.shade700 : Colors.amber.shade800,
+                  size: 48,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                isGood ? 'দারুণ প্রস্তুতি!' : 'আরেকটু রিভিশন প্রয়োজন',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'আপনি $totalটির মধ্যে $_correctCountটি প্রশ্নের সঠিক উত্তর দিয়েছেন (${total > 0 ? ((_correctCount / total) * 100).toInt() : 0}%)',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Mistake Bank Auto-Save & Re-drill Banner
+            if (wrongQuestions.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.red.withValues(alpha: 0.18)
+                      : const Color(0xFFFFF1F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.red.withValues(alpha: 0.4)
+                        : const Color(0xFFFECDD3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Color(0xFFBE123C),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${wrongQuestions.length}টি ভুল উত্তর Mistake Bank-এ সেভ হয়েছে!',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? Colors.red.shade200
+                                  : const Color(0xFF9F1239),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'পরবর্তীতে রিভিশন দিতে পারবেন অথবা এখনই পুনরায় চেষ্টা করতে পারেন।',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark
+                            ? Colors.red.shade100
+                            : const Color(0xFF881337),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFBE123C),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        icon: const Icon(Icons.replay, size: 15),
+                        label: Text(
+                          'ভুল ${wrongQuestions.length}টি প্রশ্ন পুনরায় দিন (Re-drill)',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _questions = List.from(wrongQuestions);
+                            _currentIndex = 0;
+                            _selectedOptionIndex = null;
+                            _hasAnswered = false;
+                            _correctCount = 0;
+                            _isFinished = false;
+                            _userAnswers.clear();
+                            _hasPersisted = false;
+                          });
+                          if (_mode == QuizMode.realExam) {
+                            _startExamTimer();
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Detailed Question-by-Question Review with Copy and Voice/AI Batch Fix
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '📋 প্রশ্নভিত্তিক পর্যালোচনা (Detailed Review)',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: isDark
-                          ? const Color(0xFFA5B4FC)
-                          : const Color(0xFF4338CA),
+                          ? Colors.indigo.shade200
+                          : Colors.indigo.shade900,
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Score Banner
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isGood
-                      ? [const Color(0xFF065F46), const Color(0xFF047857)]
-                      : [const Color(0xFF991B1B), const Color(0xFFB91C1C)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: (isGood ? Colors.green : Colors.red).withValues(
-                      alpha: 0.3,
-                    ),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    isGood
-                        ? '🎉 চমৎকার পারফর্মেন্স!'
-                        : '⚠️ আরেকটু মনোযোগ প্রয়োজন',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${netScore.toStringAsFixed(2)} / ${maxScore.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
-                    ),
-                  ),
-                  Text(
-                    'অর্জিত নেট স্কোর (${percent.clamp(0, 100)}%)',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
                       vertical: 4,
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(12),
+                    foregroundColor: isDark
+                        ? const Color(0xFFA5B4FC)
+                        : const Color(0xFF4F46E5),
+                    side: BorderSide(
+                      color: isDark
+                          ? const Color(0xFF6366F1)
+                          : const Color(0xFF4F46E5),
                     ),
-                    child: Text(
-                      percent >= 70
-                          ? '🏆 প্রিলি কাট-মার্ক উত্তীর্ণ রেঞ্জ'
-                          : (percent >= 45
-                                ? '👍 সন্তোষজনক, নেগেটিভ মার্কিং কমানো প্রয়োজন'
-                                : '📚 দুর্বল টপিকগুলোতে পুনরায় রিভিশন দিন'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            // 4 Stats Grid
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMiniStat(
-                    icon: Icons.check_circle_rounded,
-                    color: Colors.green,
-                    label: 'সঠিক',
-                    value: '$correct (+$correct.00)',
-                    isDark: isDark,
+                  icon: const Icon(Icons.copy_rounded, size: 14),
+                  label: const Text(
+                    'কপি করুন',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                  onPressed: _copyFullReviewToClipboard,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildMiniStat(
-                    icon: Icons.cancel_rounded,
-                    color: Colors.red,
-                    label: 'ভুল',
-                    value: '$wrong (-${(wrong * 0.50).toStringAsFixed(2)})',
-                    isDark: isDark,
+                const SizedBox(width: 6),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    backgroundColor: const Color(0xFF6366F1),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
+                  icon: const Icon(Icons.mic_rounded, size: 14),
+                  label: const Text(
+                    'AI ফিক্স / 🎙️ ভয়েস',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: _showPasteExternalAiFixSheet,
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMiniStat(
-                    icon: Icons.skip_next_rounded,
-                    color: Colors.orange,
-                    label: 'স্কিপড',
-                    value: '$skipped (0.00)',
-                    isDark: isDark,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildMiniStat(
-                    icon: Icons.timer_outlined,
-                    color: Colors.indigo,
-                    label: 'ব্যয়িত সময়',
-                    value: '${timeSpent ~/ 60}মি ${timeSpent % 60}সে',
-                    isDark: isDark,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-          ] else ...[
-            // Result Header Circle (Practice Mode)
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: isGood
-                    ? (isDark
-                          ? Colors.green.withValues(alpha: 0.2)
-                          : Colors.green.shade50)
-                    : (isDark
-                          ? Colors.amber.withValues(alpha: 0.2)
-                          : Colors.amber.shade50),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isGood ? Icons.military_tech : Icons.refresh,
-                color: isGood ? Colors.green.shade700 : Colors.amber.shade800,
-                size: 48,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              isGood ? 'দারুণ প্রস্তুতি!' : 'আরেকটু রিভিশন প্রয়োজন',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'আপনি $totalটির মধ্যে $_correctCountটি প্রশ্নের সঠিক উত্তর দিয়েছেন (${total > 0 ? ((_correctCount / total) * 100).toInt() : 0}%)',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white70 : Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
 
-          // Mistake Bank Auto-Save & Re-drill Banner
-          if (wrongQuestions.isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.red.withValues(alpha: 0.18)
-                    : const Color(0xFFFFF1F2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.red.withValues(alpha: 0.4)
-                      : const Color(0xFFFECDD3),
+            ...List.generate(_questions.length, (i) {
+              final q = _questions[i];
+              final selected = _userAnswers[i] ?? -1;
+              final isCorrect = selected == q.correctIndex;
+              final isSkipped = selected < 0;
+
+              String statusLabel;
+              Color statusColor;
+              IconData statusIcon;
+
+              if (_mode == QuizMode.realExam) {
+                if (isCorrect) {
+                  statusLabel = 'প্রশ্ন ${i + 1} · সঠিক (+১.০০)';
+                  statusColor = const Color(0xFF15803D);
+                  statusIcon = Icons.check_circle;
+                } else if (isSkipped) {
+                  statusLabel = 'প্রশ্ন ${i + 1} · স্কিপড (০.০০)';
+                  statusColor = Colors.grey.shade600;
+                  statusIcon = Icons.remove_circle_outline;
+                } else {
+                  statusLabel = 'প্রশ্ন ${i + 1} · ভুল (-০.৫০)';
+                  statusColor = const Color(0xFFC2410C);
+                  statusIcon = Icons.cancel;
+                }
+              } else {
+                statusLabel =
+                    'প্রশ্ন ${i + 1}: ${isCorrect ? "সঠিক উত্তর" : "ভুল উত্তর"}';
+                statusColor = isCorrect
+                    ? const Color(0xFF15803D)
+                    : const Color(0xFFC2410C);
+                statusIcon = isCorrect ? Icons.check_circle : Icons.cancel;
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isCorrect
+                      ? (isDark
+                            ? Colors.green.withValues(alpha: 0.15)
+                            : const Color(0xFFF0FDF4))
+                      : (isSkipped
+                            ? (isDark
+                                  ? Colors.grey.withValues(alpha: 0.15)
+                                  : const Color(0xFFF8FAFC))
+                            : (isDark
+                                  ? Colors.orange.withValues(alpha: 0.15)
+                                  : const Color(0xFFFFF7ED))),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isCorrect
+                        ? (isDark
+                              ? Colors.green.withValues(alpha: 0.4)
+                              : const Color(0xFFBBF7D0))
+                        : (isSkipped
+                              ? (isDark
+                                    ? Colors.white12
+                                    : const Color(0xFFE2E8F0))
+                              : (isDark
+                                    ? Colors.orange.withValues(alpha: 0.4)
+                                    : const Color(0xFFFED7AA))),
+                  ),
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Color(0xFFBE123C),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${wrongQuestions.length}টি ভুল উত্তর Mistake Bank-এ সেভ হয়েছে!',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(statusIcon, size: 16, color: statusColor),
+                        const SizedBox(width: 6),
+                        Text(
+                          statusLabel,
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? Colors.red.shade200
-                                : const Color(0xFF9F1239),
+                            color: statusColor,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.copy_rounded, size: 15),
+                          tooltip: 'এই প্রশ্ন ও উত্তর কপি করুন',
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          onPressed: () => _copySingleQuestionToClipboard(i),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      q.questionText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    if (!isCorrect) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSkipped
+                              ? (isDark
+                                    ? Colors.grey.withValues(alpha: 0.2)
+                                    : Colors.grey.shade100)
+                              : (isDark
+                                    ? Colors.red.withValues(alpha: 0.2)
+                                    : Colors.red.shade50),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isSkipped
+                              ? '⏭️ কোনো উত্তর দেননি (স্কিপ করা হয়েছে)'
+                              : '❌ আপনার উত্তর: ${q.options[selected]}',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isSkipped
+                                ? (isDark
+                                      ? Colors.grey.shade300
+                                      : Colors.grey.shade800)
+                                : (isDark
+                                      ? Colors.red.shade200
+                                      : Colors.red.shade900),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
+                      const SizedBox(height: 4),
                     ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'পরবর্তীতে রিভিশন দিতে পারবেন অথবা এখনই পুনরায় চেষ্টা করতে পারেন।',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: isDark
-                          ? Colors.red.shade100
-                          : const Color(0xFF881337),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFBE123C),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      icon: const Icon(Icons.replay, size: 15),
-                      label: Text(
-                        'ভুল ${wrongQuestions.length}টি প্রশ্ন পুনরায় দিন (Re-drill)',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _questions = List.from(wrongQuestions);
-                          _currentIndex = 0;
-                          _selectedOptionIndex = null;
-                          _hasAnswered = false;
-                          _correctCount = 0;
-                          _isFinished = false;
-                          _userAnswers.clear();
-                          _hasPersisted = false;
-                        });
-                        if (_mode == QuizMode.realExam) {
-                          _startExamTimer();
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
 
-          // Detailed Question-by-Question Review with Copy and Voice/AI Batch Fix
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '📋 প্রশ্নভিত্তিক পর্যালোচনা (Detailed Review)',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? Colors.indigo.shade200
-                        : Colors.indigo.shade900,
-                  ),
-                ),
-              ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  foregroundColor: isDark
-                      ? const Color(0xFFA5B4FC)
-                      : const Color(0xFF4F46E5),
-                  side: BorderSide(
-                    color: isDark
-                        ? const Color(0xFF6366F1)
-                        : const Color(0xFF4F46E5),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                icon: const Icon(Icons.copy_rounded, size: 14),
-                label: const Text(
-                  'কপি করুন',
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                ),
-                onPressed: _copyFullReviewToClipboard,
-              ),
-              const SizedBox(width: 6),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  backgroundColor: const Color(0xFF6366F1),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                icon: const Icon(Icons.mic_rounded, size: 14),
-                label: const Text(
-                  'AI ফিক্স / 🎙️ ভয়েস',
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                ),
-                onPressed: _showPasteExternalAiFixSheet,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          ...List.generate(_questions.length, (i) {
-            final q = _questions[i];
-            final selected = _userAnswers[i] ?? -1;
-            final isCorrect = selected == q.correctIndex;
-            final isSkipped = selected < 0;
-
-            String statusLabel;
-            Color statusColor;
-            IconData statusIcon;
-
-            if (_mode == QuizMode.realExam) {
-              if (isCorrect) {
-                statusLabel = 'প্রশ্ন ${i + 1} · সঠিক (+১.০০)';
-                statusColor = const Color(0xFF15803D);
-                statusIcon = Icons.check_circle;
-              } else if (isSkipped) {
-                statusLabel = 'প্রশ্ন ${i + 1} · স্কিপড (০.০০)';
-                statusColor = Colors.grey.shade600;
-                statusIcon = Icons.remove_circle_outline;
-              } else {
-                statusLabel = 'প্রশ্ন ${i + 1} · ভুল (-০.৫০)';
-                statusColor = const Color(0xFFC2410C);
-                statusIcon = Icons.cancel;
-              }
-            } else {
-              statusLabel =
-                  'প্রশ্ন ${i + 1}: ${isCorrect ? "সঠিক উত্তর" : "ভুল উত্তর"}';
-              statusColor = isCorrect
-                  ? const Color(0xFF15803D)
-                  : const Color(0xFFC2410C);
-              statusIcon = isCorrect ? Icons.check_circle : Icons.cancel;
-            }
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isCorrect
-                    ? (isDark
-                          ? Colors.green.withValues(alpha: 0.15)
-                          : const Color(0xFFF0FDF4))
-                    : (isSkipped
-                          ? (isDark
-                                ? Colors.grey.withValues(alpha: 0.15)
-                                : const Color(0xFFF8FAFC))
-                          : (isDark
-                                ? Colors.orange.withValues(alpha: 0.15)
-                                : const Color(0xFFFFF7ED))),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isCorrect
-                      ? (isDark
-                            ? Colors.green.withValues(alpha: 0.4)
-                            : const Color(0xFFBBF7D0))
-                      : (isSkipped
-                            ? (isDark
-                                  ? Colors.white12
-                                  : const Color(0xFFE2E8F0))
-                            : (isDark
-                                  ? Colors.orange.withValues(alpha: 0.4)
-                                  : const Color(0xFFFED7AA))),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(statusIcon, size: 16, color: statusColor),
-                      const SizedBox(width: 6),
-                      Text(
-                        statusLabel,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                          color: statusColor,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.copy_rounded, size: 15),
-                        tooltip: 'এই প্রশ্ন ও উত্তর কপি করুন',
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        onPressed: () => _copySingleQuestionToClipboard(i),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    q.questionText,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  if (!isCorrect) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: isSkipped
-                            ? (isDark
-                                  ? Colors.grey.withValues(alpha: 0.2)
-                                  : Colors.grey.shade100)
-                            : (isDark
-                                  ? Colors.red.withValues(alpha: 0.2)
-                                  : Colors.red.shade50),
+                        color: isDark
+                            ? Colors.green.withValues(alpha: 0.2)
+                            : Colors.green.shade50,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isSkipped
-                            ? '⏭️ কোনো উত্তর দেননি (স্কিপ করা হয়েছে)'
-                            : '❌ আপনার উত্তর: ${q.options[selected]}',
+                        '✅ সঠিক উত্তর: ${q.options[q.correctIndex]}',
                         style: TextStyle(
                           fontSize: 11.5,
-                          color: isSkipped
-                              ? (isDark
-                                    ? Colors.grey.shade300
-                                    : Colors.grey.shade800)
-                              : (isDark
-                                    ? Colors.red.shade200
-                                    : Colors.red.shade900),
+                          color: isDark
+                              ? Colors.greenAccent
+                              : Colors.green.shade900,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                  ],
 
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.green.withValues(alpha: 0.2)
-                          : Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '✅ সঠিক উত্তর: ${q.options[q.correctIndex]}',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: isDark
-                            ? Colors.greenAccent
-                            : Colors.green.shade900,
-                        fontWeight: FontWeight.w600,
+                    if (q.explanation.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('💡 ', style: TextStyle(fontSize: 12)),
+                          Expanded(
+                            child: MarkdownBody(
+                              data: BengaliMathSanitizer.sanitize(
+                                q.explanation,
+                              ),
+                              styleSheet:
+                                  MarkdownStyleSheet.fromTheme(
+                                    Theme.of(context),
+                                  ).copyWith(
+                                    p: TextStyle(
+                                      fontSize: 11.5,
+                                      color: isDark
+                                          ? Colors.amber.shade200
+                                          : Colors.brown.shade800,
+                                      height: 1.4,
+                                    ),
+                                    strong: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? Colors.amberAccent
+                                          : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+
+            const SizedBox(height: 14),
+
+            // Add to Weak Topics if score is low
+            if (_correctCount < total) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.purple.withValues(alpha: 0.2)
+                      : Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.purple.withValues(alpha: 0.4)
+                        : Colors.purple.shade100,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.radar, color: Colors.deepPurple, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'দুর্বল টপিক রাডারে যুক্ত করবেন?',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                          Text(
+                            'টপিক: ${widget.topic}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.white70 : Colors.black54,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-
-                  if (q.explanation.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('💡 ', style: TextStyle(fontSize: 12)),
-                        Expanded(
-                          child: MarkdownBody(
-                            data: BengaliMathSanitizer.sanitize(q.explanation),
-                            styleSheet: MarkdownStyleSheet.fromTheme(
-                              Theme.of(context),
-                            ).copyWith(
-                              p: TextStyle(
-                                fontSize: 11.5,
-                                color: isDark
-                                    ? Colors.amber.shade200
-                                    : Colors.brown.shade800,
-                                height: 1.4,
-                              ),
-                              strong: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? Colors.amberAccent
-                                    : const Color(0xFF0F172A),
+                    TextButton(
+                      onPressed: () async {
+                        await ref
+                            .read(topicsNotifierProvider.notifier)
+                            .addTopic(
+                              subject: widget.subject,
+                              topicName: widget.topic,
+                              proficiencyLevel: ProficiencyLevel.weak,
+                              notes:
+                                  'Added from drill test ($_correctCount/$total)',
+                            );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.deepPurple,
+                              content: Text(
+                                '"${widget.topic}" দুর্বল টপিক রাডারে যুক্ত হয়েছে!',
                               ),
                             ),
-                          ),
-                        ),
-                      ],
+                          );
+                        }
+                      },
+                      child: const Text('Add Topic'),
                     ),
                   ],
-                ],
-              ),
-            );
-          }),
-
-          const SizedBox(height: 14),
-
-          // Add to Weak Topics if score is low
-          if (_correctCount < total) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.purple.withValues(alpha: 0.2)
-                    : Colors.purple.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.purple.withValues(alpha: 0.4)
-                      : Colors.purple.shade100,
                 ),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.radar, color: Colors.deepPurple, size: 22),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'দুর্বল টপিক রাডারে যুক্ত করবেন?',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12.5,
-                          ),
-                        ),
-                        Text(
-                          'টপিক: ${widget.topic}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? Colors.white70 : Colors.black54,
-                          ),
-                        ),
-                      ],
-                    ),
+              const SizedBox(height: 16),
+            ],
+
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  TextButton(
-                    onPressed: () async {
-                      await ref
-                          .read(topicsNotifierProvider.notifier)
-                          .addTopic(
-                            subject: widget.subject,
-                            topicName: widget.topic,
-                            proficiencyLevel: ProficiencyLevel.weak,
-                            notes:
-                                'Added from drill test ($_correctCount/$total)',
-                          );
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: Colors.deepPurple,
-                            content: Text(
-                              '"${widget.topic}" দুর্বল টপিক রাডারে যুক্ত হয়েছে!',
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    child: const Text('Add Topic'),
-                  ),
-                ],
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Finish Drill & Close',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-            const SizedBox(height: 16),
           ],
-
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E3A8A),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Finish Drill & Close',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
-    ),
     );
   }
 }

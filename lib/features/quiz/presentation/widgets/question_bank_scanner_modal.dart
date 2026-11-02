@@ -18,6 +18,7 @@ import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
 import 'quiz_batch_correction_sheet.dart';
 import 'quiz_drill_modal.dart';
+import '../../../../core/services/media/photo_capture_service.dart';
 
 class QuestionBankScannerModal extends ConsumerStatefulWidget {
   final List<QuizQuestion>? initialQuestions;
@@ -60,7 +61,6 @@ class QuestionBankScannerModal extends ConsumerStatefulWidget {
 
 class _QuestionBankScannerModalState
     extends ConsumerState<QuestionBankScannerModal> {
-  final ImagePicker _picker = ImagePicker();
   File? _questionImage;
   File? _answerKeyImage;
   String _selectedSubject = 'Auto Detect';
@@ -124,23 +124,42 @@ class _QuestionBankScannerModalState
     super.dispose();
   }
 
+  Future<void> _recrop({required bool isAnswerKey}) async {
+    final current = isAnswerKey ? _answerKeyImage : _questionImage;
+    if (current == null) return;
+    final trimmed = await PhotoCaptureService.instance.cropExisting(
+      path: current.path,
+      context: context,
+      title: isAnswerKey ? 'উত্তরপত্র কেটে নিন' : 'প্রশ্নের অংশ কেটে নিন',
+    );
+    if (trimmed == null || !mounted) return;
+    setState(() {
+      if (isAnswerKey) {
+        _answerKeyImage = trimmed;
+      } else {
+        _questionImage = trimmed;
+      }
+      _result = null;
+      _errorMessage = null;
+    });
+  }
+
   Future<void> _pickImage(
     ImageSource source, {
     required bool isAnswerKey,
   }) async {
     try {
-      final picked = await _picker.pickImage(
+      final picked = await PhotoCaptureService.instance.captureAndCrop(
         source: source,
-        maxWidth: 1600,
-        maxHeight: 2400,
-        imageQuality: 85,
+        context: context,
+        title: isAnswerKey ? 'উত্তরপত্র কেটে নিন' : 'প্রশ্নের অংশ কেটে নিন',
       );
       if (picked != null) {
         setState(() {
           if (isAnswerKey) {
-            _answerKeyImage = File(picked.path);
+            _answerKeyImage = picked;
           } else {
-            _questionImage = File(picked.path);
+            _questionImage = picked;
           }
           _result = null;
           _errorMessage = null;
@@ -1000,6 +1019,27 @@ class _QuestionBankScannerModalState
                       child: const Text(
                         'ছবি যুক্ত হয়েছে ✓',
                         style: TextStyle(color: Colors.white, fontSize: 10.5),
+                      ),
+                    ),
+                  ),
+                  // A scan that comes back short is usually fixed by taking
+                  // a narrower part of the same photo, so the trim reopens
+                  // rather than sending the user back to the camera.
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: CircleAvatar(
+                      radius: 15,
+                      backgroundColor: Colors.black.withValues(alpha: 0.65),
+                      child: IconButton(
+                        tooltip: 'আবার কাটুন',
+                        icon: const Icon(
+                          Icons.crop_rounded,
+                          size: 15,
+                          color: Colors.white,
+                        ),
+                        padding: EdgeInsets.zero,
+                        onPressed: () => _recrop(isAnswerKey: isAnswerKey),
                       ),
                     ),
                   ),

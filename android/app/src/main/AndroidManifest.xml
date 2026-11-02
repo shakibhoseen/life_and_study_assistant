@@ -76,6 +76,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Crop screen for image_cropper. Without this the crop call throws
+             ActivityNotFoundException and the photo goes to the model uncropped. -->
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
         <!-- Receivers for flutter_local_notifications action buttons and scheduling -->
         <receiver
             android:exported="false"

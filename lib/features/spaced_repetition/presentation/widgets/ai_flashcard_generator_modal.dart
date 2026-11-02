@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/ai_flashcard_service.dart';
 import '../providers/spaced_repetition_provider.dart';
+import '../../../../core/services/media/photo_capture_service.dart';
 
 class AiFlashcardGeneratorModal extends ConsumerStatefulWidget {
   final String? initialPrompt;
@@ -36,7 +37,6 @@ class _AiFlashcardGeneratorModalState
   final TextEditingController _pasteController = TextEditingController();
 
   File? _selectedImage;
-  final ImagePicker _picker = ImagePicker();
 
   bool _isLoading = false;
   String? _loadingStatus;
@@ -71,15 +71,14 @@ class _AiFlashcardGeneratorModalState
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final picked = await _picker.pickImage(
+      final picked = await PhotoCaptureService.instance.captureAndCrop(
         source: source,
-        maxWidth: 1600,
-        maxHeight: 2400,
-        imageQuality: 85,
+        context: context,
+        title: 'মনে রাখার অংশটুকু কেটে নিন',
       );
       if (picked != null) {
         setState(() {
-          _selectedImage = File(picked.path);
+          _selectedImage = picked;
         });
       }
     } catch (e) {

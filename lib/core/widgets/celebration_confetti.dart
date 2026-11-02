@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 /// A lightweight, 60fps native Flutter celebration confetti burst widget.
@@ -39,10 +40,7 @@ class _CelebrationConfettiState extends State<CelebrationConfetti>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
+    _controller = AnimationController(vsync: this, duration: widget.duration);
 
     if (widget.trigger) {
       _spawnParticles();
@@ -100,7 +98,8 @@ class _CelebrationConfettiState extends State<CelebrationConfetti>
         AnimatedBuilder(
           animation: _controller,
           builder: (context, _) {
-            if (!_controller.isAnimating && (_controller.isDismissed || _controller.isCompleted)) {
+            if (!_controller.isAnimating &&
+                (_controller.isDismissed || _controller.isCompleted)) {
               return const SizedBox.shrink();
             }
             return Positioned.fill(
@@ -178,7 +177,11 @@ class ConfettiPainter extends CustomPainter {
       } else {
         canvas.drawRRect(
           RRect.fromRectAndRadius(
-            Rect.fromCenter(center: Offset.zero, width: p.size, height: p.size * 0.6),
+            Rect.fromCenter(
+              center: Offset.zero,
+              width: p.size,
+              height: p.size * 0.6,
+            ),
             const Radius.circular(2),
           ),
           paint,

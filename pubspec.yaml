@@ -53,6 +53,7 @@ dependencies:
   flutter_markdown: ^0.7.7+1
   permission_handler: ^13.0.2
   image_picker: ^1.2.4
+  image_cropper: ^13.0.0
   audioplayers: ^6.8.1
   url_launcher: ^6.3.3
   record: ^7.1.2

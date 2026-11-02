@@ -16,6 +16,7 @@ import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
 import 'quiz_drill_modal.dart';
+import '../../../../core/services/media/photo_capture_service.dart';
 
 class StudySheetCameraModal extends ConsumerStatefulWidget {
   const StudySheetCameraModal({super.key});
@@ -35,7 +36,6 @@ class StudySheetCameraModal extends ConsumerStatefulWidget {
 }
 
 class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
-  final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
   String _selectedSubject = 'Auto Detect';
   bool _isAnalyzing = false;
@@ -114,19 +114,15 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final picked = await _picker.pickImage(
+      final picked = await PhotoCaptureService.instance.captureAndCrop(
         source: source,
-        // Deliberately above every preset: the picker keeps headroom and
-        // _prepareImageBytes does the real reduction, so switching to a
-        // sharper setting after the shot still has pixels to work with.
-        maxWidth: AiMediaLimits.pickerHeadroom.toDouble(),
-        maxHeight: AiMediaLimits.pickerHeadroom.toDouble(),
-        imageQuality: AiMediaLimits.jpegQuality,
+        context: context,
+        title: 'পড়ার অংশটুকু কেটে নিন',
       );
 
       if (picked != null) {
         setState(() {
-          _selectedImage = File(picked.path);
+          _selectedImage = picked;
           _result = null;
           _errorMessage = null;
           _rulesSaved = false;
