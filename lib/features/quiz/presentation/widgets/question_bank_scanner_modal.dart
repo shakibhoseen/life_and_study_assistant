@@ -19,6 +19,7 @@ import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
 import 'quiz_batch_correction_sheet.dart';
 import 'quiz_drill_modal.dart';
 import '../../../../core/services/media/photo_capture_service.dart';
+import '../../../../core/widgets/ai_key_missing_notice.dart';
 
 class QuestionBankScannerModal extends ConsumerStatefulWidget {
   final List<QuizQuestion>? initialQuestions;
@@ -839,7 +840,20 @@ class _QuestionBankScannerModalState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_errorMessage != null)
+          // A missing key is not a failure to report; it is a thing to go and
+          // do, so it gets the way there rather than red text.
+          if (_errorMessage != null &&
+              AiKeyMissingNotice.looksLikeKeyProblem(_errorMessage!))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: AiKeyMissingNotice(
+                message: _errorMessage!,
+                onRetry: () {
+                  if (mounted) setState(() => _errorMessage = null);
+                },
+              ),
+            )
+          else if (_errorMessage != null)
             Container(
               margin: const EdgeInsets.only(bottom: 14),
               padding: const EdgeInsets.all(12),

@@ -11,6 +11,8 @@ import '../providers/spaced_repetition_provider.dart';
 import '../../../../core/services/media/photo_capture_service.dart';
 import '../../../../core/services/ai/ai_cancellation.dart';
 import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
+import '../../../../core/widgets/ai_key_missing_notice.dart';
+import '../../../settings/presentation/screens/settings_screen.dart';
 
 class AiFlashcardGeneratorModal extends ConsumerStatefulWidget {
   final String? initialPrompt;
@@ -124,11 +126,24 @@ class _AiFlashcardGeneratorModalState
         );
       }
     } on FlashcardGenerationException catch (e) {
-      // Already phrased for the user, and says what to do next.
+      // Already phrased for the user, and says what to do next. When what to
+      // do next is "set a key", the snackbar carries the way there.
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.userMessage)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.userMessage),
+            duration: const Duration(seconds: 6),
+            action: AiKeyMissingNotice.looksLikeKeyProblem(e.userMessage)
+                ? SnackBarAction(
+                    label: 'সেটিংস',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    ),
+                  )
+                : null,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -174,11 +189,24 @@ class _AiFlashcardGeneratorModalState
         );
       }
     } on FlashcardGenerationException catch (e) {
-      // Already phrased for the user, and says what to do next.
+      // Already phrased for the user, and says what to do next. When what to
+      // do next is "set a key", the snackbar carries the way there.
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.userMessage)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.userMessage),
+            duration: const Duration(seconds: 6),
+            action: AiKeyMissingNotice.looksLikeKeyProblem(e.userMessage)
+                ? SnackBarAction(
+                    label: 'সেটিংস',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    ),
+                  )
+                : null,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -236,11 +264,24 @@ class _AiFlashcardGeneratorModalState
         );
       }
     } on FlashcardGenerationException catch (e) {
-      // Already phrased for the user, and says what to do next.
+      // Already phrased for the user, and says what to do next. When what to
+      // do next is "set a key", the snackbar carries the way there.
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.userMessage)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.userMessage),
+            duration: const Duration(seconds: 6),
+            action: AiKeyMissingNotice.looksLikeKeyProblem(e.userMessage)
+                ? SnackBarAction(
+                    label: 'সেটিংস',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    ),
+                  )
+                : null,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

@@ -108,8 +108,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(icon: Icon(Icons.event_note), text: 'Exam Schedules'),
-            Tab(icon: Icon(Icons.summarize), text: 'AI Study Summarizer'),
+            Tab(icon: Icon(Icons.event_note), text: 'পরীক্ষার সূচি'),
+            Tab(icon: Icon(Icons.summarize), text: 'পড়ার সারাংশ'),
           ],
         ),
       ),
@@ -1381,8 +1381,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 decimal: true,
               ),
               decoration: const InputDecoration(
-                labelText: 'Score / Marks obtained',
-                hintText: 'e.g. 78.50',
+                labelText: 'প্রাপ্ত নম্বর',
+                hintText: 'যেমন ৭৮.৫০',
                 border: OutlineInputBorder(),
               ),
               autofocus: true,
@@ -1598,12 +1598,13 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'LiveMCQ Study Material & PDF Summarizer',
+            'পড়ার নোট ও PDF থেকে সারাংশ',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(
-            'Paste study notes or text extracted from LiveMCQ study sheets. Gemini AI will synthesize 5 high-yield bullet points, past exam questions, and memory mnemonics.',
+            'পড়ার নোট বা স্টাডি শিটের লেখা পেস্ট করুন। ৫টি গুরুত্বপূর্ণ পয়েন্ট, '
+            'বিগত পরীক্ষার প্রশ্ন আর মনে রাখার কৌশল বেরিয়ে আসবে।',
             style: TextStyle(
               fontSize: 12,
               color: isDark ? Colors.white70 : Colors.black54,
@@ -1613,7 +1614,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           TextField(
             controller: _subjectController,
             decoration: const InputDecoration(
-              labelText: 'Subject (e.g. Bangla Grammar, Math, Science)',
+              labelText: 'বিষয় (যেমন বাংলা ব্যাকরণ, গণিত, বিজ্ঞান)',
               border: OutlineInputBorder(),
               isDense: true,
             ),
@@ -1625,7 +1626,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
             // The size line below has to keep up with the typing it reports.
             onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
-              labelText: 'Paste study sheet text or topics here...',
+              labelText: 'পড়ার নোট বা টপিক এখানে পেস্ট করুন...',
               border: OutlineInputBorder(),
               hintText: 'e.g. কারক ও বিভক্তি: বাক্যের ক্রিয়ার সাথে অন্য পদের সম্বন্ধ...',
             ),
@@ -1823,7 +1824,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     TextField(
                       controller: customTrackController,
                       decoration: const InputDecoration(
-                        labelText: 'Enter Custom Program Name',
+                        labelText: 'প্রোগ্রামের নাম লিখুন',
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
@@ -1833,7 +1834,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   TextField(
                     controller: titleController,
                     decoration: const InputDecoration(
-                      labelText: 'Exam Title (e.g. Day-12: Bangla Grammar)',
+                      labelText: 'পরীক্ষার নাম (যেমন Day-12: বাংলা ব্যাকরণ)',
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
@@ -1842,7 +1843,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   TextField(
                     controller: topicsController,
                     decoration: const InputDecoration(
-                      labelText: 'Topics Covered',
+                      labelText: 'যে টপিকগুলো আছে',
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
@@ -1851,7 +1852,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   TextField(
                     controller: summaryController,
                     decoration: const InputDecoration(
-                      labelText: 'Resource Summary / Target Marks',
+                      labelText: 'নোট বা লক্ষ্য নম্বর',
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
@@ -2006,7 +2007,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     TextField(
                       controller: customTrackController,
                       decoration: const InputDecoration(
-                        labelText: 'Specify Program / Track Name',
+                        labelText: 'প্রোগ্রাম বা ট্র্যাকের নাম',
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),

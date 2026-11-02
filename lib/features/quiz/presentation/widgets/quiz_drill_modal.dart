@@ -18,6 +18,7 @@ import '../../../analytics/presentation/providers/study_streak_provider.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
 import '../providers/drill_history_provider.dart';
 import 'quiz_batch_correction_sheet.dart';
+import '../../../../core/widgets/ai_key_missing_notice.dart';
 
 enum QuizMode { practice, realExam }
 
@@ -850,6 +851,17 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
   }
 
   Widget _buildQuizState() {
+    if (_loadError != null &&
+        AiKeyMissingNotice.looksLikeKeyProblem(_loadError!)) {
+      // A missing key is a thing to go and do, not a failure to report.
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: AiKeyMissingNotice(
+          message: _loadError!,
+          onRetry: _loadQuestions,
+        ),
+      );
+    }
     if (_loadError != null) {
       return Padding(
         padding: const EdgeInsets.all(24),

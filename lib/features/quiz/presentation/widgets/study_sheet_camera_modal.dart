@@ -17,6 +17,7 @@ import '../../../spaced_repetition/presentation/providers/spaced_repetition_prov
 import '../../../topics/presentation/providers/topics_provider.dart';
 import 'quiz_drill_modal.dart';
 import '../../../../core/services/media/photo_capture_service.dart';
+import '../../../../core/widgets/ai_key_missing_notice.dart';
 
 class StudySheetCameraModal extends ConsumerStatefulWidget {
   const StudySheetCameraModal({super.key});
@@ -362,7 +363,20 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_errorMessage != null) ...[
+                  if (_errorMessage != null &&
+                      AiKeyMissingNotice.looksLikeKeyProblem(
+                        _errorMessage!,
+                      )) ...[
+                    // A missing key is a thing to go and do, not a failure
+                    // to report.
+                    AiKeyMissingNotice(
+                      message: _errorMessage!,
+                      onRetry: () {
+                        if (mounted) setState(() => _errorMessage = null);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                  ] else if (_errorMessage != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
