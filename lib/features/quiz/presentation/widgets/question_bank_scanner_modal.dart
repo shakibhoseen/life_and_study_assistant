@@ -21,6 +21,7 @@ import 'quiz_drill_modal.dart';
 import '../../../../core/services/media/photo_capture_service.dart';
 import '../../../../core/widgets/ai_key_missing_notice.dart';
 import '../../domain/merge_scanned_pages.dart';
+import '../../../../core/widgets/photo_source_sheet.dart';
 
 class QuestionBankScannerModal extends ConsumerStatefulWidget {
   final List<QuizQuestion>? initialQuestions;
@@ -131,8 +132,16 @@ class _QuestionBankScannerModalState
   /// A model test spread over three pages is one test, so the pages add up
   /// here rather than becoming three separate papers to drill apart.
   Future<void> _addAnotherPage() async {
+    // Not always the camera: a paper already photographed, shared or
+    // downloaded is in the gallery and should not have to be shot again.
+    final source = await PhotoSourceSheet.ask(
+      context,
+      title: 'পরের পাতা কোথা থেকে নেবেন?',
+    );
+    if (source == null || !mounted) return;
+
     final picked = await PhotoCaptureService.instance.captureAndCrop(
-      source: ImageSource.camera,
+      source: source,
       context: context,
       title: 'পরের পাতার প্রশ্ন কেটে নিন',
     );
