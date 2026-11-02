@@ -14,10 +14,13 @@ void main() {
     expect(manifest.existsSync(), isTrue);
   });
 
-  test('the crop screen is declared', () {
+  test('a crop screen is declared', () {
     final xml = manifest.readAsStringSync();
-    // Without this, cropping throws ActivityNotFoundException on the phone
-    // and every photo would reach the model uncropped.
+    // image_cropper ships its own CmUCropActivity, so this entry is a second
+    // one rather than the only one — checked on the built APK, which carries
+    // both. It is kept because the base UCropActivity is what a crop started
+    // without the plugin's subclass resolves to, and an undeclared activity
+    // fails at the moment the user taps, which nothing earlier would catch.
     expect(xml, contains('com.yalantis.ucrop.UCropActivity'));
   });
 
