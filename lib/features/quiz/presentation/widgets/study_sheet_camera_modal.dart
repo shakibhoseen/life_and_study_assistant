@@ -603,7 +603,9 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
             height: 180,
             width: double.infinity,
             color: isDark ? const Color(0xFF1F2937) : Colors.grey.shade200,
-            child: Image.file(_selectedImage!, fit: BoxFit.cover),
+            // contain, not cover: a page turned on its side must stay
+            // whole in the preview rather than having its edges cut off.
+            child: Image.file(_selectedImage!, fit: BoxFit.contain),
           ),
         ),
         Positioned(

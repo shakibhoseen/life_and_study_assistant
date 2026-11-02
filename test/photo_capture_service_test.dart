@@ -54,8 +54,16 @@ void main() {
     shot = File('${tmp.path}/page.jpg')..writeAsBytesSync([0xFF, 0xD8, 0xFF]);
   });
 
+  setUp(() {
+    // The straighten screen waits for a tap, so a test awaiting the capture
+    // would hang on it. Passing the photo straight through leaves the crop
+    // and cancel paths below as the thing under test.
+    service.runRotate = (context, photo) async => photo;
+  });
+
   tearDown(() async {
     service.runCrop = (path, ui) async => path;
+    service.runRotate = (context, photo) async => photo;
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
   });
 
@@ -141,6 +149,44 @@ void main() {
     );
 
     expect(result?.path, narrower.path);
+  });
+
+  testWidgets('straightening comes before trimming', (tester) async {
+    final context = await _context(tester);
+    final order = <String>[];
+    service.picker = _FakePicker(XFile(shot.path));
+    service.runRotate = (context, photo) async {
+      order.add('rotate');
+      return photo;
+    };
+    service.runCrop = (path, ui) async {
+      order.add('crop');
+      return path;
+    };
+
+    await service.captureAndCrop(source: ImageSource.camera, context: context);
+
+    // Cropping a sideways page means framing a sideways rectangle.
+    expect(order, ['rotate', 'crop']);
+  });
+
+  testWidgets('backing out of straightening hands on nothing', (tester) async {
+    final context = await _context(tester);
+    service.picker = _FakePicker(XFile(shot.path));
+    service.runRotate = (context, photo) async => null;
+    var cropOpened = false;
+    service.runCrop = (path, ui) async {
+      cropOpened = true;
+      return path;
+    };
+
+    final result = await service.captureAndCrop(
+      source: ImageSource.camera,
+      context: context,
+    );
+
+    expect(result, isNull);
+    expect(cropOpened, isFalse);
   });
 
   group('rotateQuarterTurn', () {

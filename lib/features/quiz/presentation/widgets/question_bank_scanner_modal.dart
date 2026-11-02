@@ -1040,11 +1040,17 @@ class _QuestionBankScannerModalState
               borderRadius: BorderRadius.circular(10),
               child: Stack(
                 children: [
-                  Image.file(
-                    imageFile,
+                  // contain, not cover: a page turned on its side must
+                  // stay whole here rather than having its edges cut off.
+                  Container(
                     height: 120,
                     width: double.infinity,
-                    fit: BoxFit.cover,
+                    color: isDark ? Colors.black26 : Colors.grey.shade200,
+                    child: Image.file(
+                      imageFile,
+                      key: ValueKey(imageFile.path),
+                      fit: BoxFit.contain,
+                    ),
                   ),
                   Positioned(
                     bottom: 6,

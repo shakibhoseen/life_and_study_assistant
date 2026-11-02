@@ -5,6 +5,8 @@ import 'package:image/image.dart' as img;
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'photo_rotate_screen.dart';
+
 import '../ai/ai_media_limits.dart';
 
 /// Takes a photo and lets the user trim it before anything is read from it.
@@ -24,6 +26,15 @@ class PhotoCaptureService {
 
   @visibleForTesting
   ImagePicker picker = ImagePicker();
+
+  /// The straighten step, replaceable for the same reason as [runCrop]: it
+  /// opens a screen, and a test awaiting [captureAndCrop] would otherwise
+  /// wait forever for a tap that never comes.
+  @visibleForTesting
+  Future<File?> Function(BuildContext context, File photo) runRotate = (
+    context,
+    photo,
+  ) => PhotoRotateScreen.show(context, photo);
 
   /// The crop step, replaceable so the paths around it can be tested without
   /// a device. It returns the cropped path, or null when the user backs out.
@@ -59,8 +70,15 @@ class PhotoCaptureService {
     );
     if (picked == null) return null;
 
+    // Straighten first, then trim. Cropping a sideways page means framing a
+    // sideways rectangle, and the crop screen's rotation is a fine dial for a
+    // degree or two rather than a quarter turn.
     if (!context.mounted) return File(picked.path);
-    return cropExisting(path: picked.path, context: context, title: title);
+    final upright = await runRotate(context, File(picked.path));
+    if (upright == null) return null;
+
+    if (!context.mounted) return upright;
+    return cropExisting(path: upright.path, context: context, title: title);
   }
 
   /// Turns a photo a quarter turn and writes it back as a new file.

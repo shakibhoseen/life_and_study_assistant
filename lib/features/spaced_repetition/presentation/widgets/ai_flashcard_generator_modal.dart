@@ -620,10 +620,17 @@ class _AiFlashcardGeneratorModalState
                 if (_selectedImage != null) ...[
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      _selectedImage!,
+                    // contain, not cover: a page turned on its side must
+                    // stay whole here rather than having its edges cut off.
+                    child: Container(
                       height: 140,
-                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      color: isDark ? Colors.black26 : Colors.grey.shade200,
+                      child: Image.file(
+                        _selectedImage!,
+                        key: ValueKey(_selectedImage!.path),
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
