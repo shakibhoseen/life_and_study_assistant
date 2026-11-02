@@ -29,6 +29,7 @@ import '../widgets/energy_tracker_card.dart';
 import '../widgets/multi_track_exam_countdown_card.dart';
 import '../widgets/study_plan_card.dart';
 import '../../../weekly_routine/presentation/widgets/weekly_routine_card.dart';
+import '../widgets/next_exam_revision_card.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -213,6 +214,9 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 16),
 
               // 3. Adaptive AI Study Routine
+              // Above the plan: the night before an exam, what that exam
+              // covers beats a general schedule.
+              const NextExamRevisionCard(),
               const StudyPlanCard(),
 
               const SizedBox(height: 16),
