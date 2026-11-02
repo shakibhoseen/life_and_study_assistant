@@ -157,10 +157,18 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
           _isAnalyzing = false;
         });
       }
+    } on StudySheetReadException catch (e) {
+      // Already phrased for the user, and says the photo is still here.
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.userMessage;
+          _isAnalyzing = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Analysis failed: $e';
+          _errorMessage = 'পড়া গেল না: $e';
           _isAnalyzing = false;
         });
       }
@@ -371,6 +379,21 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                         ],
                       ),
                     ),
+                    if (_selectedImage != null) ...[
+                      // The photo survived the failure, so trying again is
+                      // one tap rather than another trip to the camera.
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: _isAnalyzing ? null : _analyzeImage,
+                          icon: const Icon(Icons.refresh, size: 17),
+                          label: const Text(
+                            'আবার চেষ্টা করুন',
+                            style: TextStyle(fontSize: 12.5),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                   ],
 

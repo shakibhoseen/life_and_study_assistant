@@ -64,60 +64,35 @@ void main() {
     });
   });
 
-  group('VoiceMistakeParserService Offline Parsing Tests', () {
-    test('parseMistakeFromText identifies Bangladesh geography topics from voice note', () async {
-      final result = await VoiceMistakeParserService.instance
-          .parseMistakeFromText(
-            '১২ নম্বর প্রশ্নে মানস সরোবর থেকে উৎপন্ন নদী ভুল করছিলাম',
-          );
+  group('VoiceMistakeParserService without a model', () {
+    // What the user said is never turned into a question by keyword. The
+    // fallback this replaces answered anything containing "নদী" with a fixed
+    // ব্রহ্মপুত্র question and anything else with a placeholder whose options
+    // read "বিকল্প অপশন খ/গ/ঘ" — then saved it to the mistake notebook as a
+    // question the user had got wrong.
+    for (final spoken in const [
+      '১২ নম্বর প্রশ্নে মানস সরোবর থেকে উৎপন্ন নদী ভুল করছিলাম',
+      'বাংলা ব্যাকরণে পরপদের অর্থ প্রধান সমাস কোনটা ছিল',
+      'English adept preposition question mistake',
+    ]) {
+      test('"$spoken" reports failure rather than inventing a question', () {
+        expect(
+          VoiceMistakeParserService.instance.parseMistakeFromText(spoken),
+          throwsA(isA<VoiceParseException>()),
+        );
+      });
+    }
 
-      expect(result, isNotNull);
-      expect(result!.subject, 'Bangladesh Affairs');
-      expect(result.topic, 'বাংলাদেশের নদ-নদী');
-      expect(result.questionText.contains('মানস সরোবর'), true);
-      expect(result.options[result.correctIndex], 'ব্রহ্মপুত্র');
-      expect(result.explanation.isNotEmpty, true);
-    });
-
-    test(
-      'parseMistakeFromText identifies Bangla grammar topics from voice note',
-      () async {
-        final result = await VoiceMistakeParserService.instance
-            .parseMistakeFromText(
-              'বাংলা ব্যাকরণে পরপদের অর্থ প্রধান সমাস কোনটা ছিল',
-            );
-
-        expect(result, isNotNull);
-        expect(result!.subject, 'Bangla Grammar');
-        expect(result.topic.contains('সমাস'), true);
-        expect(result.options[result.correctIndex], 'তৎপুরুষ সমাস');
-      },
-    );
-
-    test(
-      'parseMistakeFromText identifies English preposition from voice note',
-      () async {
-        final result = await VoiceMistakeParserService.instance
-            .parseMistakeFromText('English adept preposition question mistake');
-
-        expect(result, isNotNull);
-        expect(result!.subject, 'English');
-        expect(result.options[result.correctIndex], 'in');
-      },
-    );
-
-    test('parseMistakeFromText returns null for empty, silence or non-question inputs', () async {
-      final emptyResult = await VoiceMistakeParserService.instance
-          .parseMistakeFromText('');
-      expect(emptyResult, isNull);
-
-      final blankResult = await VoiceMistakeParserService.instance
-          .parseMistakeFromText('   ');
-      expect(blankResult, isNull);
-
-      final dummyResult = await VoiceMistakeParserService.instance
-          .parseMistakeFromText('Voice Note from LiveMCQ');
-      expect(dummyResult, isNull);
+    test('silence and stray words are not worth reporting', () async {
+      // Nothing was asked, so nothing failed.
+      expect(
+        await VoiceMistakeParserService.instance.parseMistakeFromText(''),
+        isNull,
+      );
+      expect(
+        await VoiceMistakeParserService.instance.parseMistakeFromText('   '),
+        isNull,
+      );
     });
   });
 

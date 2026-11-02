@@ -60,25 +60,26 @@ void main() {
       expect((encoded['questions'] as List).length, 1);
     });
 
-    test('StudySheetOcrService generates valid 5-MCQ drill offline without Gemini API Key', () async {
+    test('a sheet that cannot be read says so instead of inventing a page', () {
+      // The fallback this replaces answered every failure with the same
+      // সমাস rules and MCQs, under a title made from the user's filename.
+      // A photo of any subject came back as Bengali grammar, and it looked
+      // exactly like a page the model had read.
       final dummyFile = File('test_page.png');
-      final result = await StudySheetOcrService.instance.analyzeStudySheet(
-        dummyFile,
-        subjectHint: 'Bangla Grammar',
+
+      expect(
+        StudySheetOcrService.instance.analyzeStudySheet(
+          dummyFile,
+          subjectHint: 'Bangla Grammar',
+        ),
+        throwsA(
+          isA<StudySheetReadException>().having(
+            (e) => e.userMessage,
+            'userMessage',
+            isNotEmpty,
+          ),
+        ),
       );
-
-      expect(result.title.isNotEmpty, true);
-      expect(result.subject, 'Bangla Grammar');
-      expect(result.questions.length, 5);
-      expect(result.keyRules.isNotEmpty, true);
-      expect(result.highYieldPoints.isNotEmpty, true);
-
-      // Verify each question has 4 options and valid correct index
-      for (final q in result.questions) {
-        expect(q.options.length, 4);
-        expect(q.correctIndex >= 0 && q.correctIndex < 4, true);
-        expect(q.explanation.isNotEmpty, true);
-      }
     });
   });
 

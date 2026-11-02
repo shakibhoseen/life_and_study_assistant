@@ -293,7 +293,18 @@ Rules:
       }
     }
 
-    return _fallbackGenerateFromSpokenText(trimmed, hint: contextHint);
+    // Nothing is invented from a keyword in what was said. The fallback this
+    // replaces answered anything containing "নদী" with a fixed ব্রহ্মপুত্র
+    // question, and anything else with a placeholder whose options read
+    // "বিকল্প অপশন খ/গ/ঘ". Both were saved to the mistake notebook and
+    // drilled as though the user had got them wrong.
+    throw const VoiceParseException(
+      userMessage:
+          'যা বললেন তা থেকে প্রশ্নটা বোঝা গেল না। '
+          'একটু গুছিয়ে আবার বলুন, বা টাইপ করে দিন।',
+      technicalDetails: 'no model result and no invented fallback',
+      isTransient: false,
+    );
   }
 
   VoiceMistakeResult? _decodeResponse(String? rawJson, {String? spokenRef}) {
@@ -411,98 +422,5 @@ Rules:
         proficiencyLevel: ProficiencyLevel.weak,
       ),
     );
-  }
-
-  /// High quality offline fallback
-  VoiceMistakeResult? _fallbackGenerateFromSpokenText(
-    String spokenText, {
-    String? hint,
-  }) {
-    final lower = spokenText.toLowerCase().trim();
-    if (lower.isEmpty ||
-        lower == 'voice note from livemcq' ||
-        lower.length < 3) {
-      return null;
-    }
-
-    String subject = 'Bangladesh Affairs';
-    String topic = 'LiveMCQ Review';
-
-    if (lower.contains('নদী') ||
-        lower.contains('মানস') ||
-        lower.contains('ব্রহ্মপুত্র') ||
-        lower.contains('পদ্মা')) {
-      subject = 'Bangladesh Affairs';
-      topic = 'বাংলাদেশের নদ-নদী';
-      return VoiceMistakeResult(
-        questionText: 'তিব্বতের মানস সরোবর হতে উৎপন্ন নদী কোনটি?',
-        options: ['ব্রহ্মপুত্র', 'পদ্মা', 'মেঘনা', 'যমুনা'],
-        correctIndex: 0,
-        explanation: 'ব্রহ্মপুত্র নদ তিব্বতের মানস সরোবরের চেমায়ুংদুং হিমবাহ থেকে উৎপন্ন হয়ে বাংলাদেশে প্রবেশ করেছে।',
-        subject: subject,
-        topic: topic,
-        keyRule: 'মানস সরোবর ➔ চেমায়ুংদুং হিমবাহ ➔ ব্রহ্মপুত্র',
-        spokenSummary: spokenText,
-      );
-    } else if (lower.contains('সমাস') ||
-        lower.contains('কারক') ||
-        lower.contains('বাংলা')) {
-      subject = 'Bangla Grammar';
-      topic = 'সমাস ও ব্যাকরণ';
-      return VoiceMistakeResult(
-        questionText: 'কোন সমাসে পরপদের অর্থ প্রধান থাকে?',
-        options: [
-          'তৎপুরুষ সমাস',
-          'দ্বন্দ্ব সমাস',
-          'অব্যয়ীভাব সমাস',
-          'বহুব্রীহি সমাস',
-        ],
-        correctIndex: 0,
-        explanation: 'তৎপুরুষ ও কর্মধারয় সমাসে পরপদের অর্থ প্রাধান্য পায়।',
-        subject: subject,
-        topic: topic,
-        keyRule:
-            'পরপদ প্রধান = তৎপুরুষ ও কর্মধারয়; পূর্বপদ প্রধান = অব্যয়ীভাব',
-        spokenSummary: spokenText,
-      );
-    } else if (lower.contains('preposition') ||
-        lower.contains('english') ||
-        lower.contains('verb')) {
-      subject = 'English';
-      topic = 'Preposition & Grammar';
-      return VoiceMistakeResult(
-        questionText:
-            'Which preposition correctly completes: "He is adept ___ coding"?',
-        options: ['in', 'at', 'with', 'for'],
-        correctIndex: 0,
-        explanation: 'The adjective "adept" is followed by the preposition "in" (adept in something).',
-        subject: subject,
-        topic: topic,
-        keyRule: 'Adept in / proficient in',
-        spokenSummary: spokenText,
-      );
-    }
-
-    // Only if user typed meaningful custom text with multiple words
-    if (spokenText.trim().split(RegExp(r'\s+')).length >= 3) {
-      return VoiceMistakeResult(
-        questionText: 'LiveMCQ Review: $spokenText',
-        options: [
-          'সঠিক ব্যাখ্যা ও উত্তর',
-          'বিকল্প অপশন খ',
-          'বিকল্প অপশন গ',
-          'বিকল্প অপশন ঘ',
-        ],
-        correctIndex: 0,
-        explanation: 'লাইভএমসিকিউ পরীক্ষায় ভুল হওয়া টপিক। নিয়মটি রিভিশন দিন।',
-        subject: hint ?? subject,
-        topic: topic,
-        keyRule:
-            'ভুল হওয়া প্রশ্ন ও রুল নিয়মিত স্পেসড রিপিটিশনে রিভিশন দেওয়া জরুরি।',
-        spokenSummary: spokenText,
-      );
-    }
-
-    return null;
   }
 }

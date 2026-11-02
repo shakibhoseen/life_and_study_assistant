@@ -73,6 +73,23 @@ final _studySheetSchema = Schema.object(
   ],
 );
 
+/// A study sheet that could not be read.
+///
+/// It replaces a fallback that answered every failure with the same page: a
+/// title made from the user's filename, three English placeholder points,
+/// and সমাস rules and MCQs that had nothing to do with the photo. A page on
+/// any subject came back as Bengali grammar, and it read like a successful
+/// scan, so there was no way to tell the model had never seen it.
+class StudySheetReadException implements Exception {
+  /// Shown to the user as it is.
+  final String userMessage;
+
+  const StudySheetReadException(this.userMessage);
+
+  @override
+  String toString() => 'StudySheetReadException: $userMessage';
+}
+
 class StudySheetOcrService {
   StudySheetOcrService._();
   static final StudySheetOcrService instance = StudySheetOcrService._();
@@ -135,6 +152,7 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
   }) async {
     await init();
     final activeModel = _modelName ?? 'gemini-flash-latest';
+    Object? lastError;
 
     if (_model != null) {
       try {
@@ -202,6 +220,7 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
         }
       } catch (e) {
         debugPrint('Gemini StudySheet Vision analysis error: $e');
+        lastError = e;
         if (e.toString().contains('429') ||
             e.toString().toLowerCase().contains('quota')) {
           await GeminiUsageTracker.instance.recordQuotaExceeded(
@@ -218,8 +237,22 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
       }
     }
 
-    // Offline rule-based fallback
-    return _fallbackGenerateResult(imageFile, subjectHint: subjectHint);
+    final reason = lastError?.toString() ?? '';
+    if (reason.contains('503') || reason.contains('UNAVAILABLE')) {
+      throw const StudySheetReadException(
+        'Gemini সার্ভার এখন ব্যস্ত (৫০৩)। একটু পরে আবার চেষ্টা করুন — '
+        'ছবিটা এখানেই আছে।',
+      );
+    }
+    if (reason.contains('429') || reason.toLowerCase().contains('quota')) {
+      throw const StudySheetReadException(
+        'আজকের কোটা শেষ। কাল আবার চেষ্টা করুন।',
+      );
+    }
+    throw const StudySheetReadException(
+      'পাতাটা পড়া গেল না। ইন্টারনেট দেখে আবার চেষ্টা করুন — '
+      'ছবিটা এখানেই আছে।',
+    );
   }
 
   StudySheetResult? _decodeResponse(
@@ -319,101 +352,5 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
     if (lower.endsWith('.png')) return 'image/png';
     if (lower.endsWith('.webp')) return 'image/webp';
     return 'image/jpeg';
-  }
-
-  /// High quality offline fallback generator
-  StudySheetResult _fallbackGenerateResult(
-    File imageFile, {
-    String? subjectHint,
-  }) {
-    final fileName = imageFile.path.split('/').last;
-    final subject =
-        (subjectHint != null &&
-            subjectHint.isNotEmpty &&
-            subjectHint != 'Auto Detect')
-        ? subjectHint
-        : 'Bangla Grammar';
-
-    return StudySheetResult(
-      title: 'Captured Study Page: $fileName',
-      subject: subject,
-      summary: 'High-yield study page captured via camera. Connect your Gemini API Key in Settings for deep multimodal AI extraction of textbook pages.',
-      highYieldPoints: [
-        'Important definition and core formula from captured sheet',
-        'Frequently tested exception rule in competitive exams',
-        'Memory mnemonic for quick revision during exam revision',
-      ],
-      keyRules: [
-        'নিয়ম: পরপদে অর্থ প্রধান হলে তৎপুরুষ সমাস হয়, আর পূর্বপদ প্রধান হলে অব্যয়ীভাব সমাস হয়।',
-        'ব্যাসবাক্যে ‘যে’ বা ‘যিনি’ থাকলে সাধারণত কর্মধারয় সমাস নির্দেশ করে।',
-        'দ্বিগু সমাসে সমাহার বা সমষ্টি বোঝায় এবং সংখ্যাবাচক শব্দ পূর্বে বসে।',
-      ],
-      questions: [
-        QuizQuestion(
-          questionText: 'কোন সমাসে পরপদের অর্থ প্রধান থাকে?',
-          options: [
-            'তৎপুরুষ সমাস',
-            'দ্বন্দ্ব সমাস',
-            'অব্যয়ীভাব সমাস',
-            'বহুব্রীহি সমাস',
-          ],
-          correctIndex: 0,
-          explanation: 'তৎপুরুষ ও কর্মধারয় সমাসে পরপদের অর্থ প্রাধান্য পায়।',
-          subject: subject,
-        ),
-        QuizQuestion(
-          questionText:
-              '‘সিংহ চিহ্নিত আসন = সিংহাসন’ - এটি কোন কর্মধারয় সমাস?',
-          options: [
-            'মধ্যপদলোপী কর্মধারয়',
-            'উপমান কর্মধারয়',
-            'উপমিত কর্মধারয়',
-            'রূপক কর্মধারয়',
-          ],
-          correctIndex: 0,
-          explanation: 'যে কর্মধারয় সমাসে ব্যাসবাক্যের মধ্যের পদ লোপ পায়, তাকে মধ্যপদলোপী কর্মধারয় সমাস বলে।',
-          subject: subject,
-        ),
-        QuizQuestion(
-          questionText: 'কোন সমাসে পূর্বপদের অর্থ প্রধান থাকে?',
-          options: [
-            'অব্যয়ীভাব সমাস',
-            'তৎপুরুষ সমাস',
-            'দ্বিগু সমাস',
-            'দ্বন্দ্ব সমাস',
-          ],
-          correctIndex: 0,
-          explanation:
-              'অব্যয়ীভাব সমাসে পূর্বপদের উপসর্গ বা অব্যয়ের অর্থ প্রধান থাকে।',
-          subject: subject,
-        ),
-        QuizQuestion(
-          questionText: '‘পঙ্কজ’ (পঙ্কে জন্মে যা) কোন সমাসের উদাহরণ?',
-          options: [
-            'উপপদ তৎপুরুষ',
-            'নঞ তৎপুরুষ',
-            'অলুক তৎপুরুষ',
-            'দ্বিতীয় তৎপুরুষ',
-          ],
-          correctIndex: 0,
-          explanation:
-              'কৃদন্ত পদের সাথে উপপদের যে সমাস হয় তাকে উপপদ তৎপুরুষ বলে।',
-          subject: subject,
-        ),
-        QuizQuestion(
-          questionText: 'যে সমাসে সমস্যমান পদগুলোর কোনোটির অর্থ না বুঝিয়ে ভিন্ন অর্থ বোঝায়, তাকে কী বলে?',
-          options: [
-            'বহুব্রীহি সমাস',
-            'কর্মধারয় সমাস',
-            'দ্বিগু সমাস',
-            'দ্বন্দ্ব সমাস',
-          ],
-          correctIndex: 0,
-          explanation: 'বহুব্রীহি সমাসে সমস্যমান পদের অর্থের প্রাধান্য না থেকে তৃতীয় কোনো সত্ত্বাকে বোঝায়।',
-          subject: subject,
-        ),
-      ],
-      rawReference: 'Image: $fileName',
-    );
   }
 }
