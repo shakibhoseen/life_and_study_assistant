@@ -57,6 +57,13 @@ class NotificationConstants {
   static const String prefPendingReviewAdvanceIds =
       'pending_review_advance_ids';
 
+  /// Cards the user said they had forgotten, from a notification button.
+  ///
+  /// Kept beside the advance list rather than applied on the spot: the button
+  /// can arrive in a background isolate where the database is not open, so
+  /// the id waits here until the app next runs.
+  static const String prefPendingReviewResetIds = 'pending_review_reset_ids';
+
   static const String prefFlashcardPushStartHour = 'flashcard_push_start_hour';
   static const String prefFlashcardPushEndHour = 'flashcard_push_end_hour';
   static const int flashcardPushDefaultStartHour = 9;
@@ -76,6 +83,7 @@ class NotificationConstants {
 
   // Action IDs for Flashcards & Spaced Repetition
   static const String actionFlashcardGotIt = 'flashcard_action_got_it';
+  static const String actionFlashcardForgot = 'flashcard_action_forgot';
   static const String actionSpacedRemembered = 'spaced_action_remembered';
   static const String actionSpacedForgot = 'spaced_action_forgot';
 

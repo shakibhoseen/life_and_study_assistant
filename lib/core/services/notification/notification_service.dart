@@ -545,7 +545,15 @@ class NotificationService {
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionFlashcardGotIt,
-          '✓ মনে থাকবে',
+          '✓ মনে আছে',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+        // Forgetting is the signal the schedule needs most, and offering only
+        // "got it" meant the honest answer cost a trip into the app.
+        AndroidNotificationAction(
+          NotificationConstants.actionFlashcardForgot,
+          '✗ মনে নেই',
           showsUserInterface: false,
           cancelNotification: true,
         ),
@@ -687,13 +695,13 @@ class NotificationService {
       actions: const <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionSpacedRemembered,
-          '✓ Remembered (+Interval)',
+          '✓ মনে আছে',
           showsUserInterface: false,
           cancelNotification: true,
         ),
         AndroidNotificationAction(
           NotificationConstants.actionSpacedForgot,
-          '✗ Forgot (Reset to 1d)',
+          '✗ মনে নেই',
           showsUserInterface: false,
           cancelNotification: true,
         ),

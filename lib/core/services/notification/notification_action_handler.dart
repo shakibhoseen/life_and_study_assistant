@@ -10,6 +10,22 @@ void notificationTapBackground(NotificationResponse response) async {
   await handleNotificationResponse(response);
 }
 
+/// Remembers an id until the app can act on it.
+///
+/// A notification button can arrive in a background isolate, where the
+/// database is not open, so the work is queued rather than attempted here.
+Future<void> _queueReviewId(
+  SharedPreferences prefs,
+  String key,
+  int reviewId,
+) async {
+  final pending = prefs.getStringList(key) ?? <String>[];
+  final id = '$reviewId';
+  if (pending.contains(id)) return;
+  pending.add(id);
+  await prefs.setStringList(key, pending);
+}
+
 Future<void> handleNotificationResponse(NotificationResponse response) async {
   final prefs = await SharedPreferences.getInstance();
   final actionId = response.actionId;
@@ -58,29 +74,43 @@ Future<void> handleNotificationResponse(NotificationResponse response) async {
     // arrive in a background isolate, so the app applies it when it next runs.
     final card = FlashcardItem.tryFromPayload(response.payload);
     if (card?.reviewItemId != null) {
-      final pending =
-          prefs.getStringList(
-            NotificationConstants.prefPendingReviewAdvanceIds,
-          ) ??
-          <String>[];
-      final id = '${card!.reviewItemId}';
-      if (!pending.contains(id)) {
-        pending.add(id);
-        await prefs.setStringList(
-          NotificationConstants.prefPendingReviewAdvanceIds,
-          pending,
-        );
-      }
+      await _queueReviewId(
+        prefs,
+        NotificationConstants.prefPendingReviewAdvanceIds,
+        card!.reviewItemId!,
+      );
+    }
+  } else if (actionId == NotificationConstants.actionFlashcardForgot) {
+    // Forgetting is the signal the schedule needs most, and until now the
+    // only way to give it was to open the app and find the card.
+    final card = FlashcardItem.tryFromPayload(response.payload);
+    if (card?.reviewItemId != null) {
+      await _queueReviewId(
+        prefs,
+        NotificationConstants.prefPendingReviewResetIds,
+        card!.reviewItemId!,
+      );
     }
   } else if (actionId == NotificationConstants.actionSpacedRemembered) {
+    // These two used to write a key nothing ever read: the notification
+    // dismissed, the user believed they had graded the card, and its
+    // schedule never moved.
     final payloadId = int.tryParse(response.payload ?? '');
     if (payloadId != null) {
-      await prefs.setString('last_spaced_advanced_id', '$payloadId');
+      await _queueReviewId(
+        prefs,
+        NotificationConstants.prefPendingReviewAdvanceIds,
+        payloadId,
+      );
     }
   } else if (actionId == NotificationConstants.actionSpacedForgot) {
     final payloadId = int.tryParse(response.payload ?? '');
     if (payloadId != null) {
-      await prefs.setString('last_spaced_reset_id', '$payloadId');
+      await _queueReviewId(
+        prefs,
+        NotificationConstants.prefPendingReviewResetIds,
+        payloadId,
+      );
     }
   }
 }

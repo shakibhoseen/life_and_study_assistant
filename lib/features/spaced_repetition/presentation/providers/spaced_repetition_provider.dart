@@ -78,19 +78,38 @@ class SpacedRepetitionNotifier extends Notifier<void> {
   ///
   /// The notification action can land in a background isolate, which has no
   /// database of its own, so it only records the id and this drains the list.
+  /// Applies what the user answered on a notification while the app was shut.
+  ///
+  /// Both answers are applied, not just "remembered". The forgot buttons used
+  /// to write a key nothing ever read, so the notification dismissed, the user
+  /// believed they had graded the card, and its schedule never moved.
   Future<int> applyPendingReviewAdvances() async {
     final prefs = await SharedPreferences.getInstance();
-    final pending =
+    final advance =
         prefs.getStringList(
           NotificationConstants.prefPendingReviewAdvanceIds,
         ) ??
         const <String>[];
-    if (pending.isEmpty) return 0;
+    final reset =
+        prefs.getStringList(NotificationConstants.prefPendingReviewResetIds) ??
+        const <String>[];
+    if (advance.isEmpty && reset.isEmpty) return 0;
 
     var applied = 0;
-    for (final raw in pending) {
+    // Reset first: a card answered both ways before the app reopened was
+    // forgotten at some point, and that is the answer worth keeping.
+    for (final raw in reset) {
       final id = int.tryParse(raw);
       if (id == null) continue;
+      try {
+        if (await _db.resetSpacedReview(id)) applied++;
+      } catch (e) {
+        debugPrint('Could not reset review $id: $e');
+      }
+    }
+    for (final raw in advance) {
+      final id = int.tryParse(raw);
+      if (id == null || reset.contains(raw)) continue;
       try {
         if (await _db.advanceSpacedReview(id)) applied++;
       } catch (e) {
@@ -99,7 +118,8 @@ class SpacedRepetitionNotifier extends Notifier<void> {
     }
 
     await prefs.remove(NotificationConstants.prefPendingReviewAdvanceIds);
-    debugPrint('Applied $applied pending review advances');
+    await prefs.remove(NotificationConstants.prefPendingReviewResetIds);
+    debugPrint('Applied $applied pending review answers');
     return applied;
   }
 
