@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -161,10 +162,20 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
     expectedOutputTokens: 700,
   );
 
+  /// [onTokens] is called with the running total while the reply streams.
+  ///
+  /// Measured against the API: a streaming call reports usage on every chunk,
+  /// and the total climbs as the reply is written. It stands still for the
+  /// first stretch, because the model reasons before it writes anything —
+  /// about a hundred seconds in one measured run, with roughly a thousand
+  /// tokens already spent by the time the first words appeared. So the figure
+  /// is real rather than guessed, and when it starts moving the user is
+  /// watching the reply being written.
   Future<StudySheetResult> analyzeStudySheet(
     File imageFile, {
     String? subjectHint,
     CaptureDetail detail = CaptureDetail.standard,
+    void Function(int tokensSoFar)? onTokens,
   }) async {
     await init();
     final activeModel = _modelName ?? 'gemini-flash-latest';
@@ -215,24 +226,45 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
           Content.multi([TextPart(prompt), DataPart(mimeType, imageBytes)]),
         ];
 
-        final response = await _model!.generateContent(content);
-        lastCallTokens = response.usageMetadata?.totalTokenCount;
+        final buffer = StringBuffer();
+        int promptTokens = 0;
+        int outputTokens = 0;
+        int totalTokens = 0;
+
+        await for (final chunk in _model!.generateContentStream(content)) {
+          buffer.write(chunk.text ?? '');
+          final usage = chunk.usageMetadata;
+          // Each chunk reports the running totals, not its own share, so the
+          // highest seen is the figure to keep.
+          promptTokens = math.max(promptTokens, usage?.promptTokenCount ?? 0);
+          outputTokens = math.max(
+            outputTokens,
+            usage?.candidatesTokenCount ?? 0,
+          );
+          final chunkTotal = usage?.totalTokenCount ?? 0;
+          if (chunkTotal > totalTokens) {
+            totalTokens = chunkTotal;
+            onTokens?.call(totalTokens);
+          }
+        }
+
+        lastCallTokens = totalTokens > 0 ? totalTokens : null;
         await GeminiUsageTracker.instance.recordSuccess(
-          tokens: response.usageMetadata?.totalTokenCount ?? 0,
-          actualInputTokens: response.usageMetadata?.promptTokenCount,
-          actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
-          actualTotalTokens: response.usageMetadata?.totalTokenCount,
+          tokens: totalTokens,
+          actualInputTokens: promptTokens > 0 ? promptTokens : null,
+          actualOutputTokens: outputTokens > 0 ? outputTokens : null,
+          actualTotalTokens: totalTokens > 0 ? totalTokens : null,
           operation: 'study_sheet_ocr',
           model: activeModel,
         );
 
-        final rawText = response.text;
+        final rawText = buffer.toString();
         final result = _decodeResponse(
           rawText,
           rawRef: 'Image: ${imageFile.path.split('/').last}',
           fallbackSubject: subjectHint,
         );
-        if (result != null && rawText != null) {
+        if (result != null && rawText.isNotEmpty) {
           await GeminiResultCache.instance.put(cacheKey, rawText);
           return result;
         }

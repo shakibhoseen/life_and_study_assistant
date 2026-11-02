@@ -136,12 +136,15 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
     }
   }
 
+  int? _liveTokens;
+
   Future<void> _analyzeImage() async {
     if (_selectedImage == null) return;
 
     setState(() {
       _isAnalyzing = true;
       _errorMessage = null;
+      _liveTokens = null;
     });
 
     try {
@@ -149,6 +152,11 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
         _selectedImage!,
         subjectHint: _selectedSubject,
         detail: _detail,
+        // The real figure, as the model reports it chunk by chunk. It holds
+        // still while the model reasons, then climbs as the reply is written.
+        onTokens: (soFar) {
+          if (mounted) setState(() => _liveTokens = soFar);
+        },
       );
 
       final spent = StudySheetOcrService.instance.lastCallTokens;
@@ -450,9 +458,14 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                         isCompact: false,
                         // What the call is worth, so the wait reads as work
                         // being done rather than time passing.
-                        liveTokens: StudySheetOcrService.instance
-                            .estimateTokensFor(_detail),
-                        liveTokensAreEstimate: true,
+                        // The estimate holds the place until the model
+                        // reports its first real figure.
+                        liveTokens:
+                            _liveTokens ??
+                            StudySheetOcrService.instance.estimateTokensFor(
+                              _detail,
+                            ),
+                        liveTokensAreEstimate: _liveTokens == null,
                       ),
                       const SizedBox(height: 16),
                     ],
