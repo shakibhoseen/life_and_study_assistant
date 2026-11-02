@@ -182,6 +182,15 @@ final _chatVerificationConfig = GenerationConfig(
 
 final _proseConfig = GenerationConfig(temperature: 0.6, maxOutputTokens: 1536);
 
+/// How long a study plan is reused before it is built again.
+///
+/// Long enough that reopening the app through an evening costs nothing, and
+/// short enough that the plan still follows the day. The key covers the
+/// energy level, fatigue, weak topics and upcoming exams, so a plan is
+/// rebuilt the moment any of those change — logging tonight's energy gives a
+/// new plan without waiting for this to run out.
+const Duration _studyPlanCacheTtl = Duration(hours: 6);
+
 class GeminiAiService {
   /// Trims a context value so one long syllabus string cannot dominate the
   /// prompt.
@@ -322,6 +331,33 @@ class GeminiAiService {
       isOffDay: isOffDay,
     );
 
+    // Reopening the app rebuilt the plan from scratch every time — twice in
+    // twenty minutes in one measured afternoon, about 1900 tokens each. A
+    // day's plan does not change between two looks at the dashboard, so it
+    // is kept and reused while the things it is built from stay the same.
+    final planCacheKey = GeminiResultCache.instance.computeKeyFromString(
+      operation: 'study_plan',
+      promptVersion: 'v1.0',
+      model: _selectedModel,
+      payloadText: promptText,
+    );
+    final cachedPlan = await GeminiResultCache.instance.get(
+      planCacheKey,
+      ttl: _studyPlanCacheTtl,
+    );
+    if (cachedPlan != null && cachedPlan.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(cachedPlan) as Map<String, dynamic>;
+        await GeminiUsageTracker.instance.recordCacheHit(
+          operation: 'study_plan',
+          model: _selectedModel,
+        );
+        return AdaptiveStudyPlan.fromJson(decoded);
+      } catch (_) {
+        // A plan that will not decode is no use; fall through and rebuild.
+      }
+    }
+
     try {
       final response = await _model!.generateContent([
         Content.text(promptText),
@@ -340,6 +376,7 @@ class GeminiAiService {
       if (rawText != null && rawText.isNotEmpty) {
         final cleanJson = _extractCleanJson(rawText);
         final decoded = jsonDecode(cleanJson) as Map<String, dynamic>;
+        await GeminiResultCache.instance.put(planCacheKey, cleanJson);
         return AdaptiveStudyPlan.fromJson(decoded);
       }
     } catch (e) {
