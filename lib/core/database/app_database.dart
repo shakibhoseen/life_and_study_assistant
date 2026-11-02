@@ -1768,6 +1768,35 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Changes what a card says, leaving its schedule alone.
+  ///
+  /// A card read off a book page or written by the model can carry a typo or
+  /// a wrong fact, and until now the only way to fix one was to delete it and
+  /// start again — which for a scanned page meant scanning it again, and in
+  /// every case threw away however far the card had got in its schedule.
+  Future<bool> updateSpacedReviewItem({
+    required int id,
+    String? title,
+    String? keyRule,
+    String? subject,
+    String? topic,
+  }) async {
+    final rows =
+        await (update(spacedReviewItems)..where((t) => t.id.equals(id))).write(
+          SpacedReviewItemsCompanion(
+            title: title == null ? const Value.absent() : Value(title.trim()),
+            keyRule: keyRule == null
+                ? const Value.absent()
+                : Value(keyRule.trim()),
+            subject: subject == null
+                ? const Value.absent()
+                : Value(subject.trim()),
+            topic: topic == null ? const Value.absent() : Value(topic.trim()),
+          ),
+        );
+    return rows > 0;
+  }
+
   Future<bool> advanceSpacedReview(int id) async {
     final item = await (select(
       spacedReviewItems,

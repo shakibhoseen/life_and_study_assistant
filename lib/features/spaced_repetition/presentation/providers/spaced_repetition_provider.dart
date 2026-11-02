@@ -41,6 +41,14 @@ class SpacedRepetitionNotifier extends Notifier<void> {
     return _db.resetSpacedReview(id);
   }
 
+  Future<bool> editItem({
+    required int id,
+    required String title,
+    required String keyRule,
+  }) {
+    return _db.updateSpacedReviewItem(id: id, title: title, keyRule: keyRule);
+  }
+
   Future<int> addRule({
     required String subject,
     required String topic,

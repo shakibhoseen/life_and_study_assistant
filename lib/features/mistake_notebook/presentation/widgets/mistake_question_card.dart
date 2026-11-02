@@ -13,6 +13,8 @@ import '../../../quiz/presentation/providers/drill_history_provider.dart';
 import '../../domain/models/mistake_folder.dart';
 import 'ai_mistake_explainer_sheet.dart';
 import 'save_to_flashcard_sheet.dart';
+import 'edit_question_dialog.dart';
+import '../../../../core/database/database_provider.dart';
 
 class MistakeQuestionCard extends ConsumerWidget {
   final DrillQuestion dq;
@@ -68,6 +70,26 @@ class MistakeQuestionCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _editByHand(BuildContext context, WidgetRef ref) async {
+    final edit = await EditQuestionDialog.show(context, dq);
+    if (edit == null) return;
+
+    // selectedIndex and isCorrect are deliberately untouched: they record
+    // what was answered at the time, which a later correction does not undo.
+    await ref
+        .read(appDatabaseProvider)
+        .applyQuestionEdit(
+          dq.id,
+          questionText: edit.questionText,
+          options: edit.options,
+          correctIndex: edit.correctIndex,
+          explanation: edit.explanation,
+        );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('প্রশ্নটি বদলানো হলো')));
   }
 
   @override
@@ -213,6 +235,8 @@ class MistakeQuestionCard extends ConsumerWidget {
                         ref
                             .read(drillHistoryNotifierProvider.notifier)
                             .markQuestionMastered(dq.id, !dq.isMastered);
+                      } else if (val == 'edit') {
+                        _editByHand(context, ref);
                       } else if (val == 'ai_explain') {
                         AiMistakeExplainerSheet.show(context, dq);
                       } else if (val == 'copy_ref') {
@@ -281,6 +305,19 @@ class MistakeQuestionCard extends ConsumerWidget {
                             Text(
                               'আইডি কপি (${EntityRef(EntityKind.question, dq.id).tag})',
                             ),
+                          ],
+                        ),
+                      ),
+                      // A typo or a misread option does not need the model,
+                      // which costs tokens and a wait to fix what the user can
+                      // already see.
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 16),
+                            SizedBox(width: 8),
+                            Text('নিজে সম্পাদনা করুন'),
                           ],
                         ),
                       ),

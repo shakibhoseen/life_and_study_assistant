@@ -125,6 +125,74 @@ class _SpacedRepetitionScreenState
     );
   }
 
+  Future<void> _showEditRuleDialog(SpacedReviewItem item) async {
+    final titleController = TextEditingController(text: item.title);
+    final ruleController = TextEditingController(text: item.keyRule);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('কার্ড সম্পাদনা', style: TextStyle(fontSize: 16)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'সামনের দিক (প্রশ্ন বা নাম)',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                maxLines: 2,
+                minLines: 1,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ruleController,
+                decoration: const InputDecoration(
+                  labelText: 'পেছনের দিক (উত্তর বা নিয়ম)',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                maxLines: 8,
+                minLines: 3,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('বাতিল'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('সেভ করুন'),
+          ),
+        ],
+      ),
+    );
+
+    final title = titleController.text.trim();
+    final rule = ruleController.text.trim();
+    titleController.dispose();
+    ruleController.dispose();
+
+    // An empty card is worse than the one it would replace.
+    if (saved != true || title.isEmpty || rule.isEmpty) return;
+
+    // The schedule is left alone: editing the wording is not the same as
+    // having forgotten the card.
+    await ref
+        .read(spacedRepetitionNotifierProvider.notifier)
+        .editItem(id: item.id, title: title, keyRule: rule);
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('কার্ডটি বদলানো হলো')));
+    }
+  }
+
   Widget _buildSubjectFilterChips(List<SpacedReviewItem> allItems) {
     final Map<String, int> counts = {'All': allItems.length};
     for (final item in allItems) {
@@ -940,17 +1008,31 @@ class _SpacedRepetitionScreenState
                 ),
               ],
             ),
-            trailing: IconButton(
-              icon: const Icon(
-                Icons.delete_outline,
-                size: 18,
-                color: Colors.red,
-              ),
-              onPressed: () {
-                ref
-                    .read(spacedRepetitionNotifierProvider.notifier)
-                    .deleteRule(item.id);
-              },
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // A card with a typo or a wrong fact used to leave only one
+                // option: delete it and start over, losing its schedule with
+                // it, and for a scanned card meaning another scan.
+                IconButton(
+                  tooltip: 'সম্পাদনা করুন',
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  onPressed: () => _showEditRuleDialog(item),
+                ),
+                IconButton(
+                  tooltip: 'মুছে ফেলুন',
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Colors.red,
+                  ),
+                  onPressed: () {
+                    ref
+                        .read(spacedRepetitionNotifierProvider.notifier)
+                        .deleteRule(item.id);
+                  },
+                ),
+              ],
             ),
           ),
         );
