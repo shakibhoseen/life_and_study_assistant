@@ -123,6 +123,20 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
   }
 
   /// Extracts MCQs from a question page and an optional answer key page.
+  /// What the last extraction actually cost, once the model reported it.
+  int? lastCallTokens;
+
+  /// A rough cost for an extraction not yet made, so the wait can show what
+  /// it is spending. [pages] counts the answer key as a second image.
+  int estimateTokensFor(CaptureDetail detail, {int pages = 1}) =>
+      estimateRequestTokens(
+        promptChars: _visionPrompt.length,
+        image: detail,
+        // A page of MCQs with options and explanations is a long reply.
+        expectedOutputTokens: 2500,
+      ) +
+      (pages - 1) * detail.approxTokens;
+
   Future<QuestionBankExtractResult> extractQuestionBank({
     required File questionImage,
     File? answerKeyImage,
@@ -217,6 +231,7 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
     ];
 
     Object? lastError;
+    lastCallTokens = null;
     for (final modelName in modelsToTry) {
       try {
         final model = GenerativeModel(
@@ -236,6 +251,7 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
           Content.multi(contentParts),
         ]);
 
+        lastCallTokens = response.usageMetadata?.totalTokenCount;
         await GeminiUsageTracker.instance.recordSuccess(
           tokens: response.usageMetadata?.totalTokenCount ?? 0,
           actualInputTokens: response.usageMetadata?.promptTokenCount,

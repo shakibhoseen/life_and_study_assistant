@@ -61,3 +61,23 @@ enum CaptureDetail {
   final String label;
   final String hint;
 }
+
+/// Rough token cost of a call, worked out on the phone before it is made.
+///
+/// A non-streaming call reports nothing until it returns, so a wait can only
+/// show what the request is likely to cost, not what it has spent. Shown as
+/// an estimate, it answers the question a bare spinner cannot: is this doing
+/// something, and roughly how much is it worth.
+///
+/// Bengali runs about 1.5 characters to the token against roughly 4 for
+/// English, and a prompt here is mostly English instructions around Bengali
+/// content, so 2.5 is the middle of that range. The image figure comes from
+/// the tile arithmetic above, which is exact.
+int estimateRequestTokens({
+  required int promptChars,
+  CaptureDetail? image,
+  int expectedOutputTokens = 0,
+}) {
+  final promptTokens = (promptChars / 2.5).ceil();
+  return promptTokens + (image?.approxTokens ?? 0) + expectedOutputTokens;
+}

@@ -189,6 +189,7 @@ class _QuestionBankScannerModalState
         detail: _detail,
       );
 
+      final spent = QuestionBankOcrService.instance.lastCallTokens;
       if (mounted) {
         setState(() {
           _result = res;
@@ -197,6 +198,16 @@ class _QuestionBankScannerModalState
           _isScanning = false;
           _savedToRoutine = false;
         });
+        if (spent != null && spent > 0) {
+          // The estimate during the wait was a guess; this is the bill.
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${res.questions.length}টি প্রশ্ন — $spent টোকেন খরচ হয়েছে',
+              ),
+            ),
+          );
+        }
       }
     } on QuestionBankExtractException catch (e) {
       // Already phrased for the user, and says what to do next.
@@ -1090,6 +1101,12 @@ class _QuestionBankScannerModalState
     return AiProgressPipelineWidget(
       type: AiTaskType.image,
       isCompact: false,
+      // What the call is worth, so the wait reads as work being done.
+      liveTokens: QuestionBankOcrService.instance.estimateTokensFor(
+        _detail,
+        pages: _answerKeyImage == null ? 1 : 2,
+      ),
+      liveTokensAreEstimate: true,
       onCancel: () {
         if (mounted) {
           setState(() {

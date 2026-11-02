@@ -151,11 +151,18 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
         detail: _detail,
       );
 
+      final spent = StudySheetOcrService.instance.lastCallTokens;
       if (mounted) {
         setState(() {
           _result = result;
           _isAnalyzing = false;
         });
+        if (spent != null && spent > 0) {
+          // The estimate during the wait was a guess; this is the bill.
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('পড়া হলো — $spent টোকেন খরচ হয়েছে')),
+          );
+        }
       }
     } on StudySheetReadException catch (e) {
       // Already phrased for the user, and says the photo is still here.
@@ -438,9 +445,14 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                     // Loading State
                     if (_isAnalyzing) ...[
                       const SizedBox(height: 16),
-                      const AiProgressPipelineWidget(
+                      AiProgressPipelineWidget(
                         type: AiTaskType.image,
                         isCompact: false,
+                        // What the call is worth, so the wait reads as work
+                        // being done rather than time passing.
+                        liveTokens: StudySheetOcrService.instance
+                            .estimateTokensFor(_detail),
+                        liveTokensAreEstimate: true,
                       ),
                       const SizedBox(height: 16),
                     ],

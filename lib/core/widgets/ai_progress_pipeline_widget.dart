@@ -32,6 +32,13 @@ class AiProgressPipelineWidget extends StatefulWidget {
   final String? customStatus;
   final String? customSubtitle;
   final int? liveTokens;
+
+  /// Whether [liveTokens] is worked out on the phone rather than reported by
+  /// the model. A non-streaming call says nothing about its cost until it
+  /// returns, so the figure shown during the wait is an estimate and is
+  /// labelled as one.
+  final bool liveTokensAreEstimate;
+
   final VoidCallback? onCancel;
 
   const AiProgressPipelineWidget({
@@ -42,6 +49,7 @@ class AiProgressPipelineWidget extends StatefulWidget {
     this.customStatus,
     this.customSubtitle,
     this.liveTokens,
+    this.liveTokensAreEstimate = false,
     this.onCancel,
   });
 
@@ -282,7 +290,9 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
     final bnTokens = BengaliMathSanitizer.toBengaliDigits(
       '${widget.liveTokens}',
     );
-    return '$bnTokens টোকেন';
+    return widget.liveTokensAreEstimate
+        ? '~$bnTokens টোকেন'
+        : '$bnTokens টোকেন';
   }
 
   @override

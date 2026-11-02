@@ -145,6 +145,22 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
 
   /// Analyze a textbook page / sheet image and generate high-yield points, key rules, and a 5-MCQ drill.
   /// Uses content-hash caching based on image bytes to prevent redundant expensive vision calls.
+  /// What the last call actually cost, once the model has reported it.
+  ///
+  /// Null until a call returns. During the wait only an estimate exists,
+  /// because a non-streaming call says nothing about its cost until it is
+  /// finished.
+  int? lastCallTokens;
+
+  /// A rough cost for a call that has not been made yet, so a wait can show
+  /// what it is spending rather than only that it is spending.
+  int estimateTokensFor(CaptureDetail detail) => estimateRequestTokens(
+    promptChars: _visionPrompt.length,
+    image: detail,
+    // The reply is a page summary with rules and a few MCQs.
+    expectedOutputTokens: 700,
+  );
+
   Future<StudySheetResult> analyzeStudySheet(
     File imageFile, {
     String? subjectHint,
@@ -153,6 +169,7 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
     await init();
     final activeModel = _modelName ?? 'gemini-flash-latest';
     Object? lastError;
+    lastCallTokens = null;
 
     if (_model != null) {
       try {
@@ -199,6 +216,7 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
         ];
 
         final response = await _model!.generateContent(content);
+        lastCallTokens = response.usageMetadata?.totalTokenCount;
         await GeminiUsageTracker.instance.recordSuccess(
           tokens: response.usageMetadata?.totalTokenCount ?? 0,
           actualInputTokens: response.usageMetadata?.promptTokenCount,
