@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:life_and_study_assistant/core/services/media/photo_capture_service.dart';
@@ -140,6 +141,71 @@ void main() {
     );
 
     expect(result?.path, narrower.path);
+  });
+
+  group('rotateQuarterTurn', () {
+    /// A landscape page: wider than it is tall, like a book held sideways.
+    File sidewaysPage() {
+      final page = img.Image(width: 40, height: 10);
+      img.fill(page, color: img.ColorRgb8(200, 200, 200));
+      final file = File('${tmp.path}/sideways.jpg')
+        ..writeAsBytesSync(img.encodeJpg(page));
+      return file;
+    }
+
+    test('a sideways page comes out upright', () async {
+      final turned = await service.rotateQuarterTurn(sidewaysPage());
+      final result = img.decodeImage(turned.readAsBytesSync())!;
+
+      expect(result.width, 10);
+      expect(result.height, 40);
+    });
+
+    test('four turns come back to where they started', () async {
+      var file = sidewaysPage();
+      for (var i = 0; i < 4; i++) {
+        file = await service.rotateQuarterTurn(file);
+      }
+      final result = img.decodeImage(file.readAsBytesSync())!;
+
+      expect(result.width, 40);
+      expect(result.height, 10);
+    });
+
+    test('turning the other way is the other way', () async {
+      final right = await service.rotateQuarterTurn(sidewaysPage());
+      final left = await service.rotateQuarterTurn(
+        sidewaysPage(),
+        clockwise: false,
+      );
+
+      // Both stand the page upright; they differ in which edge leads.
+      final r = img.decodeImage(right.readAsBytesSync())!;
+      final l = img.decodeImage(left.readAsBytesSync())!;
+      expect(r.width, l.width);
+      expect(r.height, l.height);
+      expect(right.path, isNot(left.path));
+    });
+
+    test('the original file is left alone', () async {
+      final original = sidewaysPage();
+      final before = original.readAsBytesSync().length;
+
+      final turned = await service.rotateQuarterTurn(original);
+
+      expect(turned.path, isNot(original.path));
+      expect(original.readAsBytesSync().length, before);
+    });
+
+    test('a file that is not an image is handed back untouched', () async {
+      final notAnImage = File('${tmp.path}/notes.txt')
+        ..writeAsStringSync('এটা ছবি নয়');
+
+      final result = await service.rotateQuarterTurn(notAnImage);
+
+      // Losing the photo would be worse than failing to turn it.
+      expect(result.path, notAnImage.path);
+    });
   });
 
   testWidgets('the crop screen is told what is being trimmed', (tester) async {

@@ -559,6 +559,41 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
     );
   }
 
+  Future<void> _rotateImage() async {
+    final current = _selectedImage;
+    if (current == null) return;
+    final turned = await PhotoCaptureService.instance.rotateQuarterTurn(
+      current,
+    );
+    if (!mounted) return;
+    setState(() {
+      _selectedImage = turned;
+      // The page the model was asked about has changed.
+      _result = null;
+      _errorMessage = null;
+      // Flutter caches a decoded file by path and size; a new path each turn
+      // is what makes the preview redraw.
+      imageCache.clear();
+    });
+  }
+
+  Future<void> _recropImage() async {
+    final current = _selectedImage;
+    if (current == null) return;
+    final trimmed = await PhotoCaptureService.instance.cropExisting(
+      path: current.path,
+      context: context,
+      title: 'পড়ার অংশটুকু কেটে নিন',
+    );
+    if (trimmed == null || !mounted) return;
+    setState(() {
+      _selectedImage = trimmed;
+      _result = null;
+      _errorMessage = null;
+      imageCache.clear();
+    });
+  }
+
   Widget _buildImagePreview(bool isDark) {
     return Stack(
       children: [
@@ -576,10 +611,43 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
           right: 8,
           child: Row(
             children: [
+              // A book shot sideways needs the whole page turned, not the
+              // crop frame tilted.
               CircleAvatar(
                 radius: 16,
                 backgroundColor: Colors.black.withValues(alpha: 0.65),
                 child: IconButton(
+                  tooltip: 'ঘুরিয়ে সোজা করুন',
+                  icon: const Icon(
+                    Icons.rotate_90_degrees_cw_rounded,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                  onPressed: _rotateImage,
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              const SizedBox(width: 6),
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.black.withValues(alpha: 0.65),
+                child: IconButton(
+                  tooltip: 'আবার কাটুন',
+                  icon: const Icon(
+                    Icons.crop_rounded,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                  onPressed: _recropImage,
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              const SizedBox(width: 6),
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.black.withValues(alpha: 0.65),
+                child: IconButton(
+                  tooltip: 'আবার তুলুন',
                   icon: const Icon(
                     Icons.refresh,
                     size: 16,

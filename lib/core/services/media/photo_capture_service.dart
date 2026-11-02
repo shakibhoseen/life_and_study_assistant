@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -60,6 +61,37 @@ class PhotoCaptureService {
 
     if (!context.mounted) return File(picked.path);
     return cropExisting(path: picked.path, context: context, title: title);
+  }
+
+  /// Turns a photo a quarter turn and writes it back as a new file.
+  ///
+  /// A book held sideways under the camera comes out sideways, and the crop
+  /// screen's own rotation is a fine-grained dial meant for straightening a
+  /// degree or two. A page lying on its side needs a quarter turn, which is
+  /// one tap here and is applied to the whole photo before any trimming.
+  ///
+  /// Returns the rotated file, or the original when the image cannot be
+  /// decoded — a photo is never lost to a failed rotation.
+  Future<File> rotateQuarterTurn(File photo, {bool clockwise = true}) async {
+    try {
+      final bytes = await photo.readAsBytes();
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return photo;
+
+      final turned = img.copyRotate(decoded, angle: clockwise ? 90 : -90);
+      final encoded = img.encodeJpg(turned, quality: AiMediaLimits.jpegQuality);
+
+      // A new path each time: writing over the source leaves the old image
+      // cached by anything already showing it.
+      final dir = photo.parent.path;
+      final stamp = DateTime.now().microsecondsSinceEpoch;
+      final rotated = File('$dir/rot_$stamp.jpg');
+      await rotated.writeAsBytes(encoded, flush: true);
+      return rotated;
+    } catch (e) {
+      debugPrint('Rotate failed, keeping the photo as it was: $e');
+      return photo;
+    }
   }
 
   /// Reopens the trim screen on a photo already taken.

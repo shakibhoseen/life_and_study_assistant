@@ -124,6 +124,29 @@ class _QuestionBankScannerModalState
     super.dispose();
   }
 
+  Future<void> _rotate({required bool isAnswerKey}) async {
+    final current = isAnswerKey ? _answerKeyImage : _questionImage;
+    if (current == null) return;
+    final turned = await PhotoCaptureService.instance.rotateQuarterTurn(
+      current,
+    );
+    if (!mounted) return;
+    setState(() {
+      if (isAnswerKey) {
+        _answerKeyImage = turned;
+      } else {
+        _questionImage = turned;
+      }
+      // The page the model was asked about has changed, so the old read no
+      // longer describes it.
+      _result = null;
+      _errorMessage = null;
+      // Flutter caches a decoded file by path and size; a new path each turn
+      // is what makes the preview actually redraw.
+      imageCache.clear();
+    });
+  }
+
   Future<void> _recrop({required bool isAnswerKey}) async {
     final current = isAnswerKey ? _answerKeyImage : _questionImage;
     if (current == null) return;
@@ -1047,19 +1070,40 @@ class _QuestionBankScannerModalState
                   Positioned(
                     top: 6,
                     right: 6,
-                    child: CircleAvatar(
-                      radius: 15,
-                      backgroundColor: Colors.black.withValues(alpha: 0.65),
-                      child: IconButton(
-                        tooltip: 'আবার কাটুন',
-                        icon: const Icon(
-                          Icons.crop_rounded,
-                          size: 15,
-                          color: Colors.white,
+                    child: Row(
+                      children: [
+                        // A book shot sideways needs the whole page turned,
+                        // not the crop frame tilted.
+                        CircleAvatar(
+                          radius: 15,
+                          backgroundColor: Colors.black.withValues(alpha: 0.65),
+                          child: IconButton(
+                            tooltip: 'ঘুরিয়ে সোজা করুন',
+                            icon: const Icon(
+                              Icons.rotate_90_degrees_cw_rounded,
+                              size: 15,
+                              color: Colors.white,
+                            ),
+                            padding: EdgeInsets.zero,
+                            onPressed: () => _rotate(isAnswerKey: isAnswerKey),
+                          ),
                         ),
-                        padding: EdgeInsets.zero,
-                        onPressed: () => _recrop(isAnswerKey: isAnswerKey),
-                      ),
+                        const SizedBox(width: 6),
+                        CircleAvatar(
+                          radius: 15,
+                          backgroundColor: Colors.black.withValues(alpha: 0.65),
+                          child: IconButton(
+                            tooltip: 'আবার কাটুন',
+                            icon: const Icon(
+                              Icons.crop_rounded,
+                              size: 15,
+                              color: Colors.white,
+                            ),
+                            padding: EdgeInsets.zero,
+                            onPressed: () => _recrop(isAnswerKey: isAnswerKey),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
