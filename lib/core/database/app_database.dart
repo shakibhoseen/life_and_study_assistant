@@ -13,6 +13,7 @@ import 'tables/drill_records_table.dart';
 import 'tables/exam_schedules_table.dart';
 import 'tables/spaced_review_items_table.dart';
 import 'tables/weak_topics_table.dart';
+import '../data/study_data_cleanup.dart';
 
 part 'app_database.g.dart';
 
@@ -1807,6 +1808,68 @@ class AppDatabase extends _$AppDatabase {
   ///
   /// Returns how many were added. A question already in the deck is skipped
   /// rather than duplicated, so running this twice on the same drill is safe.
+  /// What tidying the study data would change, without changing anything.
+  Future<StudyCleanupSummary> previewStudyCleanup() async {
+    final topics = await select(weakTopics).get();
+    final plan = planTopicCleanup([
+      for (final t in topics)
+        TopicRow(id: t.id, subject: t.subject, topicName: t.topicName),
+    ]);
+
+    var questionSubjects = 0;
+    for (final q in await select(drillQuestions).get()) {
+      if (canonicalSubject(q.subject) != q.subject.trim()) questionSubjects++;
+    }
+    var cardSubjects = 0;
+    for (final c in await select(spacedReviewItems).get()) {
+      if (canonicalSubject(c.subject) != c.subject.trim()) cardSubjects++;
+    }
+
+    return StudyCleanupSummary(
+      plan: plan,
+      questionSubjectsToRename: questionSubjects,
+      cardSubjectsToRename: cardSubjects,
+    );
+  }
+
+  /// Applies the plan the user has just seen.
+  ///
+  /// Merged rows are deleted rather than combined: a weak topic carries no
+  /// history worth keeping, only the fact that it is weak, and the row it
+  /// merges into already says that.
+  Future<int> applyStudyCleanup(StudyCleanupSummary summary) async {
+    return transaction(() async {
+      var changed = 0;
+
+      for (final id in [...summary.plan.drop, ...summary.plan.mergeInto.keys]) {
+        changed += await (delete(
+          weakTopics,
+        )..where((t) => t.id.equals(id))).go();
+      }
+
+      for (final entry in summary.plan.renameSubject.entries) {
+        changed +=
+            await (update(weakTopics)..where((t) => t.id.equals(entry.key)))
+                .write(WeakTopicsCompanion(subject: Value(entry.value)));
+      }
+
+      // The same subject under an English and a Bengali name split one
+      // subject's figures in two, so the questions and cards move with it.
+      for (final alias in subjectAliasesInUse) {
+        changed +=
+            await (update(drillQuestions)
+                  ..where((t) => t.subject.equals(alias.from)))
+                .write(DrillQuestionsCompanion(subject: Value(alias.to)));
+        changed +=
+            await (update(spacedReviewItems)
+                  ..where((t) => t.subject.equals(alias.from)))
+                .write(SpacedReviewItemsCompanion(subject: Value(alias.to)));
+      }
+
+      return changed;
+    });
+  }
+
   Future<int> addMistakesToReview(List<DrillQuestion> wrong) async {
     if (wrong.isEmpty) return 0;
 

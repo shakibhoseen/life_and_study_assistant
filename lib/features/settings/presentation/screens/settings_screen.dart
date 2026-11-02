@@ -23,6 +23,7 @@ import 'package:life_and_study_assistant/features/live_mcq/presentation/provider
 
 import '../providers/settings_provider.dart';
 import '../widgets/gemini_usage_monitor_card.dart';
+import '../widgets/study_data_cleanup_card.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -399,6 +400,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               // 4. Data Backup & Restore
               const BackupRestoreCard(),
+              const StudyDataCleanupCard(),
               const SizedBox(height: 18),
 
               // Visual Comfort & Theme Mode
