@@ -158,8 +158,11 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
   int estimateTokensFor(CaptureDetail detail) => estimateRequestTokens(
     promptChars: _visionPrompt.length,
     image: detail,
-    // The reply is a page summary with rules and a few MCQs.
-    expectedOutputTokens: 700,
+    // Measured on a real page: 3199 tokens in all, of which about 1200 were
+    // the prompt and image. The rest is the reply plus the reasoning that
+    // precedes it, and the reasoning is the larger part — a streamed run
+    // showed roughly a thousand tokens spent before the first word.
+    expectedOutputTokens: 2000,
   );
 
   /// [onTokens] is called with the running total while the reply streams.

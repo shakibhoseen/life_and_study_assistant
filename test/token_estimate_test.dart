@@ -36,13 +36,16 @@ void main() {
 
     test('lands near a real call', () {
       // Measured on the phone: a cropped study sheet at the standard preset
-      // cost 1457 input tokens, with a prompt of roughly 2000 characters.
+      // cost 3199 tokens in all, with a prompt of roughly 2000 characters.
+      // The allowance for the reply has to cover the reasoning too, which a
+      // streamed run showed is the larger part of it.
       final estimate = estimateRequestTokens(
         promptChars: 2000,
         image: CaptureDetail.standard,
+        expectedOutputTokens: 2000,
       );
-      expect(estimate, greaterThan(1000));
-      expect(estimate, lessThan(2200));
+      expect(estimate, greaterThan(2400));
+      expect(estimate, lessThan(4000));
     });
   });
 }
