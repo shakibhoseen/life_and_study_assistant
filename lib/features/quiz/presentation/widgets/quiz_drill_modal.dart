@@ -110,10 +110,19 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
   }
 
   Future<void> _loadQuestions() async {
+    _examTimer?.cancel();
     if (widget.customQuestions != null && widget.customQuestions!.isNotEmpty) {
       setState(() {
         _questions = widget.customQuestions!;
         _isLoading = false;
+        _isFinished = false;
+        _currentIndex = 0;
+        _selectedOptionIndex = null;
+        _hasAnswered = false;
+        _correctCount = 0;
+        _userAnswers.clear();
+        _hasPersisted = false;
+        _mistakesSaved = false;
       });
       if (_mode == QuizMode.realExam) {
         _startExamTimer();
@@ -135,6 +144,14 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
       setState(() {
         _questions = questions;
         _isLoading = false;
+        _isFinished = false;
+        _currentIndex = 0;
+        _selectedOptionIndex = null;
+        _hasAnswered = false;
+        _correctCount = 0;
+        _userAnswers.clear();
+        _hasPersisted = false;
+        _mistakesSaved = false;
       });
       if (_mode == QuizMode.realExam) {
         _startExamTimer();
@@ -1380,7 +1397,18 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('drill_question_count', size);
     if (!mounted) return;
-    setState(() => _drillSize = size);
+    _examTimer?.cancel();
+    setState(() {
+      _drillSize = size;
+      _currentIndex = 0;
+      _selectedOptionIndex = null;
+      _hasAnswered = false;
+      _correctCount = 0;
+      _isFinished = false;
+      _userAnswers.clear();
+      _hasPersisted = false;
+      _mistakesSaved = false;
+    });
     await _loadQuestions();
   }
 
@@ -1960,12 +1988,19 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   statusIcon = Icons.cancel;
                 }
               } else {
-                statusLabel =
-                    'প্রশ্ন ${i + 1}: ${isCorrect ? "সঠিক উত্তর" : "ভুল উত্তর"}';
-                statusColor = isCorrect
-                    ? const Color(0xFF15803D)
-                    : const Color(0xFFC2410C);
-                statusIcon = isCorrect ? Icons.check_circle : Icons.cancel;
+                if (isCorrect) {
+                  statusLabel = 'প্রশ্ন ${i + 1}: সঠিক উত্তর';
+                  statusColor = const Color(0xFF15803D);
+                  statusIcon = Icons.check_circle;
+                } else if (isSkipped) {
+                  statusLabel = 'প্রশ্ন ${i + 1}: উত্তর দেননি (স্কিপড)';
+                  statusColor = Colors.grey.shade600;
+                  statusIcon = Icons.remove_circle_outline;
+                } else {
+                  statusLabel = 'প্রশ্ন ${i + 1}: ভুল উত্তর';
+                  statusColor = const Color(0xFFC2410C);
+                  statusIcon = Icons.cancel;
+                }
               }
 
               return Container(
@@ -2053,7 +2088,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                         child: Text(
                           isSkipped
                               ? '⏭️ কোনো উত্তর দেননি (স্কিপ করা হয়েছে)'
-                              : '❌ আপনার উত্তর: ${q.options[selected]}',
+                              : '❌ আপনার উত্তর: ${(selected >= 0 && selected < q.options.length) ? q.options[selected] : "অজানা"}',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: isSkipped

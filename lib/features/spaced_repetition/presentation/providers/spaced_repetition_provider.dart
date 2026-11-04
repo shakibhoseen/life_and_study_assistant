@@ -13,6 +13,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../core/services/notification/notification_service.dart';
 import '../../../../core/services/flashcards/push_queue_depth.dart';
+import '../../../../core/services/flashcards/push_refresh_decision.dart';
 
 final allSpacedReviewsStreamProvider = StreamProvider<List<SpacedReviewItem>>((
   ref,
@@ -148,14 +149,14 @@ class SpacedRepetitionNotifier extends Notifier<void> {
     _refreshInFlight = true;
 
     try {
-      await _refreshFlashcardSchedule();
+      await _refreshFlashcardSchedule(force: force);
       _lastScheduleRefresh = DateTime.now();
     } finally {
       _refreshInFlight = false;
     }
   }
 
-  Future<void> _refreshFlashcardSchedule() async {
+  Future<void> _refreshFlashcardSchedule({bool force = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final enabled =
         prefs.getBool(NotificationConstants.prefFlashcardPushEnabled) ?? false;
@@ -191,6 +192,36 @@ class SpacedRepetitionNotifier extends Notifier<void> {
       count: depth,
     );
 
+    // Rebuilding cancels every pending push and starts the next one a full
+    // interval from now, so doing it on every app open kept moving the next
+    // push back — with hourly pushes and an app opened every forty-five
+    // minutes, none of them ever arrived.
+    final fingerprint = [
+      cards.map((c) => c.title).join('|'),
+      minutes,
+      startHour,
+      endHour,
+    ].join('~');
+    final lastBuiltMillis = prefs.getInt(
+      NotificationConstants.prefFlashcardQueueBuiltAt,
+    );
+    final shouldRebuild = shouldRebuildPushQueue(
+      fingerprint: fingerprint,
+      lastFingerprint: prefs.getString(
+        NotificationConstants.prefFlashcardQueueFingerprint,
+      ),
+      lastBuiltAt: lastBuiltMillis == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(lastBuiltMillis),
+      now: DateTime.now(),
+      interval: Duration(minutes: minutes),
+      force: force,
+    );
+    if (!shouldRebuild) {
+      debugPrint('Flashcard push: queue unchanged, left as scheduled');
+      return;
+    }
+
     final queued = await NotificationService.instance.scheduleFlashcardSeries(
       cards: cards,
       interval: Duration(minutes: minutes),
@@ -205,6 +236,14 @@ class SpacedRepetitionNotifier extends Notifier<void> {
       endHour: endHour,
       intervalMinutes: minutes,
       daysOfCover: 1,
+    );
+    await prefs.setString(
+      NotificationConstants.prefFlashcardQueueFingerprint,
+      fingerprint,
+    );
+    await prefs.setInt(
+      NotificationConstants.prefFlashcardQueueBuiltAt,
+      DateTime.now().millisecondsSinceEpoch,
     );
     await prefs.setInt(NotificationConstants.prefFlashcardQueuedCount, queued);
     await prefs.setInt(NotificationConstants.prefFlashcardSlotsPerDay, perDay);

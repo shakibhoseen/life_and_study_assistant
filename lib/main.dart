@@ -44,9 +44,11 @@ void main() async {
   // 5. Initialize Gemini AI Service
   await GeminiAiService.instance.init();
 
-  // 6. Preload theme mode to eliminate startup flicker
+  // 6. Preload theme mode and dark preset to eliminate startup flicker
   ThemeModeNotifier.initialMode =
       await ThemeModeNotifier.loadInitialThemeMode();
+  DarkThemePresetNotifier.initialPreset =
+      await DarkThemePresetNotifier.loadInitialPreset();
 
   runApp(const ProviderScope(child: LifeAndStudyApp()));
 }
@@ -57,12 +59,13 @@ class LifeAndStudyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final darkTheme = ref.watch(currentDarkThemeProvider);
 
     return MaterialApp(
       title: 'Life & Study Assistant',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      darkTheme: darkTheme,
       themeMode: themeMode,
       home: const HomeShellScreen(),
     );
