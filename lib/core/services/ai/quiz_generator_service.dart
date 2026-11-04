@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
@@ -36,6 +37,7 @@ class QuizGeneratorService {
     required String topic,
     required String subject,
     int count = 5,
+    void Function(int tokens)? onTokens,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final apiKey = prefs.getString(NotificationConstants.prefGeminiApiKey);
@@ -71,10 +73,25 @@ JSON Structure:
 ]
 ''';
 
-    final modelsToTry = [
+    // Respect the user's selected Gemini model from Settings.
+    // Defaults to 'gemini-flash-lite-latest' (Fastest & 100% Free - Recommended).
+    final savedModel =
+        prefs.getString(NotificationConstants.prefGeminiModel) ??
+        'gemini-flash-lite-latest';
+    final primaryModel = [
       'gemini-flash-lite-latest',
-      'gemini-3.5-flash-lite',
       'gemini-flash-latest',
+      'gemini-pro-latest',
+    ].contains(savedModel)
+        ? savedModel
+        : 'gemini-flash-lite-latest';
+
+    final modelsToTry = [
+      primaryModel,
+      if (primaryModel != 'gemini-flash-lite-latest')
+        'gemini-flash-lite-latest',
+      if (primaryModel != 'gemini-flash-latest')
+        'gemini-flash-latest',
     ];
 
     Object? lastError;
@@ -86,46 +103,62 @@ JSON Structure:
           generationConfig: GenerationConfig(
             responseMimeType: 'application/json',
             temperature: 0.2,
-            maxOutputTokens: 2048,
           ),
         );
 
-        final response = await model.generateContent([Content.text(prompt)]);
-        final rawText = response.text?.trim() ?? '';
+        final buffer = StringBuffer();
+        int promptTokens = 0;
+        int outputTokens = 0;
+        int totalTokens = 0;
+        int lastReportedTokens = 0;
+
+        await for (final chunk in model.generateContentStream([
+          Content.text(prompt),
+        ])) {
+          final text = chunk.text ?? '';
+          buffer.write(text);
+
+          final usage = chunk.usageMetadata;
+          if (usage != null) {
+            promptTokens = math.max(promptTokens, usage.promptTokenCount ?? 0);
+            outputTokens = math.max(
+              outputTokens,
+              usage.candidatesTokenCount ?? 0,
+            );
+            totalTokens = math.max(totalTokens, usage.totalTokenCount ?? 0);
+          }
+
+          if (totalTokens > lastReportedTokens) {
+            lastReportedTokens = totalTokens;
+          } else {
+            // Live approximation as chunks flow in:
+            // ~120 prompt tokens + approx output characters / 3.5
+            final approxOut = (buffer.length / 3.5).round();
+            final approxTotal =
+                (promptTokens > 0 ? promptTokens : 120) + approxOut;
+            if (approxTotal > lastReportedTokens) {
+              lastReportedTokens = approxTotal;
+            }
+          }
+          onTokens?.call(lastReportedTokens);
+        }
+
+        final rawText = buffer.toString().trim();
 
         if (rawText.isNotEmpty) {
-          final cleanJson = _extractCleanJson(rawText);
-          final decoded = jsonDecode(cleanJson);
-          if (decoded is List) {
-            final questions = decoded.map((e) {
-              final q = QuizQuestion.fromJson(e as Map<String, dynamic>);
-              return QuizQuestion(
-                questionText: BengaliMathSanitizer.sanitize(q.questionText),
-                options: q.options
-                    .map((opt) => BengaliMathSanitizer.sanitize(opt))
-                    .toList(),
-                correctIndex: q.correctIndex,
-                explanation: BengaliMathSanitizer.sanitize(q.explanation),
-                subject: q.subject,
-              );
-            }).toList();
-            if (questions.isNotEmpty) {
-              final hasMetadata =
-                  response.usageMetadata?.totalTokenCount != null;
-              await GeminiUsageTracker.instance.recordSuccess(
-                tokens:
-                    response.usageMetadata?.totalTokenCount ??
-                    (questions.length * 80),
-                actualInputTokens: response.usageMetadata?.promptTokenCount,
-                actualOutputTokens:
-                    response.usageMetadata?.candidatesTokenCount,
-                actualTotalTokens: response.usageMetadata?.totalTokenCount,
-                isEstimated: !hasMetadata,
-                operation: 'quick_quiz_drill',
-                model: modelName,
-              );
-              return questions;
-            }
+          final questions = _parseQuestions(rawText);
+          if (questions.isNotEmpty) {
+            final hasMetadata = totalTokens > 0;
+            await GeminiUsageTracker.instance.recordSuccess(
+              tokens: totalTokens > 0 ? totalTokens : (questions.length * 80),
+              actualInputTokens: promptTokens > 0 ? promptTokens : null,
+              actualOutputTokens: outputTokens > 0 ? outputTokens : null,
+              actualTotalTokens: totalTokens > 0 ? totalTokens : null,
+              isEstimated: !hasMetadata,
+              operation: 'quick_quiz_drill',
+              model: modelName,
+            );
+            return questions;
           }
         }
       } catch (e) {
@@ -135,9 +168,94 @@ JSON Structure:
     }
 
     debugPrint('Quiz generation failed for "$topic": $lastError');
-    throw const QuizGenerationException(
-      'প্রশ্ন তৈরি করা গেল না। ইন্টারনেট দেখে আবার চেষ্টা করুন।',
+    throw QuizGenerationException(_diagnoseError(lastError));
+  }
+
+  List<QuizQuestion> _parseQuestions(String rawText) {
+    final cleanJson = _extractCleanJson(rawText);
+    try {
+      final decoded = jsonDecode(cleanJson);
+      if (decoded is List) {
+        return _mapJsonListToQuestions(decoded);
+      }
+    } catch (_) {
+      // If direct jsonDecode failed (e.g. slight formatting anomaly),
+      // scan and recover all individual complete question objects.
+      final recovered = _recoverIndividualQuestions(cleanJson);
+      if (recovered.isNotEmpty) return recovered;
+    }
+    return [];
+  }
+
+  List<QuizQuestion> _mapJsonListToQuestions(List<dynamic> list) {
+    return list.map((e) {
+      final q = QuizQuestion.fromJson(e as Map<String, dynamic>);
+      return QuizQuestion(
+        questionText: BengaliMathSanitizer.sanitize(q.questionText),
+        options: q.options
+            .map((opt) => BengaliMathSanitizer.sanitize(opt))
+            .toList(),
+        correctIndex: q.correctIndex,
+        explanation: BengaliMathSanitizer.sanitize(q.explanation),
+        subject: q.subject,
+      );
+    }).toList();
+  }
+
+  List<QuizQuestion> _recoverIndividualQuestions(String text) {
+    final questions = <QuizQuestion>[];
+    final regex = RegExp(
+      r'\{[^{}]*"question"[^{}]*"options"[^{}]*\}',
+      dotAll: true,
     );
+    for (final match in regex.allMatches(text)) {
+      try {
+        final decoded = jsonDecode(match.group(0)!);
+        if (decoded is Map<String, dynamic>) {
+          final q = QuizQuestion.fromJson(decoded);
+          questions.add(
+            QuizQuestion(
+              questionText: BengaliMathSanitizer.sanitize(q.questionText),
+              options: q.options
+                  .map((opt) => BengaliMathSanitizer.sanitize(opt))
+                  .toList(),
+              correctIndex: q.correctIndex,
+              explanation: BengaliMathSanitizer.sanitize(q.explanation),
+              subject: q.subject,
+            ),
+          );
+        }
+      } catch (_) {}
+    }
+    return questions;
+  }
+
+  String _diagnoseError(Object? error) {
+    if (error == null) {
+      return 'প্রশ্ন তৈরি করা গেল না। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।';
+    }
+    final str = error.toString().toLowerCase();
+    if (str.contains('503') ||
+        str.contains('overloaded') ||
+        str.contains('unavailable')) {
+      return 'Gemini সার্ভার বর্তমানে ব্যস্ত (503)। কয়েক সেকেন্ড পর আবার চেষ্টা করুন।';
+    }
+    if (str.contains('429') ||
+        str.contains('resourceexhausted') ||
+        str.contains('quota')) {
+      return 'Gemini API ফ্রি রিকোয়েস্ট সীমা সাময়িকভাবে পূর্ণ (429)। এক মিনিট পর আবার চেষ্টা করুন।';
+    }
+    if (str.contains('socketexception') ||
+        str.contains('network is unreachable') ||
+        str.contains('failed host lookup') ||
+        str.contains('clientexception')) {
+      return 'ইন্টারনেট সংযোগ পাওয়া যায়নি। ফোনের Wi-Fi বা মোবাইল ডেটা চেক করুন।';
+    }
+    if (str.contains('api_key_invalid') ||
+        str.contains('api key not valid')) {
+      return 'Gemini API কী সঠিক নয়। সেটিংসে গিয়ে নতুন কী দিন।';
+    }
+    return 'প্রশ্ন তৈরি করা সম্ভব হয়নি (${error.runtimeType})। আবার চেষ্টা করুন।';
   }
 
   String _extractCleanJson(String raw) {

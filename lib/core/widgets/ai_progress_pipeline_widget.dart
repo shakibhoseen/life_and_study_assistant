@@ -296,14 +296,29 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
     return '$bnSeconds সে.';
   }
 
-  String? _formatTokens() {
-    if (widget.liveTokens == null || widget.liveTokens! <= 0) return null;
-    final bnTokens = BengaliMathSanitizer.toBengaliDigits(
-      '${widget.liveTokens}',
-    );
-    return widget.liveTokensAreEstimate
-        ? '~$bnTokens টোকেন'
-        : '$bnTokens টোকেন';
+  int get _effectiveTokens {
+    if (widget.liveTokens != null && widget.liveTokens! > 0) {
+      return widget.liveTokens!;
+    }
+    // Dynamic real-time estimation so every AI task in the app visibly shows active token progress
+    final elapsedSec = _elapsedMillis / 1000.0;
+    final basePromptTokens = switch (widget.type) {
+      AiTaskType.image => 350,
+      AiTaskType.audio => 200,
+      AiTaskType.drill => 120,
+      AiTaskType.explainer => 150,
+      _ => 100,
+    };
+    final generatedEstimate = (elapsedSec * 22).round();
+    return basePromptTokens + generatedEstimate;
+  }
+
+  String _formatTokens() {
+    final tokens = _effectiveTokens;
+    final bnTokens = BengaliMathSanitizer.toBengaliDigits('$tokens');
+    final isEstimate =
+        widget.liveTokens == null || widget.liveTokensAreEstimate;
+    return isEstimate ? '~$bnTokens টোকেন' : '$bnTokens টোকেন';
   }
 
   @override
@@ -395,13 +410,12 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                   ),
                   const SizedBox(width: 8),
 
-                  // Live Token Badge (if provided)
-                  if (tokensStr != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
+                  // Live Token Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                       decoration: BoxDecoration(
                         color: Colors.amber.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
@@ -413,7 +427,14 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.bolt, size: 11, color: Colors.amber),
+                          FadeTransition(
+                            opacity: _pulseController,
+                            child: const Icon(
+                              Icons.bolt,
+                              size: 11,
+                              color: Colors.amber,
+                            ),
+                          ),
                           const SizedBox(width: 2),
                           Text(
                             tokensStr,
@@ -427,7 +448,6 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       ),
                     ),
                     const SizedBox(width: 6),
-                  ],
 
                   // Live Timer Badge
                   Container(
@@ -576,7 +596,79 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                 color: isDark ? Colors.white60 : Colors.black54,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
+
+            // Live Stream Pulse & Token Badge Pill
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF6366F1).withValues(alpha: 0.15)
+                    : const Color(0xFFEEF2FF),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark
+                      ? const Color(0xFF6366F1).withValues(alpha: 0.35)
+                      : const Color(0xFFC7D2FE),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FadeTransition(
+                    opacity: _pulseController,
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981), // Emerald green live indicator
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Gemini Live',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6366F1),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    '•',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white38 : Colors.black38,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  FadeTransition(
+                    opacity: _pulseController,
+                    child: const Icon(
+                      Icons.bolt,
+                      size: 12,
+                      color: Colors.amber,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    tokensStr,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
 
             // Progress bar + Percent + Timer row
             ClipRRect(
@@ -608,19 +700,6 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (tokensStr != null) ...[
-                      const Icon(Icons.bolt, size: 13, color: Colors.amber),
-                      const SizedBox(width: 3),
-                      Text(
-                        tokensStr,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
                     Icon(
                       Icons.timer_outlined,
                       size: 13,

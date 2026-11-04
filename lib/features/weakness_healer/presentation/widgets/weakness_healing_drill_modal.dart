@@ -47,6 +47,7 @@ class WeaknessHealingDrillModal extends ConsumerStatefulWidget {
 class _WeaknessHealingDrillModalState
     extends ConsumerState<WeaknessHealingDrillModal> {
   bool _isLoading = true;
+  int? _liveTokens;
   final List<_HealingQuestionItem> _questions = [];
   int _currentIndex = 0;
   int? _selectedOptionIndex;
@@ -104,6 +105,13 @@ class _WeaknessHealingDrillModalState
           topic: widget.topic.topicName,
           subject: widget.topic.subject,
           count: needed,
+          onTokens: (tokens) {
+            if (mounted) {
+              setState(() {
+                _liveTokens = tokens;
+              });
+            }
+          },
         );
 
         for (final q in aiQuestions) {
@@ -285,9 +293,10 @@ class _WeaknessHealingDrillModalState
       ),
       body: SafeArea(
         child: _isLoading
-            ? const AiProgressPipelineWidget(
+            ? AiProgressPipelineWidget(
                 type: AiTaskType.drill,
                 isCompact: false,
+                liveTokens: _liveTokens,
               )
             : (_isCompleted
                   ? _buildCompletionScreen(isDark)

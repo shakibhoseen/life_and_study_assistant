@@ -81,6 +81,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
   late QuizMode _mode;
   bool _isLoading = true;
   String? _loadError;
+  int? _liveTokens;
   List<QuizQuestion> _questions = [];
   int _currentIndex = 0;
   int? _selectedOptionIndex;
@@ -133,12 +134,20 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     setState(() {
       _isLoading = true;
       _loadError = null;
+      _liveTokens = null;
     });
     try {
       final questions = await QuizGeneratorService.instance.generateQuiz(
         topic: widget.topic,
         subject: widget.subject,
         count: _drillSize,
+        onTokens: (tokens) {
+          if (mounted) {
+            setState(() {
+              _liveTokens = tokens;
+            });
+          }
+        },
       );
       if (!mounted) return;
       setState(() {
@@ -885,6 +894,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
       type: AiTaskType.drill,
       isCompact: false,
       customSubtitle: 'টপিক: ${widget.topic} • ${widget.subject}',
+      liveTokens: _liveTokens,
     );
   }
 
