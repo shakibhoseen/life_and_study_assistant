@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
+    <application>
+        <!-- Started only while the microphone is genuinely open, and stopped
+             the moment it is handed back. Nothing else in the app may carry
+             this type, or the app claims the microphone just by running. -->
+        <service
+            android:name=".MicForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+    </application>
+</manifest>

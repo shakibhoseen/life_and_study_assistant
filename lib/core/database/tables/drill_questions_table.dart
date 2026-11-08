@@ -1,5 +1,23 @@
 import 'package:drift/drift.dart';
 
+/// Marks a row as a mistake dictated into the voice bubble rather than a
+/// question answered here.
+///
+/// It is a prefix on [DrillQuestions.explanation], which is where it has
+/// always been written; a column of its own would say it better, but this
+/// project has no code generation set up and the tag already covers every row
+/// ever saved this way, including the ones from before it had to be told
+/// apart. Both the writer and [AppDatabase.getDrillStats] use this constant,
+/// so the two cannot drift apart.
+const String voiceMistakeSourceTag = '[উৎস: LiveMCQ 🎙️]';
+
+/// What every one of those tags begins with.
+///
+/// There is more than one — dictating a mistake writes 🎙️ and photographing
+/// one writes 📸 — and neither was answered here, so the statistics have to
+/// recognise the whole family rather than the one spelling.
+const String capturedMistakeTagPrefix = '[উৎস:';
+
 @TableIndex(
   name: 'idx_drill_questions_correct_mastered',
   columns: {#isCorrect, #isMastered},

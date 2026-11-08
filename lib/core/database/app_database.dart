@@ -34,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'life_and_study_assistant');
@@ -128,6 +128,37 @@ class AppDatabase extends _$AppDatabase {
         );
         await customStatement(
           'CREATE INDEX IF NOT EXISTS idx_weak_topics_proficiency ON weak_topics(proficiency_level, last_reviewed_at);',
+        );
+      }
+      if (from < 14) {
+        // Every mistake dictated into the voice bubble used to be written as
+        // a drill session as well: one question, nought correct, 0%. They
+        // were never sat, so they are taken back out — the Past Sessions list
+        // was filling with them and `total_drills` counted each one.
+        //
+        // The questions themselves are kept and stay in the Mistake Bank,
+        // only detached from the session that was invented for them. A record
+        // is removed solely once nothing is left pointing at it and its own
+        // figures match the shape written here (a single question, none
+        // right), so a real one-question drill somebody actually sat is left
+        // alone.
+        await customStatement(
+          "UPDATE drill_questions SET drill_record_id = NULL "
+          "WHERE explanation LIKE '$capturedMistakeTagPrefix%';",
+        );
+        await customStatement(
+          'DELETE FROM drill_records '
+          'WHERE total_questions = 1 AND correct_count = 0 '
+          'AND id NOT IN (SELECT drill_record_id FROM drill_questions '
+          'WHERE drill_record_id IS NOT NULL);',
+        );
+        // The invented answer went with it. Only the voice rows are touched,
+        // and only where the value is the one the old code would have
+        // written, so a real answer is never overwritten.
+        await customStatement(
+          "UPDATE drill_questions SET selected_index = -1 "
+          "WHERE explanation LIKE '$capturedMistakeTagPrefix%' "
+          "AND is_correct = 0 AND selected_index <> correct_index;",
         );
       }
     },
@@ -1683,10 +1714,21 @@ class AppDatabase extends _$AppDatabase {
     final records = await select(drillRecords).get();
     final allQuestions = await select(drillQuestions).get();
 
+    // A mistake dictated into the voice bubble was never answered here — the
+    // user wrote down something they got wrong in LiveMCQ. These rows are
+    // only ever wrong, so counting them as attempts meant every note taken
+    // pulled the accuracy down, however well the drills themselves went.
+    // They are left out of the answered figures and kept in
+    // [activeWrongCount] below, which is the Mistake Bank's own count and
+    // exactly where they belong.
+    final answered = allQuestions
+        .where((q) => !q.explanation.startsWith(capturedMistakeTagPrefix))
+        .toList();
+
     final totalDrills = records.length;
-    final totalAnswered = allQuestions.length;
-    final totalCorrect = allQuestions.where((q) => q.isCorrect).length;
-    final totalWrong = allQuestions.where((q) => !q.isCorrect).length;
+    final totalAnswered = answered.length;
+    final totalCorrect = answered.where((q) => q.isCorrect).length;
+    final totalWrong = answered.where((q) => !q.isCorrect).length;
     final accuracy = totalAnswered > 0
         ? (totalCorrect / totalAnswered) * 100
         : 0.0;

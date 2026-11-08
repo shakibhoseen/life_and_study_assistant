@@ -947,6 +947,7 @@ class QuizBatchCorrectionSheet {
     ).whenComplete(() {
       recordingTimer?.cancel();
       VoiceRecordingService.instance.cancelRecording();
+      textController.dispose();
     });
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:overlay_bridge/overlay_bridge.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
@@ -55,10 +56,19 @@ class VoiceRecordingService {
         '${tempDir.path}/livemcq_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
     _currentFilePath = path;
 
-    await _audioRecorder.start(
-      config ?? const RecordConfig(encoder: AudioEncoder.aacLc),
-      path: path,
-    );
+    // Claimed first and given back on failure: recording from the floating
+    // bubble happens while the app is in the background, where Android allows
+    // the microphone only to a foreground service that says it needs one.
+    await MicForegroundService.instance.acquire(text: 'Recording');
+    try {
+      await _audioRecorder.start(
+        config ?? const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: path,
+      );
+    } catch (_) {
+      await MicForegroundService.instance.release();
+      rethrow;
+    }
     _isRecording = true;
   }
 
@@ -67,6 +77,7 @@ class VoiceRecordingService {
 
     final path = await _audioRecorder.stop();
     _isRecording = false;
+    await MicForegroundService.instance.release();
 
     if (path != null) {
       final file = File(path);
@@ -81,6 +92,7 @@ class VoiceRecordingService {
     if (_isRecording) {
       await _audioRecorder.cancel();
       _isRecording = false;
+      await MicForegroundService.instance.release();
     }
   }
 

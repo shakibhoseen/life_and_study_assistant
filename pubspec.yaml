@@ -61,6 +61,11 @@ dependencies:
   crypto: ^3.0.3
   speech_to_text: ^7.5.0
 
+  # Local: carries Android's microphone foreground-service type only while the
+  # microphone is open. See packages/overlay_bridge/lib for why.
+  overlay_bridge:
+    path: packages/overlay_bridge
+
 # shared_preferences_android 2.5.0 switched its implementation to Pigeon JNI.
 # In debug builds the Java-side registrar is not yet attached when main() first
 # touches SharedPreferences, so getInstance() returns null and startup dies with

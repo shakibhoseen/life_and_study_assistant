@@ -10,6 +10,8 @@ import 'package:life_and_study_assistant/features/quiz/presentation/providers/dr
 import 'package:life_and_study_assistant/features/quiz/presentation/widgets/quiz_drill_modal.dart';
 import 'package:life_and_study_assistant/features/quiz/presentation/widgets/study_sheet_camera_modal.dart';
 
+import 'package:life_and_study_assistant/core/services/overlay/bubble_handoff_provider.dart';
+
 import '../providers/topics_provider.dart';
 import '../widgets/mistake_bank_and_hub_tab.dart';
 import '../widgets/topic_card.dart';
@@ -73,6 +75,14 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Arriving from the floating bubble, which lands on the Mistake Bank
+    // rather than the tab the user happened to leave open. This screen is
+    // built once inside an IndexedStack, so initState never runs again and
+    // cannot carry the request.
+    ref.listen<int>(mistakeBankTabRequestProvider, (_, _) {
+      if (mounted) _tabController.animateTo(1);
+    });
+
     final wrongQuestions = ref.watch(wrongQuestionsStreamProvider).value ?? [];
     final isTab0 = _tabController.index == 0;
     final isDark = Theme.of(context).brightness == Brightness.dark;

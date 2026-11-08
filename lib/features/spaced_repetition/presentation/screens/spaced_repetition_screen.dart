@@ -1299,6 +1299,13 @@ class _SpacedRepetitionScreenState
           ),
         ],
       ),
-    );
+      // Four controllers a time, kept alive for the rest of the session
+      // otherwise. The dialog above it disposes its two; this one was missed.
+    ).whenComplete(() {
+      subjectController.dispose();
+      topicController.dispose();
+      titleController.dispose();
+      ruleController.dispose();
+    });
   }
 }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 11 and below. The study data is worth backing up; the Gemini API key
+  sitting beside it in the same preferences file is not. Everything the user
+  has written is covered by the backup, and only that one file is held back.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="FlutterSharedPreferences.xml" />
+</full-backup-content>

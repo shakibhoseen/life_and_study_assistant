@@ -6,6 +6,9 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/ai/models/voice_mistake_result.dart';
 import '../../../../core/services/ai/voice_mistake_parser_service.dart';
+import '../../../../core/services/overlay/bubble_handoff_service.dart';
+import 'package:overlay_bridge/overlay_bridge.dart';
+
 import '../../../../core/services/voice/device_dictation_service.dart';
 import '../../../../core/services/voice/voice_recording_service.dart';
 
@@ -40,19 +43,33 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
   Timer? _recordTimer;
   StreamSubscription? _overlaySub;
   VoiceMistakeResult? _lastResult;
+
+  /// How many saved questions are waiting to be looked at in the app.
+  ///
+  /// Read from [BubbleHandoffService] rather than counted here, because the
+  /// app is what clears them and the bubble has to follow it.
+  int _pendingCount = 0;
   String? _statusMessage;
 
   @override
   void initState() {
     super.initState();
     _isExpanded = false;
+    unawaited(_refreshPendingCount());
     WidgetsBinding.instance.addObserver(this);
-    _overlaySub = FlutterOverlayWindow.overlayListener.listen((data) {
+    _overlaySub = FlutterOverlayWindow.overlayListener.listen((data) async {
       if (data == 'reset_to_collapsed' || data == 'reopen') {
+        // The bubble is being reopened, so whatever the last session left
+        // running has to be released before this screen claims to be idle.
+        // Clearing the flags on their own left the microphone open behind a
+        // bubble that showed nothing happening.
+        await _releaseMic();
+        await _refreshPendingCount();
         if (mounted) {
           setState(() {
             _isExpanded = false;
             _isRecording = false;
+            _isDictating = false;
             _isProcessing = false;
             _parseTimer?.cancel();
             _statusMessage = null;
@@ -67,10 +84,17 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // This screen already treats a resume as the end of whatever was in
+      // progress; the microphone has to end with it.
+      unawaited(_releaseMic());
+      // A resume usually means the app has just been in front, which is where
+      // the waiting questions get cleared.
+      unawaited(_refreshPendingCount());
       if (mounted) {
         setState(() {
           _isExpanded = false;
           _isRecording = false;
+          _isDictating = false;
           _isProcessing = false;
           _parseTimer?.cancel();
           _statusMessage = null;
@@ -86,8 +110,48 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
     _overlaySub?.cancel();
     _recordTimer?.cancel();
     _parseTimer?.cancel();
+    // Not awaited, because dispose cannot be: the release is handed to the
+    // engine and runs on its own. It matters most here, since this widget
+    // lives inside a foreground service that carries on after the bubble is
+    // gone, and both services below are singletons in that same engine.
+    unawaited(_releaseMic());
     _typedController.dispose();
     super.dispose();
+  }
+
+  /// Re-reads how many saved questions are still waiting in the app.
+  Future<void> _refreshPendingCount() async {
+    final count = (await BubbleHandoffService.instance.pending()).length;
+    if (!mounted || count == _pendingCount) return;
+    setState(() => _pendingCount = count);
+  }
+
+  /// Hands the microphone back, whatever state the bubble was in.
+  ///
+  /// Safe to call when nothing is running: both services check first, and
+  /// neither throws. It deliberately touches no widget state, so it can be
+  /// called from dispose.
+  Future<void> _releaseMic() async {
+    try {
+      await DeviceDictationService.instance.stop();
+    } catch (e) {
+      debugPrint('Overlay: stopping dictation failed: $e');
+    }
+    try {
+      await VoiceRecordingService.instance.cancelRecording();
+    } catch (e) {
+      debugPrint('Overlay: cancelling the recording failed: $e');
+    }
+    // The backstop, for a claim that was taken and then lost its way out. It
+    // can also drop a claim the main app's own screens are holding, since the
+    // service is one per process while the counters are one per engine; that
+    // is harmless, because those screens are visible and Android asks nothing
+    // of a visible app.
+    try {
+      await MicForegroundService.instance.releaseAll();
+    } catch (e) {
+      debugPrint('Overlay: releasing the microphone service failed: $e');
+    }
   }
 
   void _toggleExpand() async {
@@ -103,6 +167,12 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
         WindowSize.matchParent,
         false,
       );
+      // Collapsing keeps what was typed but hides the field it was typed
+      // into, so reopening the card looked exactly like the words had been
+      // thrown away. They are put back in front of the user instead.
+      if (_typedController.text.trim().isNotEmpty) {
+        await _startTyping();
+      }
     } else {
       // Collapsed, the bubble must not take focus or it would swallow taps
       // meant for the app underneath.
@@ -234,11 +304,16 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
       }
 
       final db = AppDatabase();
-      await VoiceMistakeParserService.instance.saveVoiceMistakeToDatabase(
-        db,
-        result,
-      );
+      final saved = await VoiceMistakeParserService.instance
+          .saveVoiceMistakeToDatabase(db, result);
       await db.close();
+      // Left for the app to find when it next comes up. The stream below
+      // reaches only an app that is already running and listening, and the
+      // app listens for nothing; this is what survives the bubble being used
+      // while the app is not even on screen.
+      if (saved) {
+        await BubbleHandoffService.instance.noteAdded(result.questionText);
+      }
       await FlutterOverlayWindow.shareData('mistake_added');
       await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
 
@@ -248,8 +323,11 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
         _isProcessing = false;
         _isTyping = false;
         _typedController.clear();
-        _statusMessage = 'Saved to Mistake Bank ✓';
+        _statusMessage = saved
+            ? 'Saved to Mistake Bank ✓'
+            : 'এটি আগেই সেভ করা আছে ✓';
       });
+      if (saved) await _refreshPendingCount();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -257,6 +335,53 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
         _statusMessage = 'সমস্যা হয়েছে: $e';
       });
     }
+  }
+
+  /// Carries whatever is in the bubble into the app and opens it.
+  ///
+  /// This is the way out of the bubble, in whatever state it is in. Words
+  /// part way through being written come across and open the app's own voice
+  /// sheet, already filled in, so the note is finished on a full screen
+  /// instead of in a window the size of a stamp. With nothing written, the
+  /// app simply comes up — on the Mistake Bank when the bubble has saved
+  /// something, otherwise wherever the user left it.
+  Future<void> _continueInApp() async {
+    // Stopped first so the last thing said is in the box before it travels.
+    if (_isDictating) {
+      await DeviceDictationService.instance.stop();
+      final heard = DeviceDictationService.instance.committedText.trim();
+      if (heard.isNotEmpty) _typedController.text = heard;
+    }
+    // Written before the app is opened, so both are already there when it
+    // comes up and asks what it was given and how it got here.
+    await BubbleHandoffService.instance.noteDraft(_typedController.text);
+    await BubbleHandoffService.instance.noteOpeningApp();
+    final opened = await AppLauncher.instance.open();
+    if (!mounted) return;
+    if (!opened) {
+      setState(() {
+        _statusMessage = 'অ্যাপটি খোলা গেল না। নিজে খুলে দেখে নিন।';
+      });
+      return;
+    }
+    // Out of the way, so the app does not come up behind the bubble that
+    // opened it. The bubble keeps running; this only collapses it.
+    setState(() {
+      _lastResult = null;
+      _statusMessage = null;
+      _isExpanded = false;
+      _isDictating = false;
+      _isTyping = false;
+      // Cleared only once it is safely across: the sheet in the app now holds
+      // these words, and leaving a copy here would have the user finishing
+      // the same note twice.
+      _typedController.clear();
+      // The app clears what is waiting as it opens, so the badge goes now
+      // rather than lingering until the next resume.
+      _pendingCount = 0;
+    });
+    await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
+    await FlutterOverlayWindow.resizeOverlay(110, 110, true);
   }
 
   Future<void> _startRecording() async {
@@ -354,21 +479,29 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
 
         // Save into local Drift database ONLY if valid result
         final db = AppDatabase();
-        await VoiceMistakeParserService.instance.saveVoiceMistakeToDatabase(
-          db,
-          result,
-        );
+        final saved = await VoiceMistakeParserService.instance
+            .saveVoiceMistakeToDatabase(db, result);
         await db.close();
 
-        // Notify main app over stream
+        // Left for the app to find when it next comes up, and only for a
+        // question that was actually written. The stream below reaches an app
+        // that is already running and listening, and the app listens for
+        // nothing; this is what survives the bubble being used while the app
+        // is not even on screen.
+        if (saved) {
+          await BubbleHandoffService.instance.noteAdded(result.questionText);
+        }
         await FlutterOverlayWindow.shareData('mistake_added');
 
         setState(() {
           _lastResult = result;
           _isProcessing = false;
           _parseTimer?.cancel();
-          _statusMessage = 'Saved to Mistake Bank ✓';
+          _statusMessage = saved
+              ? 'Saved to Mistake Bank ✓'
+              : 'এটি আগেই সেভ করা আছে ✓';
         });
+        if (saved) await _refreshPendingCount();
       } else {
         setState(() {
           _isProcessing = false;
@@ -474,17 +607,52 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
           alignment: Alignment.center,
           children: [
             const Icon(Icons.school, color: Colors.white, size: 28),
+            // The bubble is collapsed nearly all the time, so this is the
+            // only chance to say that something is waiting. Without it the
+            // user had to expand the card to find out, which nobody does
+            // without a reason to.
             Positioned(
               bottom: 2,
               right: 2,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF59E0B), // Golden amber mic badge
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.mic, color: Colors.white, size: 14),
-              ),
+              child: _pendingCount > 0
+                  ? Container(
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 20,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white, width: 1.2),
+                      ),
+                      child: Center(
+                        child: Text(
+                          _pendingCount > 9 ? '9+' : '$_pendingCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF59E0B), // Golden amber mic badge
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.mic,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -547,6 +715,22 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                   ],
                 ),
               ),
+              // Always here, with nothing to wait for and nothing saved. The
+              // banner below only appears once something has been saved, so
+              // without this a half-written note left the user with no way
+              // into the app at all.
+              IconButton(
+                icon: const Icon(
+                  Icons.open_in_new,
+                  color: Color(0xFFA5B4FC),
+                  size: 20,
+                ),
+                tooltip: 'অ্যাপে নিয়ে যান',
+                onPressed: _continueInApp,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 4),
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.grey, size: 22),
                 tooltip: 'Minimize to Bubble',
@@ -566,6 +750,10 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                   setState(() {
                     _isExpanded = false;
                   });
+                  // Before the window goes, not after: closing it tears down
+                  // the screen, and anything still listening would be left
+                  // running with nothing to turn it off.
+                  await _releaseMic();
                   await FlutterOverlayWindow.resizeOverlay(110, 110, true);
                   await FlutterOverlayWindow.closeOverlay();
                 },
@@ -575,6 +763,66 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
             ],
           ),
           const SizedBox(height: 12),
+
+          // Here for as long as anything is waiting, whatever else the card
+          // happens to be showing. It used to sit in the result card, which
+          // meant it vanished the moment the user tapped "Record Another" —
+          // and after dictating three questions in a row there was no way
+          // into the app left at all.
+          if (_pendingCount > 0) ...[
+            InkWell(
+              onTap: _continueInApp,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.6),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.inventory_2_outlined,
+                      color: Color(0xFFA5B4FC),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '$_pendingCount টি সেভ হয়েছে',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      'অ্যাপে যান',
+                      style: TextStyle(
+                        color: Color(0xFFA5B4FC),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: Color(0xFFA5B4FC),
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
 
           // Central Microphone Action
           if (!_isProcessing && _lastResult == null) ...[

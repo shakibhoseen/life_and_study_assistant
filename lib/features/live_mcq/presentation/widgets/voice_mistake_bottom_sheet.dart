@@ -17,14 +17,21 @@ import '../../../spaced_repetition/presentation/providers/spaced_repetition_prov
 import '../../../topics/presentation/providers/topics_provider.dart';
 
 class VoiceMistakeBottomSheet extends ConsumerStatefulWidget {
-  const VoiceMistakeBottomSheet({super.key});
+  const VoiceMistakeBottomSheet({super.key, this.initialText});
 
-  static Future<void> show(BuildContext context) {
+  /// Words to start from, carried in from the floating bubble.
+  ///
+  /// The bubble is a small window over another app; this sheet is the full
+  /// screen with the keyboard and the rest of the controls. A note begun out
+  /// there is finished in here rather than retyped.
+  final String? initialText;
+
+  static Future<void> show(BuildContext context, {String? initialText}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => const VoiceMistakeBottomSheet(),
+      builder: (ctx) => VoiceMistakeBottomSheet(initialText: initialText),
     );
   }
 
@@ -58,6 +65,11 @@ class _VoiceMistakeBottomSheetState
   @override
   void initState() {
     super.initState();
+    final carried = widget.initialText?.trim() ?? '';
+    if (carried.isNotEmpty) {
+      _textController.text = carried;
+      _statusMessage = 'বাবল থেকে আনা হয়েছে — দেখে নিয়ে পাঠান';
+    }
     _checkBubbleStatus();
   }
 
@@ -73,6 +85,12 @@ class _VoiceMistakeBottomSheetState
   @override
   void dispose() {
     _recordTimer?.cancel();
+    // Swiping the sheet away is the ordinary way out of it, and it never
+    // passed through the stop button. Both services are singletons, so a
+    // session left listening here went on holding the microphone for the
+    // rest of the app's life. Not awaited, because dispose cannot be.
+    unawaited(DeviceDictationService.instance.stop());
+    unawaited(VoiceRecordingService.instance.cancelRecording());
     _textController.dispose();
     super.dispose();
   }
@@ -375,11 +393,8 @@ class _VoiceMistakeBottomSheetState
     String sourceTag = '[উৎস: LiveMCQ 🎙️]',
   }) async {
     final db = ref.read(appDatabaseProvider);
-    await VoiceMistakeParserService.instance.saveVoiceMistakeToDatabase(
-      db,
-      result,
-      sourceTag: sourceTag,
-    );
+    final saved = await VoiceMistakeParserService.instance
+        .saveVoiceMistakeToDatabase(db, result, sourceTag: sourceTag);
 
     ref.invalidate(wrongQuestionsStreamProvider);
     ref.invalidate(dueSpacedReviewsStreamProvider);
@@ -391,7 +406,9 @@ class _VoiceMistakeBottomSheetState
         _parsedResult = result;
         _isProcessing = false;
         _parseTimer?.cancel();
-        _statusMessage = 'Saved to Mistake Bank & Spaced Repetition ✓';
+        _statusMessage = saved
+            ? 'Saved to Mistake Bank & Spaced Repetition ✓'
+            : 'এই প্রশ্নটি আগেই সেভ করা আছে ✓';
         _textController.clear();
       });
     }

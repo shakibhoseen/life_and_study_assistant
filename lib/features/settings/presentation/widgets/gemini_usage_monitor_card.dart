@@ -374,6 +374,10 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
         ],
       ),
     );
+    // The dialog is gone by here, so the controller it was reading has no
+    // more readers. Left undisposed it kept its listeners alive for the rest
+    // of the session, one more set every time the dialog was opened.
+    controller.dispose();
 
     if (value != null && value > 0) {
       await GeminiUsageTracker.instance.setDailyRequestLimit(value);

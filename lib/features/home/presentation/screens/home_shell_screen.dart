@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:life_and_study_assistant/core/database/database_provider.dart';
+import 'package:life_and_study_assistant/core/services/overlay/bubble_handoff_provider.dart';
+import 'package:life_and_study_assistant/core/services/overlay/bubble_handoff_service.dart';
 import 'package:life_and_study_assistant/core/services/sharing/sharing_intent_service.dart';
+import 'package:life_and_study_assistant/features/quiz/presentation/providers/drill_history_provider.dart';
 import 'package:life_and_study_assistant/features/chat/presentation/screens/ai_chat_screen.dart';
 import 'package:life_and_study_assistant/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/providers/exam_schedule_provider.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/live_mcq_screen.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/widgets/routine_preview_sheet.dart';
+import 'package:life_and_study_assistant/features/live_mcq/presentation/widgets/voice_mistake_bottom_sheet.dart';
 import 'package:life_and_study_assistant/features/settings/presentation/screens/settings_screen.dart';
 import 'package:life_and_study_assistant/core/services/notification/notification_service.dart';
 import 'package:life_and_study_assistant/core/services/flashcards/flashcard_service.dart';
@@ -45,6 +49,8 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initSharingIntent();
+      // The cold-start path: the app was not running when the bubble opened it.
+      unawaited(_showWhatTheBubbleAdded());
     });
   }
 
@@ -58,7 +64,81 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
       notifier.applyPendingReviewAdvances().then(
         (_) => notifier.refreshFlashcardSchedule(),
       );
+      // This is the usual way in from the bubble: it opens the app, and the
+      // app resumes with something waiting to be shown.
+      unawaited(_showWhatTheBubbleAdded());
     }
+  }
+
+  /// Picks up where the floating bubble left off.
+  ///
+  /// The bubble is a small copy of the app's own voice sheet, made to be
+  /// reachable while the user is inside someone else's app. So coming back
+  /// from it lands on that sheet — the real one, with the whole screen and
+  /// the keyboard — carrying whatever was written out there, finished or not.
+  /// Whether the user got as far as saving makes no difference to where they
+  /// arrive; it is the same piece of work either way.
+  ///
+  /// Opening the app from the launcher is a different thing entirely. Nobody
+  /// who came to start a timer wants a sheet over the screen about a question
+  /// they dictated hours ago, so that case only mentions it.
+  ///
+  /// The reload matters as much as the destination. The bubble writes through
+  /// a database connection of its own, in its own Flutter engine, and drift
+  /// only tells a connection about its own writes — so the Mistake Bank would
+  /// otherwise be exactly as it was before the user spoke, and what they saved
+  /// would appear only after a restart.
+  Future<void> _showWhatTheBubbleAdded() async {
+    // Read first, and whatever else happens below. The bubble can open the app
+    // with nothing saved and nothing written, and a flag left set then would
+    // make the next arrival, days later, look like it came from the bubble.
+    final cameFromBubble = await BubbleHandoffService.instance
+        .takeOpenedFromBubble();
+    final draft = await BubbleHandoffService.instance.takeDraft();
+    final added = await BubbleHandoffService.instance.pending();
+    if (!mounted) return;
+
+    if (added.isNotEmpty) {
+      await BubbleHandoffService.instance.clear();
+      if (!mounted) return;
+      ref.invalidate(wrongQuestionsStreamProvider);
+      ref.invalidate(allMistakesStreamProvider);
+      ref.invalidate(allDrillQuestionsStreamProvider);
+      ref.invalidate(drillHistoryStreamProvider);
+      ref.invalidate(drillStatsStreamProvider);
+    }
+
+    if (cameFromBubble) {
+      VoiceMistakeBottomSheet.show(context, initialText: draft);
+      return;
+    }
+
+    if (added.isEmpty) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF10B981),
+        duration: const Duration(seconds: 6),
+        content: Text(
+          added.length == 1
+              ? 'বাবল থেকে যোগ হয়েছে: ${added.first}'
+              : 'বাবল থেকে ${added.length}টি প্রশ্ন যোগ হয়েছে',
+        ),
+        // Offered, never taken: the user came here for something else.
+        action: SnackBarAction(
+          label: 'দেখুন',
+          textColor: Colors.white,
+          onPressed: _goToMistakeBank,
+        ),
+      ),
+    );
+  }
+
+  /// Puts the Topics screen up with its Mistake Bank tab showing.
+  void _goToMistakeBank() {
+    if (!mounted) return;
+    setState(() => _currentIndex = 2);
+    ref.read(mistakeBankTabRequestProvider.notifier).request();
   }
 
   void _initSharingIntent() {

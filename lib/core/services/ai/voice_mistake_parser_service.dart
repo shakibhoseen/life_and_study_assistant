@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/notification_constants.dart';
 import '../../database/app_database.dart';
+import '../../database/tables/drill_questions_table.dart';
 import '../../database/tables/weak_topics_table.dart';
 import '../../utils/bengali_math_sanitizer.dart';
 import 'gemini_usage_tracker.dart';
@@ -488,11 +489,14 @@ Return STRICTLY a JSON object with this exact structure:
     );
   }
 
-  /// Save the mistake to Mistake Bank (DrillQuestions), Spaced Repetition (SM-2), and Weak Topics
-  Future<void> saveVoiceMistakeToDatabase(
+  /// Saves the mistake to the Mistake Bank, Spaced Repetition and Weak Topics.
+  ///
+  /// Returns false when the question is already in the bank and nothing was
+  /// written, so the caller can say so instead of claiming a save.
+  Future<bool> saveVoiceMistakeToDatabase(
     AppDatabase db,
     VoiceMistakeResult rawResult, {
-    String sourceTag = '[উৎস: LiveMCQ 🎙️]',
+    String sourceTag = voiceMistakeSourceTag,
   }) async {
     final result = VoiceMistakeResult(
       questionText: BengaliMathSanitizer.sanitize(rawResult.questionText),
@@ -505,6 +509,21 @@ Return STRICTLY a JSON object with this exact structure:
       topic: rawResult.topic,
       keyRule: BengaliMathSanitizer.sanitize(rawResult.keyRule),
     );
+
+    // Already in the bank?
+    //
+    // Dictating the same mistake twice is ordinary — the question comes round
+    // again in the next exam — and it used to leave two identical rows to be
+    // mastered separately, along with two review cards for the one fact. The
+    // import path has treated matching question text as the same question for
+    // a long time; this follows it, and compares the sanitised text so that
+    // two spellings of the same formula still meet.
+    final alreadySaved =
+        await (db.select(db.drillQuestions)
+              ..where((t) => t.questionText.equals(result.questionText))
+              ..limit(1))
+            .getSingleOrNull();
+    if (alreadySaved != null) return false;
 
     // 1. Save to Spaced Repetition (Day 1 review interval)
     final tomorrow = DateTime.now().add(const Duration(days: 1));
@@ -521,31 +540,34 @@ Return STRICTLY a JSON object with this exact structure:
       ),
     );
 
-    // 2. Save into Mistake Bank (DrillRecords and DrillQuestions table)
-    await db.recordFullDrillSession(
-      subject: result.subject,
-      topic: result.topic,
-      totalQuestions: 1,
-      correctCount: 0,
-      incorrectCount: 1,
-      scorePercentage: 0.0,
-      questions: [
-        DrillQuestionsCompanion.insert(
-          subject: result.subject,
-          topic: result.topic,
-          questionText: result.questionText,
-          optionsJson: jsonEncode(result.options),
-          correctIndex: result.correctIndex,
-          selectedIndex: (result.correctIndex + 1) % 4,
-          isCorrect: false,
-          explanation: Value(
-            result.explanation.startsWith('[উৎস:')
-                ? result.explanation
-                : '$sourceTag ${result.explanation}',
-          ),
-          isMastered: const Value(false),
+    // 2. Save into the Mistake Bank.
+    //
+    // As a question on its own, with no drill record over it. Writing one
+    // made every mistake dictated into the bubble show up as a sat-and-failed
+    // drill session: the Past Sessions list filled with one-question runs
+    // scored 0%, and `total_drills` counted each of them. The user did not
+    // take a drill, they wrote down a mistake.
+    await db.insertDrillQuestion(
+      DrillQuestionsCompanion.insert(
+        subject: result.subject,
+        topic: result.topic,
+        questionText: result.questionText,
+        optionsJson: jsonEncode(result.options),
+        correctIndex: result.correctIndex,
+        // Nothing was selected. This used to hold `(correctIndex + 1) % 4`,
+        // an answer invented to sit next to the right one, so the Mistake
+        // Bank told the user they had picked an option they never saw — and
+        // with fewer than four options it pointed past the end of the list.
+        // -1 is what every reader already treats as "no answer given".
+        selectedIndex: -1,
+        isCorrect: false,
+        explanation: Value(
+          result.explanation.startsWith('[উৎস:')
+              ? result.explanation
+              : '$sourceTag ${result.explanation}',
         ),
-      ],
+        isMastered: const Value(false),
+      ),
     );
 
     // 3. Mark as Weak Topic
@@ -556,5 +578,7 @@ Return STRICTLY a JSON object with this exact structure:
         proficiencyLevel: ProficiencyLevel.weak,
       ),
     );
+
+    return true;
   }
 }

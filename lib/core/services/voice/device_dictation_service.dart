@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:overlay_bridge/overlay_bridge.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 /// Turns speech into text using the phone's own recogniser.
@@ -134,6 +135,27 @@ class DeviceDictationService {
   /// captured.
   bool _userStopped = false;
 
+  /// When the session now running was opened.
+  ///
+  /// Used only as the backstop in [_restartSoon]; null whenever nothing is
+  /// listening.
+  DateTime? _sessionStartedAt;
+
+  /// Whether this session is holding the microphone foreground-service type.
+  ///
+  /// Tracked rather than inferred, so a second [listen] without a [stop]
+  /// between them cannot claim it twice and leave it claimed forever.
+  bool _holdingMic = false;
+
+  /// How long the reopen-on-pause loop may keep a session alive.
+  ///
+  /// Nobody dictates one note for five minutes, so this never cuts a real
+  /// session short. It exists for the case where a screen goes away without
+  /// calling [stop]: the loop would otherwise reopen the recogniser every
+  /// quarter second for as long as the process lives, holding the microphone
+  /// away from the camera and every other app on the phone.
+  static const Duration maxSessionLifetime = Duration(minutes: 5);
+
   /// The newest text of the utterance in flight.
   ///
   /// Measured on this handset: every result arrives with finalResult false —
@@ -160,8 +182,16 @@ class DeviceDictationService {
     _lastPartial = '';
     _userStopped = false;
     _onResult = onResult;
+    _sessionStartedAt = DateTime.now();
     _maxDuration = maxDuration;
     if (!await init()) return false;
+    if (!_holdingMic) {
+      // Held for the whole session rather than per utterance: the recogniser
+      // closes and reopens at every pause, and letting the claim lapse in
+      // those gaps would lose the microphone in the background.
+      _holdingMic = true;
+      await MicForegroundService.instance.acquire(text: 'Listening');
+    }
     return _listenOnce();
   }
 
@@ -181,22 +211,36 @@ class DeviceDictationService {
   }
 
   Future<void> _restartSoon() async {
-    if (_restarting || _userStopped) return;
+    if (_restarting || _userStopped || _onResult == null) return;
     _restarting = true;
-    // The session is closing, which is the only dependable moment to keep
-    // what was heard.
-    _commitPartial();
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    if (!_userStopped) {
+    try {
+      // The session is closing, which is the only dependable moment to keep
+      // what was heard.
+      _commitPartial();
+
+      final started = _sessionStartedAt;
+      if (started != null &&
+          DateTime.now().difference(started) > maxSessionLifetime) {
+        debugPrint('Dictation: session past $maxSessionLifetime, closing');
+        await stop();
+        return;
+      }
+
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      // Read again after the wait rather than before it: stop() may have run
+      // while it was pending, and reopening then is exactly the leak the
+      // guard at the top is there to prevent.
+      if (_userStopped || _onResult == null) return;
       debugPrint('Dictation: reopening after pause');
       await _listenOnce();
+    } finally {
+      _restarting = false;
     }
-    _restarting = false;
   }
 
   Future<bool> _listenOnce() async {
     final onResult = _onResult;
-    if (onResult == null) return false;
+    if (onResult == null || _userStopped) return false;
 
     final locale = await resolveLocale();
     try {
@@ -258,20 +302,42 @@ class DeviceDictationService {
   /// The text gathered so far, across every utterance in this session.
   String get committedText => _committed;
 
+  /// Ends the session and hands the microphone back.
+  ///
+  /// Dropping the callback is what actually stops it. The status callback
+  /// reopens the recogniser at every pause, and that loop is only allowed to
+  /// run while somebody is still waiting for the words; [_userStopped] alone
+  /// was not enough, because the next [listen] clears it again.
+  ///
+  /// [committedText] still holds the whole session afterwards: the utterance
+  /// in flight is banked first, and the text is not cleared here.
   Future<void> stop() async {
     _userStopped = true;
+    _onResult = null;
+    _sessionStartedAt = null;
     _commitPartial();
     try {
       await _speech.stop();
     } catch (_) {}
+    await _releaseMic();
   }
 
+  /// Ends the session and throws away what was heard.
   Future<void> cancel() async {
     _userStopped = true;
+    _onResult = null;
+    _sessionStartedAt = null;
     _committed = '';
     _lastPartial = '';
     try {
       await _speech.cancel();
     } catch (_) {}
+    await _releaseMic();
+  }
+
+  Future<void> _releaseMic() async {
+    if (!_holdingMic) return;
+    _holdingMic = false;
+    await MicForegroundService.instance.release();
   }
 }
