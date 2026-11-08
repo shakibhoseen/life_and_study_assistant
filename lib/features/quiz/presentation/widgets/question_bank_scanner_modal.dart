@@ -424,11 +424,19 @@ class _QuestionBankScannerModalState
       final spent = QuestionBankOcrService.instance.lastCallTokens ?? 0;
 
       if (mounted) {
+        final isAppending = _editableQuestions.isNotEmpty;
+        final merge = mergeScannedPage(
+          existing: _editableQuestions,
+          fromPage: res.questions,
+        );
+
         setState(() {
           _result = res;
-          _editableQuestions = List<QuizQuestion>.from(res.questions);
-          _titleController.text = res.title;
-          _pagesScanned = 1;
+          _editableQuestions = merge.questions;
+          if (_titleController.text.trim().isEmpty) {
+            _titleController.text = res.title;
+          }
+          _pagesScanned = isAppending ? _pagesScanned + 1 : 1;
           _isScanning = false;
           _savedToRoutine = false;
         });
@@ -436,9 +444,13 @@ class _QuestionBankScannerModalState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '${res.questions.length}টি প্রশ্ন প্রসেস হয়েছে'
-              '${hasAnswers ? ' (সংযুক্ত উত্তরমালা থেকে)' : ' (উত্তর ও ব্যাখ্যা অনুপস্থিত)'}'
-              '${spent > 0 ? ' · $spent টোকেন' : ' (অফলাইন পার্স)'}',
+              !isAppending
+                  ? '${merge.added}টি প্রশ্ন প্রসেস হয়েছে'
+                      '${hasAnswers ? ' (সংযুক্ত উত্তরমালা থেকে)' : ' (উত্তর ও ব্যাখ্যা অনুপস্থিত)'}'
+                      '${spent > 0 ? ' · $spent টোকেন' : ' (অফলাইন পার্স)'}'
+                  : '${merge.added}টি নতুন প্রশ্ন যোগ হয়েছে'
+                      '${merge.duplicates > 0 ? ' (${merge.duplicates}টি ডুপ্লিকেট বাদ)' : ''}'
+                      ' · মোট ${_editableQuestions.length}টি প্রশ্ন',
             ),
           ),
         );
@@ -617,6 +629,10 @@ class _QuestionBankScannerModalState
 
   Future<void> _showPasteAnswerKeySheet() async {
     final textCtrl = TextEditingController();
+    bool applyToUnansweredOnly = false;
+    final unsolvedCount =
+        _editableQuestions.where((q) => q.correctIndex < 0).length;
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -724,6 +740,26 @@ class _QuestionBankScannerModalState
                       ),
                     ],
                   ),
+                  if (unsolvedCount > 0) ...[
+                    const SizedBox(height: 6),
+                    CheckboxListTile(
+                      value: applyToUnansweredOnly,
+                      onChanged: (val) => setSheetState(
+                        () => applyToUnansweredOnly = val ?? false,
+                      ),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        'শুধুমাত্র অনুত্তরিত $unsolvedCountটি প্রশ্নে ক্রমানুসারে বসান',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      subtitle: const Text(
+                        'অন থাকলে পূর্বে উত্তর দেওয়া প্রশ্নগুলোর মান পরিবর্তন হবে না',
+                        style: TextStyle(fontSize: 10.5, color: Colors.grey),
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   ElevatedButton.icon(
                     onPressed: textCtrl.text.trim().isEmpty
@@ -744,19 +780,46 @@ class _QuestionBankScannerModalState
                             }
                             int updatedCount = 0;
                             setState(() {
-                              for (final entry in keyMap.entries) {
-                                final qIdx = entry.key;
-                                final optIdx = entry.value;
-                                if (qIdx >= 0 &&
-                                    qIdx < _editableQuestions.length) {
+                              if (applyToUnansweredOnly) {
+                                final unanswered = <int>[];
+                                for (
+                                  int i = 0;
+                                  i < _editableQuestions.length;
+                                  i++
+                                ) {
+                                  if (_editableQuestions[i].correctIndex < 0) {
+                                    unanswered.add(i);
+                                  }
+                                }
+                                int u = 0;
+                                for (final optIdx in keyMap.values) {
+                                  if (u >= unanswered.length) break;
+                                  final qIdx = unanswered[u++];
                                   final q = _editableQuestions[qIdx];
                                   if (optIdx >= 0 &&
-                                    optIdx < q.options.length) {
+                                      optIdx < q.options.length) {
                                     _editableQuestions[qIdx] = q.copyWith(
                                       correctIndex: optIdx,
                                       answerSource: AnswerSource.answerKey,
                                     );
                                     updatedCount++;
+                                  }
+                                }
+                              } else {
+                                for (final entry in keyMap.entries) {
+                                  final qIdx = entry.key;
+                                  final optIdx = entry.value;
+                                  if (qIdx >= 0 &&
+                                      qIdx < _editableQuestions.length) {
+                                    final q = _editableQuestions[qIdx];
+                                    if (optIdx >= 0 &&
+                                        optIdx < q.options.length) {
+                                      _editableQuestions[qIdx] = q.copyWith(
+                                        correctIndex: optIdx,
+                                        answerSource: AnswerSource.answerKey,
+                                      );
+                                      updatedCount++;
+                                    }
                                   }
                                 }
                               }
@@ -783,6 +846,137 @@ class _QuestionBankScannerModalState
                     label: const Text(
                       'উত্তরমালা প্রয়োগ করুন (Apply)',
                       style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showAddMoreTextSheet() async {
+    final textCtrl = TextEditingController();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (sheetCtx, setSheetState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 16,
+              ),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.note_add_outlined,
+                        color: Color(0xFF4F46E5),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'আরও প্রশ্ন যোগ করুন (পেস্ট)',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'বর্তমান ${_editableQuestions.length}টি প্রশ্নের সাথে আরও নতুন প্রশ্ন যোগ করতে টেক্সটবুক বা AI এজেন্ট থেকে কপি করা MCQ পেস্ট করুন:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Stack(
+                    children: [
+                      TextField(
+                        controller: textCtrl,
+                        maxLines: 6,
+                        minLines: 3,
+                        style: const TextStyle(fontSize: 12.5),
+                        decoration: InputDecoration(
+                          hintText: '১. প্রশ্ন...\nক) অপশন ১\nখ) অপশন ২...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          contentPadding: const EdgeInsets.all(10),
+                        ),
+                        onChanged: (_) => setSheetState(() {}),
+                      ),
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final data = await Clipboard.getData('text/plain');
+                            if (data?.text != null && data!.text!.isNotEmpty) {
+                              setSheetState(() => textCtrl.text = data.text!);
+                            }
+                          },
+                          icon: const Icon(Icons.paste, size: 12),
+                          label: const Text('পেস্ট', style: TextStyle(fontSize: 11)),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: textCtrl.text.trim().isEmpty
+                        ? null
+                        : () async {
+                            final raw = textCtrl.text.trim();
+                            if (raw.isEmpty) return;
+                            Navigator.of(ctx).pop();
+                            _pastedTextController.text = raw;
+                            await _processPastedText();
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text(
+                      'প্রশ্নে যুক্ত করুন (+ Merge)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -1745,9 +1939,11 @@ class _QuestionBankScannerModalState
                     : Colors.grey.shade300,
               ),
               icon: const Icon(Icons.auto_awesome, size: 20),
-              label: const Text(
-                '⚡ টেক্সট থেকে কুইজ তৈরি করুন (Extract MCQs)',
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+              label: Text(
+                _editableQuestions.isNotEmpty
+                    ? '⚡ বিদ্যমান প্রশ্নে যোগ করুন (+${_editableQuestions.length}টি বর্তমান)'
+                    : '⚡ টেক্সট থেকে কুইজ তৈরি করুন (Extract MCQs)',
+                style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
               ),
             ),
         ],
@@ -2027,7 +2223,7 @@ class _QuestionBankScannerModalState
                     child: Text(
                       _hasAnswerMarkersInPastedText()
                           ? 'উত্তরমালা পাওয়া গেছে (তাৎক্ষণিক পার্স হবে)'
-                          : 'উত্তর ও ব্যাখ্যা অনুপস্থিত — AI নিজে সমাধান করে সঠিক উত্তর ও ব্যাখ্যা বসাবে',
+                          : 'উত্তর ও ব্যাখ্যা অনুপস্থিত (রিভিউ স্ক্রিনে উত্তরমালা পেস্ট, ভয়েস বা AI দিয়ে সহজে সমাধান করতে পারবেন)',
                       style: TextStyle(
                         fontSize: 11,
                         color: _hasAnswerMarkersInPastedText()
@@ -2641,6 +2837,18 @@ class _QuestionBankScannerModalState
                     icon: const Icon(Icons.add_a_photo_outlined, size: 16),
                     label: const Text(
                       'আরেক পাতা',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  TextButton.icon(
+                    onPressed: _isScanning ? null : _showAddMoreTextSheet,
+                    icon: const Icon(Icons.note_add_outlined, size: 16),
+                    label: const Text(
+                      '+ আরও পেস্ট',
                       style: TextStyle(fontSize: 12),
                     ),
                     style: TextButton.styleFrom(
