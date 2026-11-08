@@ -416,38 +416,38 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       horizontal: 6,
                       vertical: 2,
                     ),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: Colors.amber.withValues(alpha: 0.3),
-                          width: 0.5,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          FadeTransition(
-                            opacity: _pulseController,
-                            child: const Icon(
-                              Icons.bolt,
-                              size: 11,
-                              color: Colors.amber,
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            tokensStr,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber,
-                            ),
-                          ),
-                        ],
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.amber.withValues(alpha: 0.3),
+                        width: 0.5,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FadeTransition(
+                          opacity: _pulseController,
+                          child: const Icon(
+                            Icons.bolt,
+                            size: 11,
+                            color: Colors.amber,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          tokensStr,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
 
                   // Live Timer Badge
                   Container(
@@ -600,10 +600,7 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
 
             // Live Stream Pulse & Token Badge Pill
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 4,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xFF6366F1).withValues(alpha: 0.15)
@@ -625,7 +622,9 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       width: 7,
                       height: 7,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF10B981), // Emerald green live indicator
+                        color: Color(
+                          0xFF10B981,
+                        ), // Emerald green live indicator
                         shape: BoxShape.circle,
                       ),
                     ),

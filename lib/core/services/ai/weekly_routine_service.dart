@@ -57,7 +57,9 @@ class WeeklyRoutineService {
   WeeklyRoutineService._();
   static final WeeklyRoutineService instance = WeeklyRoutineService._();
 
-  static const int maxOutputTokens = 1536;
+  /// A whole week's routine comes back in one reply, and the reasoning
+  /// that precedes it is drawn from the same allowance.
+  static const int maxOutputTokens = 8192;
 
   Future<String?> _getApiKey() async {
     final prefs = await SharedPreferences.getInstance();

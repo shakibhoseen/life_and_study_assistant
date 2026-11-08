@@ -12,6 +12,7 @@ import '../../utils/embedded_json.dart';
 import 'gemini_ai_service.dart';
 import 'gemini_usage_tracker.dart';
 import 'models/quiz_question.dart';
+import 'ai_cancellation.dart';
 
 class QuestionCorrectionItem {
   final int questionIndex; // 0-based index
@@ -239,9 +240,15 @@ class QuizBatchCorrectionService {
   /// question they know is wrong is still wrong.
   bool lastReplyWasCut = false;
 
+  /// [cancellation] lets the user stop waiting.
+  ///
+  /// The reply is not cut short to save tokens — a half-written correction is
+  /// worth nothing, and the reasoning has already been paid for by the time
+  /// the writing starts. Stopping is the user's decision instead.
   Future<List<QuestionCorrectionItem>> parseCorrections({
     required List<QuizQuestion> questions,
     required String externalAnalysis,
+    AiCancellation? cancellation,
   }) async {
     if (questions.isEmpty || externalAnalysis.trim().isEmpty) return const [];
     lastParseWasFree = false;
@@ -283,12 +290,15 @@ class QuizBatchCorrectionService {
           apiKey: apiKey,
           questions: questions,
           externalAnalysis: externalAnalysis,
+          cancellation: cancellation,
         );
         debugPrint(
           'Batch correction: ${result.length} corrections parsed from '
           '${questions.length} questions',
         );
         if (result.isNotEmpty) return result;
+      } on AiCancelledException {
+        rethrow;
       } catch (e) {
         debugPrint('Gemini batch correction parsing error: $e');
         final lower = e.toString().toLowerCase();
@@ -323,6 +333,7 @@ class QuizBatchCorrectionService {
     required String apiKey,
     required List<QuizQuestion> questions,
     required String externalAnalysis,
+    AiCancellation? cancellation,
   }) async {
     final questionsListBuffer = StringBuffer();
     for (int i = 0; i < questions.length; i++) {
@@ -396,7 +407,10 @@ If the text says all answers are correct or no fixes are suggested, return: []
       ),
     );
 
-    final response = await model.generateContent([Content.text(prompt)]);
+    final call = model.generateContent([Content.text(prompt)]);
+    final response = cancellation == null
+        ? await call
+        : await cancellation.guard(call);
 
     // This call used to spend tokens without recording any, so its cost never
     // showed up in the daily total or in the log.

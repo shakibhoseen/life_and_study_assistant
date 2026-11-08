@@ -238,10 +238,7 @@ class AppTheme {
         unselectedLabelColor: textMuted,
         indicatorColor: primary,
       ),
-      listTileTheme: ListTileThemeData(
-        textColor: text,
-        iconColor: text,
-      ),
+      listTileTheme: ListTileThemeData(textColor: text, iconColor: text),
       popupMenuTheme: PopupMenuThemeData(
         color: cardBg,
         surfaceTintColor: Colors.transparent,

@@ -133,6 +133,13 @@ void main() {
     test(
       'importBackupJson imports into a fresh database without loss',
       () async {
+        // Dated from today rather than written in. The exam below is only
+        // returned by getUpcomingExams while it is still ahead, so a fixed
+        // date made this test pass until that day and fail every day after.
+        final futureExamDate = DateTime.now()
+            .add(const Duration(days: 7))
+            .toIso8601String();
+
         final sampleBackup = jsonEncode({
           'version': 1,
           'exported_at': DateTime.now().toIso8601String(),
@@ -152,7 +159,7 @@ void main() {
           ],
           'exam_schedules': [
             {
-              'exam_date': '2026-11-05T00:00:00.000',
+              'exam_date': futureExamDate,
               'exam_time': '10:00 PM',
               'subject': 'English Literature',
               'title': 'Elizabethan Era Test',

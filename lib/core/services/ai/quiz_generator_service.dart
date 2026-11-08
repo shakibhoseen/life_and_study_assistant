@@ -78,11 +78,12 @@ JSON Structure:
     final savedModel =
         prefs.getString(NotificationConstants.prefGeminiModel) ??
         'gemini-flash-lite-latest';
-    final primaryModel = [
-      'gemini-flash-lite-latest',
-      'gemini-flash-latest',
-      'gemini-pro-latest',
-    ].contains(savedModel)
+    final primaryModel =
+        [
+          'gemini-flash-lite-latest',
+          'gemini-flash-latest',
+          'gemini-pro-latest',
+        ].contains(savedModel)
         ? savedModel
         : 'gemini-flash-lite-latest';
 
@@ -90,8 +91,7 @@ JSON Structure:
       primaryModel,
       if (primaryModel != 'gemini-flash-lite-latest')
         'gemini-flash-lite-latest',
-      if (primaryModel != 'gemini-flash-latest')
-        'gemini-flash-latest',
+      if (primaryModel != 'gemini-flash-latest') 'gemini-flash-latest',
     ];
 
     Object? lastError;
@@ -251,8 +251,7 @@ JSON Structure:
         str.contains('clientexception')) {
       return 'ইন্টারনেট সংযোগ পাওয়া যায়নি। ফোনের Wi-Fi বা মোবাইল ডেটা চেক করুন।';
     }
-    if (str.contains('api_key_invalid') ||
-        str.contains('api key not valid')) {
+    if (str.contains('api_key_invalid') || str.contains('api key not valid')) {
       return 'Gemini API কী সঠিক নয়। সেটিংসে গিয়ে নতুন কী দিন।';
     }
     return 'প্রশ্ন তৈরি করা সম্ভব হয়নি (${error.runtimeType})। আবার চেষ্টা করুন।';

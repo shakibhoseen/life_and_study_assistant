@@ -131,7 +131,7 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
           responseMimeType: 'application/json',
           responseSchema: _studySheetSchema,
           temperature: 0.2,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 8192,
         ),
       );
       _modelName = modelName;

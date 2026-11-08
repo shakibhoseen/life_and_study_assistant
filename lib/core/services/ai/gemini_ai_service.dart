@@ -25,17 +25,31 @@ import 'ai_cancellation.dart';
 /// so every call ran at the API default temperature of 1.0 with no output
 /// ceiling, and the JSON callers had to beg the model in prose not to wrap
 /// their output in markdown fences.
+/// Why these ceilings are generous.
+///
+/// A cap costs nothing. Billing is for tokens actually produced, so a high
+/// ceiling on a short reply is free; all a low one can do is cut the reply
+/// off. That was harmless until the model started reasoning before writing:
+/// measured on this project, a call spent roughly a thousand tokens before
+/// its first visible word. Against that, a 600-token ceiling on an MCQ
+/// verification left almost nothing for the answer, and a reply cut mid-JSON
+/// decodes to nothing — which is why the tracing came back wrong or empty
+/// rather than slow.
+///
+/// So these are sized to never truncate. Keeping the cost down is done where
+/// it belongs: caching, smaller images, shorter prompts, and asking fewer
+/// times — not by cutting an answer in half after paying to think about it.
 final _studyPlanConfig = GenerationConfig(
   temperature: 0.2,
   responseMimeType: 'application/json',
   responseSchema: studyPlanSchema,
-  maxOutputTokens: 2048,
+  maxOutputTokens: 8192,
 );
 
 final _jsonConfig = GenerationConfig(
   temperature: 0.2,
   responseMimeType: 'application/json',
-  maxOutputTokens: 2048,
+  maxOutputTokens: 8192,
 );
 
 /// Shape of an independent answer to an MCQ.
@@ -70,7 +84,7 @@ final _mcqSolveConfig = GenerationConfig(
   temperature: 0.1,
   responseMimeType: 'application/json',
   responseSchema: _mcqSolveSchema,
-  maxOutputTokens: 600,
+  maxOutputTokens: 8192,
 );
 
 /// Shape for a second look taken with the user's own argument in hand.
@@ -119,7 +133,7 @@ final _evidenceReviewConfig = GenerationConfig(
   temperature: 0.2,
   responseMimeType: 'application/json',
   responseSchema: _evidenceReviewSchema,
-  maxOutputTokens: 900,
+  maxOutputTokens: 8192,
 );
 
 /// Claim-level shape for a chat answer.
@@ -177,10 +191,10 @@ final _chatVerificationConfig = GenerationConfig(
   temperature: 0.1,
   responseMimeType: 'application/json',
   responseSchema: _chatVerificationSchema,
-  maxOutputTokens: 1400,
+  maxOutputTokens: 8192,
 );
 
-final _proseConfig = GenerationConfig(temperature: 0.6, maxOutputTokens: 1536);
+final _proseConfig = GenerationConfig(temperature: 0.6, maxOutputTokens: 8192);
 
 /// How long a study plan is reused before it is built again.
 ///

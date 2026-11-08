@@ -69,7 +69,10 @@ void main() {
       // In result state, verify it shows "উত্তর দেননি (স্কিপড)" instead of "ভুল উত্তর"
       expect(find.text('প্রশ্ন 1: উত্তর দেননি (স্কিপড)'), findsOneWidget);
       expect(find.text('প্রশ্ন 1: ভুল উত্তর'), findsNothing);
-      expect(find.text('⏭️ কোনো উত্তর দেননি (স্কিপ করা হয়েছে)'), findsOneWidget);
+      expect(
+        find.text('⏭️ কোনো উত্তর দেননি (স্কিপ করা হয়েছে)'),
+        findsOneWidget,
+      );
     },
   );
 }

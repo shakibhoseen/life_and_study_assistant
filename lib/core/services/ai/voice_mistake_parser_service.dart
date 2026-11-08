@@ -101,7 +101,7 @@ Rules:
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
           temperature: 0.1,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 8192,
         ),
       );
       debugPrint('VoiceMistakeParserService initialized with $modelName');

@@ -35,7 +35,11 @@ class ThemeSelectorCard extends ConsumerWidget {
           children: [
             const Row(
               children: [
-                Icon(Icons.palette_outlined, size: 18, color: Color(0xFF6366F1)),
+                Icon(
+                  Icons.palette_outlined,
+                  size: 18,
+                  color: Color(0xFF6366F1),
+                ),
                 SizedBox(width: 8),
                 Text(
                   'Select Interface Theme',
@@ -149,7 +153,8 @@ class ThemeSelectorCard extends ConsumerWidget {
               subtitle: 'সফট ল্যাভেন্ডার, প্যাস্টেল রোজ ও কোজি ভেলভেট — মিষ্টি ও ফ্রেন্ডলি',
               icon: Icons.auto_awesome,
               iconColor: const Color(0xFFC084FC),
-              isSelected: currentMode == ThemeMode.dark &&
+              isSelected:
+                  currentMode == ThemeMode.dark &&
                   activeDarkPreset == DarkThemePreset.cuteVelvet,
               onTap: () => selectDarkPreset(DarkThemePreset.cuteVelvet),
             ),
@@ -162,7 +167,8 @@ class ThemeSelectorCard extends ConsumerWidget {
               subtitle: 'ওয়ার্ম রোস্টেড চকোলেট ও ক্যারামেল — কফি শপ ও লাইব্রেরি বুকিশ ভাইব',
               icon: Icons.coffee_rounded,
               iconColor: const Color(0xFFF59E0B),
-              isSelected: currentMode == ThemeMode.dark &&
+              isSelected:
+                  currentMode == ThemeMode.dark &&
                   activeDarkPreset == DarkThemePreset.cozyMocha,
               onTap: () => selectDarkPreset(DarkThemePreset.cozyMocha),
             ),
@@ -175,7 +181,8 @@ class ThemeSelectorCard extends ConsumerWidget {
               subtitle: 'ডিপ ব্লুবেরি নেভি ও আইস সায়ান — শান্ত ও মার্জিত রাত',
               icon: Icons.nights_stay_rounded,
               iconColor: const Color(0xFF38BDF8),
-              isSelected: currentMode == ThemeMode.dark &&
+              isSelected:
+                  currentMode == ThemeMode.dark &&
                   activeDarkPreset == DarkThemePreset.nordicTwilight,
               onTap: () => selectDarkPreset(DarkThemePreset.nordicTwilight),
             ),
@@ -188,7 +195,8 @@ class ThemeSelectorCard extends ConsumerWidget {
               subtitle: 'Obsidian pitch-black (#090D1A) — AMOLED স্ক্রিনে সর্বোচ্চ ব্যাটারি সাশ্রয়ী',
               icon: Icons.battery_saver_rounded,
               iconColor: const Color(0xFF10B981),
-              isSelected: currentMode == ThemeMode.dark &&
+              isSelected:
+                  currentMode == ThemeMode.dark &&
                   activeDarkPreset == DarkThemePreset.oledBatterySaver,
               onTap: () => selectDarkPreset(DarkThemePreset.oledBatterySaver),
             ),
@@ -218,21 +226,10 @@ class ThemeSelectorCard extends ConsumerWidget {
           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
         ),
       ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(fontSize: 10.5),
-      ),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 10.5)),
       trailing: isSelected
-          ? Icon(
-              Icons.check_circle,
-              color: iconColor,
-              size: 20,
-            )
-          : const Icon(
-              Icons.circle_outlined,
-              color: Colors.grey,
-              size: 20,
-            ),
+          ? Icon(Icons.check_circle, color: iconColor, size: 20)
+          : const Icon(Icons.circle_outlined, color: Colors.grey, size: 20),
       onTap: onTap,
     );
   }

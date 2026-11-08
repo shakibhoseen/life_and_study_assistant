@@ -45,7 +45,9 @@ class GeminiChatService {
   /// Caps a single reply. Bengali tokenises far less efficiently than English
   /// (roughly 2-3x the tokens per character), so this sits well above the
   /// English-equivalent budget for a long grammar explanation.
-  static const int maxOutputTokens = 2048;
+  /// A cap only truncates; it never costs anything on its own, and a chat
+  /// answer cut mid-sentence is worse than a long one.
+  static const int maxOutputTokens = 8192;
 
   /// Mentor replies need some warmth, but the API default of 1.0 made
   /// flash-lite wander and pad.

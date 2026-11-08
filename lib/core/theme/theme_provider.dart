@@ -8,12 +8,7 @@ const String _prefThemeModeKey = 'app_theme_mode_preference';
 const String _prefDarkPresetKey = 'app_dark_theme_preset_preference';
 
 /// Available curated aesthetic dark theme presets.
-enum DarkThemePreset {
-  cuteVelvet,
-  cozyMocha,
-  nordicTwilight,
-  oledBatterySaver,
-}
+enum DarkThemePreset { cuteVelvet, cozyMocha, nordicTwilight, oledBatterySaver }
 
 class DarkThemePresetNotifier extends Notifier<DarkThemePreset> {
   static DarkThemePreset? initialPreset;

@@ -13,6 +13,7 @@ import '../../../../core/services/voice/voice_recording_service.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
 import '../providers/drill_history_provider.dart';
 import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
+import '../../../../core/services/ai/ai_cancellation.dart';
 
 /// Reusable modal sheet that allows students to paste external AI (ChatGPT, Claude, etc.)
 /// critiques or speak voice instructions to batch-fix or delete faulty questions with a 1-tap confirmation preview.
@@ -29,6 +30,7 @@ class QuizBatchCorrectionSheet {
   }) {
     final textController = TextEditingController();
     bool isAnalyzing = false;
+    AiCancellation? analysisCancellation;
     bool isRecordingVoice = false;
     int recordingSeconds = 0;
     Timer? recordingTimer;
@@ -435,9 +437,12 @@ class QuizBatchCorrectionSheet {
                     // counts the seconds so a slow call is visibly working
                     // rather than hung.
                     if (isAnalyzing) ...[
-                      const AiProgressPipelineWidget(
+                      AiProgressPipelineWidget(
                         type: AiTaskType.text,
                         isCompact: true,
+                        // Nothing is cut short to save tokens. Stopping is
+                        // the user's call, so it needs to be reachable.
+                        onCancel: () => analysisCancellation?.cancel(),
                       ),
                       const SizedBox(height: 10),
                     ],
@@ -478,8 +483,10 @@ class QuizBatchCorrectionSheet {
                                 });
                                 return;
                               }
+                              final cancellation = AiCancellation();
                               setSheetState(() {
                                 isAnalyzing = true;
+                                analysisCancellation = cancellation;
                                 statusMessage = null;
                               });
 
@@ -489,6 +496,7 @@ class QuizBatchCorrectionSheet {
                                     .parseCorrections(
                                       questions: questions,
                                       externalAnalysis: text,
+                                      cancellation: cancellation,
                                     );
                                 if (items.isEmpty) {
                                   setSheetState(() {

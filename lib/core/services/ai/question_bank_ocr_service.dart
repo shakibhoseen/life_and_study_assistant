@@ -469,11 +469,19 @@ Return JSON ONLY:
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
           temperature: 0.1,
-          maxOutputTokens: 1024,
+          // A cap only truncates; it never costs anything on its own. At
+          // 1024 this verification was cut by the reasoning that precedes
+          // the answer, and a reply cut mid-JSON decodes to nothing — so a
+          // question came back unverified rather than slowly verified.
+          maxOutputTokens: 8192,
         ),
       );
 
       final response = await model.generateContent([Content.text(prompt)]);
+      if (response.candidates.isNotEmpty &&
+          response.candidates.first.finishReason == FinishReason.maxTokens) {
+        debugPrint('Question verify: reply was cut before it finished');
+      }
 
       // Per-question verification is a real call too; it was the only one in
       // this service not being counted.

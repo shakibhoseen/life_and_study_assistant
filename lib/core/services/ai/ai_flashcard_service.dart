@@ -350,7 +350,7 @@ Instructions:
             // A dense page can carry a dozen cards, and reasoning is drawn
             // from this budget before any of them is written; 1200 cut the
             // reply mid-card.
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
           ),
         );
 
@@ -491,7 +491,7 @@ Return ONLY a valid JSON object matching the requested schema.
             responseMimeType: 'application/json',
             responseSchema: _flashcardSchema,
             temperature: 0.1,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 8192,
           ),
         );
 
