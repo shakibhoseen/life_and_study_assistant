@@ -109,13 +109,16 @@ class QuestionTextParser {
 
     // Detect correct index
     int correctIndex = 0;
+    AnswerSource source = AnswerSource.guess;
     final rawIndex = item['correct_index'] ?? item['correctIndex'] ?? item['answer_index'];
     if (rawIndex is int && rawIndex >= 0 && rawIndex < options.length) {
       correctIndex = rawIndex;
+      source = AnswerSource.answerKey;
     } else {
       final rawAns = item['answer'] ?? item['correct'] ?? item['ans'];
       if (rawAns != null) {
         correctIndex = _resolveAnswerOptionIndex(rawAns.toString(), options);
+        source = AnswerSource.answerKey;
       }
     }
 
@@ -129,7 +132,7 @@ class QuestionTextParser {
       correctIndex: correctIndex,
       explanation: BengaliMathSanitizer.sanitize(explanation),
       subject: subject,
-      answerSource: AnswerSource.solved,
+      answerSource: source,
       legible: true,
     );
   }
@@ -262,8 +265,10 @@ class QuestionTextParser {
     if (questionText == null || options.length < 2) return null;
 
     int correctIndex = 0;
+    AnswerSource source = AnswerSource.guess;
     if (answerLine != null) {
       correctIndex = _resolveAnswerOptionIndex(answerLine, options);
+      source = AnswerSource.answerKey;
     }
 
     final explanation = explanationLines.join(' ').trim();
@@ -274,9 +279,15 @@ class QuestionTextParser {
       correctIndex: correctIndex,
       explanation: BengaliMathSanitizer.sanitize(explanation),
       subject: subject,
-      answerSource: answerLine != null ? AnswerSource.answerKey : AnswerSource.solved,
+      answerSource: source,
       legible: true,
     );
+  }
+
+  /// Returns true if all extracted questions have an explicit answer key provided.
+  static bool hasExplicitAnswers(QuestionBankExtractResult result) {
+    if (result.questions.isEmpty) return false;
+    return result.questions.every((q) => q.answerSource == AnswerSource.answerKey);
   }
 
   static String _normalizeOptionPrefix(String raw) {

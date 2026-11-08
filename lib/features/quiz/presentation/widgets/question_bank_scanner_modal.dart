@@ -386,9 +386,20 @@ class _QuestionBankScannerModalState
     }
   }
 
+  bool _hasAnswerMarkersInPastedText() {
+    final text = _pastedTextController.text.trim();
+    if (text.isEmpty) return false;
+    return RegExp(
+      r'(?:(?:সঠিক\s*)?উত্তর|Ans(?:wer)?)\s*[\:\=\-]',
+      caseSensitive: false,
+    ).hasMatch(text);
+  }
+
   Future<void> _processPastedText() async {
     final text = _pastedTextController.text.trim();
     if (text.isEmpty) return;
+
+    final hasAnswers = _hasAnswerMarkersInPastedText();
 
     setState(() {
       _isScanning = true;
@@ -402,6 +413,7 @@ class _QuestionBankScannerModalState
           await QuestionBankOcrService.instance.extractQuestionsFromText(
         rawText: text,
         subjectHint: _selectedSubject,
+        forceAi: !hasAnswers,
         onTokens: (spent) {
           if (mounted) setState(() => _liveTokens = spent);
         },
@@ -423,7 +435,8 @@ class _QuestionBankScannerModalState
           SnackBar(
             content: Text(
               '${res.questions.length}টি প্রশ্ন প্রসেস হয়েছে'
-              '${spent > 0 ? ' · $spent টোকেন' : ' (অফলাইন/লোকাল পার্স)'}',
+              '${hasAnswers ? ' (সংযুক্ত উত্তরমালা থেকে)' : ' (AI দ্বারা সমাধানকৃত)'}'
+              '${spent > 0 ? ' · $spent টোকেন' : ' (অফলাইন পার্স)'}',
             ),
           ),
         );
@@ -1442,6 +1455,55 @@ class _QuestionBankScannerModalState
               ),
             ],
           ),
+          if (_pastedTextController.text.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: _hasAnswerMarkersInPastedText()
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _hasAnswerMarkersInPastedText()
+                      ? Colors.green.withValues(alpha: 0.3)
+                      : const Color(0xFF4F46E5).withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _hasAnswerMarkersInPastedText()
+                        ? Icons.check_circle_outline
+                        : Icons.auto_awesome,
+                    size: 14,
+                    color: _hasAnswerMarkersInPastedText()
+                        ? Colors.green
+                        : const Color(0xFF4F46E5),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _hasAnswerMarkersInPastedText()
+                          ? 'উত্তরমালা পাওয়া গেছে (তাৎক্ষণিক পার্স হবে)'
+                          : 'উত্তর ও ব্যাখ্যা অনুপস্থিত — AI নিজে সমাধান করে সঠিক উত্তর ও ব্যাখ্যা বসাবে',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: _hasAnswerMarkersInPastedText()
+                            ? (isDark
+                                ? Colors.green.shade300
+                                : Colors.green.shade800)
+                            : (isDark
+                                ? const Color(0xFF818CF8)
+                                : const Color(0xFF4338CA)),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1900,10 +1962,10 @@ class _QuestionBankScannerModalState
                 color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
               ),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 14,
                   height: 14,
                   child: CircularProgressIndicator(
@@ -1911,10 +1973,12 @@ class _QuestionBankScannerModalState
                     color: Color(0xFF4F46E5),
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
-                  'টেক্সট প্রসেস ও কুইজ সাজানো হচ্ছে...',
-                  style: TextStyle(
+                  _hasAnswerMarkersInPastedText()
+                      ? 'টেক্সট প্রসেস ও কুইজ সাজানো হচ্ছে...'
+                      : 'AI প্রশ্নগুলো সমাধান করছে ও সঠিক উত্তর বের করছে...',
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF4F46E5),

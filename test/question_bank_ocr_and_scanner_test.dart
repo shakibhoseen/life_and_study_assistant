@@ -592,5 +592,34 @@ Explanation: Paris is the capital.
       expect(QuestionTextParser.tryParseLocal('   '), isNull);
       expect(QuestionTextParser.tryParseLocal('Just random talk without questions or options'), isNull);
     });
+
+    test('detects when answers and explanations are omitted and marks guess/unverified', () {
+      const inputWithoutAnswers = '''
+১. কোন গ্রহের উপগ্রহ সবচেয়ে বেশি?
+ক) বৃহস্পতি
+খ) শনি
+গ) মঙ্গল
+ঘ) শুক্র
+
+২. বাংলাদেশের জাতীয় স্মৃতিসৌধের স্থপতি কে?
+ক) মাইনুল হোসেন
+খ) হামিদুর রহমান
+গ) তানভীর মোস্তফা
+ঘ) শামীম সিকদার
+''';
+
+      final res = QuestionTextParser.tryParseLocal(inputWithoutAnswers);
+      expect(res, isNotNull);
+      expect(res!.questions.length, 2);
+      expect(QuestionTextParser.hasExplicitAnswers(res), isFalse);
+
+      final q1 = res.questions[0];
+      expect(q1.answerSource, AnswerSource.guess);
+      expect(q1.needsReview, isTrue);
+
+      final q2 = res.questions[1];
+      expect(q2.answerSource, AnswerSource.guess);
+      expect(q2.needsReview, isTrue);
+    });
   });
 }

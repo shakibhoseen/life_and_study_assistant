@@ -429,13 +429,16 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
       );
     }
 
-    // 1. Try offline local parser first if not forcing AI
+    // 1. Try offline local parser first ONLY if not forcing AI AND
+    // the input text already contains explicit answers for all questions.
     if (!forceAi) {
       final local = QuestionTextParser.tryParseLocal(
         trimmed,
         subjectHint: subjectHint,
       );
-      if (local != null && local.questions.isNotEmpty) {
+      if (local != null &&
+          local.questions.isNotEmpty &&
+          QuestionTextParser.hasExplicitAnswers(local)) {
         return local;
       }
     }
@@ -509,8 +512,9 @@ Instructions:
 1. Extract ALL authentic Multiple Choice Questions (MCQs) found in the text.
 2. Determine the Subject (e.g. "বাংলা ব্যাকরণ", "বাংলাদেশ বিষয়াবলী", "English Language", "সাধারণ বিজ্ঞান", "গণিত ও মানসিক দক্ষতা", "আন্তর্জাতিক বিষয়াবলী", "কম্পিউটার ও তথ্যপ্রযুক্তি", "ভূগোল ও পরিবেশ") and a concise Chapter/Topic Title.
 3. Each question must have exactly 4 distinct options (or 5 if bank exam). Ensure options are cleanly formatted.
-4. If an answer key or solution is given in the text, match and indicate the zero-based correct_index (0, 1, 2, or 3) and set answer_source to "answer_key". If no answer is indicated, solve it accurately with high confidence and set answer_source to "solved".
-5. Provide a clear educational explanation in Bengali for each question.
+4. If an answer key or solution is given in the text, match and indicate the zero-based correct_index (0, 1, 2, or 3) and set answer_source to "answer_key".
+   CRITICAL: If NO answer is indicated (the user omitted the answer and explanation), YOU MUST SOLVE THE QUESTION YOURSELF with 100% accuracy, pick the correct option (0, 1, 2, or 3), and set answer_source to "solved". DO NOT default or blindly choose option 0!
+5. Provide a clear educational explanation in Bengali for each question explaining why the chosen option is correct.
 6. Clean Unicode: Replace LaTeX math like \$x^2\$ or \\to with standard Unicode ('²', '°', '→', '√').
 
 ${subjectHint != null && subjectHint.isNotEmpty && subjectHint != 'Auto Detect' ? 'User Subject Hint: "$subjectHint"' : ''}
