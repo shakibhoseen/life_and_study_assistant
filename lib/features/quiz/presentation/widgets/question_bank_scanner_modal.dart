@@ -433,7 +433,7 @@ class _QuestionBankScannerModalState
       SnackBar(
         backgroundColor: Colors.green.shade700,
         content: Text(
-          'প্রশ্ন ${qIndex + 1}-এর সঠিক উত্তর "${currentQ.options[correctIndex]}" হিসেবে ঠিক করা হয়েছে ✓',
+          'প্রশ্ন ${qIndex + 1}-এর সঠিক উত্তর "${(correctIndex >= 0 && correctIndex < currentQ.options.length) ? currentQ.options[correctIndex] : ''}" হিসেবে ঠিক করা হয়েছে ✓',
         ),
       ),
     );
@@ -2121,7 +2121,7 @@ class _QuestionBankScannerModalState
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '• বইয়ের চিহ্নিত উত্তর: অপশন ${q.correctIndex + 1} (${q.options.length > q.correctIndex ? q.options[q.correctIndex] : ''})',
+                    '• বইয়ের চিহ্নিত উত্তর: ${q.correctIndex >= 0 ? "অপশন ${q.correctIndex + 1}" : "অচিহ্নিত"} (${(q.correctIndex >= 0 && q.correctIndex < q.options.length) ? q.options[q.correctIndex] : ''})',
                     style: TextStyle(
                       fontSize: 11,
                       color: isDark ? Colors.white70 : Colors.black87,

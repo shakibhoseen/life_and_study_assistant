@@ -680,7 +680,7 @@ class _VoiceMistakeBottomSheetState
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'সঠিক উত্তর: ${_parsedResult!.options[_parsedResult!.correctIndex]}',
+                      'সঠিক উত্তর: ${(_parsedResult!.correctIndex >= 0 && _parsedResult!.correctIndex < _parsedResult!.options.length) ? _parsedResult!.options[_parsedResult!.correctIndex] : "অজানা"}',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,

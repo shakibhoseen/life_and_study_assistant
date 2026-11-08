@@ -441,7 +441,7 @@ Question: ${question.questionText}
 Options:
 ${question.options.asMap().entries.map((e) => '${e.key}. ${e.value}').join('\n')}
 
-Marked Correct Option: ${question.correctIndex} (${question.options.length > question.correctIndex ? question.options[question.correctIndex] : ''})
+Marked Correct Option: ${question.correctIndex} (${(question.correctIndex >= 0 && question.correctIndex < question.options.length) ? question.options[question.correctIndex] : ''})
 
 Task:
 1. Is the question stem itself factually flawed, erroneous, or has NO correct answer at all among the options? (is_flawed: true/false)

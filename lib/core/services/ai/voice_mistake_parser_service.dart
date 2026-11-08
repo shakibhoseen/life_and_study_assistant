@@ -382,7 +382,7 @@ Rules:
             ? '${result.questionText.substring(0, 60)}...'
             : result.questionText,
         keyRule:
-            '${result.keyRule}\nসঠিক উত্তর: ${result.options[result.correctIndex]}\nব্যাখ্যা: ${result.explanation}',
+            '${result.keyRule}\nসঠিক উত্তর: ${(result.correctIndex >= 0 && result.correctIndex < result.options.length) ? result.options[result.correctIndex] : "অজানা"}\nব্যাখ্যা: ${result.explanation}',
         nextReviewDate: tomorrow,
       ),
     );

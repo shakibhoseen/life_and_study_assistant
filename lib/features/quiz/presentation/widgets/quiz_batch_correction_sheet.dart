@@ -678,46 +678,117 @@ class QuizBatchCorrectionSheet {
                                           ),
                                         ),
                                       ] else ...[
-                                        Row(
-                                          children: [
-                                            if (item
-                                                .oldOptionText
-                                                .isNotEmpty) ...[
-                                              Flexible(
-                                                child: Text(
-                                                  'পূর্বের: ${item.oldOptionText}',
-                                                  style: TextStyle(
-                                                    decoration: TextDecoration
-                                                        .lineThrough,
-                                                    color: isDark
-                                                        ? Colors.grey.shade400
-                                                        : Colors.grey.shade600,
-                                                    fontSize: 11,
+                                        Builder(
+                                          builder: (_) {
+                                            final targetOptions =
+                                                item.newOptions ?? q?.options;
+                                            final proposedText = item
+                                                    .proposedOptionText
+                                                    .isNotEmpty
+                                                ? item.proposedOptionText
+                                                : (item.proposedCorrectIndex !=
+                                                            null &&
+                                                        item.proposedCorrectIndex! >=
+                                                            0 &&
+                                                        targetOptions != null &&
+                                                        item.proposedCorrectIndex! <
+                                                            targetOptions.length
+                                                    ? targetOptions[item
+                                                        .proposedCorrectIndex!]
+                                                    : '');
+
+                                            if (proposedText.isNotEmpty) {
+                                              return Row(
+                                                children: [
+                                                  if (item.oldOptionText
+                                                      .isNotEmpty) ...[
+                                                    Flexible(
+                                                      child: Text(
+                                                        'পূর্বের: ${item.oldOptionText}',
+                                                        style: TextStyle(
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .lineThrough,
+                                                          color: isDark
+                                                              ? Colors
+                                                                  .grey.shade400
+                                                              : Colors
+                                                                  .grey.shade600,
+                                                          fontSize: 11,
+                                                        ),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    const Icon(
+                                                      Icons.arrow_forward,
+                                                      size: 12,
+                                                      color: Colors.green,
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                  ],
+                                                  Flexible(
+                                                    child: Text(
+                                                      'নতুন উত্তর: $proposedText',
+                                                      style: const TextStyle(
+                                                        color: Colors.green,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 11.5,
+                                                      ),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
                                                   ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              const Icon(
-                                                Icons.arrow_forward,
-                                                size: 12,
-                                                color: Colors.green,
-                                              ),
-                                              const SizedBox(width: 6),
-                                            ],
-                                            Flexible(
-                                              child: Text(
-                                                'নতুন উত্তর: ${item.proposedOptionText.isNotEmpty ? item.proposedOptionText : (item.proposedCorrectIndex != null && q != null && item.proposedCorrectIndex! < q.options.length ? q.options[item.proposedCorrectIndex!] : "")}',
-                                                style: const TextStyle(
-                                                  color: Colors.green,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 11.5,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
+                                                ],
+                                              );
+                                            } else if (item.newQuestionText !=
+                                                    null ||
+                                                item.newOptions != null) {
+                                              return const Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.edit_note_rounded,
+                                                    size: 14,
+                                                    color: Color(0xFF6366F1),
+                                                  ),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    'প্রশ্ন বা অপশন পরিমার্জন',
+                                                    style: TextStyle(
+                                                      color: Color(0xFF6366F1),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 11.5,
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            } else if (item.newExplanation !=
+                                                null) {
+                                              return const Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.lightbulb_outline,
+                                                    size: 14,
+                                                    color: Colors.amber,
+                                                  ),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    'ব্যাখ্যা পরিমার্জন',
+                                                    style: TextStyle(
+                                                      color: Colors.amber,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 11.5,
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            }
+                                            return const SizedBox.shrink();
+                                          },
                                         ),
                                       ],
                                       if (item.reason.isNotEmpty) ...[

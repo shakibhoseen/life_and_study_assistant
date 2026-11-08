@@ -554,6 +554,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
           }
         }
         _correctCount = newCorrect;
+        if (_currentIndex >= _questions.length) {
+          _currentIndex = _questions.isEmpty ? 0 : _questions.length - 1;
+        }
       });
     }
   }
@@ -939,6 +942,12 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     }
     if (_questions.isEmpty) {
       return const Center(child: Text('কোনো প্রশ্ন নেই।'));
+    }
+    if (_currentIndex >= _questions.length) {
+      _currentIndex = _questions.length - 1;
+    }
+    if (_currentIndex < 0) {
+      _currentIndex = 0;
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -2127,7 +2136,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '✅ সঠিক উত্তর: ${q.options[q.correctIndex]}',
+                        '✅ সঠিক উত্তর: ${(q.correctIndex >= 0 && q.correctIndex < q.options.length) ? q.options[q.correctIndex] : "অজানা"}',
                         style: TextStyle(
                           fontSize: 11.5,
                           color: isDark

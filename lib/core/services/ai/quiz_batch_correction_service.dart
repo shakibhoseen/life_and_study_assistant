@@ -45,7 +45,7 @@ class QuestionCorrectionItem {
       isDelete ||
       rewritesQuestion ||
       newExplanation != null ||
-      proposedCorrectIndex != null;
+      (proposedCorrectIndex != null && proposedCorrectIndex! >= 0);
 
   QuestionCorrectionItem({
     required this.questionIndex,
@@ -90,7 +90,7 @@ class QuestionCorrectionItem {
 
     final isDel =
         json['is_delete'] == true || json['action'] == 'delete_question';
-    final pIdx = (json['proposed_correct_index'] as num?)?.toInt();
+    final rawPIdx = (json['proposed_correct_index'] as num?)?.toInt();
 
     final rawNewOptions = json['new_options'];
     List<String>? newOptions;
@@ -109,6 +109,12 @@ class QuestionCorrectionItem {
     final newExplanation = rawNewExplanation.isEmpty ? null : rawNewExplanation;
 
     final effectiveOptions = newOptions ?? q.options;
+
+    // A negative index (e.g. -1 for "leave unchanged") or an out-of-range index
+    // is treated as no proposed index change.
+    final pIdx = (rawPIdx != null && rawPIdx >= 0 && rawPIdx < effectiveOptions.length)
+        ? rawPIdx
+        : null;
 
     String oldOpt = '';
     if (q.correctIndex >= 0 && q.correctIndex < q.options.length) {
@@ -516,14 +522,17 @@ If the text says all answers are correct or no fixes are suggested, return: []
         final qIdx = qNum - 1;
         if (qIdx >= 0 && qIdx < questions.length) {
           if (!items.any((it) => it.questionIndex == qIdx)) {
+            final oldOpt = (questions[qIdx].correctIndex >= 0 &&
+                    questions[qIdx].correctIndex < questions[qIdx].options.length)
+                ? questions[qIdx].options[questions[qIdx].correctIndex]
+                : '';
             items.add(
               QuestionCorrectionItem(
                 questionIndex: qIdx,
                 questionSnippet: questions[qIdx].questionText,
                 proposedCorrectIndex: null,
                 proposedOptionText: '',
-                oldOptionText:
-                    questions[qIdx].options[questions[qIdx].correctIndex],
+                oldOptionText: oldOpt,
                 isDelete: true,
                 reason: 'External AI বা ভয়েস নির্দেশনায় বাদ দেওয়া হয়েছে',
               ),
@@ -558,17 +567,21 @@ If the text says all answers are correct or no fixes are suggested, return: []
         if (qIdx >= 0 &&
             qIdx < questions.length &&
             optIdx != null &&
+            optIdx >= 0 &&
             optIdx < questions[qIdx].options.length) {
           if (optIdx != questions[qIdx].correctIndex &&
               !items.any((it) => it.questionIndex == qIdx)) {
+            final oldOpt = (questions[qIdx].correctIndex >= 0 &&
+                    questions[qIdx].correctIndex < questions[qIdx].options.length)
+                ? questions[qIdx].options[questions[qIdx].correctIndex]
+                : '';
             items.add(
               QuestionCorrectionItem(
                 questionIndex: qIdx,
                 questionSnippet: questions[qIdx].questionText,
                 proposedCorrectIndex: optIdx,
                 proposedOptionText: questions[qIdx].options[optIdx],
-                oldOptionText:
-                    questions[qIdx].options[questions[qIdx].correctIndex],
+                oldOptionText: oldOpt,
                 isDelete: false,
                 reason: reason != null && reason.isNotEmpty
                     ? reason
@@ -697,7 +710,8 @@ If the text says all answers are correct or no fixes are suggested, return: []
             await (db.delete(
               db.drillQuestions,
             )..where((t) => t.id.equals(row.id))).go();
-          } else if (item.proposedCorrectIndex != null) {
+          } else if (item.proposedCorrectIndex != null &&
+              item.proposedCorrectIndex! >= 0) {
             await db.acceptAnswerCorrection(
               row.id,
               correctedIndex: item.proposedCorrectIndex!,

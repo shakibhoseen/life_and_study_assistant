@@ -826,7 +826,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'সঠিক উত্তর: ${_lastResult!.options[_lastResult!.correctIndex]}',
+                    'সঠিক উত্তর: ${(_lastResult!.correctIndex >= 0 && _lastResult!.correctIndex < _lastResult!.options.length) ? _lastResult!.options[_lastResult!.correctIndex] : "অজানা"}',
                     style: const TextStyle(
                       color: Color(0xFFF59E0B),
                       fontSize: 11,
