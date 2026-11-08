@@ -64,12 +64,14 @@ class QuestionBankScannerModal extends ConsumerStatefulWidget {
 
 class _QuestionBankScannerModalState
     extends ConsumerState<QuestionBankScannerModal> {
-  File? _questionImage;
+  final List<File> _questionImages = [];
   File? _answerKeyImage;
   String _selectedSubject = 'Auto Detect';
   CaptureDetail _detail = CaptureDetail.standard;
 
   bool _isScanning = false;
+  int _currentScanningPageIndex = 0;
+  int _totalScanningPages = 0;
   String? _errorMessage;
   QuestionBankExtractResult? _result;
   List<QuizQuestion> _editableQuestions = [];
@@ -147,17 +149,20 @@ class _QuestionBankScannerModalState
     );
     if (picked == null || !mounted) return;
     setState(() {
-      _questionImage = picked;
-      // The answer key belongs to the page it was shot with; a later page
-      // brings its own or none.
-      _answerKeyImage = null;
+      _questionImages.add(picked);
+      // NOTE: We deliberately PRESERVE _answerKeyImage!
+      // In competitive test papers, 1 compact answer key covers the whole 1-200 questions.
       _errorMessage = null;
     });
     await _scanQuestionBank(append: true);
   }
 
-  Future<void> _rotate({required bool isAnswerKey}) async {
-    final current = isAnswerKey ? _answerKeyImage : _questionImage;
+  Future<void> _rotate({required bool isAnswerKey, int pageIndex = 0}) async {
+    final current = isAnswerKey
+        ? _answerKeyImage
+        : (pageIndex < _questionImages.length
+              ? _questionImages[pageIndex]
+              : null);
     if (current == null) return;
     final turned = await PhotoCaptureService.instance.rotateQuarterTurn(
       current,
@@ -166,8 +171,8 @@ class _QuestionBankScannerModalState
     setState(() {
       if (isAnswerKey) {
         _answerKeyImage = turned;
-      } else {
-        _questionImage = turned;
+      } else if (pageIndex < _questionImages.length) {
+        _questionImages[pageIndex] = turned;
       }
       // The page the model was asked about has changed, so the old read no
       // longer describes it.
@@ -179,8 +184,12 @@ class _QuestionBankScannerModalState
     });
   }
 
-  Future<void> _recrop({required bool isAnswerKey}) async {
-    final current = isAnswerKey ? _answerKeyImage : _questionImage;
+  Future<void> _recrop({required bool isAnswerKey, int pageIndex = 0}) async {
+    final current = isAnswerKey
+        ? _answerKeyImage
+        : (pageIndex < _questionImages.length
+              ? _questionImages[pageIndex]
+              : null);
     if (current == null) return;
     final trimmed = await PhotoCaptureService.instance.cropExisting(
       path: current.path,
@@ -191,8 +200,8 @@ class _QuestionBankScannerModalState
     setState(() {
       if (isAnswerKey) {
         _answerKeyImage = trimmed;
-      } else {
-        _questionImage = trimmed;
+      } else if (pageIndex < _questionImages.length) {
+        _questionImages[pageIndex] = trimmed;
       }
       _result = null;
       _errorMessage = null;
@@ -204,24 +213,47 @@ class _QuestionBankScannerModalState
     required bool isAnswerKey,
   }) async {
     try {
+      if (!isAnswerKey && source == ImageSource.gallery) {
+        final picker = ImagePicker();
+        final pickedList = await picker.pickMultiImage(
+          maxWidth: 1920,
+          maxHeight: 1920,
+          imageQuality: 90,
+        );
+        if (pickedList.isNotEmpty) {
+          setState(() {
+            for (final xFile in pickedList) {
+              _questionImages.add(File(xFile.path));
+            }
+            _result = null;
+            _errorMessage = null;
+          });
+          return;
+        }
+      }
+
+      if (!mounted) return;
+
       final picked = await PhotoCaptureService.instance.captureAndCrop(
         source: source,
         context: context,
         title: isAnswerKey ? 'উত্তরপত্র কেটে নিন' : 'প্রশ্নের অংশ কেটে নিন',
       );
-      if (picked != null) {
+      if (picked != null && mounted) {
         setState(() {
           if (isAnswerKey) {
             _answerKeyImage = picked;
           } else {
-            _questionImage = picked;
+            _questionImages.add(picked);
           }
           _result = null;
           _errorMessage = null;
         });
       }
     } catch (e) {
-      setState(() => _errorMessage = 'ছবি লোড করা যায়নি: $e');
+      if (mounted) {
+        setState(() => _errorMessage = 'ছবি লোড করা যায়নি: $e');
+      }
     }
   }
 
@@ -236,7 +268,7 @@ class _QuestionBankScannerModalState
   int _pagesScanned = 0;
 
   Future<void> _scanQuestionBank({bool append = false}) async {
-    if (_questionImage == null) return;
+    if (_questionImages.isEmpty) return;
 
     setState(() {
       _isScanning = true;
@@ -250,44 +282,73 @@ class _QuestionBankScannerModalState
       }
     });
 
-    try {
-      final res = await QuestionBankOcrService.instance.extractQuestionBank(
-        // The model's own running figure, replacing the estimate as soon as
-        // the first chunk reports one.
-        onTokens: (soFar) {
-          if (mounted) setState(() => _liveTokens = soFar);
-        },
-        questionImage: _questionImage!,
-        answerKeyImage: _answerKeyImage,
-        subjectHint: _selectedSubject,
-        detail: _detail,
-      );
+    final pagesToScan = append
+        ? [_questionImages.last]
+        : List<File>.from(_questionImages);
+    final totalPages = pagesToScan.length;
 
-      final spent = QuestionBankOcrService.instance.lastCallTokens;
-      final merge = mergeScannedPage(
-        existing: append ? _editableQuestions : const [],
-        fromPage: res.questions,
-      );
-      final duplicates = merge.duplicates;
+    try {
+      int totalSpentTokens = 0;
+      int newlyAdded = 0;
+      int duplicatesTotal = 0;
+
+      for (int i = 0; i < totalPages; i++) {
+        if (!mounted || !_isScanning) break;
+        final currentFile = pagesToScan[i];
+
+        setState(() {
+          _currentScanningPageIndex = i + 1;
+          _totalScanningPages = totalPages;
+        });
+
+        final res = await QuestionBankOcrService.instance.extractQuestionBank(
+          // The model's own running figure, replacing the estimate as soon as
+          // the first chunk reports one.
+          onTokens: (soFar) {
+            if (mounted) setState(() => _liveTokens = soFar);
+          },
+          questionImage: currentFile,
+          answerKeyImage: _answerKeyImage, // Shared across ALL pages!
+          subjectHint: _selectedSubject,
+          detail: _detail,
+        );
+
+        final spent = QuestionBankOcrService.instance.lastCallTokens ?? 0;
+        totalSpentTokens += spent;
+
+        final merge = mergeScannedPage(
+          existing: _editableQuestions,
+          fromPage: res.questions,
+        );
+        newlyAdded += merge.added;
+        duplicatesTotal += merge.duplicates;
+
+        if (mounted) {
+          setState(() {
+            _result = res;
+            _editableQuestions = merge.questions;
+            if (_titleController.text.trim().isEmpty) {
+              _titleController.text = res.title;
+            }
+            _pagesScanned += 1;
+          });
+        }
+      }
 
       if (mounted) {
         setState(() {
-          _result = res;
-          _editableQuestions = merge.questions;
-          if (!append) _titleController.text = res.title;
-          _pagesScanned += 1;
           _isScanning = false;
           _savedToRoutine = false;
         });
-        if (spent != null && spent > 0) {
+        if (totalSpentTokens > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
                 append
-                    ? 'পাতা $_pagesScanned — ${merge.added}টি নতুন প্রশ্ন যোগ হলো'
-                          '${duplicates > 0 ? ', $duplicates টি আগেই ছিল' : ''}'
-                          ' · মোট ${_editableQuestions.length}টি · $spent টোকেন'
-                    : '${merge.added}টি প্রশ্ন — $spent টোকেন খরচ হয়েছে',
+                    ? 'পাতা $_pagesScanned — $newlyAdded টি নতুন প্রশ্ন যোগ হলো'
+                          '${duplicatesTotal > 0 ? ', $duplicatesTotal টি আগেই ছিল' : ''}'
+                          ' · মোট ${_editableQuestions.length}টি · $totalSpentTokens টোকেন'
+                    : '$newlyAdded টি প্রশ্ন — $totalSpentTokens টোকেন খরচ হয়েছে',
               ),
             ),
           );
@@ -306,7 +367,7 @@ class _QuestionBankScannerModalState
       if (mounted) {
         setState(() {
           _isScanning = false;
-          _errorMessage = 'স্ক্যান ব্যর্থ হয়েছে: $e';
+          _errorMessage = 'স্ক্যান করার সময় সমস্যা হয়েছে: $e';
         });
       }
     }
@@ -928,21 +989,15 @@ class _QuestionBankScannerModalState
               ),
             ),
 
-          // 1. Question Page Card
-          _buildImageCard(
-            title: '১. প্রশ্ন পাতার ছবি (আবশ্যক)',
-            subtitle: 'বইয়ের যে পাতায় MCQ প্রশ্নগুলো ছাপা আছে',
-            imageFile: _questionImage,
-            isAnswerKey: false,
-            isDark: isDark,
-          ),
+          // 1. Question Pages Section
+          _buildQuestionPagesSection(isDark),
 
           const SizedBox(height: 14),
 
           // 2. Answer Key Card (Optional)
           _buildImageCard(
             title: '২. উত্তরপত্রের ছবি (ঐচ্ছিক)',
-            subtitle: 'উত্তর যদি অন্য পাতায় বা সমাধান অংশে থাকে',
+            subtitle: 'বইয়ের শেষে থাকা সংক্ষিপ্ত উত্তরমালা (১টি ছবিতেই ১-২০০ সব উত্তর থাকলে সেটিই সব পাতার জন্য ব্যবহৃত হবে)',
             imageFile: _answerKeyImage,
             isAnswerKey: true,
             isDark: isDark,
@@ -1014,7 +1069,7 @@ class _QuestionBankScannerModalState
 
           // Scan Button
           ElevatedButton.icon(
-            onPressed: _questionImage == null ? null : _scanQuestionBank,
+            onPressed: _questionImages.isEmpty ? null : _scanQuestionBank,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4F46E5),
               foregroundColor: Colors.white,
@@ -1027,11 +1082,267 @@ class _QuestionBankScannerModalState
                   : Colors.grey.shade300,
             ),
             icon: const Icon(Icons.auto_awesome, size: 20),
-            label: const Text(
-              '⚡ প্রশ্ন ব্যাংক স্ক্যান করুন (Extract MCQs)',
-              style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+            label: Text(
+              _questionImages.length > 1
+                  ? '⚡ ${_questionImages.length}টি পাতা স্ক্যান করুন (Extract MCQs)'
+                  : '⚡ প্রশ্ন ব্যাংক স্ক্যান করুন (Extract MCQs)',
+              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionPagesSection(bool isDark) {
+    final borderColor = isDark ? const Color(0xFF374151) : Colors.grey.shade300;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.menu_book,
+                size: 18,
+                color: Color(0xFF4F46E5),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  '১. প্রশ্ন পাতার ছবি (আবশ্যক)',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (_questionImages.isNotEmpty)
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Colors.red,
+                  ),
+                  tooltip: 'সব পাতা মুছুন',
+                  onPressed: () => setState(() {
+                    _questionImages.clear();
+                    _result = null;
+                    _errorMessage = null;
+                  }),
+                ),
+            ],
+          ),
+          Text(
+            _questionImages.isEmpty
+                ? 'বইয়ের যে পাতায় MCQ প্রশ্নগুলো ছাপা আছে (একাধিক পাতাও যোগ করতে পারেন)'
+                : 'মোট ${_questionImages.length}টি প্রশ্ন পাতা যুক্ত হয়েছে',
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? Colors.white60 : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (_questionImages.isEmpty)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _pickImage(
+                      ImageSource.camera,
+                      isAnswerKey: false,
+                    ),
+                    icon: const Icon(Icons.camera_alt, size: 16),
+                    label: const Text(
+                      'ক্যামেরা',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _pickImage(
+                      ImageSource.gallery,
+                      isAnswerKey: false,
+                    ),
+                    icon: const Icon(Icons.photo_library, size: 16),
+                    label: const Text(
+                      'গ্যালারি (একাধিক)',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else ...[
+            SizedBox(
+              height: 130,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _questionImages.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final imgFile = _questionImages[index];
+                  return Container(
+                    width: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: isDark ? Colors.black26 : Colors.grey.shade200,
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.grey.shade700
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(9),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.file(
+                            imgFile,
+                            key: ValueKey(imgFile.path),
+                            fit: BoxFit.cover,
+                          ),
+                          Positioned(
+                            top: 4,
+                            left: 4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black87,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'পাতা ${index + 1}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 2,
+                            right: 2,
+                            child: CircleAvatar(
+                              radius: 12,
+                              backgroundColor:
+                                  Colors.black.withValues(alpha: 0.65),
+                              child: IconButton(
+                                tooltip: 'পাতা মুছুন',
+                                icon: const Icon(
+                                  Icons.close,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                                padding: EdgeInsets.zero,
+                                onPressed: () => setState(() {
+                                  _questionImages.removeAt(index);
+                                  _result = null;
+                                  _errorMessage = null;
+                                }),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 4,
+                            right: 4,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor:
+                                      Colors.black.withValues(alpha: 0.65),
+                                  child: IconButton(
+                                    tooltip: 'সোজা করুন',
+                                    icon: const Icon(
+                                      Icons.rotate_90_degrees_cw_rounded,
+                                      size: 13,
+                                      color: Colors.white,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => _rotate(
+                                      isAnswerKey: false,
+                                      pageIndex: index,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor:
+                                      Colors.black.withValues(alpha: 0.65),
+                                  child: IconButton(
+                                    tooltip: 'কাটুন',
+                                    icon: const Icon(
+                                      Icons.crop_rounded,
+                                      size: 13,
+                                      color: Colors.white,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => _recrop(
+                                      isAnswerKey: false,
+                                      pageIndex: index,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _pickImage(
+                      ImageSource.camera,
+                      isAnswerKey: false,
+                    ),
+                    icon: const Icon(Icons.add_a_photo, size: 14),
+                    label: const Text(
+                      '+ ক্যামেরা পাতা',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _pickImage(
+                      ImageSource.gallery,
+                      isAnswerKey: false,
+                    ),
+                    icon: const Icon(Icons.add_photo_alternate, size: 14),
+                    label: const Text(
+                      '+ গ্যালারি পাতা',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -1087,7 +1398,7 @@ class _QuestionBankScannerModalState
                     if (isAnswerKey) {
                       _answerKeyImage = null;
                     } else {
-                      _questionImage = null;
+                      _questionImages.clear();
                     }
                   }),
                 ),
@@ -1222,24 +1533,64 @@ class _QuestionBankScannerModalState
   // LOADING STATE
   // ========================================================
   Widget _buildScanningState(bool isDark) {
-    return AiProgressPipelineWidget(
-      type: AiTaskType.image,
-      isCompact: false,
-      // What the call is worth, so the wait reads as work being done.
-      liveTokens:
-          _liveTokens ??
-          QuestionBankOcrService.instance.estimateTokensFor(
-            _detail,
-            pages: _answerKeyImage == null ? 1 : 2,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_totalScanningPages > 1)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF4F46E5),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'পাতা $_currentScanningPageIndex / $_totalScanningPages স্ক্যান হচ্ছে...',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4F46E5),
+                  ),
+                ),
+              ],
+            ),
           ),
-      liveTokensAreEstimate: _liveTokens == null,
-      onCancel: () {
-        if (mounted) {
-          setState(() {
-            _isScanning = false;
-          });
-        }
-      },
+        AiProgressPipelineWidget(
+          type: AiTaskType.image,
+          isCompact: false,
+          // What the call is worth, so the wait reads as work being done.
+          liveTokens:
+              _liveTokens ??
+              QuestionBankOcrService.instance.estimateTokensFor(
+                _detail,
+                pages: (_answerKeyImage == null ? 1 : 2) *
+                    (_totalScanningPages > 0 ? _totalScanningPages : 1),
+              ),
+          liveTokensAreEstimate: _liveTokens == null,
+          onCancel: () {
+            if (mounted) {
+              setState(() {
+                _isScanning = false;
+              });
+            }
+          },
+        ),
+      ],
     );
   }
 
