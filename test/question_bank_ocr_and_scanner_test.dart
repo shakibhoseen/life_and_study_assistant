@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:drift/drift.dart' hide Column;
+import 'package:drift/drift.dart' hide Column, isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +12,7 @@ import 'package:life_and_study_assistant/core/database/database_provider.dart';
 import 'package:life_and_study_assistant/core/services/ai/models/question_bank_extract_result.dart';
 import 'package:life_and_study_assistant/core/services/ai/models/quiz_question.dart';
 import 'package:life_and_study_assistant/core/services/ai/question_bank_ocr_service.dart';
+import 'package:life_and_study_assistant/core/services/ai/question_text_parser.dart';
 import 'package:life_and_study_assistant/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/providers/exam_schedule_provider.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/live_mcq_screen.dart';
@@ -446,5 +447,150 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       },
     );
+
+    testWidgets(
+      'QuestionBankScannerModal supports text paste mode and parses pasted questions',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(800, 1400));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            child: const MaterialApp(
+              home: Scaffold(body: QuestionBankScannerModal()),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Check tabs exist
+        expect(find.text('পাতার ছবি স্ক্যান'), findsOneWidget);
+        expect(find.text('টেক্সট পেস্ট (AI/নোট)'), findsOneWidget);
+
+        // Switch to text paste mode
+        await tester.tap(find.text('টেক্সট পেস্ট (AI/নোট)'));
+        await tester.pumpAndSettle();
+
+        // Check text field and sample button are displayed
+        expect(find.text('নমুনা ফরম্যাট'), findsOneWidget);
+        expect(find.text('ক্লিপবোর্ড থেকে পেস্ট'), findsOneWidget);
+        expect(
+          find.text('⚡ টেক্সট থেকে কুইজ তৈরি করুন (Extract MCQs)'),
+          findsOneWidget,
+        );
+
+        // Tap sample format button to load sample questions
+        await tester.tap(find.text('নমুনা ফরম্যাট'));
+        await tester.pumpAndSettle();
+
+        // Ensure button is visible before tapping
+        await tester.ensureVisible(
+          find.text('⚡ টেক্সট থেকে কুইজ তৈরি করুন (Extract MCQs)'),
+        );
+        await tester.pumpAndSettle();
+
+        // Process the pasted text
+        await tester.tap(
+          find.text('⚡ টেক্সট থেকে কুইজ তৈরি করুন (Extract MCQs)'),
+        );
+        await tester.pumpAndSettle();
+
+        // Verify it transitioned to review state with questions loaded
+        expect(find.text('⚡ এখনই পরীক্ষা দিন (Start Exam)'), findsOneWidget);
+        expect(find.text('💾 সেভ করুন'), findsOneWidget);
+        expect(find.textContaining('বাংলাদেশের প্রথম রাষ্ট্রপতি'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(milliseconds: 100));
+      },
+    );
+  });
+
+  group('QuestionTextParser Offline Unit Tests', () {
+    test('parses structured Bengali numbered MCQs with options and answer keys', () {
+      const input = '''
+১. বাংলাদেশের প্রথম রাষ্ট্রপতি কে ছিলেন?
+ক) বঙ্গবন্ধু শেখ মুজিবুর রহমান
+খ) সৈয়দ নজরুল ইসলাম
+গ) তাজউদ্দীন আহমদ
+ঘ) খন্দকার মোশতাক আহমদ
+উত্তর: ক
+ব্যাখ্যা: বঙ্গবন্ধু শেখ মুজিবুর রহমান ছিলেন প্রথম রাষ্ট্রপতি।
+
+২. "সূর্য" শব্দের সমার্থক শব্দ কোনটি?
+ক. সুধাকর
+খ. তপন
+গ. শশাঙ্ক
+ঘ. বিধু
+Ans: খ
+Explanation: তপন অর্থ সূর্য।
+''';
+
+      final res = QuestionTextParser.tryParseLocal(input, subjectHint: 'বাংলা');
+      expect(res, isNotNull);
+      expect(res!.questions.length, 2);
+
+      final q1 = res.questions[0];
+      expect(q1.questionText, contains('বাংলাদেশের প্রথম রাষ্ট্রপতি'));
+      expect(q1.options.length, 4);
+      expect(q1.correctIndex, 0);
+      expect(q1.options[0], contains('বঙ্গবন্ধু শেখ মুজিবুর রহমান'));
+      expect(q1.explanation, contains('প্রথম রাষ্ট্রপতি'));
+
+      final q2 = res.questions[1];
+      expect(q2.questionText, contains('"সূর্য"'));
+      expect(q2.options.length, 4);
+      expect(q2.correctIndex, 1);
+      expect(q2.options[1], contains('তপন'));
+    });
+
+    test('parses English MCQs with A/B/C/D format', () {
+      const input = '''
+1. Which is the capital of France?
+(A) London
+(B) Berlin
+(C) Paris
+(D) Rome
+Answer: C
+Explanation: Paris is the capital.
+''';
+
+      final res = QuestionTextParser.tryParseLocal(input);
+      expect(res, isNotNull);
+      expect(res!.questions.length, 1);
+      final q = res.questions.first;
+      expect(q.questionText, contains('capital of France'));
+      expect(q.options.length, 4);
+      expect(q.correctIndex, 2);
+    });
+
+    test('parses JSON format generated by external AI agents', () {
+      const jsonInput = '''
+```json
+[
+  {
+    "question": "What is the speed of light?",
+    "options": ["3x10^8 m/s", "2x10^8 m/s", "1x10^8 m/s", "4x10^8 m/s"],
+    "correct_index": 0,
+    "explanation": "Speed of light in vacuum is approximately 300,000 km/s."
+  }
+]
+```
+''';
+
+      final res = QuestionTextParser.tryParseLocal(jsonInput);
+      expect(res, isNotNull);
+      expect(res!.questions.length, 1);
+      expect(res.questions.first.questionText, 'What is the speed of light?');
+      expect(res.questions.first.correctIndex, 0);
+    });
+
+    test('returns null for empty or completely unparseable input', () {
+      expect(QuestionTextParser.tryParseLocal(''), isNull);
+      expect(QuestionTextParser.tryParseLocal('   '), isNull);
+      expect(QuestionTextParser.tryParseLocal('Just random talk without questions or options'), isNull);
+    });
   });
 }

@@ -23,11 +23,14 @@ import '../../../../core/widgets/ai_key_missing_notice.dart';
 import '../../domain/merge_scanned_pages.dart';
 import '../../../../core/widgets/photo_source_sheet.dart';
 
+enum ScannerInputMode { imageOcr, textPaste }
+
 class QuestionBankScannerModal extends ConsumerStatefulWidget {
   final List<QuizQuestion>? initialQuestions;
   final String? initialTitle;
   final String? initialSubject;
   final int? existingExamId;
+  final String? initialText;
 
   const QuestionBankScannerModal({
     super.key,
@@ -35,6 +38,7 @@ class QuestionBankScannerModal extends ConsumerStatefulWidget {
     this.initialTitle,
     this.initialSubject,
     this.existingExamId,
+    this.initialText,
   });
 
   static Future<void> show(
@@ -43,6 +47,7 @@ class QuestionBankScannerModal extends ConsumerStatefulWidget {
     String? initialTitle,
     String? initialSubject,
     int? existingExamId,
+    String? initialText,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -53,6 +58,7 @@ class QuestionBankScannerModal extends ConsumerStatefulWidget {
         initialTitle: initialTitle,
         initialSubject: initialSubject,
         existingExamId: existingExamId,
+        initialText: initialText,
       ),
     );
   }
@@ -64,6 +70,8 @@ class QuestionBankScannerModal extends ConsumerStatefulWidget {
 
 class _QuestionBankScannerModalState
     extends ConsumerState<QuestionBankScannerModal> {
+  ScannerInputMode _inputMode = ScannerInputMode.imageOcr;
+  final TextEditingController _pastedTextController = TextEditingController();
   final List<File> _questionImages = [];
   File? _answerKeyImage;
   String _selectedSubject = 'Auto Detect';
@@ -104,6 +112,10 @@ class _QuestionBankScannerModalState
   @override
   void initState() {
     super.initState();
+    if (widget.initialText != null && widget.initialText!.isNotEmpty) {
+      _pastedTextController.text = widget.initialText!;
+      _inputMode = ScannerInputMode.textPaste;
+    }
     if (widget.initialQuestions != null &&
         widget.initialQuestions!.isNotEmpty) {
       _editableQuestions = List<QuizQuestion>.from(widget.initialQuestions!);
@@ -124,6 +136,7 @@ class _QuestionBankScannerModalState
 
   @override
   void dispose() {
+    _pastedTextController.dispose();
     _titleController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -368,6 +381,65 @@ class _QuestionBankScannerModalState
         setState(() {
           _isScanning = false;
           _errorMessage = 'স্ক্যান করার সময় সমস্যা হয়েছে: $e';
+        });
+      }
+    }
+  }
+
+  Future<void> _processPastedText() async {
+    final text = _pastedTextController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() {
+      _isScanning = true;
+      _errorMessage = null;
+      _currentScanningPageIndex = 1;
+      _totalScanningPages = 1;
+    });
+
+    try {
+      final res =
+          await QuestionBankOcrService.instance.extractQuestionsFromText(
+        rawText: text,
+        subjectHint: _selectedSubject,
+        onTokens: (spent) {
+          if (mounted) setState(() => _liveTokens = spent);
+        },
+      );
+
+      final spent = QuestionBankOcrService.instance.lastCallTokens ?? 0;
+
+      if (mounted) {
+        setState(() {
+          _result = res;
+          _editableQuestions = List<QuizQuestion>.from(res.questions);
+          _titleController.text = res.title;
+          _pagesScanned = 1;
+          _isScanning = false;
+          _savedToRoutine = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${res.questions.length}টি প্রশ্ন প্রসেস হয়েছে'
+              '${spent > 0 ? ' · $spent টোকেন' : ' (অফলাইন/লোকাল পার্স)'}',
+            ),
+          ),
+        );
+      }
+    } on QuestionBankExtractException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+          _errorMessage = e.userMessage;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+          _errorMessage = 'টেক্সট প্রসেস করতে সমস্যা হয়েছে: $e';
         });
       }
     }
@@ -989,19 +1061,29 @@ class _QuestionBankScannerModalState
               ),
             ),
 
-          // 1. Question Pages Section
-          _buildQuestionPagesSection(isDark),
+          // Mode Switcher: 📷 বইয়ের পাতা স্ক্যান vs 📋 টেক্সট পেস্ট (বাইরের AI / চ্যাট)
+          _buildInputModeSelector(isDark),
 
           const SizedBox(height: 14),
 
-          // 2. Answer Key Card (Optional)
-          _buildImageCard(
-            title: '২. উত্তরপত্রের ছবি (ঐচ্ছিক)',
-            subtitle: 'বইয়ের শেষে থাকা সংক্ষিপ্ত উত্তরমালা (১টি ছবিতেই ১-২০০ সব উত্তর থাকলে সেটিই সব পাতার জন্য ব্যবহৃত হবে)',
-            imageFile: _answerKeyImage,
-            isAnswerKey: true,
-            isDark: isDark,
-          ),
+          if (_inputMode == ScannerInputMode.imageOcr) ...[
+            // 1. Question Pages Section
+            _buildQuestionPagesSection(isDark),
+
+            const SizedBox(height: 14),
+
+            // 2. Answer Key Card (Optional)
+            _buildImageCard(
+              title: '২. উত্তরপত্রের ছবি (ঐচ্ছিক)',
+              subtitle: 'বইয়ের শেষে থাকা সংক্ষিপ্ত উত্তরমালা (১টি ছবিতেই ১-২০০ সব উত্তর থাকলে সেটিই সব পাতার জন্য ব্যবহৃত হবে)',
+              imageFile: _answerKeyImage,
+              isAnswerKey: true,
+              isDark: isDark,
+            ),
+          ] else ...[
+            // Text Paste Section
+            _buildTextPasteSection(isDark),
+          ],
 
           const SizedBox(height: 16),
 
@@ -1034,60 +1116,331 @@ class _QuestionBankScannerModalState
             }).toList(),
           ),
 
-          const SizedBox(height: 14),
+          if (_inputMode == ScannerInputMode.imageOcr) ...[
+            const SizedBox(height: 14),
 
-          // Resolution detail
-          Text(
-            'ছবির কোয়ালিটি',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+            // Resolution detail
+            Text(
+              'ছবির কোয়ালিটি',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: CaptureDetail.values.map((d) {
-              final selected = d == _detail;
-              return ChoiceChip(
-                selected: selected,
-                onSelected: (_) => setState(() => _detail = d),
-                label: Text(
-                  '${d.label} · ~${d.approxTokens}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: CaptureDetail.values.map((d) {
+                final selected = d == _detail;
+                return ChoiceChip(
+                  selected: selected,
+                  onSelected: (_) => setState(() => _detail = d),
+                  label: Text(
+                    '${d.label} · ~${d.approxTokens}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
+                );
+              }).toList(),
+            ),
+          ],
 
           const SizedBox(height: 24),
 
-          // Scan Button
-          ElevatedButton.icon(
-            onPressed: _questionImages.isEmpty ? null : _scanQuestionBank,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4F46E5),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          // Action Button
+          if (_inputMode == ScannerInputMode.imageOcr)
+            ElevatedButton.icon(
+              onPressed: _questionImages.isEmpty ? null : _scanQuestionBank,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4F46E5),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                disabledBackgroundColor: isDark
+                    ? Colors.grey.shade800
+                    : Colors.grey.shade300,
               ),
-              disabledBackgroundColor: isDark
-                  ? Colors.grey.shade800
-                  : Colors.grey.shade300,
+              icon: const Icon(Icons.auto_awesome, size: 20),
+              label: Text(
+                _questionImages.length > 1
+                    ? '⚡ ${_questionImages.length}টি পাতা স্ক্যান করুন (Extract MCQs)'
+                    : '⚡ প্রশ্ন ব্যাংক স্ক্যান করুন (Extract MCQs)',
+                style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            ElevatedButton.icon(
+              onPressed: _pastedTextController.text.trim().isEmpty
+                  ? null
+                  : _processPastedText,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4F46E5),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                disabledBackgroundColor: isDark
+                    ? Colors.grey.shade800
+                    : Colors.grey.shade300,
+              ),
+              icon: const Icon(Icons.auto_awesome, size: 20),
+              label: const Text(
+                '⚡ টেক্সট থেকে কুইজ তৈরি করুন (Extract MCQs)',
+                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+              ),
             ),
-            icon: const Icon(Icons.auto_awesome, size: 20),
-            label: Text(
-              _questionImages.length > 1
-                  ? '⚡ ${_questionImages.length}টি পাতা স্ক্যান করুন (Extract MCQs)'
-                  : '⚡ প্রশ্ন ব্যাংক স্ক্যান করুন (Extract MCQs)',
-              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputModeSelector(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _inputMode = ScannerInputMode.imageOcr),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                decoration: BoxDecoration(
+                  color: _inputMode == ScannerInputMode.imageOcr
+                      ? const Color(0xFF4F46E5)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.camera_alt_outlined,
+                      size: 15,
+                      color: _inputMode == ScannerInputMode.imageOcr
+                          ? Colors.white
+                          : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'পাতার ছবি স্ক্যান',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _inputMode == ScannerInputMode.imageOcr
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: _inputMode == ScannerInputMode.imageOcr
+                              ? Colors.white
+                              : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _inputMode = ScannerInputMode.textPaste),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                decoration: BoxDecoration(
+                  color: _inputMode == ScannerInputMode.textPaste
+                      ? const Color(0xFF4F46E5)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.content_paste_rounded,
+                      size: 15,
+                      color: _inputMode == ScannerInputMode.textPaste
+                          ? Colors.white
+                          : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'টেক্সট পেস্ট (AI/নোট)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _inputMode == ScannerInputMode.textPaste
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: _inputMode == ScannerInputMode.textPaste
+                              ? Colors.white
+                              : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextPasteSection(bool isDark) {
+    final borderColor = isDark ? const Color(0xFF374151) : Colors.grey.shade300;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.smart_toy_outlined,
+                size: 18,
+                color: Color(0xFF4F46E5),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'বাইরের Agent / চ্যাট থেকে কপি করা টেক্সট',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (_pastedTextController.text.isNotEmpty)
+                IconButton(
+                  icon: const Icon(
+                    Icons.clear,
+                    size: 18,
+                    color: Colors.red,
+                  ),
+                  tooltip: 'মুছুন',
+                  onPressed: () => setState(() => _pastedTextController.clear()),
+                ),
+            ],
+          ),
+          Text(
+            'ChatGPT, Claude বা নোট থেকে MCQ প্রশ্ন পেস্ট করুন (স্বয়ংক্রিয়ভাবে প্রশ্ন, অপশন ও উত্তর সাজিয়ে নেবে)',
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? Colors.white60 : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Stack(
+            children: [
+              TextField(
+                controller: _pastedTextController,
+                maxLines: 8,
+                minLines: 5,
+                style: const TextStyle(fontSize: 12.5, height: 1.45),
+                decoration: InputDecoration(
+                  hintText: 'এখানে টেক্সট পেস্ট করুন...\n\nযেমন:\n১. বাংলাদেশের প্রথম রাষ্ট্রপতি কে ছিলেন?\nক) বঙ্গবন্ধু শেখ মুজিবুর রহমান\nখ) সৈয়দ নজরুল ইসলাম\nগ) তাজউদ্দীন আহমদ\nঘ) খন্দকার মোশতাক আহমদ\nউত্তর: ক\nব্যাখ্যা: বঙ্গবন্ধু শেখ মুজিবুর রহমান ছিলেন...',
+                  hintStyle: TextStyle(
+                    fontSize: 11.5,
+                    color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+                  ),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF111827) : Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF4F46E5),
+                      width: 1.5,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _pastedTextController.text =
+                              '১. বাংলাদেশের প্রথম রাষ্ট্রপতি কে ছিলেন?\n'
+                              'ক) বঙ্গবন্ধু শেখ মুজিবুর রহমান\n'
+                              'খ) সৈয়দ নজরুল ইসলাম\n'
+                              'গ) তাজউদ্দীন আহমদ\n'
+                              'ঘ) খন্দকার মোশতাক আহমদ\n'
+                              'উত্তর: ক\n'
+                              'ব্যাখ্যা: ১৯৭১ সালের ১০ এপ্রিল গঠিত মুজিবনগর সরকারের রাষ্ট্রপতি ছিলেন বঙ্গবন্ধু শেখ মুজিবুর রহমান।\n\n'
+                              '২. "সূর্য" শব্দের সমার্থক শব্দ কোনটি?\n'
+                              'ক) সুধাকর\n'
+                              'খ) তপন\n'
+                              'গ) শশাঙ্ক\n'
+                              'ঘ) বিধু\n'
+                              'উত্তর: খ\n'
+                              'ব্যাখ্যা: তপন শব্দের অর্থ সূর্য; সুধাকর ও বিধু শব্দের অর্থ চাঁদ।';
+                        });
+                      },
+                      icon: const Icon(Icons.lightbulb_outline, size: 14),
+                      label: const Text('নমুনা ফরম্যাট', style: TextStyle(fontSize: 11)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final data = await Clipboard.getData('text/plain');
+                        if (data?.text != null && data!.text!.isNotEmpty) {
+                          setState(() {
+                            _pastedTextController.text = data.text!;
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.paste, size: 13),
+                      label: const Text('ক্লিপবোর্ড থেকে পেস্ট', style: TextStyle(fontSize: 11)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1536,7 +1889,41 @@ class _QuestionBankScannerModalState
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (_totalScanningPages > 1)
+        if (_inputMode == ScannerInputMode.textPaste)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
+              ),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF4F46E5),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'টেক্সট প্রসেস ও কুইজ সাজানো হচ্ছে...',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4F46E5),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (_totalScanningPages > 1)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             margin: const EdgeInsets.only(bottom: 12),
@@ -1571,16 +1958,20 @@ class _QuestionBankScannerModalState
             ),
           ),
         AiProgressPipelineWidget(
-          type: AiTaskType.image,
+          type: _inputMode == ScannerInputMode.textPaste
+              ? AiTaskType.general
+              : AiTaskType.image,
           isCompact: false,
           // What the call is worth, so the wait reads as work being done.
           liveTokens:
               _liveTokens ??
-              QuestionBankOcrService.instance.estimateTokensFor(
-                _detail,
-                pages: (_answerKeyImage == null ? 1 : 2) *
-                    (_totalScanningPages > 0 ? _totalScanningPages : 1),
-              ),
+              (_inputMode == ScannerInputMode.textPaste
+                  ? 800
+                  : QuestionBankOcrService.instance.estimateTokensFor(
+                      _detail,
+                      pages: (_answerKeyImage == null ? 1 : 2) *
+                          (_totalScanningPages > 0 ? _totalScanningPages : 1),
+                    )),
           liveTokensAreEstimate: _liveTokens == null,
           onCancel: () {
             if (mounted) {

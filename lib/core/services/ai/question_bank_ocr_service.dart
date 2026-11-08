@@ -14,6 +14,7 @@ import 'gemini_result_cache.dart';
 import 'gemini_usage_tracker.dart';
 import 'models/quiz_question.dart';
 import 'models/question_bank_extract_result.dart';
+import 'question_text_parser.dart';
 
 final _questionBankSchema = Schema.object(
   properties: {
@@ -408,6 +409,198 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
     if (lower.endsWith('.png')) return 'image/png';
     if (lower.endsWith('.webp')) return 'image/webp';
     return 'image/jpeg';
+  }
+
+  /// Extracts multiple-choice questions from raw text provided by external agents
+  /// (such as ChatGPT, Claude, DeepSeek, or web transcriptions).
+  ///
+  /// First attempts an offline structural parse; if [forceAi] is true or local
+  /// parsing yields no questions, sends the text to Gemini with structured output schema.
+  Future<QuestionBankExtractResult> extractQuestionsFromText({
+    required String rawText,
+    String? subjectHint,
+    bool forceAi = false,
+    void Function(int tokens)? onTokens,
+  }) async {
+    final trimmed = rawText.trim();
+    if (trimmed.isEmpty) {
+      throw const QuestionBankExtractException(
+        'কোনো টেক্সট পাওয়া যায়নি। অনুগ্রহ করে প্রশ্ন সংবলিত টেক্সট পেস্ট করুন।',
+      );
+    }
+
+    // 1. Try offline local parser first if not forcing AI
+    if (!forceAi) {
+      final local = QuestionTextParser.tryParseLocal(
+        trimmed,
+        subjectHint: subjectHint,
+      );
+      if (local != null && local.questions.isNotEmpty) {
+        return local;
+      }
+    }
+
+    final apiKey = await _getStoredApiKey();
+    if (apiKey == null || apiKey.isEmpty) {
+      // If no API key, try local parse as best-effort fallback
+      final fallback = QuestionTextParser.tryParseLocal(
+        trimmed,
+        subjectHint: subjectHint,
+      );
+      if (fallback != null && fallback.questions.isNotEmpty) {
+        return fallback;
+      }
+      throw const QuestionBankExtractException(
+        'Gemini API কী বসানো নেই এবং টেক্সটটি সরাসরি পার্স করা যায়নি। সেটিংসে কী দিন অথবা সুনির্দিষ্ট ফরম্যাটে টেক্সট পেস্ট করুন।',
+      );
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    var preferredModel =
+        prefs.getString(NotificationConstants.prefGeminiModel) ??
+        'gemini-flash-latest';
+    if (![
+      'gemini-flash-lite-latest',
+      'gemini-flash-latest',
+      'gemini-pro-latest',
+      'gemini-3.5-flash-lite',
+    ].contains(preferredModel)) {
+      preferredModel = 'gemini-flash-latest';
+    }
+
+    final modelsToTry = [
+      preferredModel,
+      if (preferredModel != 'gemini-flash-latest') 'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+    ];
+
+    // Check content-hash cache
+    final cacheKey = GeminiResultCache.instance.computeKey(
+      operation: 'question_text_extract',
+      promptVersion: 'v1.0',
+      model: preferredModel,
+      payloadBytes: [
+        ...utf8.encode(trimmed),
+        ...utf8.encode(subjectHint ?? ''),
+      ],
+    );
+
+    final cachedRaw = await GeminiResultCache.instance.get(cacheKey);
+    if (cachedRaw != null && cachedRaw.isNotEmpty) {
+      final cached = _decodeResponse(
+        cachedRaw,
+        rawRef: 'Text input (${trimmed.length} chars)',
+        hasSeparateAnswerKey: false,
+      );
+      if (cached != null) {
+        await GeminiUsageTracker.instance.recordCacheHit(
+          operation: 'question_text_extract',
+          model: preferredModel,
+        );
+        return cached;
+      }
+    }
+
+    final prompt = '''
+You are an expert exam question extractor and question setter for Bangladeshi competitive exams (BCS Preliminary, Bank, Primary Recruitment, LiveMCQ).
+The user has provided raw text containing Multiple Choice Questions (MCQs), copied from an external AI agent, website, OCR transcript, or notes.
+
+Instructions:
+1. Extract ALL authentic Multiple Choice Questions (MCQs) found in the text.
+2. Determine the Subject (e.g. "বাংলা ব্যাকরণ", "বাংলাদেশ বিষয়াবলী", "English Language", "সাধারণ বিজ্ঞান", "গণিত ও মানসিক দক্ষতা", "আন্তর্জাতিক বিষয়াবলী", "কম্পিউটার ও তথ্যপ্রযুক্তি", "ভূগোল ও পরিবেশ") and a concise Chapter/Topic Title.
+3. Each question must have exactly 4 distinct options (or 5 if bank exam). Ensure options are cleanly formatted.
+4. If an answer key or solution is given in the text, match and indicate the zero-based correct_index (0, 1, 2, or 3) and set answer_source to "answer_key". If no answer is indicated, solve it accurately with high confidence and set answer_source to "solved".
+5. Provide a clear educational explanation in Bengali for each question.
+6. Clean Unicode: Replace LaTeX math like \$x^2\$ or \\to with standard Unicode ('²', '°', '→', '√').
+
+${subjectHint != null && subjectHint.isNotEmpty && subjectHint != 'Auto Detect' ? 'User Subject Hint: "$subjectHint"' : ''}
+
+Raw Input Text:
+$trimmed
+''';
+
+    Object? lastError;
+    lastCallTokens = null;
+    for (final modelName in modelsToTry) {
+      try {
+        final model = GenerativeModel(
+          model: modelName,
+          apiKey: apiKey,
+          generationConfig: GenerationConfig(
+            responseMimeType: 'application/json',
+            responseSchema: _questionBankSchema,
+            temperature: 0.1,
+            maxOutputTokens: 8192,
+          ),
+        );
+
+        final response = await model.generateContent([
+          Content.text(prompt),
+        ]);
+
+        final text = response.text;
+        if (text == null || text.trim().isEmpty) {
+          throw const QuestionBankExtractException(
+            'মডেল থেকে কোনো উত্তর পাওয়া যায়নি।',
+          );
+        }
+
+        final spent = response.usageMetadata?.totalTokenCount;
+        lastCallTokens = spent;
+        if (spent != null && spent > 0) {
+          onTokens?.call(spent);
+          await GeminiUsageTracker.instance.recordSuccess(
+            tokens: spent,
+            actualInputTokens: response.usageMetadata?.promptTokenCount,
+            actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
+            actualTotalTokens: spent,
+            operation: 'question_text_extract',
+            model: modelName,
+          );
+        }
+
+        final result = _decodeResponse(
+          text,
+          rawRef: 'Text Input (${trimmed.length} chars)',
+          hasSeparateAnswerKey: false,
+        );
+
+        if (result != null && result.questions.isNotEmpty) {
+          await GeminiResultCache.instance.put(cacheKey, text);
+          return result;
+        }
+
+        throw const QuestionBankExtractException(
+          'টেক্সট থেকে কোনো প্রশ্ন উদ্ধার করা সম্ভব হয়নি। টেক্সটটিতে কি প্রশ্ন ও অপশন উপস্থিত রয়েছে?',
+        );
+      } on GenerativeAIException catch (e) {
+        lastError = e;
+        if (e.message.contains('API key not valid') ||
+            e.message.contains('API_KEY_INVALID')) {
+          throw const QuestionBankExtractException(
+            'সেটিংসের Gemini API কী সঠিক নয়।',
+          );
+        }
+        if (e.message.contains('RESOURCE_EXHAUSTED')) {
+          continue; // Try next model
+        }
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    // If Gemini fails, try local parser as final safety net
+    final fallback = QuestionTextParser.tryParseLocal(
+      trimmed,
+      subjectHint: subjectHint,
+    );
+    if (fallback != null && fallback.questions.isNotEmpty) {
+      return fallback;
+    }
+
+    throw QuestionBankExtractException(
+      'টেক্সট প্রসেস করতে ব্যর্থ হয়েছে: $lastError',
+    );
   }
 
   /// Independently verifies if a question and its marked answer are factually correct.
