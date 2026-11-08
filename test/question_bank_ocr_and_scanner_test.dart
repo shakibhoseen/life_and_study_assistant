@@ -593,7 +593,7 @@ Explanation: Paris is the capital.
       expect(QuestionTextParser.tryParseLocal('Just random talk without questions or options'), isNull);
     });
 
-    test('detects when answers and explanations are omitted and marks guess/unverified', () {
+    test('detects when answers and explanations are omitted and marks guess/unverified with correctIndex = -1', () {
       const inputWithoutAnswers = '''
 ১. কোন গ্রহের উপগ্রহ সবচেয়ে বেশি?
 ক) বৃহস্পতি
@@ -614,12 +614,39 @@ Explanation: Paris is the capital.
       expect(QuestionTextParser.hasExplicitAnswers(res), isFalse);
 
       final q1 = res.questions[0];
+      expect(q1.correctIndex, -1);
+      expect(q1.hasAnswer, isFalse);
       expect(q1.answerSource, AnswerSource.guess);
       expect(q1.needsReview, isTrue);
 
       final q2 = res.questions[1];
+      expect(q2.correctIndex, -1);
+      expect(q2.hasAnswer, isFalse);
       expect(q2.answerSource, AnswerSource.guess);
       expect(q2.needsReview, isTrue);
+    });
+
+    test('parseAnswerKey parses Bengali and English textbook answer keys accurately into 0-based indices', () {
+      // 1. Bengali numbering and options: ১. খ, ২. ক, ৩-গ, ৪: ঘ
+      final bnKey = QuestionTextParser.parseAnswerKey('১. খ, ২. ক, ৩-গ, ৪: ঘ');
+      expect(bnKey[0], 1); // Q1 -> খ (index 1)
+      expect(bnKey[1], 0); // Q2 -> ক (index 0)
+      expect(bnKey[2], 2); // Q3 -> গ (index 2)
+      expect(bnKey[3], 3); // Q4 -> ঘ (index 3)
+
+      // 2. English numbering and options: 1-B, 2. A, 3: C, 4) D
+      final enKey = QuestionTextParser.parseAnswerKey('1-B, 2. A, 3: C, 4) D');
+      expect(enKey[0], 1); // Q1 -> B (index 1)
+      expect(enKey[1], 0); // Q2 -> A (index 0)
+      expect(enKey[2], 2); // Q3 -> C (index 2)
+      expect(enKey[3], 3); // Q4 -> D (index 3)
+
+      // 3. Simple comma/newline separated answers without question numbers: খ, ক, গ, ঘ
+      final seqKey = QuestionTextParser.parseAnswerKey('খ, ক, গ, ঘ');
+      expect(seqKey[0], 1); // Q1 -> খ (index 1)
+      expect(seqKey[1], 0); // Q2 -> ক (index 0)
+      expect(seqKey[2], 2); // Q3 -> গ (index 2)
+      expect(seqKey[3], 3); // Q4 -> ঘ (index 3)
     });
   });
 }

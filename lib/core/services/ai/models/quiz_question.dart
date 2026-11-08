@@ -57,7 +57,11 @@ class QuizQuestion {
   });
 
   /// True where this row should not be saved without being looked at.
-  bool get needsReview => !legible || answerSource == AnswerSource.guess;
+  bool get needsReview =>
+      !legible || answerSource == AnswerSource.guess || correctIndex < 0;
+
+  /// True when a valid option index is marked as the correct answer.
+  bool get hasAnswer => correctIndex >= 0 && correctIndex < options.length;
 
   factory QuizQuestion.fromJson(Map<String, dynamic> json) {
     final rawOptions = json['options'];

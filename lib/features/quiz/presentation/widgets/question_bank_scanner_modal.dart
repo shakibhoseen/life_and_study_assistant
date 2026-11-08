@@ -13,6 +13,8 @@ import '../../../../core/services/ai/ai_media_limits.dart';
 import '../../../../core/services/ai/models/question_bank_extract_result.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/question_bank_ocr_service.dart';
+import '../../../../core/services/ai/question_text_parser.dart';
+import '../../../../core/services/voice/device_dictation_service.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
@@ -413,7 +415,7 @@ class _QuestionBankScannerModalState
           await QuestionBankOcrService.instance.extractQuestionsFromText(
         rawText: text,
         subjectHint: _selectedSubject,
-        forceAi: !hasAnswers,
+        forceAi: false,
         onTokens: (spent) {
           if (mounted) setState(() => _liveTokens = spent);
         },
@@ -435,7 +437,7 @@ class _QuestionBankScannerModalState
           SnackBar(
             content: Text(
               '${res.questions.length}টি প্রশ্ন প্রসেস হয়েছে'
-              '${hasAnswers ? ' (সংযুক্ত উত্তরমালা থেকে)' : ' (AI দ্বারা সমাধানকৃত)'}'
+              '${hasAnswers ? ' (সংযুক্ত উত্তরমালা থেকে)' : ' (উত্তর ও ব্যাখ্যা অনুপস্থিত)'}'
               '${spent > 0 ? ' · $spent টোকেন' : ' (অফলাইন পার্স)'}',
             ),
           ),
@@ -613,6 +615,509 @@ class _QuestionBankScannerModalState
     );
   }
 
+  Future<void> _showPasteAnswerKeySheet() async {
+    final textCtrl = TextEditingController();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (sheetCtx, setSheetState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 16,
+              ),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.paste_rounded,
+                        color: Color(0xFF4F46E5),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          '📋 উত্তরমালা পেস্ট করুন (Paste Answer Key)',
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'পাঠ্যবই, টেস্ট পেপারের সমাধান অংশ বা বাইরের AI Agent থেকে উত্তরমালা পেস্ট করুন। অ্যাপ স্বয়ংক্রিয়ভাবে প্রশ্নের নম্বরের সাথে অপশন মিলিয়ে দেবে।\nযেমন:\n১. খ, ২. ঘ, ৩. ক\nঅথবা:\n1. B, 2. D, 3. A',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color:
+                          isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Stack(
+                    children: [
+                      TextField(
+                        controller: textCtrl,
+                        maxLines: 5,
+                        minLines: 3,
+                        style: const TextStyle(fontSize: 12.5),
+                        decoration: InputDecoration(
+                          hintText: '১. খ, ২. ঘ, ৩. ক... অথবা B, D, A, C',
+                          hintStyle: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark
+                                ? Colors.grey.shade500
+                                : Colors.grey.shade400,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          contentPadding: const EdgeInsets.all(12),
+                        ),
+                        onChanged: (_) => setSheetState(() {}),
+                      ),
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final data =
+                                await Clipboard.getData('text/plain');
+                            if (data?.text != null && data!.text!.isNotEmpty) {
+                              setSheetState(() => textCtrl.text = data.text!);
+                            }
+                          },
+                          icon: const Icon(Icons.paste, size: 12),
+                          label: const Text(
+                            'পেস্ট',
+                            style: TextStyle(fontSize: 11),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  ElevatedButton.icon(
+                    onPressed: textCtrl.text.trim().isEmpty
+                        ? null
+                        : () {
+                            final keyMap = QuestionTextParser.parseAnswerKey(
+                              textCtrl.text,
+                            );
+                            if (keyMap.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'উত্তরমালা থেকে কোনো প্রশ্নের উত্তর সনাক্ত করা যায়নি।',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+                            int updatedCount = 0;
+                            setState(() {
+                              for (final entry in keyMap.entries) {
+                                final qIdx = entry.key;
+                                final optIdx = entry.value;
+                                if (qIdx >= 0 &&
+                                    qIdx < _editableQuestions.length) {
+                                  final q = _editableQuestions[qIdx];
+                                  if (optIdx >= 0 &&
+                                    optIdx < q.options.length) {
+                                    _editableQuestions[qIdx] = q.copyWith(
+                                      correctIndex: optIdx,
+                                      answerSource: AnswerSource.answerKey,
+                                    );
+                                    updatedCount++;
+                                  }
+                                }
+                              }
+                              _savedToRoutine = false;
+                            });
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '$updatedCountটি প্রশ্নের উত্তর সফলভাবে যুক্ত হয়েছে! ✓',
+                                ),
+                              ),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: const Text(
+                      'উত্তরমালা প্রয়োগ করুন (Apply)',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showVoiceAnswerSheet(int qIndex) async {
+    if (qIndex < 0 || qIndex >= _editableQuestions.length) return;
+    final q = _editableQuestions[qIndex];
+
+    int selectedOptIndex = q.correctIndex;
+    final explanationCtrl = TextEditingController(text: q.explanation);
+    bool isListening = false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (sheetCtx, setSheetState) {
+            void onSpeechResult(String recognizedWords, bool isFinal) {
+              setSheetState(() {
+                final lower = recognizedWords.toLowerCase();
+                for (int i = 0; i < q.options.length; i++) {
+                  final letterBn =
+                      i == 0 ? 'ক' : (i == 1 ? 'খ' : (i == 2 ? 'গ' : 'ঘ'));
+                  final letterEn =
+                      i == 0 ? 'a' : (i == 1 ? 'b' : (i == 2 ? 'c' : 'd'));
+                  if (lower.contains('উত্তর $letterBn') ||
+                      lower.contains('উত্তর $letterEn') ||
+                      lower.contains('অপশন $letterBn') ||
+                      lower.contains('অপশন ${i + 1}') ||
+                      lower.startsWith(letterBn) ||
+                      lower.startsWith(letterEn)) {
+                    selectedOptIndex = i;
+                    break;
+                  }
+                }
+                explanationCtrl.text = recognizedWords;
+              });
+            }
+
+            return Container(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 16,
+              ),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.mic, color: Color(0xFF4F46E5), size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'প্রশ্ন #${qIndex + 1} - ভয়েস ইনপুট',
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () {
+                          if (isListening) {
+                            DeviceDictationService.instance.stop();
+                          }
+                          Navigator.of(ctx).pop();
+                        },
+                      ),
+                    ],
+                  ),
+                  Text(
+                    q.questionText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'সঠিক অপশনটি সিলেক্ট করুন বা মুখে বলুন:',
+                    style: TextStyle(fontSize: 11.5),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    children: List.generate(q.options.length, (optIdx) {
+                      final isSelected = selectedOptIndex == optIdx;
+                      final prefix = optIdx == 0
+                          ? 'ক'
+                          : (optIdx == 1 ? 'খ' : (optIdx == 2 ? 'গ' : 'ঘ'));
+                      return ChoiceChip(
+                        label: Text(
+                          '$prefix. ${q.options[optIdx]}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        selected: isSelected,
+                        selectedColor: Colors.green.shade100,
+                        onSelected: (_) => setSheetState(
+                          () => selectedOptIndex = optIdx,
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: explanationCtrl,
+                    maxLines: 3,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: InputDecoration(
+                      labelText: 'ব্যাখ্যা (মুখে বলুন বা লিখুন)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      contentPadding: const EdgeInsets.all(10),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            if (isListening) {
+                              await DeviceDictationService.instance.stop();
+                              setSheetState(() => isListening = false);
+                            } else {
+                              final ready =
+                                  await DeviceDictationService.instance.init();
+                              if (!ready) {
+                                if (sheetCtx.mounted) {
+                                  ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('মাইক্রোফোন চালু করা যায়নি।'),
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
+                              setSheetState(() => isListening = true);
+                              await DeviceDictationService.instance.listen(
+                                onResult: onSpeechResult,
+                              );
+                            }
+                          },
+                          icon: Icon(
+                            isListening ? Icons.stop : Icons.mic,
+                            color: isListening
+                                ? Colors.red
+                                : const Color(0xFF4F46E5),
+                          ),
+                          label: Text(
+                            isListening ? 'রেকর্ডিং বন্ধ করুন' : '🎙️ মুখে বলুন',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: selectedOptIndex < 0
+                              ? null
+                              : () {
+                                  if (isListening) {
+                                    DeviceDictationService.instance.stop();
+                                  }
+                                  setState(() {
+                                    _editableQuestions[qIndex] = q.copyWith(
+                                      correctIndex: selectedOptIndex,
+                                      explanation: explanationCtrl.text.trim(),
+                                      answerSource: AnswerSource.solved,
+                                    );
+                                    _savedToRoutine = false;
+                                  });
+                                  Navigator.of(ctx).pop();
+                                },
+                          icon: const Icon(Icons.check, size: 16),
+                          label: const Text('সংরক্ষণ'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _solveSingleQuestionWithAi(int qIndex) async {
+    if (qIndex < 0 || qIndex >= _editableQuestions.length) return;
+    final q = _editableQuestions[qIndex];
+
+    setState(() {
+      _verifyingIndices.add(qIndex);
+    });
+
+    try {
+      final res = await QuestionBankOcrService.instance.verifyQuestion(
+        question: q,
+        subject: _selectedSubject != 'Auto Detect'
+            ? _selectedSubject
+            : (_result?.subject ?? 'General'),
+      );
+
+      if (res != null && mounted) {
+        setState(() {
+          _editableQuestions[qIndex] = q.copyWith(
+            correctIndex: res.trueCorrectIndex >= 0 ? res.trueCorrectIndex : 0,
+            explanation:
+                res.explanation.isNotEmpty ? res.explanation : q.explanation,
+            answerSource: AnswerSource.solved,
+          );
+          _verifications[qIndex] = res;
+          _savedToRoutine = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'প্রশ্ন #${qIndex + 1} এর উত্তর ও ব্যাখ্যা AI দ্বারা সমাধান করা হয়েছে! ✓',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('AI সমাধান করতে সমস্যা হয়েছে: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _verifyingIndices.remove(qIndex);
+        });
+      }
+    }
+  }
+
+  Future<void> _solveAllUnsolvedWithAi() async {
+    final unsolved = <int>[];
+    for (int i = 0; i < _editableQuestions.length; i++) {
+      if (_editableQuestions[i].correctIndex < 0 ||
+          _editableQuestions[i].explanation.isEmpty) {
+        unsolved.add(i);
+      }
+    }
+
+    if (unsolved.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('সব প্রশ্নের উত্তর ইতোমধ্যে সেট করা আছে!')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isVerifyingAll = true;
+    });
+
+    int solvedCount = 0;
+    try {
+      for (final qIndex in unsolved) {
+        if (!mounted || !_isVerifyingAll) break;
+        final q = _editableQuestions[qIndex];
+        final res = await QuestionBankOcrService.instance.verifyQuestion(
+          question: q,
+          subject: _selectedSubject != 'Auto Detect'
+              ? _selectedSubject
+              : (_result?.subject ?? 'General'),
+        );
+        if (res != null && mounted) {
+          setState(() {
+            _editableQuestions[qIndex] = q.copyWith(
+              correctIndex: res.trueCorrectIndex >= 0 ? res.trueCorrectIndex : 0,
+              explanation:
+                  res.explanation.isNotEmpty ? res.explanation : q.explanation,
+              answerSource: AnswerSource.solved,
+            );
+            _verifications[qIndex] = res;
+          });
+          solvedCount++;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _isVerifyingAll = false;
+          _savedToRoutine = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$solvedCountটি প্রশ্ন AI দ্বারা সফলভাবে সমাধান করা হয়েছে! ✓',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isVerifyingAll = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('AI সমাধান করার সময় সমস্যা হয়েছে: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _showEditQuestionDialog(int qIndex) async {
     if (qIndex < 0 || qIndex >= _editableQuestions.length) return;
     final q = _editableQuestions[qIndex];
@@ -749,6 +1254,42 @@ class _QuestionBankScannerModalState
 
   void _startExamNow() {
     if (_editableQuestions.isEmpty) return;
+
+    final unsolvedIdx =
+        _editableQuestions.indexWhere((q) => q.correctIndex < 0);
+    if (unsolvedIdx >= 0) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.amber),
+              SizedBox(width: 8),
+              Text('উত্তরবিহীন প্রশ্ন রয়েছে', style: TextStyle(fontSize: 16)),
+            ],
+          ),
+          content: Text(
+            'প্রশ্ন #${unsolvedIdx + 1} সহ কিছু প্রশ্নের কোনো সঠিক উত্তর নির্বাচন করা হয়নি।\n\n'
+            'পরীক্ষা শুরু করার আগে দয়া করে অপশনে ট্যাপ করে উত্তর সেট করুন, উত্তরমালা পেস্ট করুন, অথবা "AI সমাধান" বাটনে চাপ দিন।',
+            style: const TextStyle(fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('ঠিক আছে'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _solveAllUnsolvedWithAi();
+              },
+              child: const Text('AI দিয়ে সমাধান করুন'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
 
     final title = _titleController.text.trim().isNotEmpty
         ? _titleController.text.trim()
@@ -2059,6 +2600,8 @@ class _QuestionBankScannerModalState
     final warningCount = _verifications.values
         .where((v) => !v.isCorrect || v.isAmbiguous)
         .length;
+    final unsolvedCount =
+        _editableQuestions.where((q) => q.correctIndex < 0).length;
 
     return Column(
       children: [
@@ -2336,6 +2879,36 @@ class _QuestionBankScannerModalState
                     ),
                     onPressed: _showBatchFixSheet,
                   ),
+                  const SizedBox(width: 6),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 5,
+                      ),
+                      foregroundColor: isDark
+                          ? const Color(0xFFA5B4FC)
+                          : const Color(0xFF4F46E5),
+                      side: BorderSide(
+                        color: isDark
+                            ? const Color(0xFF6366F1)
+                            : const Color(0xFF4F46E5),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    icon: const Icon(Icons.paste_rounded, size: 13),
+                    label: const Text(
+                      'উত্তরমালা',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: _showPasteAnswerKeySheet,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: SizedBox(
@@ -2433,6 +3006,98 @@ class _QuestionBankScannerModalState
                           visualDensity: VisualDensity.compact,
                         ),
                       ],
+                    ],
+                  ),
+                ),
+              ],
+              if (unsolvedCount > 0) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50.withValues(
+                      alpha: isDark ? 0.15 : 1,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.shade600),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: Colors.amber.shade800,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '$unsolvedCountটি প্রশ্নের কোনো উত্তর বা ব্যাখ্যা নেই!',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? Colors.amber.shade200
+                                    : Colors.amber.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'নিচে অপশনে ট্যাপ করে নিজে উত্তর দিন, পাঠ্যবই/অন্য এজেন্ট থেকে উত্তরমালা পেস্ট করুন, অথবা অ্যাপের AI দিয়ে সমাধান নিন:',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: isDark
+                              ? Colors.grey.shade300
+                              : Colors.grey.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4F46E5),
+                              foregroundColor: Colors.white,
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                            ),
+                            icon: const Icon(Icons.paste_rounded, size: 13),
+                            label: const Text(
+                              '📋 উত্তরমালা পেস্ট করুন',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                            onPressed: _showPasteAnswerKeySheet,
+                          ),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              foregroundColor: isDark
+                                  ? const Color(0xFFA5B4FC)
+                                  : const Color(0xFF4F46E5),
+                            ),
+                            icon: const Icon(Icons.auto_awesome, size: 13),
+                            label: const Text(
+                              '⚡ অ্যাপের AI দিয়ে সব সমাধান',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                            onPressed: _solveAllUnsolvedWithAi,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -2619,7 +3284,101 @@ class _QuestionBankScannerModalState
           // A row the scan could not actually read, or answered without
           // confidence, says so here. Without this the garbled ones look
           // exactly like the clean ones.
-          if (q.needsReview) ...[
+          if (q.correctIndex < 0) ...[
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 9),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: isDark ? 0.2 : 0.12),
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(color: Colors.amber.shade600),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.help_outline,
+                    size: 15,
+                    color: Colors.amber.shade900,
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      'উত্তর নির্বাচিত নেই — অপশনে ট্যাপ করুন বা সমাধান দিন',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? Colors.amber.shade200
+                            : Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => _showVoiceAnswerSheet(qIndex),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.mic, size: 12, color: Color(0xFF4F46E5)),
+                          SizedBox(width: 2),
+                          Text(
+                            'ভয়েস',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF4F46E5),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: () => _solveSingleQuestionWithAi(qIndex),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 12,
+                            color: Color(0xFF10B981),
+                          ),
+                          SizedBox(width: 2),
+                          Text(
+                            'AI সমাধান',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF10B981),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (q.needsReview) ...[
             Container(
               width: double.infinity,
               margin: const EdgeInsets.only(bottom: 9),
@@ -3032,12 +3791,13 @@ class _QuestionBankScannerModalState
 
           // Options
           ...List.generate(q.options.length, (optIndex) {
-            final isCorrect = optIndex == q.correctIndex;
+            final isCorrect = q.correctIndex >= 0 && optIndex == q.correctIndex;
             return InkWell(
               onTap: () {
                 setState(() {
                   _editableQuestions[qIndex] = q.copyWith(
                     correctIndex: optIndex,
+                    answerSource: AnswerSource.solved,
                   );
                   _savedToRoutine = false;
                 });
@@ -3148,6 +3908,43 @@ class _QuestionBankScannerModalState
                     ),
                   ),
                 ],
+              ),
+            ),
+          ] else if (q.explanation.isEmpty && verification == null) ...[
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: () => _showEditQuestionDialog(qIndex),
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E293B).withValues(alpha: 0.5)
+                      : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : Colors.grey.shade300,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.edit_note,
+                      size: 14,
+                      color: isDark ? Colors.blueGrey.shade300 : Colors.blueGrey,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '+ ব্যাখ্যা যোগ করুন (লিখুন বা মুখে বলুন)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.blueGrey.shade300 : Colors.blueGrey,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

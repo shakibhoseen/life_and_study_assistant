@@ -108,7 +108,7 @@ class QuestionTextParser {
     if (options.length < 2) return null;
 
     // Detect correct index
-    int correctIndex = 0;
+    int correctIndex = -1;
     AnswerSource source = AnswerSource.guess;
     final rawIndex = item['correct_index'] ?? item['correctIndex'] ?? item['answer_index'];
     if (rawIndex is int && rawIndex >= 0 && rawIndex < options.length) {
@@ -264,7 +264,7 @@ class QuestionTextParser {
 
     if (questionText == null || options.length < 2) return null;
 
-    int correctIndex = 0;
+    int correctIndex = -1;
     AnswerSource source = AnswerSource.guess;
     if (answerLine != null) {
       correctIndex = _resolveAnswerOptionIndex(answerLine, options);
@@ -287,7 +287,98 @@ class QuestionTextParser {
   /// Returns true if all extracted questions have an explicit answer key provided.
   static bool hasExplicitAnswers(QuestionBankExtractResult result) {
     if (result.questions.isEmpty) return false;
-    return result.questions.every((q) => q.answerSource == AnswerSource.answerKey);
+    return result.questions.every(
+      (q) => q.correctIndex >= 0 && q.answerSource == AnswerSource.answerKey,
+    );
+  }
+
+  /// Parses answer key text (from textbook, external agent, etc.) into a Map of
+  /// zero-based question index -> zero-based option index (0 for ক/A, 1 for খ/B, etc.).
+  static Map<int, int> parseAnswerKey(String rawKeyText) {
+    final text = rawKeyText.trim();
+    if (text.isEmpty) return {};
+
+    final result = <int, int>{};
+
+    // Regex matching: (QuestionNum)[separator](OptionLetter)
+    // e.g. "১. খ", "1) B", "Q1: C", "1-A", "১ খ", "১ = গ"
+    final itemPattern = RegExp(
+      r'(?:(?:প্রশ্ন\s*|Q\s*)?([০-৯\d]+)[\.\)\:\-\=\s]+([কখগঘঙABCDEabcde]))',
+      caseSensitive: false,
+    );
+
+    final matches = itemPattern.allMatches(text).toList();
+    if (matches.isNotEmpty) {
+      for (final match in matches) {
+        final qNumStr = match.group(1);
+        final optLetter = match.group(2);
+        if (qNumStr != null && optLetter != null) {
+          final westernStr = BengaliMathSanitizer.toEnglishDigits(qNumStr);
+          final qNum = int.tryParse(westernStr);
+          if (qNum != null && qNum > 0) {
+            final optIdx = _resolveOptionLetterToIndex(optLetter);
+            if (optIdx >= 0) {
+              result[qNum - 1] = optIdx;
+            }
+          }
+        }
+      }
+      if (result.isNotEmpty) return result;
+    }
+
+    // Fallback: Check if it's a comma/space separated sequence of option letters alone
+    // e.g. "ক, খ, গ, ঘ" or "B, D, A, C"
+    final tokens = text
+        .split(RegExp(r'[\s\,\;]+'))
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+
+    int sequentialIdx = 0;
+    for (final token in tokens) {
+      final optIdx = _resolveOptionLetterToIndex(token);
+      if (optIdx >= 0) {
+        result[sequentialIdx] = optIdx;
+        sequentialIdx++;
+      }
+    }
+
+    return result;
+  }
+
+  static int _resolveOptionLetterToIndex(String letter) {
+    final cleaned = letter.trim().toLowerCase();
+    if (cleaned.isEmpty) return -1;
+    final ch = cleaned[0];
+    switch (ch) {
+      case 'ক':
+      case 'a':
+      case '১':
+      case '1':
+        return 0;
+      case 'খ':
+      case 'b':
+      case '২':
+      case '2':
+        return 1;
+      case 'গ':
+      case 'c':
+      case '৩':
+      case '3':
+        return 2;
+      case 'ঘ':
+      case 'd':
+      case '৪':
+      case '4':
+        return 3;
+      case 'ঙ':
+      case 'e':
+      case '৫':
+      case '5':
+        return 4;
+      default:
+        return -1;
+    }
   }
 
   static String _normalizeOptionPrefix(String raw) {
