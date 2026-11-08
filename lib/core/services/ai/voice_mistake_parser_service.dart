@@ -355,11 +355,145 @@ Rules:
     return 'audio/m4a';
   }
 
+  String _detectImageMimeType(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
+  }
+
+  /// Parse screenshot or camera image of a LiveMCQ or test paper mistake.
+  /// Solves the question on the spot with high accuracy even if official answer
+  /// is not yet published on LiveMCQ.
+  Future<VoiceMistakeResult?> parseMistakeFromImage(
+    File imageFile, {
+    String? contextHint,
+  }) async {
+    if (!await imageFile.exists()) return null;
+    final imageBytes = await imageFile.readAsBytes();
+    if (imageBytes.isEmpty) return null;
+
+    await init();
+    final activeModel = _modelName ?? 'gemini-flash-latest';
+
+    if (_model != null) {
+      try {
+        final mimeType = _detectImageMimeType(imageFile.path);
+        const prompt = '''
+You are an expert tutor for BCS (Bangladesh Civil Service) and LiveMCQ exams in Bangladesh.
+The student took a screenshot or photo of an exam question from LiveMCQ or a study guide that they got wrong or left unanswered.
+Since LiveMCQ does not reveal the correct answer until the next day, you MUST solve the question yourself with 100% academic accuracy!
+
+Task:
+1. Extract the question text and all multiple-choice options from the image.
+2. If the user's selected wrong answer is visible (marked in red, crossed out, or ticked), note it.
+3. Solve the question independently to identify the true correct option index (0, 1, 2, or 3).
+4. Provide a clear, educational, authentic Bengali explanation citing authentic rules or textbooks (e.g. বোর্ড ব্যাকরণ, সংবিধান, পিএসসি সিলেবাস).
+5. Identify the exact subject (Bangla Grammar, English Literature, Bangladesh Affairs, International Affairs, Mathematics, General Science, Computer & ICT, Mental Ability) and chapter/topic.
+6. Provide a 1-sentence punchy takeaway rule (key_rule).
+
+Return STRICTLY a JSON object with this exact structure:
+{
+  "question": "Full Bengali/English question text",
+  "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+  "correct_index": 0,
+  "explanation": "Detailed, educational Bengali explanation",
+  "subject": "Subject name",
+  "topic": "Topic name",
+  "key_rule": "Short memorable rule or fact"
+}
+''';
+
+        final content = [
+          Content.multi([
+            TextPart(
+              contextHint != null && contextHint.isNotEmpty
+                  ? '$prompt\nContext: $contextHint'
+                  : prompt,
+            ),
+            DataPart(mimeType, imageBytes),
+          ]),
+        ];
+
+        GenerateContentResponse response;
+        try {
+          response = await _model!.generateContent(content);
+        } catch (e) {
+          final lower = e.toString().toLowerCase();
+          if (!lower.contains('503') &&
+              !lower.contains('unavailable') &&
+              !lower.contains('high demand') &&
+              !lower.contains('overloaded')) {
+            rethrow;
+          }
+          await Future<void>.delayed(const Duration(seconds: 3));
+          response = await _model!.generateContent(content);
+        }
+
+        await GeminiUsageTracker.instance.recordSuccess(
+          tokens: response.usageMetadata?.totalTokenCount ?? 0,
+          actualInputTokens: response.usageMetadata?.promptTokenCount,
+          actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
+          actualTotalTokens: response.usageMetadata?.totalTokenCount,
+          operation: 'voice_mistake_image',
+          model: activeModel,
+        );
+
+        final result = _decodeResponse(
+          response.text,
+          spokenRef: 'Screenshot: ${imageFile.path.split('/').last}',
+        );
+        return result;
+      } catch (e) {
+        debugPrint('Gemini Mistake Image analysis error: $e');
+        final text = e.toString();
+        final lower = text.toLowerCase();
+
+        if (text.contains('429') || lower.contains('quota')) {
+          await GeminiUsageTracker.instance.recordQuotaExceeded(
+            operation: 'voice_mistake_image',
+            model: activeModel,
+          );
+          throw VoiceParseException(
+            userMessage: 'আজকের API কোটা শেষ। পরে আবার চেষ্টা করুন।',
+            technicalDetails: text,
+          );
+        }
+
+        await GeminiUsageTracker.instance.recordError(
+          text,
+          operation: 'voice_mistake_image',
+          model: activeModel,
+        );
+
+        final transient =
+            lower.contains('503') ||
+            lower.contains('unavailable') ||
+            lower.contains('overloaded') ||
+            lower.contains('high demand');
+        throw VoiceParseException(
+          userMessage: transient
+              ? 'Gemini সার্ভার এই মুহূর্তে ব্যস্ত। আবার চেষ্টা করুন।'
+              : 'ছবি থেকে প্রশ্ন বিশ্লেষণ করা গেল না। স্পষ্ট ছবি বা স্ক্রিনশট দিয়ে আবার চেষ্টা করুন।',
+          technicalDetails: text,
+          isTransient: transient,
+        );
+      }
+    }
+
+    throw const VoiceParseException(
+      userMessage: 'Gemini API key সেট করা নেই, তাই ছবি বিশ্লেষণ সম্ভব নয়।',
+      technicalDetails: 'model was null',
+    );
+  }
+
   /// Save the mistake to Mistake Bank (DrillQuestions), Spaced Repetition (SM-2), and Weak Topics
   Future<void> saveVoiceMistakeToDatabase(
     AppDatabase db,
-    VoiceMistakeResult rawResult,
-  ) async {
+    VoiceMistakeResult rawResult, {
+    String sourceTag = '[উৎস: LiveMCQ 🎙️]',
+  }) async {
     final result = VoiceMistakeResult(
       questionText: BengaliMathSanitizer.sanitize(rawResult.questionText),
       options: rawResult.options
@@ -407,7 +541,7 @@ Rules:
           explanation: Value(
             result.explanation.startsWith('[উৎস:')
                 ? result.explanation
-                : '[উৎস: LiveMCQ 🎙️] ${result.explanation}',
+                : '$sourceTag ${result.explanation}',
           ),
           isMastered: const Value(false),
         ),

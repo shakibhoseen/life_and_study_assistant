@@ -17,9 +17,15 @@ import '../../../../core/services/ai/gemini_prompts.dart';
 import '../../../../core/services/ai/models/study_sheet_summary.dart';
 import '../../../../core/services/ai/routine_parser_service.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/services/calendar/calendar_sync_service.dart';
+import '../../../../core/services/ai/quiz_generator_service.dart';
+import '../../../../core/services/ai/voice_mistake_parser_service.dart';
+import '../../../quiz/presentation/providers/drill_history_provider.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
 import '../../../quiz/presentation/widgets/question_bank_scanner_modal.dart';
+import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
+import '../../../topics/presentation/providers/topics_provider.dart';
 import '../../domain/models/exam_source_info.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/exam_schedule_provider.dart';
@@ -96,8 +102,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           ),
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
-            tooltip: 'Upload Routine PDF',
-            onPressed: () => _pickAndParsePdf(context),
+            tooltip: 'PDF ইম্পোর্ট (রুটিন বা পড়ার লেকচার শিট)',
+            onPressed: () => _showPdfOptionsSheet(context),
           ),
           IconButton(
             icon: const Icon(Icons.playlist_add),
@@ -129,6 +135,15 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   tooltip: 'প্রশ্ন ব্যাংক স্ক্যান করে এক্সাম',
                   onPressed: () => QuestionBankScannerModal.show(context),
                   child: const Icon(Icons.document_scanner_outlined, size: 20),
+                ),
+                const SizedBox(height: 10),
+                FloatingActionButton.small(
+                  heroTag: 'fab_screenshot_mistake_mcq',
+                  backgroundColor: const Color(0xFF0284C7),
+                  foregroundColor: Colors.white,
+                  tooltip: 'LiveMCQ স্ক্রিনশট থেকে ভুল সেভ',
+                  onPressed: () => _pickAndParseScreenshotMistake(context),
+                  child: const Icon(Icons.add_photo_alternate_rounded, size: 20),
                 ),
                 const SizedBox(height: 10),
                 FloatingActionButton.small(
@@ -2251,6 +2266,319 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
         },
       ),
     );
+  }
+
+  void _showPdfOptionsSheet(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const Text(
+                'PDF ইম্পোর্ট অপশন',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 14),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.calendar_month,
+                    color: Color(0xFF6366F1),
+                  ),
+                ),
+                title: const Text(
+                  'পরীক্ষার রুটিন PDF',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'LiveMCQ বা কোচিং রুটিন থেকে পরীক্ষার তালিকা ও শিডিউল সেভ করুন',
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndParsePdf(context);
+                },
+              ),
+              const Divider(height: 20),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.menu_book_rounded,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+                title: const Text(
+                  'পড়ার রিসোর্স / লেকচার শিট PDF',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'PDF পড়ে তাৎক্ষণিক ১০টি প্রশ্নে পরীক্ষা দিন (Active Recall)',
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndParseStudyPdf(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickAndParseStudyPdf(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final pickedFiles = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (pickedFiles.isNotEmpty && pickedFiles.first.path != null) {
+        final filePath = pickedFiles.first.path!;
+        final file = File(filePath);
+        final fileName = file.path.split('/').last;
+
+        messenger.showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 15),
+            backgroundColor: const Color(0xFF10B981),
+            content: Row(
+              children: [
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'AI $fileName থেকে ১০টি প্রশ্ন তৈরি করছে...',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final questions = await QuizGeneratorService.instance
+            .generateQuizFromStudyPdf(file, count: 10);
+
+        if (!context.mounted) return;
+        messenger.hideCurrentSnackBar();
+
+        if (questions.isNotEmpty) {
+          QuizDrillModal.show(
+            context,
+            subject: 'Study PDF Drill',
+            topic: fileName.replaceAll('.pdf', ''),
+            customQuestions: questions,
+          );
+        } else {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text(
+                'PDF থেকে প্রশ্ন তৈরি করা সম্ভব হয়নি। ফাইলটি যাচাই করুন।',
+              ),
+            ),
+          );
+        }
+      }
+    } on QuizGenerationException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade800,
+          content: Text(e.userMessage),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade800,
+          content: Text('PDF পড়তে সমস্যা হয়েছে: $e'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickAndParseScreenshotMistake(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      messenger.showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 15),
+          backgroundColor: Color(0xFF0284C7),
+          content: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'AI LiveMCQ স্ক্রিনশট থেকে প্রশ্ন সমাধান করছে…',
+                  style: TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final result = await VoiceMistakeParserService.instance
+          .parseMistakeFromImage(File(picked.path));
+
+      if (!context.mounted) return;
+      messenger.hideCurrentSnackBar();
+
+      if (result != null) {
+        final db = ref.read(appDatabaseProvider);
+        await VoiceMistakeParserService.instance.saveVoiceMistakeToDatabase(
+          db,
+          result,
+          sourceTag: '[উৎস: LiveMCQ 📸]',
+        );
+        ref.invalidate(wrongQuestionsStreamProvider);
+        ref.invalidate(dueSpacedReviewsStreamProvider);
+        ref.invalidate(allSpacedReviewsStreamProvider);
+        ref.invalidate(weakTopicsStreamProvider);
+
+        if (!context.mounted) return;
+        showDialog(
+          context: context,
+          builder: (dlgCtx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Color(0xFF10B981), size: 22),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'ভুল প্রশ্ন সংরক্ষিত ✓',
+                    style: TextStyle(fontSize: 15),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${result.subject} • ${result.topic}',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6366F1),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    result.questionText,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '✅ সঠিক উত্তর: ${(result.correctIndex >= 0 && result.correctIndex < result.options.length) ? result.options[result.correctIndex] : "অজানা"}',
+                    style: const TextStyle(
+                      color: Color(0xFF10B981),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '💡 ব্যাখ্যা: ${result.explanation}',
+                    style: const TextStyle(fontSize: 11.5),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dlgCtx),
+                child: const Text('ঠিক আছে'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'স্ক্রিনশট থেকে প্রশ্ন শনাক্ত করা যায়নি। স্পষ্ট ছবি দিন।',
+            ),
+          ),
+        );
+      }
+    } on VoiceParseException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade800,
+          content: Text(e.userMessage),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade800,
+          content: Text('স্ক্রিনশট বিশ্লেষণে সমস্যা: $e'),
+        ),
+      );
+    }
   }
 
   Future<void> _pickAndParsePdf(BuildContext context) async {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -168,6 +169,116 @@ JSON Structure:
     }
 
     debugPrint('Quiz generation failed for "$topic": $lastError');
+    throw QuizGenerationException(_diagnoseError(lastError));
+  }
+
+  /// Generates authentic BCS-standard MCQs directly from a study resource or
+  /// lecture sheet PDF. Allows students to test their active recall immediately
+  /// after reading.
+  Future<List<QuizQuestion>> generateQuizFromStudyPdf(
+    File pdfFile, {
+    int count = 10,
+    void Function(int tokens)? onTokens,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString(NotificationConstants.prefGeminiApiKey);
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const QuizGenerationException(
+        'Gemini API কী সেট করা নেই। সেটিংসে API কী দিন, তারপর চেষ্টা করুন।',
+      );
+    }
+
+    if (!await pdfFile.exists()) {
+      throw const QuizGenerationException('PDF ফাইলটি খুঁজে পাওয়া যায়নি।');
+    }
+
+    final pdfBytes = await pdfFile.readAsBytes();
+    if (pdfBytes.isEmpty) {
+      throw const QuizGenerationException('PDF ফাইলটি খালি।');
+    }
+
+    final prompt = '''
+You are an expert BCS preliminary exam question creator.
+The student has uploaded a study resource or lecture sheet PDF (e.g. from LiveMCQ or coaching).
+Read the provided PDF content carefully and generate exactly $count high-yield, authentic Multiple Choice Questions (MCQs) in Bengali directly based on the concepts, facts, and rules taught in this document.
+
+Rules:
+1. Each question must have 4 distinct, plausible options.
+2. Indicate the zero-based index of the correct option (0, 1, 2, or 3).
+3. Provide a clear, educational 1-2 sentence Bengali explanation citing the specific fact or rule from the text.
+4. Categorize with appropriate subject and specific topic based on the PDF content.
+5. Clean Unicode: never use raw LaTeX (e.g. avoid \\to, \$x^2\$); use native Unicode: '°', '→', '×', '²', '√'.
+6. Return ONLY a valid JSON array of objects without markdown fences.
+
+JSON Structure:
+[
+  {
+    "question": "...",
+    "options": ["ক. অপশন ১", "খ. অপশন ২", "গ. অপশন ৩", "ঘ. অপশন ৪"],
+    "correct_index": 0,
+    "explanation": "...",
+    "subject": "...",
+    "topic": "..."
+  }
+]
+''';
+
+    final savedModel =
+        prefs.getString(NotificationConstants.prefGeminiModel) ??
+        'gemini-flash-latest';
+    final primaryModel =
+        ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-pro-latest']
+            .contains(savedModel)
+        ? savedModel
+        : 'gemini-flash-latest';
+
+    final modelsToTry = [
+      primaryModel,
+      if (primaryModel != 'gemini-flash-latest') 'gemini-flash-latest',
+    ];
+
+    Object? lastError;
+    for (final modelName in modelsToTry) {
+      try {
+        final model = GenerativeModel(
+          model: modelName,
+          apiKey: apiKey,
+          generationConfig: GenerationConfig(
+            responseMimeType: 'application/json',
+            temperature: 0.2,
+          ),
+        );
+
+        final content = [
+          Content.multi([
+            TextPart(prompt),
+            DataPart('application/pdf', pdfBytes),
+          ]),
+        ];
+
+        final response = await model.generateContent(content);
+        final rawText = response.text?.trim() ?? '';
+        if (rawText.isNotEmpty) {
+          final questions = _parseQuestions(rawText);
+          if (questions.isNotEmpty) {
+            await GeminiUsageTracker.instance.recordSuccess(
+              tokens: response.usageMetadata?.totalTokenCount ?? (questions.length * 90),
+              actualInputTokens: response.usageMetadata?.promptTokenCount,
+              actualOutputTokens: response.usageMetadata?.candidatesTokenCount,
+              actualTotalTokens: response.usageMetadata?.totalTokenCount,
+              operation: 'study_pdf_quiz',
+              model: modelName,
+            );
+            return questions;
+          }
+        }
+      } catch (e) {
+        debugPrint('QuizGeneratorService PDF error with $modelName: $e');
+        lastError = e;
+      }
+    }
+
     throw QuizGenerationException(_diagnoseError(lastError));
   }
 

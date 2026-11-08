@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/models/voice_mistake_result.dart';
@@ -41,6 +43,7 @@ class _VoiceMistakeBottomSheetState
   // to 159 seconds and fails outright while the model is busy.
   bool _isDictating = false;
   bool _isProcessing = false;
+  bool _isProcessingImage = false;
 
   // Measured at up to 159 seconds on a real recording. A spinner
   // with no number on it is indistinguishable from a hang.
@@ -307,11 +310,75 @@ class _VoiceMistakeBottomSheetState
     }
   }
 
-  Future<void> _saveAndRefresh(VoiceMistakeResult result) async {
+  Future<void> _pickImageAndParse(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      setState(() {
+        _isProcessing = true;
+        _isProcessingImage = true;
+        _parseSeconds = 0;
+        _statusMessage = 'AI স্ক্রিনশট থেকে প্রশ্ন ও উত্তর বিশ্লেষণ করছে…';
+        _parsedResult = null;
+      });
+
+      _parseTimer?.cancel();
+      _parseTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+        if (!mounted || !_isProcessing) {
+          t.cancel();
+          return;
+        }
+        setState(() {
+          _parseSeconds++;
+          _statusMessage =
+              'AI স্ক্রিনশট থেকে প্রশ্ন সমাধান করছে… ${_parseSeconds}s';
+        });
+      });
+
+      final result = await VoiceMistakeParserService.instance
+          .parseMistakeFromImage(File(picked.path));
+
+      if (result != null) {
+        await _saveAndRefresh(result, sourceTag: '[উৎস: LiveMCQ 📸]');
+      } else {
+        setState(() {
+          _isProcessing = false;
+          _parseTimer?.cancel();
+          _statusMessage =
+              'স্ক্রিনশট থেকে প্রশ্ন শনাক্ত করা যায়নি। স্পষ্ট ছবি দিয়ে আবার চেষ্টা করুন।';
+        });
+      }
+    } on VoiceParseException catch (e) {
+      setState(() {
+        _isProcessing = false;
+        _parseTimer?.cancel();
+        _statusMessage = e.userMessage;
+      });
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+        _parseTimer?.cancel();
+        _statusMessage = 'ছবি প্রসেসিংয়ে সমস্যা: $e';
+      });
+    }
+  }
+
+  Future<void> _saveAndRefresh(
+    VoiceMistakeResult result, {
+    String sourceTag = '[উৎস: LiveMCQ 🎙️]',
+  }) async {
     final db = ref.read(appDatabaseProvider);
     await VoiceMistakeParserService.instance.saveVoiceMistakeToDatabase(
       db,
       result,
+      sourceTag: sourceTag,
     );
 
     ref.invalidate(wrongQuestionsStreamProvider);
@@ -623,12 +690,66 @@ class _VoiceMistakeBottomSheetState
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+
+            // LiveMCQ Screenshot / Camera Buttons (for non-copyable text in LiveMCQ)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                    label: const Text('LiveMCQ স্ক্রিনশট'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0284C7),
+                      side: BorderSide(
+                        color: isDark
+                            ? const Color(0xFF0369A1)
+                            : const Color(0xFFBAE6FD),
+                      ),
+                      backgroundColor: const Color(0xFF0284C7).withValues(
+                        alpha: isDark ? 0.15 : 0.08,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: _isProcessing
+                        ? null
+                        : () => _pickImageAndParse(ImageSource.gallery),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                  label: const Text('ক্যামেরা ছবি'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark
+                        ? Colors.grey.shade300
+                        : const Color(0xFF334155),
+                    side: BorderSide(
+                      color: isDark ? Colors.white24 : Colors.grey.shade300,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: _isProcessing
+                      ? null
+                      : () => _pickImageAndParse(ImageSource.camera),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
 
             // Processing state
             if (_isProcessing) ...[
-              const AiProgressPipelineWidget(
-                type: AiTaskType.audio,
+              AiProgressPipelineWidget(
+                type: _isProcessingImage ? AiTaskType.image : AiTaskType.audio,
                 isCompact: true,
               ),
               const SizedBox(height: 16),
