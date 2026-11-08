@@ -393,7 +393,10 @@ class QuizBatchCorrectionSheet {
                       maxLines: 4,
                       style: const TextStyle(fontSize: 12.5),
                       decoration: InputDecoration(
-                        hintText: 'বা এখানে সরাসরি AI-এর বিশ্লেষণ পেস্ট করুন...\nযেমন:\n"প্রশ্ন ৩ এর উত্তর খ হবে, ক নয়..."\n"প্রশ্ন ৫ তথ্যগতভাবে ভুল, বাদ দেওয়া উচিত..."',
+                        hintText:
+                            'AI-এর বিশ্লেষণ এখানে পেস্ট করুন — যেভাবে খুশি লিখুন।\n'
+                            'এক লাইনেও চলবে: "৪ নম্বরটা ভুল, প্রশ্নটা ঠিক করো"\n'
+                            'উপরের প্রম্পটে চাইলে JSON আসে — সেটা ফোনেই পড়া হয়, ফ্রি।',
                         hintStyle: TextStyle(
                           fontSize: 12,
                           color: isDark
