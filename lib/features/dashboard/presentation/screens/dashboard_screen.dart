@@ -19,12 +19,20 @@ import '../../../quiz/presentation/widgets/study_sheet_camera_modal.dart';
 import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
 import '../../../spaced_repetition/presentation/screens/spaced_repetition_screen.dart';
+import '../../../study_planner/presentation/providers/adaptive_planner_provider.dart';
+import '../../../study_planner/presentation/widgets/focus_timer_dialog.dart';
+import '../../../weakness_healer/presentation/widgets/weakness_healing_drill_modal.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
 import '../../../mistake_notebook/presentation/screens/mistake_notebook_screen.dart';
 import '../../../mistake_notebook/presentation/widgets/nightly_review_modal.dart';
 import '../../../weakness_healer/presentation/widgets/weakness_healing_card.dart';
-import '../widgets/automation_test_card.dart';
+import '../../../analytics/presentation/providers/today_activity_provider.dart';
+import '../../domain/next_study_action.dart';
+import '../../domain/today_progress.dart';
 import '../widgets/biometric_status_banner.dart';
+import '../widgets/attention_card.dart';
+import '../widgets/next_action_card.dart';
+import '../widgets/today_progress_strip.dart';
 import '../widgets/energy_tracker_card.dart';
 import '../widgets/multi_track_exam_countdown_card.dart';
 import '../widgets/study_plan_card.dart';
@@ -201,7 +209,31 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 0. Quick Action & Productivity Bar
+              // 0. The one thing to start now.
+              //
+              // Above everything else on purpose: the cards below offer six
+              // separate calls to action and rank none of them, and choosing
+              // between six is the hard part after a day's work.
+              _buildNextAction(
+                context,
+                ref,
+                dueSpacedReviews: dueSpacedReviews,
+                wrongQuestions: wrongQuestions,
+                weakTopics: weakTopics,
+                streak: streak,
+              ),
+              const SizedBox(height: 10),
+              _buildTodayProgress(ref),
+              const SizedBox(height: 10),
+              _buildAttention(
+                context,
+                dueSpacedReviews: dueSpacedReviews,
+                wrongQuestions: wrongQuestions,
+                weakTopics: weakTopics,
+              ),
+              const SizedBox(height: 14),
+
+              // 0.5. Quick Action & Productivity Bar
               _buildQuickActionStrip(context, ref),
               const SizedBox(height: 14),
 
@@ -247,20 +279,164 @@ class DashboardScreen extends ConsumerWidget {
               const WeaknessHealingCard(),
               const SizedBox(height: 16),
 
-              // 8. Weak Topics Spotlight
-              if (weakTopics.isNotEmpty) ...[
-                _buildWeakTopicsSection(context, weakTopics),
-                const SizedBox(height: 16),
-              ],
-
-              // 9. Automation & Triggers Testing Lab
-              const AutomationTestCard(),
               const SizedBox(height: 24),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Chooses the next job and says what starting it does.
+  ///
+  /// The choosing lives in [pickNextStudyAction]; what is here is only the
+  /// wiring to the screens that already do each of these, so none of that work
+  /// is written a second time.
+  Widget _buildNextAction(
+    BuildContext context,
+    WidgetRef ref, {
+    required List<SpacedReviewItem> dueSpacedReviews,
+    required List<DrillQuestion> wrongQuestions,
+    required List<WeakTopic> weakTopics,
+    required int streak,
+  }) {
+    // The first task of today's plan that is not ticked off. The plan sized it
+    // to today's energy already, so it beats anything this screen would guess.
+    final plan = ref.watch(adaptivePlannerProvider).value;
+    final pending = plan?.tasks.where((t) => !t.isCompleted).firstOrNull;
+
+    final action = pickNextStudyAction(
+      dueReviews: dueSpacedReviews.length,
+      unfinishedTaskTitle: pending?.title,
+      unfinishedTaskMinutes: pending?.estimatedMinutes ?? 10,
+      activeMistakes: wrongQuestions.length,
+      weakTopics: weakTopics.length,
+    );
+
+    VoidCallback? start;
+    switch (action.kind) {
+      case StudyActionKind.dueReviews:
+        // The same door the "Open Hub" button below uses.
+        start = () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SpacedRepetitionScreen()),
+        );
+      case StudyActionKind.unfinishedTask:
+        final task = pending;
+        start = task == null
+            ? null
+            : () => FocusTimerDialog.show(
+                context,
+                taskId: task.id,
+                taskTitle: task.title,
+                subject: task.subject,
+                initialMinutes: task.estimatedMinutes,
+              );
+      case StudyActionKind.mistakeDrill:
+        start = () => QuizDrillModal.show(
+          context,
+          topic: 'Mistake Bank Quick Drill',
+          subject: 'Revision',
+          customQuestions: _asQuizQuestions(wrongQuestions),
+        );
+      case StudyActionKind.weakTopic:
+        final topic = weakTopics.firstOrNull;
+        start = topic == null
+            ? null
+            : () => WeaknessHealingDrillModal.show(context, topic: topic);
+      case StudyActionKind.allClear:
+        start = () => QuestionBankScannerModal.show(context);
+    }
+
+    return NextActionCard(action: action, onStart: start, streakDays: streak);
+  }
+
+  /// Everything waiting, with its size, beside the one recommendation.
+  ///
+  /// The rows follow the same order as [pickNextStudyAction], so the backlog
+  /// and the recommendation never look as though they disagree.
+  Widget _buildAttention(
+    BuildContext context, {
+    required List<SpacedReviewItem> dueSpacedReviews,
+    required List<DrillQuestion> wrongQuestions,
+    required List<WeakTopic> weakTopics,
+  }) {
+    final firstWeakTopic = weakTopics.firstOrNull;
+
+    return AttentionCard(
+      items: [
+        AttentionItem(
+          label: 'রিভিশন কার্ড আজ জমা',
+          count: dueSpacedReviews.length,
+          icon: Icons.history_toggle_off,
+          colour: const Color(0xFF6366F1),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SpacedRepetitionScreen()),
+          ),
+        ),
+        AttentionItem(
+          label: 'ভুল প্রশ্ন আয়ত্তে আসেনি',
+          count: wrongQuestions.length,
+          icon: Icons.error_outline,
+          colour: const Color(0xFFF59E0B),
+          onTap: () => QuizDrillModal.show(
+            context,
+            topic: 'Mistake Bank Quick Drill',
+            subject: 'Revision',
+            customQuestions: _asQuizQuestions(wrongQuestions),
+          ),
+        ),
+        AttentionItem(
+          label: 'দুর্বল টপিক চিহ্নিত',
+          count: weakTopics.length,
+          icon: Icons.track_changes,
+          colour: const Color(0xFF14B8A6),
+          onTap: firstWeakTopic == null
+              ? null
+              : () => WeaknessHealingDrillModal.show(
+                  context,
+                  topic: firstWeakTopic,
+                ),
+        ),
+      ],
+    );
+  }
+
+  /// How much of today is done, from the plan and the day's real activity.
+  Widget _buildTodayProgress(WidgetRef ref) {
+    final plan = ref.watch(adaptivePlannerProvider).value;
+    final answered = ref.watch(questionsAnsweredTodayProvider).value ?? 0;
+
+    return TodayProgressStrip(
+      progress: summariseToday(
+        tasks: plan?.tasks ?? const [],
+        recommendedStudyMinutes: plan?.recommendedStudyMinutes ?? 0,
+        questionsAnsweredToday: answered,
+      ),
+    );
+  }
+
+  /// Wrong answers as drillable questions.
+  ///
+  /// Lifted out of the Mistake Bank section so the card above can start the
+  /// same drill without a second copy of the conversion.
+  List<QuizQuestion> _asQuizQuestions(List<DrillQuestion> questions) {
+    return questions.map((dq) {
+      List<String> options = [];
+      try {
+        final decoded = jsonDecode(dq.optionsJson);
+        if (decoded is List) {
+          options = decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {}
+      return QuizQuestion(
+        questionText: dq.questionText,
+        options: options,
+        correctIndex: dq.correctIndex,
+        explanation: dq.explanation,
+      );
+    }).toList();
   }
 
   Widget _buildQuickActionStrip(BuildContext context, WidgetRef ref) {
@@ -426,57 +602,6 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWeakTopicsSection(BuildContext context, List<dynamic> topics) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.flag, color: Colors.deepOrange, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Core Weak Topics (LiveMCQ Focus)',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: topics.take(4).map((t) {
-                return Chip(
-                  labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-                  label: Text(
-                    '${t.subject}: ${t.topicName}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  backgroundColor: isDark
-                      ? Colors.deepOrange.withValues(alpha: 0.18)
-                      : Colors.deepOrange.shade50,
-                  avatar: const Icon(
-                    Icons.circle,
-                    size: 10,
-                    color: Colors.deepOrange,
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
         ),
       ),
     );

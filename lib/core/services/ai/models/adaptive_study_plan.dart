@@ -40,8 +40,15 @@ class AdaptiveStudyPlan {
     var rawTasks = json['tasks'];
     List<StudyTask> parsedTasks = [];
     if (rawTasks is List) {
-      parsedTasks = rawTasks
-          .map((item) => StudyTask.fromJson(item as Map<String, dynamic>))
+      // The index goes along so a task with no id of its own still gets one
+      // that is the same every time this plan is read.
+      parsedTasks = rawTasks.indexed
+          .map(
+            (entry) => StudyTask.fromJson(
+              entry.$2 as Map<String, dynamic>,
+              index: entry.$1,
+            ),
+          )
           .toList();
     }
 

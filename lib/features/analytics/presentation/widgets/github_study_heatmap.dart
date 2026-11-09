@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/widgets/collapsible_card.dart';
+import '../../../dashboard/domain/dashboard_section_prefs.dart';
 
 class GithubStudyHeatmap extends ConsumerStatefulWidget {
   const GithubStudyHeatmap({super.key});
@@ -14,15 +16,34 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
   final int _daysBack = 98; // 14 weeks × 7 days
   Map<String, dynamic>? _heatmapData;
   List<Map<String, dynamic>>? _subjectDistribution;
-  bool _isLoading = true;
+  bool _isLoading = false;
+  bool _expanded = DashboardSectionPrefs.heatmapExpandedByDefault;
 
   @override
   void initState() {
     super.initState();
-    _loadAnalytics();
+    _restore();
+  }
+
+  /// Folded is the default, so nothing is read from the database until the
+  /// section is actually open. Two queries over fourteen weeks of activity and
+  /// ninety-eight cells of grid used to be paid for on every dashboard open,
+  /// whether or not anybody looked at the result.
+  Future<void> _restore() async {
+    final expanded = await DashboardSectionPrefs.heatmapExpanded();
+    if (!mounted) return;
+    setState(() => _expanded = expanded);
+    if (expanded) _loadAnalytics();
+  }
+
+  Future<void> _toggle(bool expanded) async {
+    setState(() => _expanded = expanded);
+    await DashboardSectionPrefs.setHeatmapExpanded(expanded);
+    if (expanded && _heatmapData == null && !_isLoading) _loadAnalytics();
   }
 
   Future<void> _loadAnalytics() async {
+    setState(() => _isLoading = true);
     final db = ref.read(appDatabaseProvider);
     final data = await db.getActivityHeatmapData(daysBack: _daysBack);
     final distribution = await db.getSubjectStudyDistribution();
@@ -95,21 +116,34 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      );
-    }
+    final activeDays = _heatmapData?['activeDays'];
 
+    return CollapsibleCard(
+      title: 'Study Activity Heatmap',
+      icon: Icons.grid_on,
+      iconColour: const Color(0xFF2DA44E),
+      // Nothing is counted until it is opened, so there is nothing to say
+      // about the fortnight until then. The streak badge that used to sit here
+      // is gone: the dashboard already shows the streak at the top of the
+      // screen, and saying it twice made the card look like news.
+      subtitle: activeDays == null
+          ? 'শেষ ১৪ সপ্তাহের পড়ার ছক — দেখতে চাপুন'
+          : '$activeDays active study days in the last 14 weeks',
+      expanded: _expanded,
+      onToggle: _toggle,
+      child: _isLoading
+          ? const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     final scores = (_heatmapData?['scores'] as Map<String, int>?) ?? {};
     final details =
         (_heatmapData?['details'] as Map<String, Map<String, dynamic>>?) ?? {};
-    final activeDays = _heatmapData?['activeDays'] ?? 0;
-    final currentStreak = _heatmapData?['currentStreak'] ?? 0;
-    final totalDays = _heatmapData?['totalDays'] ?? 99;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -126,265 +160,187 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
     final totalWeeks = (totalGridDays / 7).ceil();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: Title & GitHub Style Badges
-            Row(
-              children: [
-                const Icon(Icons.grid_on, color: Color(0xFF2DA44E), size: 20),
-                const SizedBox(width: 8),
-                const Text(
-                  'Study Activity Heatmap',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Horizontal Scrollable GitHub Grid
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Weekday labels (M, W, F)
+              Padding(
+                padding: const EdgeInsets.only(right: 6, top: 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 14), // Sun
+                    _buildWeekdayLabel('Mon', isDark: isDark),
+                    const SizedBox(height: 16), // Tue
+                    _buildWeekdayLabel('Wed', isDark: isDark),
+                    const SizedBox(height: 16), // Thu
+                    _buildWeekdayLabel('Fri', isDark: isDark),
+                  ],
                 ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF451A03).withValues(alpha: 0.4)
-                        : Colors.amber.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.amber.shade700
-                          : Colors.amber.shade300,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.local_fire_department,
-                        size: 14,
-                        color: Colors.deepOrange,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '$currentStreak Days Streak',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? Colors.amber.shade300
-                              : Colors.deepOrange.shade800,
+              ),
+
+              // 14 Weeks Column Grid
+              Row(
+                children: List.generate(totalWeeks, (weekIndex) {
+                  return Column(
+                    children: List.generate(7, (dayOfWeek) {
+                      final dayOffset = (weekIndex * 7) + dayOfWeek;
+                      final cellDate = alignedStartDate.add(
+                        Duration(days: dayOffset),
+                      );
+
+                      // Don't draw future days beyond today
+                      if (cellDate.isAfter(today)) {
+                        return const SizedBox(width: 14, height: 14);
+                      }
+
+                      // If before the requested start date, draw empty placeholder
+                      if (cellDate.isBefore(startDate)) {
+                        return const SizedBox(width: 14, height: 14);
+                      }
+
+                      final dateKey =
+                          '${cellDate.year}-${cellDate.month.toString().padLeft(2, '0')}-${cellDate.day.toString().padLeft(2, '0')}';
+                      final score = scores[dateKey] ?? 0;
+                      final dayDetail = details[dateKey];
+
+                      return GestureDetector(
+                        onTap: () => _showDayDetails(dateKey, dayDetail, score),
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          margin: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: _getCellColor(score, isDark: isDark),
+                            borderRadius: BorderRadius.circular(2.5),
+                            border: Border.all(
+                              color: score > 0
+                                  ? (isDark
+                                        ? Colors.black.withValues(alpha: 0.3)
+                                        : Colors.black.withValues(alpha: 0.08))
+                                  : (isDark
+                                        ? const Color(0xFF334155)
+                                        : Colors.grey.shade300),
+                              width: 0.5,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
+                      );
+                    }),
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // GitHub Legend (Less [0][1][2][3][4] More)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
             Text(
-              '$activeDays active study days in the last 14 weeks ($totalDays days track)',
+              'Less',
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: 10,
                 color: isDark ? Colors.white60 : Colors.grey.shade600,
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(width: 4),
+            _buildLegendCell(_getCellColor(0, isDark: isDark), isDark: isDark),
+            _buildLegendCell(const Color(0xFF9BE9A8), isDark: isDark),
+            _buildLegendCell(const Color(0xFF40C463), isDark: isDark),
+            _buildLegendCell(const Color(0xFF30A14E), isDark: isDark),
+            _buildLegendCell(const Color(0xFF216E39), isDark: isDark),
+            const SizedBox(width: 4),
+            Text(
+              'More',
+              style: TextStyle(
+                fontSize: 10,
+                color: isDark ? Colors.white60 : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
 
-            // Horizontal Scrollable GitHub Grid
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
+        // Subject Distribution Breakdown (if available)
+        if (_subjectDistribution != null &&
+            _subjectDistribution!.isNotEmpty) ...[
+          const Divider(height: 24),
+          const Row(
+            children: [
+              Icon(Icons.donut_small, color: Colors.indigo, size: 16),
+              SizedBox(width: 6),
+              Text(
+                'Subject Time & Focus Distribution',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Multi-segment horizontal bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: SizedBox(
+              height: 10,
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Weekday labels (M, W, F)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6, top: 2),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 14), // Sun
-                        _buildWeekdayLabel('Mon', isDark: isDark),
-                        const SizedBox(height: 16), // Tue
-                        _buildWeekdayLabel('Wed', isDark: isDark),
-                        const SizedBox(height: 16), // Thu
-                        _buildWeekdayLabel('Fri', isDark: isDark),
-                      ],
-                    ),
-                  ),
-
-                  // 14 Weeks Column Grid
-                  Row(
-                    children: List.generate(totalWeeks, (weekIndex) {
-                      return Column(
-                        children: List.generate(7, (dayOfWeek) {
-                          final dayOffset = (weekIndex * 7) + dayOfWeek;
-                          final cellDate = alignedStartDate.add(
-                            Duration(days: dayOffset),
-                          );
-
-                          // Don't draw future days beyond today
-                          if (cellDate.isAfter(today)) {
-                            return const SizedBox(width: 14, height: 14);
-                          }
-
-                          // If before the requested start date, draw empty placeholder
-                          if (cellDate.isBefore(startDate)) {
-                            return const SizedBox(width: 14, height: 14);
-                          }
-
-                          final dateKey =
-                              '${cellDate.year}-${cellDate.month.toString().padLeft(2, '0')}-${cellDate.day.toString().padLeft(2, '0')}';
-                          final score = scores[dateKey] ?? 0;
-                          final dayDetail = details[dateKey];
-
-                          return GestureDetector(
-                            onTap: () =>
-                                _showDayDetails(dateKey, dayDetail, score),
-                            child: Container(
-                              width: 12,
-                              height: 12,
-                              margin: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: _getCellColor(score, isDark: isDark),
-                                borderRadius: BorderRadius.circular(2.5),
-                                border: Border.all(
-                                  color: score > 0
-                                      ? (isDark
-                                            ? Colors.black.withValues(
-                                                alpha: 0.3,
-                                              )
-                                            : Colors.black.withValues(
-                                                alpha: 0.08,
-                                              ))
-                                      : (isDark
-                                            ? const Color(0xFF334155)
-                                            : Colors.grey.shade300),
-                                  width: 0.5,
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // GitHub Legend (Less [0][1][2][3][4] More)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  'Less',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isDark ? Colors.white60 : Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                _buildLegendCell(
-                  _getCellColor(0, isDark: isDark),
-                  isDark: isDark,
-                ),
-                _buildLegendCell(const Color(0xFF9BE9A8), isDark: isDark),
-                _buildLegendCell(const Color(0xFF40C463), isDark: isDark),
-                _buildLegendCell(const Color(0xFF30A14E), isDark: isDark),
-                _buildLegendCell(const Color(0xFF216E39), isDark: isDark),
-                const SizedBox(width: 4),
-                Text(
-                  'More',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isDark ? Colors.white60 : Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-
-            // Subject Distribution Breakdown (if available)
-            if (_subjectDistribution != null &&
-                _subjectDistribution!.isNotEmpty) ...[
-              const Divider(height: 24),
-              const Row(
-                children: [
-                  Icon(Icons.donut_small, color: Colors.indigo, size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    'Subject Time & Focus Distribution',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Multi-segment horizontal bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: SizedBox(
-                  height: 10,
-                  child: Row(
-                    children: _subjectDistribution!.map((item) {
-                      final pct =
-                          (item['percentage'] as num?)?.toDouble() ?? 0.0;
-                      final color = _getSubjectColor(
-                        item['subject']?.toString(),
-                      );
-                      return Expanded(
-                        flex: (pct * 10).round().clamp(1, 1000),
-                        child: Container(color: color),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Subject chips with percentages
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: _subjectDistribution!.take(5).map((item) {
-                  final subject = item['subject']?.toString() ?? 'General';
-                  final pct = ((item['percentage'] as num?)?.toDouble() ?? 0.0)
-                      .toStringAsFixed(0);
-                  final color = _getSubjectColor(subject);
-
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$subject ($pct%)',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                children: _subjectDistribution!.map((item) {
+                  final pct = (item['percentage'] as num?)?.toDouble() ?? 0.0;
+                  final color = _getSubjectColor(item['subject']?.toString());
+                  return Expanded(
+                    flex: (pct * 10).round().clamp(1, 1000),
+                    child: Container(color: color),
                   );
                 }).toList(),
               ),
-            ],
-          ],
-        ),
-      ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Subject chips with percentages
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: _subjectDistribution!.take(5).map((item) {
+              final subject = item['subject']?.toString() ?? 'General';
+              final pct = ((item['percentage'] as num?)?.toDouble() ?? 0.0)
+                  .toStringAsFixed(0);
+              final color = _getSubjectColor(subject);
+
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$subject ($pct%)',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ],
+      ],
     );
   }
 

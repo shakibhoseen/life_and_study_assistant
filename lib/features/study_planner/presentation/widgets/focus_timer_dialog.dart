@@ -76,10 +76,14 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
           _isRunning = false;
           _isFinished = true;
         });
-        // Automatically mark task complete in study planner
-        ref
-            .read(adaptivePlannerProvider.notifier)
-            .toggleTaskCompletion(widget.taskId);
+        // Finish it, not flip it. This called toggleTaskCompletion, so running
+        // the timer on a task already ticked off unticked it — the opposite of
+        // what the line above it said it did.
+        unawaited(
+          ref
+              .read(adaptivePlannerProvider.notifier)
+              .markTaskCompleted(widget.taskId),
+        );
       }
     });
   }
