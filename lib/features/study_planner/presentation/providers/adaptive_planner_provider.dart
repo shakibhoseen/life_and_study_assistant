@@ -119,6 +119,10 @@ class AdaptivePlannerNotifier extends AsyncNotifier<AdaptiveStudyPlan?> {
     List<StudyTask> tasks,
   ) {
     return AdaptiveStudyPlan(
+      // Carried over: without it, ticking a task off a locally-built plan made
+      // the plan start claiming it came from the model, and the badge saying
+      // otherwise disappeared.
+      isLocallyBuilt: plan.isLocallyBuilt,
       date: plan.date,
       energyLevel: plan.energyLevel,
       fatigueScore: plan.fatigueScore,

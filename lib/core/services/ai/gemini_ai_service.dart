@@ -1302,6 +1302,15 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
   }
 
   /// Intelligent deterministic rule-based local generator
+  /// The plan built here when there is no API key, or when the model could not
+  /// be reached.
+  ///
+  /// The task ids below are written out by hand rather than minted from the
+  /// clock. This plan is not cached — it is rebuilt from scratch on every call,
+  /// several times a day — so a `DateTime.now()` id meant the same task had a
+  /// different id each time it was built, and a task ticked off could never be
+  /// found again. They are stable per branch and slot; the day they belong to
+  /// comes from the completion store, which is keyed by date.
   AdaptiveStudyPlan _generateLocalAdaptivePlan({
     required String energyLevel,
     required int fatigueScore,
@@ -1333,7 +1342,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
         burnoutWarning: null,
         tasks: [
           StudyTask(
-            id: 'task_${DateTime.now().millisecondsSinceEpoch}_1',
+            id: 'local_offday_1',
             title: primaryTopic != null
                 ? 'ডিপ রিভিশন ও নোটস: ${primaryTopic.topicName}'
                 : 'দুর্বল বিষয়ের মূল ধারণা ও নোট রিভিশন',
@@ -1344,7 +1353,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
                 '${primaryTopic?.topicName ?? 'বাংলা ব্যাকরণ'} টপিকটির গুরুত্বপূর্ণ নিয়ম, ব্যতিক্রম ও বিগত বছরের প্রশ্ন ভালো করে পড়ুন।',
           ),
           StudyTask(
-            id: 'task_${DateTime.now().millisecondsSinceEpoch}_2',
+            id: 'local_offday_2',
             title: upcomingExams.isNotEmpty
                 ? 'LiveMCQ স্পেশাল ড্রিল: ${upcomingExams.first.title}'
                 : 'LiveMCQ ফুল ৫০ মার্কস মডেল টেস্ট',
@@ -1357,7 +1366,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
           ),
           if (secondaryTopic != null)
             StudyTask(
-              id: 'task_${DateTime.now().millisecondsSinceEpoch}_3',
+              id: 'local_offday_3',
               title: 'কুইক ফর্মুলা রিভিশন: ${secondaryTopic.topicName}',
               subject: secondaryTopic.subject,
               estimatedMinutes: 15,
@@ -1384,7 +1393,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
             : null,
         tasks: [
           StudyTask(
-            id: 'task_${DateTime.now().millisecondsSinceEpoch}_1',
+            id: 'local_low_1',
             title: primaryTopic != null
                 ? '১০টি বিগত বছরের MCQ: ${primaryTopic.topicName}'
                 : '১০টি লাইভএমসিকিউ বিগত বছরের প্রশ্ন সমাধান',
@@ -1409,7 +1418,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
         familyAndWellbeingAdvice: 'পড়ার পর অন্তত ১ ঘণ্টা পরিবারের সাথে কোয়ালিটি টাইম কাটান। মোবাইল দূরে রাখুন।',
         tasks: [
           StudyTask(
-            id: 'task_${DateTime.now().millisecondsSinceEpoch}_1',
+            id: 'local_medium_1',
             title: primaryTopic != null
                 ? 'রুলস রিকল: ${primaryTopic.topicName}'
                 : 'রুলস রিকল: সমাস ও সন্ধি',
@@ -1420,7 +1429,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
                 '১০ মিনিট নোট শিট থেকে মূল নিয়মগুলো একবার চোখ বুলিয়ে নিন।',
           ),
           StudyTask(
-            id: 'task_${DateTime.now().millisecondsSinceEpoch}_2',
+            id: 'local_medium_2',
             title: secondaryTopic != null
                 ? '১৫টি প্র্যাকটিস MCQ: ${secondaryTopic.topicName}'
                 : '১৫টি গণিত শর্টকাট প্র্যাকটিস',
@@ -1444,7 +1453,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
         familyAndWellbeingAdvice: 'পড়া শেষে পরিবারকে জানিয়ে দিন আপনার আজকের লক্ষ্য পূরণ হয়েছে। একসাথে রাতের খাবার উপভোগ করুন।',
         tasks: [
           StudyTask(
-            id: 'task_${DateTime.now().millisecondsSinceEpoch}_1',
+            id: 'local_high_1',
             title: primaryTopic != null
                 ? 'ডিপ ড্রিল: ${primaryTopic.topicName}'
                 : 'ডিপ ড্রিল: কারক ও বিভক্তি',
@@ -1454,7 +1463,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
             actionablePrompt: 'কনফিউজিং উদাহরণগুলো আলাদা খাতায় টুকে রাখুন এবং ৩টি ব্যতিক্রম নোট করুন।',
           ),
           StudyTask(
-            id: 'task_${DateTime.now().millisecondsSinceEpoch}_2',
+            id: 'local_high_2',
             title: secondaryTopic != null
                 ? '২৫টি লাইভ স্পিড টেস্ট: ${secondaryTopic.topicName}'
                 : '২৫টি ম্যাথ স্পিড টেস্ট',
