@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/ai_media_limits.dart';
+import '../../../../core/services/ai/cross_check_answers.dart';
 import '../../../../core/services/ai/models/question_bank_extract_result.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/question_bank_ocr_service.dart';
@@ -80,6 +81,35 @@ class _QuestionBankScannerModalState
   File? _answerKeyImage;
   String _selectedSubject = 'Auto Detect';
   CaptureDetail _detail = CaptureDetail.standard;
+
+  /// Whether only an answer printed on the page may be kept.
+  ///
+  /// On by default. These books print their own answers and those are usually
+  /// right, so a model that reasons over the top of them adds mistakes rather
+  /// than removing any — and a wrong answer that looks certain is worse than
+  /// a blank the reader fills in.
+  bool _trustPrintedAnswersOnly = true;
+
+  /// Whether the model writes an explanation where the page prints none.
+  ///
+  /// Off by default: it spends output tokens on every question, and output is
+  /// the slow half of the wait. A single question can still be explained on
+  /// demand afterwards.
+  bool _withExplanations = false;
+
+  /// Whether the answers are read a second time and compared.
+  ///
+  /// On by default. Measured on one page: two reads of it disagreed on six
+  /// answers out of eighteen, and both reads reported every one as read off
+  /// the page, with no hint of doubt. A model that takes খ for ঘ does not know
+  /// it has, so nothing it reports can catch this — only reading twice can.
+  /// The second read asks for the answer letters alone, so it costs a fraction
+  /// of the first.
+  bool _crossCheckAnswers = true;
+
+  /// Set when the re-check could not be made at all, so the screen can say the
+  /// answers went unchecked rather than implying they were confirmed.
+  bool _crossCheckUnavailable = false;
 
   bool _isScanning = false;
   int _currentScanningPageIndex = 0;
@@ -280,6 +310,13 @@ class _QuestionBankScannerModalState
 
   int? _liveTokens;
 
+  /// Characters of the reply received so far.
+  ///
+  /// The only figure that moves while the page is being read: the model sends
+  /// no chunk at all until it stops reasoning, and every chunk after that
+  /// carries text.
+  int? _liveChars;
+
   /// How many pages have been read into this set so far.
   ///
   /// A full model test rarely fits on one page, and scanning the second one
@@ -294,6 +331,8 @@ class _QuestionBankScannerModalState
     setState(() {
       _isScanning = true;
       _liveTokens = null;
+      _liveChars = null;
+      _crossCheckUnavailable = false;
       _errorMessage = null;
       if (!append) {
         _result = null;
@@ -328,18 +367,50 @@ class _QuestionBankScannerModalState
           onTokens: (soFar) {
             if (mounted) setState(() => _liveTokens = soFar);
           },
+          onChars: (soFar) {
+            if (mounted) setState(() => _liveChars = soFar);
+          },
           questionImage: currentFile,
           answerKeyImage: _answerKeyImage, // Shared across ALL pages!
           subjectHint: _selectedSubject,
           detail: _detail,
+          trustPrintedAnswersOnly: _trustPrintedAnswersOnly,
+          withExplanations: _withExplanations,
         );
 
         final spent = QuestionBankOcrService.instance.lastCallTokens ?? 0;
         totalSpentTokens += spent;
 
+        // The same page read again, for the answers alone. A disagreement
+        // clears the answer and hands the question back with both letters
+        // shown; neither reading has a claim to be the right one.
+        var pageQuestions = res.questions;
+        if (_crossCheckAnswers) {
+          if (mounted) {
+            setState(() {
+              _liveChars = null;
+              _liveTokens = null;
+            });
+          }
+          final secondRead = await QuestionBankOcrService.instance
+              .readPrintedAnswers(
+                questionImage: currentFile,
+                answerKeyImage: _answerKeyImage,
+                detail: _detail,
+              );
+          if (secondRead == null || secondRead.isEmpty) {
+            // Not checked is not the same as checked and agreed, and the
+            // answers are left alone rather than thrown away for what may be
+            // a network fault.
+            if (mounted) setState(() => _crossCheckUnavailable = true);
+          } else {
+            pageQuestions = crossCheckAnswers(pageQuestions, secondRead);
+          }
+        }
+
         final merge = mergeScannedPage(
           existing: _editableQuestions,
-          fromPage: res.questions,
+          fromPage: pageQuestions,
         );
         newlyAdded += merge.added;
         duplicatesTotal += merge.duplicates;
@@ -1901,6 +1972,35 @@ class _QuestionBankScannerModalState
                 );
               }).toList(),
             ),
+
+            const SizedBox(height: 10),
+            _ScanToggle(
+              value: _trustPrintedAnswersOnly,
+              onChanged: (v) => setState(() => _trustPrintedAnswersOnly = v),
+              isDark: isDark,
+              title: 'শুধু বইয়ের ছাপা উত্তর নেবে',
+              subtitle: _trustPrintedAnswersOnly
+                  ? 'ছাপা উত্তর না থাকলে ফাঁকা রাখবে — AI অনুমান করবে না'
+                  : 'ছাপা উত্তর না থাকলে AI নিজে বের করার চেষ্টা করবে',
+            ),
+            _ScanToggle(
+              value: _crossCheckAnswers,
+              onChanged: (v) => setState(() => _crossCheckAnswers = v),
+              isDark: isDark,
+              title: 'উত্তর দুইবার মিলিয়ে নেবে',
+              subtitle: _crossCheckAnswers
+                  ? 'দুই পাঠে না মিললে ফাঁকা রেখে চিহ্ন দেবে — আপনি ঠিক করবেন'
+                  : 'একবারই পড়বে — ভুল পড়া উত্তর ধরা পড়বে না',
+            ),
+            _ScanToggle(
+              value: _withExplanations,
+              onChanged: (v) => setState(() => _withExplanations = v),
+              isDark: isDark,
+              title: 'ব্যাখ্যাও লিখিয়ে নেবে',
+              subtitle: _withExplanations
+                  ? 'পাতায় ব্যাখ্যা না থাকলে AI লিখে দেবে — স্ক্যান ধীর হবে'
+                  : 'পাতায় যা ছাপা আছে শুধু তাই — পরে প্রশ্নভেদে চাওয়া যাবে',
+            ),
           ],
 
           const SizedBox(height: 24),
@@ -2769,17 +2869,22 @@ class _QuestionBankScannerModalState
               ? AiTaskType.general
               : AiTaskType.image,
           isCompact: false,
-          // What the call is worth, so the wait reads as work being done.
-          liveTokens:
-              _liveTokens ??
-              (_inputMode == ScannerInputMode.textPaste
-                  ? 800
-                  : QuestionBankOcrService.instance.estimateTokensFor(
-                      _detail,
-                      pages: (_answerKeyImage == null ? 1 : 2) *
-                          (_totalScanningPages > 0 ? _totalScanningPages : 1),
-                    )),
-          liveTokensAreEstimate: _liveTokens == null,
+          // The real figure only. It used to be the estimate until the first
+          // chunk arrived, which meant the badge opened on a large static
+          // number and sat there for the whole reasoning stretch — the part of
+          // the wait the user most needs reassuring about — and then jumped,
+          // sometimes downwards. The estimate goes in its own slot now and is
+          // shown with a `~` until there is something real to replace it.
+          liveTokens: _liveTokens,
+          liveChars: _liveChars,
+          estimatedTokens: _inputMode == ScannerInputMode.textPaste
+              ? 800
+              : QuestionBankOcrService.instance.estimateTokensFor(
+                  _detail,
+                  pages:
+                      (_answerKeyImage == null ? 1 : 2) *
+                      (_totalScanningPages > 0 ? _totalScanningPages : 1),
+                ),
           onCancel: () {
             if (mounted) {
               setState(() {
@@ -2807,6 +2912,38 @@ class _QuestionBankScannerModalState
 
     return Column(
       children: [
+        // Said plainly rather than left out: an unchecked answer looks exactly
+        // like a confirmed one, and the whole point of the second read is that
+        // the difference cannot be seen.
+        if (_crossCheckUnavailable)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            color: Colors.orange.withValues(alpha: isDark ? 0.22 : 0.14),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 15,
+                  color: Colors.orange.shade900,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'উত্তরগুলো দ্বিতীয়বার মিলিয়ে দেখা যায়নি — নিজে একবার দেখে নিন',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? Colors.orange.shade200
+                          : Colors.orange.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // Summary & Editable Title
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -3488,6 +3625,69 @@ class _QuestionBankScannerModalState
           _savedToRoutine = false;
         });
       },
+    );
+  }
+}
+
+
+/// One setting in the scanner, as a plain row.
+///
+/// Not a SwitchListTile: a ListTile paints onto the nearest Material ancestor,
+/// and this sheet draws its own background over one, which Flutter asserts
+/// about. A row of its own sidesteps that and matches the rest of the sheet.
+class _ScanToggle extends StatelessWidget {
+  const _ScanToggle({
+    required this.value,
+    required this.onChanged,
+    required this.isDark,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final bool isDark;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    height: 1.3,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ],
+      ),
     );
   }
 }

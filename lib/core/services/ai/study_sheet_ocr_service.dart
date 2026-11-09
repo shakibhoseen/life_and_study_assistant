@@ -131,7 +131,6 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
           responseMimeType: 'application/json',
           responseSchema: _studySheetSchema,
           temperature: 0.2,
-          maxOutputTokens: 8192,
         ),
       );
       _modelName = modelName;
@@ -179,6 +178,7 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
     String? subjectHint,
     CaptureDetail detail = CaptureDetail.standard,
     void Function(int tokensSoFar)? onTokens,
+    void Function(int charsSoFar)? onChars,
   }) async {
     await init();
     final activeModel = _modelName ?? 'gemini-flash-latest';
@@ -236,6 +236,7 @@ Analyse this textbook page, coaching lecture sheet or handwritten note: pull out
 
         await for (final chunk in _model!.generateContentStream(content)) {
           buffer.write(chunk.text ?? '');
+          onChars?.call(buffer.length);
           final usage = chunk.usageMetadata;
           // Each chunk reports the running totals, not its own share, so the
           // highest seen is the figure to keep.

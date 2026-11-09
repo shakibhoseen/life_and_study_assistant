@@ -99,7 +99,8 @@ class AppDatabase extends _$AppDatabase {
         // marked wrong. Only rows whose key actually moved are touched.
         await customStatement(
           'UPDATE drill_questions '
-          'SET is_correct = (selected_index = correct_index) '
+          'SET is_correct = (correct_index >= 0 '
+          'AND selected_index = correct_index) '
           'WHERE corrected_at IS NOT NULL',
         );
       }
@@ -1181,10 +1182,13 @@ class AppDatabase extends _$AppDatabase {
         correctIndex: correctIndex == null
             ? const Value.absent()
             : Value(correctIndex),
-        // Regraded against the new key, for the same reason as above.
+        // Regraded against the new key, for the same reason as above. The
+        // index check is not decoration: a correction that clears the key and
+        // a row nobody answered are both -1, and comparing them straight
+        // marked the attempt correct.
         isCorrect: correctIndex == null
             ? const Value.absent()
-            : Value(row.selectedIndex == correctIndex),
+            : Value(correctIndex >= 0 && row.selectedIndex == correctIndex),
         explanation: explanation == null
             ? const Value.absent()
             : Value(explanation),

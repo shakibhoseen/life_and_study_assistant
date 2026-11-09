@@ -86,6 +86,33 @@ class QuestionReviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Which test this question came off, where the page said so. One
+          // page often carries the end of one model test and the start of the
+          // next, and these books credit each question to an exam in
+          // brackets; without showing it, a set scanned from such a page is
+          // two tests the reader can no longer tell apart.
+          if (question.sectionTitle != null || question.sourceExam != null) ...[
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                if (question.sectionTitle != null)
+                  _OriginChip(
+                    icon: Icons.bookmark_border,
+                    label: question.sectionTitle!,
+                    isDark: isDark,
+                  ),
+                if (question.sourceExam != null)
+                  _OriginChip(
+                    icon: Icons.history_edu_outlined,
+                    label: question.sourceExam!,
+                    isDark: isDark,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+
           // A row the scan could not actually read, or answered without
           // confidence, says so here. Without this the garbled ones look
           // exactly like the clean ones.
@@ -109,7 +136,25 @@ class QuestionReviewCard extends StatelessWidget {
                   const SizedBox(width: 7),
                   Expanded(
                     child: Text(
-                      'উত্তর নির্বাচিত নেই — অপশনে ট্যাপ করুন বা সমাধান দিন',
+                      // Naming the letter that was read matters: the reader can
+                      // look at their own page and settle in one tap what the
+                      // model could not. খ, ঘ and ব are the usual culprits.
+                      // Both letters, where two reads of the page disagreed.
+                      // The reader has the page in front of them, so naming
+                      // what each read saw turns a blank into one tap.
+                      question.secondReadLetter != null &&
+                              question.printedAnswerLetter != null &&
+                              question.secondReadLetter !=
+                                  question.printedAnswerLetter
+                          ? 'দুই পাঠে উত্তর মেলেনি '
+                                '("${question.printedAnswerLetter}" বনাম '
+                                '"${question.secondReadLetter}") '
+                                '— বই দেখে সঠিক অপশনে ট্যাপ করুন'
+                          : question.printedAnswerLetter != null
+                          ? 'বইয়ে উত্তর আছে, কিন্তু অক্ষরটা পড়া যায়নি '
+                                '(দেখাচ্ছে "${question.printedAnswerLetter}") '
+                                '— সঠিক অপশনে ট্যাপ করুন'
+                          : 'উত্তর নির্বাচিত নেই — অপশনে ট্যাপ করুন বা সমাধান দিন',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -744,6 +789,51 @@ class QuestionReviewCard extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A small label saying where a scanned question came from.
+class _OriginChip extends StatelessWidget {
+  const _OriginChip({
+    required this.icon,
+    required this.label,
+    required this.isDark,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final colour = isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4F46E5);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: colour.withValues(alpha: isDark ? 0.16 : 0.08),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: colour.withValues(alpha: 0.4), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: colour),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: colour,
+              ),
+            ),
+          ),
         ],
       ),
     );

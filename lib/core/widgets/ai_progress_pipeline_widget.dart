@@ -31,13 +31,32 @@ class AiProgressPipelineWidget extends StatefulWidget {
   final String? customInitialTitle;
   final String? customStatus;
   final String? customSubtitle;
+  /// The figure the model itself reported, or null while it has reported
+  /// none.
+  ///
+  /// Nothing is invented to fill the gap any more. Measured against the API:
+  /// the model thinks before it writes a word — over two minutes on a trivial
+  /// prompt — and sends no chunk at all until it starts writing, so there is
+  /// genuinely nothing to report during the longest part of the wait. A
+  /// number manufactured from a clock moves, which makes it look like
+  /// progress, and it is not.
   final int? liveTokens;
 
-  /// Whether [liveTokens] is worked out on the phone rather than reported by
-  /// the model. A non-streaming call says nothing about its cost until it
-  /// returns, so the figure shown during the wait is an estimate and is
-  /// labelled as one.
-  final bool liveTokensAreEstimate;
+  /// What the call is expected to cost, shown with a `~` for as long as
+  /// [liveTokens] is null.
+  ///
+  /// Separate from [liveTokens] on purpose. It used to be passed in as the
+  /// live figure, so the badge opened on a large static number and then
+  /// jumped — sometimes downwards, once the real total came in under the
+  /// estimate — which reads as broken rather than as working.
+  final int? estimatedTokens;
+
+  /// Characters of the reply received so far.
+  ///
+  /// The honest sign of life once writing starts: every chunk carries text,
+  /// while usage metadata is the server's to send or withhold. It moves on
+  /// every chunk, which is what "it has not stopped" actually looks like.
+  final int? liveChars;
 
   final VoidCallback? onCancel;
 
@@ -49,7 +68,8 @@ class AiProgressPipelineWidget extends StatefulWidget {
     this.customStatus,
     this.customSubtitle,
     this.liveTokens,
-    this.liveTokensAreEstimate = false,
+    this.estimatedTokens,
+    this.liveChars,
     this.onCancel,
   });
 
@@ -296,29 +316,30 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
     return '$bnSeconds সে.';
   }
 
-  int get _effectiveTokens {
-    if (widget.liveTokens != null && widget.liveTokens! > 0) {
-      return widget.liveTokens!;
-    }
-    // Dynamic real-time estimation so every AI task in the app visibly shows active token progress
-    final elapsedSec = _elapsedMillis / 1000.0;
-    final basePromptTokens = switch (widget.type) {
-      AiTaskType.image => 350,
-      AiTaskType.audio => 200,
-      AiTaskType.drill => 120,
-      AiTaskType.explainer => 150,
-      _ => 100,
-    };
-    final generatedEstimate = (elapsedSec * 22).round();
-    return basePromptTokens + generatedEstimate;
-  }
-
+  /// What to put beside the status, or an empty string when there is nothing
+  /// true to put there.
+  ///
+  /// One figure, never two: the badge is a narrow pill and two of them
+  /// overflow it. They are ranked instead.
+  ///
+  /// A real token count is best, and in practice it arrives with the very
+  /// first chunk, so it covers the whole writing stretch on its own. The
+  /// characters received are the fallback for a model or a server that sends
+  /// no usage metadata — they still climb with every chunk. The estimate is
+  /// last and wears a `~`. Where the caller has none of the three the badge is
+  /// left off altogether rather than filled with a guess.
   String _formatTokens() {
-    final tokens = _effectiveTokens;
-    final bnTokens = BengaliMathSanitizer.toBengaliDigits('$tokens');
-    final isEstimate =
-        widget.liveTokens == null || widget.liveTokensAreEstimate;
-    return isEstimate ? '~$bnTokens টোকেন' : '$bnTokens টোকেন';
+    String bn(int value) => BengaliMathSanitizer.toBengaliDigits('$value');
+
+    final live = widget.liveTokens;
+    if (live != null && live > 0) return '${bn(live)} টোকেন';
+
+    final chars = widget.liveChars ?? 0;
+    if (chars > 0) return '${bn(chars)} অক্ষর';
+
+    final estimated = widget.estimatedTokens;
+    if (estimated != null && estimated > 0) return '~${bn(estimated)} টোকেন';
+    return '';
   }
 
   @override
@@ -410,7 +431,8 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                   ),
                   const SizedBox(width: 8),
 
-                  // Live Token Badge
+                  // Live Token Badge, only while there is a figure for it.
+                  if (tokensStr.isNotEmpty) ...[
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 6,
@@ -448,6 +470,7 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                     ),
                   ),
                   const SizedBox(width: 6),
+                  ],
 
                   // Live Timer Badge
                   Container(
@@ -647,23 +670,25 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                     ),
                   ),
                   const SizedBox(width: 5),
-                  FadeTransition(
-                    opacity: _pulseController,
-                    child: const Icon(
-                      Icons.bolt,
-                      size: 12,
-                      color: Colors.amber,
+                  if (tokensStr.isNotEmpty) ...[
+                    FadeTransition(
+                      opacity: _pulseController,
+                      child: const Icon(
+                        Icons.bolt,
+                        size: 12,
+                        color: Colors.amber,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    tokensStr,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.amber,
+                    const SizedBox(width: 2),
+                    Text(
+                      tokensStr,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

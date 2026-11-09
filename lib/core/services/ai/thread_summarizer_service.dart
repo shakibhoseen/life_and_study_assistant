@@ -99,7 +99,6 @@ note, no preamble.
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.2,
-          maxOutputTokens: 4096,
         ),
       );
 

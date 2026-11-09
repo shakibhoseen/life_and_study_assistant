@@ -346,6 +346,16 @@ class QuestionTextParser {
     return result;
   }
 
+  /// The option index an answer letter stands for, or -1 when it stands for
+  /// nothing this parser recognises.
+  ///
+  /// Public because the vision scanner needs the same mapping: it reports the
+  /// letter it read off the page and the app resolves it here, so a letter
+  /// neither of them recognises — a খ taken for a ব, say — comes out as "no
+  /// answer" instead of as the wrong option.
+  static int resolveOptionLetterToIndex(String letter) =>
+      _resolveOptionLetterToIndex(letter);
+
   static int _resolveOptionLetterToIndex(String letter) {
     final cleaned = letter.trim().toLowerCase();
     if (cleaned.isEmpty) return -1;

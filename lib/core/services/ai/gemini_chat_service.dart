@@ -47,7 +47,6 @@ class GeminiChatService {
   /// English-equivalent budget for a long grammar explanation.
   /// A cap only truncates; it never costs anything on its own, and a chat
   /// answer cut mid-sentence is worse than a long one.
-  static const int maxOutputTokens = 8192;
 
   /// Mentor replies need some warmth, but the API default of 1.0 made
   /// flash-lite wander and pad.
@@ -283,7 +282,6 @@ class GeminiChatService {
       systemInstruction: Content.system(systemPrompt),
       generationConfig: GenerationConfig(
         temperature: chatTemperature,
-        maxOutputTokens: maxOutputTokens,
       ),
       tools: contextTool == null ? null : [contextTool],
       toolConfig: contextTool == null

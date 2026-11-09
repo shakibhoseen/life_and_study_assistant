@@ -365,7 +365,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     for (int i = 0; i < _questions.length; i++) {
       final q = _questions[i];
       final selected = _userAnswers[i] ?? -1;
-      final isCorrect = selected == q.correctIndex;
+      final isCorrect = q.isCorrectChoice(selected);
 
       if (selected >= 0) {
         if (isCorrect) {
@@ -463,7 +463,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     for (int i = 0; i < _questions.length; i++) {
       final q = _questions[i];
       final selected = _userAnswers[i] ?? -1;
-      final isCorrect = selected == q.correctIndex;
+      final isCorrect = q.isCorrectChoice(selected);
       final userAnsText = selected >= 0 && selected < q.options.length
           ? q.options[selected]
           : 'উত্তর দেওয়া হয়নি';
@@ -565,7 +565,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     if (index < 0 || index >= _questions.length) return;
     final q = _questions[index];
     final selected = _userAnswers[index] ?? -1;
-    final isCorrect = selected == q.correctIndex;
+    final isCorrect = q.isCorrectChoice(selected);
     final userAnsText = selected >= 0 && selected < q.options.length
         ? q.options[selected]
         : 'উত্তর দেওয়া হয়নি';
@@ -1985,7 +1985,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             ...List.generate(_questions.length, (i) {
               final q = _questions[i];
               final selected = _userAnswers[i] ?? -1;
-              final isCorrect = selected == q.correctIndex;
+              final isCorrect = q.isCorrectChoice(selected);
               final isSkipped = selected < 0;
 
               String statusLabel;

@@ -245,7 +245,6 @@ class AiFlashcardService {
             // and the budget went mostly on reasoning before any of it was
             // written. Bengali costs about 1.5 characters a token, and a
             // card with a mnemonic runs long, so the room has to be real.
-            maxOutputTokens: 8192,
           ),
         );
 
@@ -350,7 +349,6 @@ Instructions:
             // A dense page can carry a dozen cards, and reasoning is drawn
             // from this budget before any of them is written; 1200 cut the
             // reply mid-card.
-            maxOutputTokens: 8192,
           ),
         );
 
@@ -491,7 +489,6 @@ Return ONLY a valid JSON object matching the requested schema.
             responseMimeType: 'application/json',
             responseSchema: _flashcardSchema,
             temperature: 0.1,
-            maxOutputTokens: 8192,
           ),
         );
 

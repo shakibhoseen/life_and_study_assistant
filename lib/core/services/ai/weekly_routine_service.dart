@@ -59,7 +59,6 @@ class WeeklyRoutineService {
 
   /// A whole week's routine comes back in one reply, and the reasoning
   /// that precedes it is drawn from the same allowance.
-  static const int maxOutputTokens = 8192;
 
   Future<String?> _getApiKey() async {
     final prefs = await SharedPreferences.getInstance();
@@ -124,7 +123,6 @@ Apply that change and return the whole routine. Keep what they did not ask you t
           temperature: 0.4,
           responseMimeType: 'application/json',
           responseSchema: _routineSchema,
-          maxOutputTokens: maxOutputTokens,
         ),
       );
 

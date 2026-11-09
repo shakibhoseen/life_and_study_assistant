@@ -139,6 +139,10 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
 
   int? _liveTokens;
 
+  /// Characters of the reply received so far — see [_liveTokens]; this is the
+  /// one that moves while the page is being read.
+  int? _liveChars;
+
   Future<void> _analyzeImage() async {
     if (_selectedImage == null) return;
 
@@ -146,6 +150,7 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
       _isAnalyzing = true;
       _errorMessage = null;
       _liveTokens = null;
+      _liveChars = null;
     });
 
     try {
@@ -157,6 +162,9 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
         // still while the model reasons, then climbs as the reply is written.
         onTokens: (soFar) {
           if (mounted) setState(() => _liveTokens = soFar);
+        },
+        onChars: (soFar) {
+          if (mounted) setState(() => _liveChars = soFar);
         },
       );
 
@@ -472,14 +480,12 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                         isCompact: false,
                         // What the call is worth, so the wait reads as work
                         // being done rather than time passing.
-                        // The estimate holds the place until the model
-                        // reports its first real figure.
-                        liveTokens:
-                            _liveTokens ??
-                            StudySheetOcrService.instance.estimateTokensFor(
-                              _detail,
-                            ),
-                        liveTokensAreEstimate: _liveTokens == null,
+                        // The real figure only; the estimate has its own slot
+                        // and is marked as an estimate there.
+                        liveTokens: _liveTokens,
+                        liveChars: _liveChars,
+                        estimatedTokens: StudySheetOcrService.instance
+                            .estimateTokensFor(_detail),
                       ),
                       const SizedBox(height: 16),
                     ],

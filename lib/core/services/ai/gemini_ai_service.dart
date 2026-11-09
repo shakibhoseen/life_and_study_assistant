@@ -43,13 +43,11 @@ final _studyPlanConfig = GenerationConfig(
   temperature: 0.2,
   responseMimeType: 'application/json',
   responseSchema: studyPlanSchema,
-  maxOutputTokens: 8192,
 );
 
 final _jsonConfig = GenerationConfig(
   temperature: 0.2,
   responseMimeType: 'application/json',
-  maxOutputTokens: 8192,
 );
 
 /// Shape of an independent answer to an MCQ.
@@ -84,7 +82,6 @@ final _mcqSolveConfig = GenerationConfig(
   temperature: 0.1,
   responseMimeType: 'application/json',
   responseSchema: _mcqSolveSchema,
-  maxOutputTokens: 8192,
 );
 
 /// Shape for a second look taken with the user's own argument in hand.
@@ -133,7 +130,6 @@ final _evidenceReviewConfig = GenerationConfig(
   temperature: 0.2,
   responseMimeType: 'application/json',
   responseSchema: _evidenceReviewSchema,
-  maxOutputTokens: 8192,
 );
 
 /// Claim-level shape for a chat answer.
@@ -191,10 +187,9 @@ final _chatVerificationConfig = GenerationConfig(
   temperature: 0.1,
   responseMimeType: 'application/json',
   responseSchema: _chatVerificationSchema,
-  maxOutputTokens: 8192,
 );
 
-final _proseConfig = GenerationConfig(temperature: 0.6, maxOutputTokens: 8192);
+final _proseConfig = GenerationConfig(temperature: 0.6);
 
 /// How long a study plan is reused before it is built again.
 ///

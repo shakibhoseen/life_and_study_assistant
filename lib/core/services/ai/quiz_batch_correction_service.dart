@@ -409,7 +409,6 @@ If the text says all answers are correct or no fixes are suggested, return: []
         // is written — a streamed run showed roughly a thousand tokens gone
         // before the first word — so a page's worth of corrections needs
         // real room behind it.
-        maxOutputTokens: 8192,
       ),
     );
 

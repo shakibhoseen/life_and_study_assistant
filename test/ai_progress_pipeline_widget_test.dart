@@ -171,4 +171,73 @@ void main() {
     expect(find.textContaining('ভেবে দেখছে'), findsWidgets);
     expect(find.textContaining('সম্পূর্ণ প্রস্তুত'), findsNothing);
   });
+
+  /// The badge used to invent a number from the clock whenever the caller had
+  /// no real one, which moved and so looked like progress. Measured against
+  /// the API: the model sends no chunk at all until it stops reasoning, so
+  /// during the longest part of the wait there is nothing true to show.
+  group('the figure beside the status is never invented', () {
+    Future<void> pumpWith(
+      WidgetTester tester, {
+      int? liveTokens,
+      int? estimatedTokens,
+      int? liveChars,
+    }) {
+      return tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AiProgressPipelineWidget(
+              type: AiTaskType.image,
+              isCompact: true,
+              liveTokens: liveTokens,
+              estimatedTokens: estimatedTokens,
+              liveChars: liveChars,
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('an estimate is shown as one', (tester) async {
+      await pumpWith(tester, estimatedTokens: 6500);
+      expect(find.text('~৬৫০০ টোকেন'), findsOneWidget);
+    });
+
+    testWidgets('a real figure replaces the estimate', (tester) async {
+      await pumpWith(tester, liveTokens: 2176, estimatedTokens: 6500);
+      expect(find.text('২১৭৬ টোকেন'), findsOneWidget);
+      expect(find.text('~৬৫০০ টোকেন'), findsNothing);
+    });
+
+    testWidgets('characters received stand in before any token figure', (
+      tester,
+    ) async {
+      await pumpWith(tester, liveChars: 1240);
+      expect(find.text('১২৪০ অক্ষর'), findsOneWidget);
+    });
+
+    testWidgets('the token figure wins over the character count', (
+      tester,
+    ) async {
+      // One figure only: the badge is a narrow pill, and a real token count
+      // already climbs with every chunk, so the characters add nothing.
+      await pumpWith(tester, liveTokens: 2176, liveChars: 1240);
+      expect(find.text('২১৭৬ টোকেন'), findsOneWidget);
+      expect(find.textContaining('অক্ষর'), findsNothing);
+    });
+
+    testWidgets('with nothing to report there is no badge at all', (
+      tester,
+    ) async {
+      await pumpWith(tester);
+      expect(find.byIcon(Icons.bolt), findsNothing);
+      expect(find.textContaining('টোকেন'), findsNothing);
+
+      // And it stays absent as the clock runs, which is what the invented
+      // figure used to feed on.
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.byIcon(Icons.bolt), findsNothing);
+      expect(find.textContaining('টোকেন'), findsNothing);
+    });
+  });
 }

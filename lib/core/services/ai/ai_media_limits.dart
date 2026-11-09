@@ -73,6 +73,22 @@ enum CaptureDetail {
 /// English, and a prompt here is mostly English instructions around Bengali
 /// content, so 2.5 is the middle of that range. The image figure comes from
 /// the tile arithmetic above, which is exact.
+/// Why nothing here caps the model's output length.
+///
+/// `maxOutputTokens` is not a cap on the reply — it is the budget the reply
+/// and the model's own reasoning are both paid from. Measured against
+/// gemini-flash-latest on one question-bank page: the model spent 7,862
+/// tokens thinking and was left 316 for the answer, which truncated the JSON
+/// mid-object and lost the whole page. The cap did not keep the cost down; it
+/// threw away what had already been paid for.
+///
+/// So no request sets it, and the model is allowed to finish. What a reply
+/// should contain belongs in the prompt, which is read before the work starts
+/// and not enforced by cutting the answer off partway through.
+///
+/// [estimateRequestTokens] is still here and still useful: an estimate shown
+/// to the user before they spend is a different thing from a limit imposed on
+/// the model while it works.
 int estimateRequestTokens({
   required int promptChars,
   CaptureDetail? image,

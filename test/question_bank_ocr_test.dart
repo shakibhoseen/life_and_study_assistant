@@ -57,10 +57,25 @@ void main() {
       expect(QuizQuestion.fromJson(raw(question: '   ')).needsReview, isTrue);
     });
 
-    test('an answer index outside the options is flagged', () {
+    test('an answer index outside the options leaves no answer', () {
       final q = QuizQuestion.fromJson(raw(correctIndex: 7));
 
-      expect(q.correctIndex, 0);
+      // It used to fall back to 0, so a page the model could not read an
+      // answer off came back marked with option ক — a wrong answer wearing
+      // the face of a real one. There is no answer here, and that is what it
+      // now says.
+      expect(q.correctIndex, -1);
+      expect(q.hasAnswer, isFalse);
+      expect(q.needsReview, isTrue);
+    });
+
+    test('a readable question with no answer is still readable', () {
+      final q = QuizQuestion.fromJson(raw(correctIndex: -1));
+
+      // Legibility is about the print, not about whether an answer was found.
+      // Conflating them hid which of the two had gone wrong.
+      expect(q.legible, isTrue);
+      expect(q.correctIndex, -1);
       expect(q.needsReview, isTrue);
     });
 
