@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/services/ai/ai_cancellation.dart';
 import '../../../../core/services/ai/ai_media_limits.dart';
 import '../../../../core/services/ai/cross_check_answers.dart';
 import '../../domain/scan_preferences.dart';
@@ -129,9 +130,39 @@ class _QuestionBankScannerModalState
   /// of the first.
   bool _crossCheckAnswers = true;
 
+  /// Read this page again rather than reusing the last answer for it.
+  ///
+  /// Deliberately not remembered between scans, unlike the settings above it.
+  /// Bypassing the cache is a thing you do to one page, usually because its
+  /// last answer was wrong; left switched on it would quietly pay for every
+  /// page twice.
+  bool _bypassCache = false;
+
   /// Set when the re-check could not be made at all, so the screen can say the
   /// answers went unchecked rather than implying they were confirmed.
   bool _crossCheckUnavailable = false;
+
+  /// Set once the user has read the notice above. It is a sentence of news,
+  /// not a permanent state, and on a phone it was taking a tenth of the screen
+  /// away from the questions it was telling them to check.
+  bool _crossCheckNoticeRead = false;
+
+  /// Lets the user call off a scan they are tired of waiting for.
+  ///
+  /// The Cancel button used to do nothing but hide the spinner: the request
+  /// carried on, the retries carried on, and the tokens carried on being
+  /// spent. The request already in flight still cannot be recalled, but
+  /// everything this app does about it stops.
+  AiCancellation? _scanCancel;
+
+  /// What is actually happening, in place of the clock-driven stages.
+  ///
+  /// The pipeline's stages are a fixed timetable: the last one begins at a
+  /// hundred seconds and reads "উত্তর লেখা হচ্ছে..." for ever after, so a scan
+  /// eight minutes in claimed to be writing answers whether or not a single
+  /// character had arrived. The scan now says what it is really doing, because
+  /// it is the only thing that knows.
+  String? _scanStatus;
 
   bool _isScanning = false;
   int _currentScanningPageIndex = 0;
@@ -382,6 +413,9 @@ class _QuestionBankScannerModalState
       _liveTokens = null;
       _liveChars = null;
       _crossCheckUnavailable = false;
+      _crossCheckNoticeRead = false;
+      _scanStatus = null;
+      _scanCancel = AiCancellation();
       _errorMessage = null;
       if (!append) {
         _result = null;
@@ -403,21 +437,48 @@ class _QuestionBankScannerModalState
 
       for (int i = 0; i < totalPages; i++) {
         if (!mounted || !_isScanning) break;
+        if (_scanCancel?.isCancelled ?? false) throw const AiCancelledException();
         final currentFile = pagesToScan[i];
 
+        final pageLabel = totalPages > 1 ? 'পাতা ${i + 1}/$totalPages — ' : '';
         setState(() {
           _currentScanningPageIndex = i + 1;
           _totalScanningPages = totalPages;
+          _scanStatus = '$pageLabelপাতা পাঠানো হচ্ছে…';
         });
 
         final res = await QuestionBankOcrService.instance.extractQuestionBank(
           // The model's own running figure, replacing the estimate as soon as
           // the first chunk reports one.
+          cancel: _scanCancel,
           onTokens: (soFar) {
-            if (mounted) setState(() => _liveTokens = soFar);
+            if (!mounted) return;
+            setState(() {
+              _liveTokens = soFar;
+              // A token figure with no text yet is the model reasoning: the
+              // thinking is charged to the same total, and it is spent before
+              // the first word. Saying "writing" here is what made an
+              // eight-minute wait unreadable.
+              _scanStatus ??= '$pageLabelভেবে দেখছে…';
+              if ((_liveChars ?? 0) == 0) {
+                _scanStatus = '$pageLabelভেবে দেখছে — এখনো লেখা শুরু হয়নি';
+              }
+            });
           },
           onChars: (soFar) {
-            if (mounted) setState(() => _liveChars = soFar);
+            if (!mounted) return;
+            setState(() {
+              _liveChars = soFar;
+              _scanStatus = '$pageLabelউত্তর লেখা হচ্ছে — $soFar অক্ষর';
+            });
+          },
+          onServerBusy: (attempt, waiting) {
+            if (!mounted) return;
+            setState(() {
+              _scanStatus =
+                  '$pageLabelসার্ভার ব্যস্ত — ${waiting.inSeconds} সেকেন্ড পরে '
+                  'আবার চেষ্টা ($attempt/3)';
+            });
           },
           questionImage: currentFile,
           answerKeyImage: _answerKeyImage, // Shared across ALL pages!
@@ -425,6 +486,7 @@ class _QuestionBankScannerModalState
           detail: _detail,
           trustPrintedAnswersOnly: _trustPrintedAnswersOnly,
           withExplanations: _withExplanations,
+          bypassCache: _bypassCache,
         );
 
         final spent = QuestionBankOcrService.instance.lastCallTokens ?? 0;
@@ -441,11 +503,23 @@ class _QuestionBankScannerModalState
               _liveTokens = null;
             });
           }
+          setState(() {
+            _scanStatus = '$pageLabelউত্তরগুলো দ্বিতীয়বার মিলিয়ে দেখা হচ্ছে…';
+          });
           final secondRead = await QuestionBankOcrService.instance
               .readPrintedAnswers(
                 questionImage: currentFile,
                 answerKeyImage: _answerKeyImage,
                 detail: _detail,
+                cancel: _scanCancel,
+                onServerBusy: (attempt, waiting) {
+                  if (!mounted) return;
+                  setState(() {
+                    _scanStatus =
+                        '$pageLabelমিলিয়ে দেখায় সার্ভার ব্যস্ত — '
+                        '${waiting.inSeconds} সেকেন্ড পরে আবার ($attempt/3)';
+                  });
+                },
               );
           if (secondRead == null || secondRead.isEmpty) {
             // Not checked is not the same as checked and agreed, and the
@@ -480,6 +554,10 @@ class _QuestionBankScannerModalState
         setState(() {
           _isScanning = false;
           _savedToRoutine = false;
+          _scanStatus = null;
+          // Spent. Re-reading is asked for one page at a time, and leaving it
+          // on would pay for every page after it twice over.
+          _bypassCache = false;
         });
         if (totalSpentTokens > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -494,6 +572,16 @@ class _QuestionBankScannerModalState
             ),
           );
         }
+      }
+    } on AiCancelledException {
+      // The user asked for this, so it is not a failure and wants no red
+      // message. Whatever earlier pages had already returned is kept.
+      debugPrint('Question bank scan cancelled by the user');
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+          _scanStatus = null;
+        });
       }
     } on QuestionBankExtractException catch (e) {
       // Already phrased for the user, and says what to do next.
@@ -1855,15 +1943,22 @@ class _QuestionBankScannerModalState
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        widget.existingExamId != null
-                            ? 'প্রশ্নসমূহ সম্পাদনা করুন ও AI দিয়ে সঠিক উত্তর যাচাই করুন'
-                            : 'বই বা প্রশ্ন ব্যাংকের পাতার ছবি দিয়ে পরীক্ষা দিন',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: isDark ? Colors.white60 : Colors.grey.shade600,
+                      // Only while there is nothing to review yet. It
+                      // explains what to do with an empty screen; once
+                      // twenty questions are on it, it is a line of
+                      // instructions sitting on top of the thing it was
+                      // instructing about, on the screen where height is
+                      // scarcest.
+                      if (_editableQuestions.isEmpty)
+                        Text(
+                          widget.existingExamId != null
+                              ? 'প্রশ্নসমূহ সম্পাদনা করুন ও AI দিয়ে সঠিক উত্তর যাচাই করুন'
+                              : 'বই বা প্রশ্ন ব্যাংকের পাতার ছবি দিয়ে পরীক্ষা দিন',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark ? Colors.white60 : Colors.grey.shade600,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -2037,6 +2132,16 @@ class _QuestionBankScannerModalState
               subtitle: _trustPrintedAnswersOnly
                   ? 'ছাপা উত্তর না থাকলে ফাঁকা রাখবে — AI অনুমান করবে না'
                   : 'ছাপা উত্তর না থাকলে AI নিজে বের করার চেষ্টা করবে',
+            ),
+            _ScanToggle(
+              value: _bypassCache,
+              // Not saved, so no _rememberScanPreferences here.
+              onChanged: (v) => setState(() => _bypassCache = v),
+              isDark: isDark,
+              title: 'আবার নতুন করে পড়ো',
+              subtitle: _bypassCache
+                  ? 'আগের উত্তর ব্যবহার করবে না — নতুন করে পড়বে, টোকেন খরচ হবে'
+                  : 'একই ছবি আগে পড়া থাকলে সেই উত্তরই দেবে, খরচ ছাড়াই',
             ),
             _ScanToggle(
               value: _crossCheckAnswers,
@@ -2930,6 +3035,10 @@ class _QuestionBankScannerModalState
               ? AiTaskType.general
               : AiTaskType.image,
           isCompact: false,
+          // The scan's own account of itself, which beats a timetable: the
+          // last built-in stage begins at a hundred seconds and then reads
+          // "উত্তর লেখা হচ্ছে..." for ever, however long the model thinks.
+          customStatus: _scanStatus,
           // The real figure only. It used to be the estimate until the first
           // chunk arrived, which meant the badge opened on a large static
           // number and sat there for the whole reasoning stretch — the part of
@@ -2947,9 +3056,15 @@ class _QuestionBankScannerModalState
                       (_totalScanningPages > 0 ? _totalScanningPages : 1),
                 ),
           onCancel: () {
+            // Not just hiding the spinner. This ends the stream, the waits
+            // between retries and any page still to come. The request already
+            // sent cannot be recalled, so it may still finish somewhere and
+            // still be billed — but nothing here waits for it.
+            _scanCancel?.cancel();
             if (mounted) {
               setState(() {
                 _isScanning = false;
+                _scanStatus = null;
               });
             }
           },
@@ -3070,52 +3185,52 @@ class _QuestionBankScannerModalState
     };
   }
 
-  Widget _buildResultReviewState(bool isDark) {
-    final verifiedCount = _verifications.values
-        .where((v) => v.isCorrect && !v.isAmbiguous)
-        .length;
-    final warningCount = _verifications.values
-        .where((v) => !v.isCorrect || v.isAmbiguous)
-        .length;
-    final tally = tallyScanIssues(_editableQuestions);
-    final unsolvedCount = tally.noAnswer;
-
+  /// Shown in place of the list when a filter or a search matches nothing.
+  ///
+  /// Sits under the header rather than replacing the whole screen, so the
+  /// counts and the filter chips stay reachable — a filter that empties the
+  /// list used to hide the only means of undoing it.
+  Widget _buildEmptyFilterNotice(bool isDark) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Said plainly rather than left out: an unchecked answer looks exactly
-        // like a confirmed one, and the whole point of the second read is that
-        // the difference cannot be seen.
-        if (_crossCheckUnavailable)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-            color: Colors.orange.withValues(alpha: isDark ? 0.22 : 0.14),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 15,
-                  color: Colors.orange.shade900,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'উত্তরগুলো দ্বিতীয়বার মিলিয়ে দেখা যায়নি — নিজে একবার দেখে নিন',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? Colors.orange.shade200
-                          : Colors.orange.shade900,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        Icon(
+          Icons.search_off,
+          size: 36,
+          color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _searchQuery.isNotEmpty
+              ? '"$_searchQuery" সম্পর্কিত কোনো প্রশ্ন পাওয়া যায়নি'
+              : 'এই ছাঁকনিতে কোনো প্রশ্ন নেই',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
           ),
+        ),
+      ],
+    );
+  }
 
+  /// Everything above the question list: the counts, the title and the
+  /// bulk actions.
+  ///
+  /// It is the first item of the list rather than a band fixed above it.
+  /// Fixed, it took around two thirds of a phone screen and left a strip
+  /// barely one question tall to review twenty of them in — and two of the
+  /// things in it were added recently, which is how it got that far. As a
+  /// list item it scrolls away the moment the user starts reading.
+  Widget _buildReviewHeader(
+    bool isDark,
+    ScanTally tally,
+    int warningCount,
+    int verifiedCount,
+    int unsolvedCount,
+  ) {
         // Summary & Editable Title
-        Container(
+        return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
@@ -3576,7 +3691,65 @@ class _QuestionBankScannerModalState
               ],
             ],
           ),
-        ),
+        );
+  }
+
+  Widget _buildResultReviewState(bool isDark) {
+    final verifiedCount = _verifications.values
+        .where((v) => v.isCorrect && !v.isAmbiguous)
+        .length;
+    final warningCount = _verifications.values
+        .where((v) => !v.isCorrect || v.isAmbiguous)
+        .length;
+    final tally = tallyScanIssues(_editableQuestions);
+    final unsolvedCount = tally.noAnswer;
+
+    return Column(
+      children: [
+        // Said plainly rather than left out: an unchecked answer looks exactly
+        // like a confirmed one, and the whole point of the second read is that
+        // the difference cannot be seen.
+        if (_crossCheckUnavailable && !_crossCheckNoticeRead)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            color: Colors.orange.withValues(alpha: isDark ? 0.22 : 0.14),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 15,
+                  color: Colors.orange.shade900,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'উত্তরগুলো দ্বিতীয়বার মিলিয়ে দেখা যায়নি — নিজে একবার দেখে নিন',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? Colors.orange.shade200
+                          : Colors.orange.shade900,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () =>
+                      setState(() => _crossCheckNoticeRead = true),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Colors.orange.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
         // Questions List
         Expanded(
@@ -3597,41 +3770,43 @@ class _QuestionBankScannerModalState
             }
 
             if (filteredIndices.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.search_off,
-                      size: 36,
-                      color: isDark
-                          ? Colors.grey.shade600
-                          : Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _searchQuery.isNotEmpty
-                          ? '"$_searchQuery" সম্পর্কিত কোনো প্রশ্ন পাওয়া যায়নি'
-                          : 'কোনো প্রশ্ন মেলেনি',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
+              return ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _buildReviewHeader(
+                    isDark,
+                    tally,
+                    warningCount,
+                    verifiedCount,
+                    unsolvedCount,
+                  ),
+                  const SizedBox(height: 40),
+                  _buildEmptyFilterNotice(isDark),
+                ],
               );
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.all(14),
-              itemCount: filteredIndices.length,
+              padding: const EdgeInsets.only(bottom: 14),
+              // One more than the questions: the header is the first item, so
+              // it scrolls away instead of holding two thirds of the screen.
+              itemCount: filteredIndices.length + 1,
               itemBuilder: (context, idx) {
-                final qIndex = filteredIndices[idx];
+                if (idx == 0) {
+                  return _buildReviewHeader(
+                    isDark,
+                    tally,
+                    warningCount,
+                    verifiedCount,
+                    unsolvedCount,
+                  );
+                }
+                final qIndex = filteredIndices[idx - 1];
                 final q = _editableQuestions[qIndex];
-                return _buildQuestionCard(qIndex, q, isDark);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: _buildQuestionCard(qIndex, q, isDark),
+                );
               },
             );
           }(),
@@ -3665,11 +3840,16 @@ class _QuestionBankScannerModalState
                       ),
                     ),
                     icon: const Icon(Icons.bolt, size: 20),
+                    // One line. It carried a bolt icon and a ⚡ as well, plus
+                    // "(Start Exam)" beside the Bengali that says the same
+                    // thing, so it wrapped to two lines and made the whole
+                    // bottom bar twice as tall as it needed to be.
                     label: const Text(
-                      '⚡ এখনই পরীক্ষা দিন (Start Exam)',
+                      'পরীক্ষা দিন',
+                      maxLines: 1,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 13.5,
                       ),
                     ),
                   ),

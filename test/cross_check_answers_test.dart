@@ -148,6 +148,61 @@ void main() {
     expect(out.single.answerSource, AnswerSource.answerKey);
   });
 
+  group('the two reads do not have to spell the number the same way', () {
+    test('a printed full stop does not break the match', () {
+      // Measured: the full read returned "১." and the answers-only read is
+      // asked for "১০"-style numbers. Matching the raw strings made one dot
+      // clear every answer on the page.
+      final out = crossCheckAnswers(
+        [asked(number: '১.', correctIndex: 1, letter: 'খ')],
+        [read('১', 'খ')],
+      );
+
+      expect(out.single.correctIndex, 1);
+      expect(out.single.answerSource, AnswerSource.answerKey);
+    });
+
+    test('Bengali and English digits are the same question', () {
+      final out = crossCheckAnswers(
+        [asked(number: '১০', correctIndex: 2, letter: 'গ')],
+        [read('10', 'গ')],
+      );
+
+      expect(out.single.correctIndex, 2);
+    });
+
+    test('a leading zero is presentation, not identity', () {
+      final out = crossCheckAnswers(
+        [asked(number: '০৭', correctIndex: 3, letter: 'ঘ')],
+        [read('৭', 'ঘ')],
+      );
+
+      expect(out.single.correctIndex, 3);
+    });
+
+    test('but a genuinely different number still does not match', () {
+      final out = crossCheckAnswers(
+        [asked(number: '১.', correctIndex: 1, letter: 'খ')],
+        [read('১১', 'খ')],
+      );
+
+      expect(
+        out.single.correctIndex,
+        -1,
+        reason: 'question ১ is not question ১১',
+      );
+    });
+
+    test('a number with no digits at all cannot be matched', () {
+      final out = crossCheckAnswers(
+        [asked(number: '—', correctIndex: 1, letter: 'খ')],
+        [read('১', 'খ')],
+      );
+
+      expect(out.single.correctIndex, -1);
+    });
+  });
+
   test('a question with no printed number cannot be matched, so it clears', () {
     const q = QuizQuestion(
       questionText: 'নম্বরহীন প্রশ্ন',

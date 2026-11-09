@@ -1,5 +1,26 @@
+import '../../utils/bengali_math_sanitizer.dart';
 import 'models/quiz_question.dart';
 import 'question_text_parser.dart';
+
+/// A question number reduced to just its digits, for matching one list against
+/// another.
+///
+/// Measured: the full read of a page returned "১." with the printed full stop,
+/// while the answers-only read is asked for "১০"-style numbers. Matching the
+/// raw strings meant a single dot made every question look unmatched, and
+/// every unmatched question has its answer cleared — a page of blanks caused
+/// by punctuation rather than by any disagreement. Bengali digits are folded
+/// to ASCII as well, so "১০" and "10" are the same question.
+String normaliseQuestionNumber(String raw) {
+  final digits = BengaliMathSanitizer.toEnglishDigits(raw);
+  final buffer = StringBuffer();
+  for (final unit in digits.codeUnits) {
+    if (unit >= 0x30 && unit <= 0x39) buffer.writeCharCode(unit);
+  }
+  // Leading zeros are presentation, not identity: "০৭" and "৭" are question 7.
+  final trimmed = buffer.toString().replaceFirst(RegExp(r'^0+(?=\d)'), '');
+  return trimmed;
+}
 
 /// One answer letter as a second reading of the page found it.
 class PrintedAnswer {
@@ -50,14 +71,16 @@ List<QuizQuestion> crossCheckAnswers(
   // Keyed on the section as well as the number, because the number alone is
   // not unique: a page carrying the end of one test and the start of another
   // has two question ১৩s on it.
-  String key(String? section, String number) => '${section ?? ''}#$number';
+  String key(String? section, String number) =>
+      '${section ?? ''}#${normaliseQuestionNumber(number)}';
 
   final byKey = <String, PrintedAnswer>{};
   final byNumber = <String, List<PrintedAnswer>>{};
   for (final answer in secondRead) {
-    if (answer.printedNumber.isEmpty || answer.letter.isEmpty) continue;
+    final number = normaliseQuestionNumber(answer.printedNumber);
+    if (number.isEmpty || answer.letter.isEmpty) continue;
     byKey[key(answer.sectionTitle, answer.printedNumber)] = answer;
-    byNumber.putIfAbsent(answer.printedNumber, () => []).add(answer);
+    byNumber.putIfAbsent(number, () => []).add(answer);
   }
 
   return [
@@ -72,12 +95,12 @@ QuizQuestion _checked(
   Map<String, List<PrintedAnswer>> byNumber,
   String Function(String?, String) key,
 ) {
-  final number = question.printedNumber?.trim() ?? '';
+  final number = normaliseQuestionNumber(question.printedNumber ?? '');
   if (number.isEmpty) return _unverified(question);
 
   // The section and number together first. Falling back to the number alone
   // is safe only where the page holds exactly one question with that number.
-  var match = byKey[key(question.sectionTitle, number)];
+  var match = byKey[key(question.sectionTitle, question.printedNumber ?? '')];
   if (match == null) {
     final candidates = byNumber[number];
     if (candidates != null && candidates.length == 1) {

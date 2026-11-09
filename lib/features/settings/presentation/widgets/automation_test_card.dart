@@ -6,7 +6,7 @@ import '../../../../core/services/ai/routine_parser_service.dart';
 import '../../../../core/services/background/wifi_monitor_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
-import '../../../settings/presentation/providers/settings_provider.dart';
+import '../providers/settings_provider.dart';
 import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
 
 class AutomationTestCard extends ConsumerWidget {

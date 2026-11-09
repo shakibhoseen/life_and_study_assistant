@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/notification_constants.dart';
+import 'ai_cancellation.dart';
 
 /// The models an AI call is allowed to use, in order.
 ///
@@ -67,15 +68,29 @@ const List<Duration> serverBusyBackoff = [
 Future<T> withServerBusyRetry<T>(
   Future<T> Function() attempt, {
   void Function(int attemptNumber, Duration waiting)? onWaiting,
+  AiCancellation? cancel,
 }) async {
   for (var i = 0; ; i++) {
+    if (cancel?.isCancelled ?? false) throw const AiCancelledException();
     try {
       return await attempt();
     } catch (error) {
+      if (error is AiCancelledException) rethrow;
       if (i >= serverBusyBackoff.length || !isServerBusy(error)) rethrow;
       final wait = serverBusyBackoff[i];
       onWaiting?.call(i + 1, wait);
-      await Future<void>.delayed(wait);
+      // Waited through the cancellation rather than past it: these pauses run
+      // to twenty-five seconds, and sitting them out after the user has asked
+      // to stop is most of what "it is still going" feels like.
+      if (cancel != null) {
+        try {
+          await cancel.guard(Future<void>.delayed(wait));
+        } on AiCancelledException {
+          rethrow;
+        }
+      } else {
+        await Future<void>.delayed(wait);
+      }
     }
   }
 }

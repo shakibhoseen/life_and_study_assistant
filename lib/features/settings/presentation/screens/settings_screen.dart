@@ -23,6 +23,8 @@ import 'package:life_and_study_assistant/features/live_mcq/presentation/provider
 
 import '../providers/settings_provider.dart';
 import '../widgets/gemini_usage_monitor_card.dart';
+import '../widgets/ai_cache_card.dart';
+import '../widgets/automation_test_card.dart';
 import '../widgets/study_data_cleanup_card.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -429,6 +431,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               // Real-time Gemini API Quota & Usage Monitor
               const GeminiUsageMonitorCard(),
+              const SizedBox(height: 18),
+
+              // What the result cache is holding, and the means to empty it.
+              const AiCacheCard(),
+              const SizedBox(height: 18),
+
+              // Firing the Wi-Fi triggers and notifications by hand, to see
+              // whether they work. It used to sit on the dashboard, where it
+              // was a developer's tool in the middle of the day's study.
+              const AutomationTestCard(),
               const SizedBox(height: 18),
 
               // Auto-Weakness Healer & Micro Drills Control

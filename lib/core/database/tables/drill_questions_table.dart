@@ -4,11 +4,18 @@ import 'package:drift/drift.dart';
 /// question answered here.
 ///
 /// It is a prefix on [DrillQuestions.explanation], which is where it has
-/// always been written; a column of its own would say it better, but this
-/// project has no code generation set up and the tag already covers every row
-/// ever saved this way, including the ones from before it had to be told
-/// apart. Both the writer and [AppDatabase.getDrillStats] use this constant,
-/// so the two cannot drift apart.
+/// always been written, and the tag already covers every row ever saved this
+/// way — including the ones from before anything had to be told apart. Both
+/// the writer and [AppDatabase.getDrillStats] use this constant, so the two
+/// cannot come apart.
+///
+/// A `source` column would still say it better, and that is open: the project
+/// does have code generation (`drift_dev` and `build_runner` are dev
+/// dependencies, and `dart run build_runner build` regenerates
+/// `app_database.g.dart` exactly as committed). An earlier note here claimed
+/// otherwise and was wrong. What the column would need is a migration and a
+/// backfill keyed on this same tag, which is work of its own rather than a
+/// reason the tag is here.
 const String voiceMistakeSourceTag = '[উৎস: LiveMCQ 🎙️]';
 
 /// What every one of those tags begins with.

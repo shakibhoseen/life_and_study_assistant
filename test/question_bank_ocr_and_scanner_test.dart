@@ -497,8 +497,11 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Verify it transitioned to review state with questions loaded
-        expect(find.text('⚡ এখনই পরীক্ষা দিন (Start Exam)'), findsOneWidget);
+        // Verify it transitioned to review state with questions loaded.
+        // The label is short on purpose: with the bolt icon beside it, a ⚡ and
+        // "(Start Exam)" as well, it wrapped to two lines and doubled the
+        // height of the bottom bar on the screen with the least to spare.
+        expect(find.text('পরীক্ষা দিন'), findsOneWidget);
         expect(find.text('💾 সেভ করুন'), findsOneWidget);
         expect(find.textContaining('বাংলাদেশের প্রথম রাষ্ট্রপতি'), findsOneWidget);
 

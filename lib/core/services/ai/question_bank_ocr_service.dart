@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/notification_constants.dart';
 import '../../utils/bengali_math_sanitizer.dart';
+import 'ai_cancellation.dart';
 import 'ai_media_limits.dart';
 import 'gemini_result_cache.dart';
 import 'gemini_usage_tracker.dart';
@@ -315,6 +316,23 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
     /// Writing one for every question spends output tokens on every question,
     /// and output is the slow half of the wait.
     bool withExplanations = false,
+
+    /// Asks the model again rather than handing back what it said last time.
+    ///
+    /// The same page photographed twice is the same bytes, so it is the same
+    /// cache entry — which is the point when nothing has changed, and exactly
+    /// wrong when the last answer is the thing the user wants re-read.
+    bool bypassCache = false,
+
+    /// Lets the caller stop waiting. The request already sent cannot be
+    /// recalled — this package gives no way to abort one — so the model may
+    /// still finish and still be billed; what this ends is the user being
+    /// held on a call they no longer want.
+    AiCancellation? cancel,
+
+    /// Called while a busy server is being waited out, so the screen can say
+    /// so instead of showing a stage it is not at.
+    void Function(int attemptNumber, Duration waiting)? onServerBusy,
     // A question bank page is a full page of small Bengali print, which is
     // what the high preset is for. At 1024 the conjuncts and matras blur and
     // the model starts filling the gaps with invented text.
@@ -375,7 +393,10 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
       ],
     );
 
-    final cachedRaw = await GeminiResultCache.instance.get(cacheKey);
+    final cachedRaw = await GeminiResultCache.instance.get(
+      cacheKey,
+      bypass: bypassCache,
+    );
     if (cachedRaw != null && cachedRaw.isNotEmpty) {
       final cached = _decodeResponse(
         cachedRaw,
@@ -450,6 +471,9 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
             await for (final chunk in model.generateContentStream([
               Content.multi(contentParts),
             ])) {
+              if (cancel?.isCancelled ?? false) {
+                throw const AiCancelledException();
+              }
               buffer.write(chunk.text ?? '');
               onChars?.call(buffer.length);
               final usage = chunk.usageMetadata;
@@ -474,10 +498,14 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
               }
             }
           },
-          onWaiting: (attempt, waiting) => debugPrint(
-            'Question bank scan: server busy, waiting ${waiting.inSeconds}s '
-            '(attempt $attempt)',
-          ),
+          cancel: cancel,
+          onWaiting: (attempt, waiting) {
+            debugPrint(
+              'Question bank scan: server busy, waiting ${waiting.inSeconds}s '
+              '(attempt $attempt)',
+            );
+            onServerBusy?.call(attempt, waiting);
+          },
         );
 
         lastCallTokens = totalTokens > 0 ? totalTokens : null;
@@ -507,7 +535,13 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
           trustPrintedAnswersOnly: trustPrintedAnswersOnly,
         );
         if (result != null && rawText.isNotEmpty) {
-          await GeminiResultCache.instance.put(cacheKey, rawText);
+          await GeminiResultCache.instance.put(
+            cacheKey,
+            rawText,
+            // The file name and the subject, so a listed entry says which page
+            // it came from rather than only how long its hash is.
+            label: '${questionImage.path.split('/').last} · ${result.subject}',
+          );
           return result;
         }
       } on QuestionBankExtractException {
@@ -540,6 +574,8 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
     required File questionImage,
     File? answerKeyImage,
     CaptureDetail detail = CaptureDetail.high,
+    AiCancellation? cancel,
+    void Function(int attemptNumber, Duration waiting)? onServerBusy,
   }) async {
     final apiKey = await _getStoredApiKey();
     if (apiKey == null || apiKey.isEmpty) return null;
@@ -579,10 +615,14 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
       // answers quietly went unchecked for what is a momentary capacity spike.
       final response = await withServerBusyRetry(
         () => model.generateContent([Content.multi(parts)]),
-        onWaiting: (attempt, waiting) => debugPrint(
-          'Answer re-check: server busy, waiting ${waiting.inSeconds}s '
-          '(attempt $attempt)',
-        ),
+        cancel: cancel,
+        onWaiting: (attempt, waiting) {
+          debugPrint(
+            'Answer re-check: server busy, waiting ${waiting.inSeconds}s '
+            '(attempt $attempt)',
+          );
+          onServerBusy?.call(attempt, waiting);
+        },
       );
       await GeminiUsageTracker.instance.recordSuccess(
         tokens: response.usageMetadata?.totalTokenCount ?? 0,

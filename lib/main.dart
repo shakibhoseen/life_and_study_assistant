@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/services/ai/gemini_ai_service.dart';
+import 'core/services/ai/gemini_result_cache.dart';
 import 'core/services/background/wifi_monitor_service.dart';
 import 'core/services/background/workmanager_service.dart';
 import 'core/services/notification/notification_service.dart';
@@ -43,6 +46,11 @@ void main() async {
 
   // 5. Initialize Gemini AI Service
   await GeminiAiService.instance.init();
+
+  // 6. Give back the space the old preference-stored AI replies still take.
+  // They can never be served again, and they sit in a file Android reads in
+  // full at every launch. Not awaited: nothing on screen depends on it.
+  unawaited(GeminiResultCache.instance.sweepLegacyEntries());
 
   // 6. Preload theme mode and dark preset to eliminate startup flicker
   ThemeModeNotifier.initialMode =

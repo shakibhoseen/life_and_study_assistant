@@ -24,6 +24,10 @@ void main() {
       NotificationConstants.prefGeminiModel: 'gemini-flash-lite-latest',
     });
     db = AppDatabase(NativeDatabase.memory());
+    // The cache writes its replies to files now, and real file I/O awaited in
+    // a widget test's body never completes. This test seeds the cache and
+    // reads it back within the one run, which memory answers by itself.
+    GeminiResultCache.instance.useMemoryOnly();
     await GeminiAiService.instance.init('test_key');
   });
 

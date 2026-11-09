@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_and_study_assistant/core/database/app_database.dart';
+import 'package:life_and_study_assistant/core/services/ai/gemini_result_cache.dart';
 import 'package:life_and_study_assistant/core/theme/app_theme.dart';
 import 'package:life_and_study_assistant/features/chat/presentation/providers/chat_provider.dart';
 import 'package:life_and_study_assistant/features/chat/presentation/screens/ai_chat_screen.dart';
@@ -21,6 +22,13 @@ class _MockSettingsNotifier extends SettingsNotifier {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    // The settings screen shows how much the AI cache is holding, which means
+    // reading its folder. Asking the platform where that folder is never
+    // answers in a widget test, so the screen would hang instead of rendering.
+    GeminiResultCache.instance.useMemoryOnly();
+  });
 
   group('Dark Theme Contrast & Typography Tests', () {
     test('AppTheme.darkTheme defines bright readable typography and dark card surfaces', () {

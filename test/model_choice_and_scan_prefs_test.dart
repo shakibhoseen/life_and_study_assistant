@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:life_and_study_assistant/core/services/ai/ai_cancellation.dart';
 import 'package:life_and_study_assistant/core/services/ai/ai_media_limits.dart';
 import 'package:life_and_study_assistant/core/services/ai/model_choice.dart';
 import 'package:life_and_study_assistant/features/quiz/domain/scan_preferences.dart';
@@ -70,6 +71,56 @@ void main() {
       var calls = 0;
       expect(
         () => withServerBusyRetry(() async {
+          calls++;
+          throw Exception('API key not valid');
+        }),
+        throwsA(isA<Exception>()),
+      );
+      expect(calls, 1);
+    });
+  });
+
+  group('calling it off', () {
+    test('a cancelled call is not retried, however busy the server', () async {
+      // The waits run to twenty-five seconds. Sitting them out after the user
+      // has pressed Cancel is most of what "it is still going" feels like.
+      final cancel = AiCancellation()..cancel();
+      var calls = 0;
+
+      await expectLater(
+        withServerBusyRetry(
+          () async {
+            calls++;
+            throw Exception('503 UNAVAILABLE high demand');
+          },
+          cancel: cancel,
+        ),
+        throwsA(isA<AiCancelledException>()),
+      );
+      expect(calls, 0, reason: 'it never even tried');
+    });
+
+    test('cancelling partway stops the waiting', () async {
+      final cancel = AiCancellation();
+      var calls = 0;
+
+      final run = withServerBusyRetry(
+        () async {
+          calls++;
+          if (calls == 1) cancel.cancel();
+          throw Exception('503 UNAVAILABLE');
+        },
+        cancel: cancel,
+      );
+
+      await expectLater(run, throwsA(isA<AiCancelledException>()));
+      expect(calls, 1, reason: 'the second attempt never happened');
+    });
+
+    test('without a cancellation it behaves as before', () async {
+      var calls = 0;
+      await expectLater(
+        withServerBusyRetry(() async {
           calls++;
           throw Exception('API key not valid');
         }),
