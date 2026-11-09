@@ -12,6 +12,7 @@ import '../../utils/bengali_math_sanitizer.dart';
 import 'ai_media_limits.dart';
 import 'gemini_result_cache.dart';
 import 'gemini_usage_tracker.dart';
+import 'model_choice.dart';
 import 'models/quiz_question.dart';
 import 'models/question_bank_extract_result.dart';
 import 'cross_check_answers.dart';
@@ -339,11 +340,9 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
       preferredModel = 'gemini-flash-latest';
     }
 
-    final modelsToTry = [
-      preferredModel,
-      if (preferredModel != 'gemini-flash-latest') 'gemini-flash-latest',
-      'gemini-flash-lite-latest',
-    ];
+    // The user's model, and nothing else unless they said otherwise. A busy
+    // server is waited out below rather than answered by a weaker model.
+    final modelsToTry = await modelsToTryFor(preferredModel);
 
     final questionBytes = await _prepareImageBytes(
       questionImage,
@@ -435,28 +434,51 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
         int totalTokens = 0;
         var wasCut = false;
 
-        await for (final chunk in model.generateContentStream([
-          Content.multi(contentParts),
-        ])) {
-          buffer.write(chunk.text ?? '');
-          onChars?.call(buffer.length);
-          final usage = chunk.usageMetadata;
-          // Each chunk carries the running totals, not its own share.
-          promptTokens = math.max(promptTokens, usage?.promptTokenCount ?? 0);
-          outputTokens = math.max(
-            outputTokens,
-            usage?.candidatesTokenCount ?? 0,
-          );
-          final chunkTotal = usage?.totalTokenCount ?? 0;
-          if (chunkTotal > totalTokens) {
-            totalTokens = chunkTotal;
-            onTokens?.call(totalTokens);
-          }
-          if (chunk.candidates.isNotEmpty &&
-              chunk.candidates.first.finishReason == FinishReason.maxTokens) {
-            wasCut = true;
-          }
-        }
+        // Waited out, not given up on. A busy server refuses before the first
+        // chunk arrives, so there is nothing half-read to protect; the counters
+        // are reset and the page is asked for again. Without this a momentary
+        // spike threw away a scan the user had already waited minutes for, and
+        // the same request went through seconds later.
+        await withServerBusyRetry(
+          () async {
+            buffer.clear();
+            promptTokens = 0;
+            outputTokens = 0;
+            totalTokens = 0;
+            wasCut = false;
+
+            await for (final chunk in model.generateContentStream([
+              Content.multi(contentParts),
+            ])) {
+              buffer.write(chunk.text ?? '');
+              onChars?.call(buffer.length);
+              final usage = chunk.usageMetadata;
+              // Each chunk carries the running totals, not its own share.
+              promptTokens = math.max(
+                promptTokens,
+                usage?.promptTokenCount ?? 0,
+              );
+              outputTokens = math.max(
+                outputTokens,
+                usage?.candidatesTokenCount ?? 0,
+              );
+              final chunkTotal = usage?.totalTokenCount ?? 0;
+              if (chunkTotal > totalTokens) {
+                totalTokens = chunkTotal;
+                onTokens?.call(totalTokens);
+              }
+              if (chunk.candidates.isNotEmpty &&
+                  chunk.candidates.first.finishReason ==
+                      FinishReason.maxTokens) {
+                wasCut = true;
+              }
+            }
+          },
+          onWaiting: (attempt, waiting) => debugPrint(
+            'Question bank scan: server busy, waiting ${waiting.inSeconds}s '
+            '(attempt $attempt)',
+          ),
+        );
 
         lastCallTokens = totalTokens > 0 ? totalTokens : null;
         await GeminiUsageTracker.instance.recordSuccess(
@@ -553,7 +575,15 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
         ),
       );
 
-      final response = await model.generateContent([Content.multi(parts)]);
+      // Waited out rather than given up on. A 503 here would otherwise mean the
+      // answers quietly went unchecked for what is a momentary capacity spike.
+      final response = await withServerBusyRetry(
+        () => model.generateContent([Content.multi(parts)]),
+        onWaiting: (attempt, waiting) => debugPrint(
+          'Answer re-check: server busy, waiting ${waiting.inSeconds}s '
+          '(attempt $attempt)',
+        ),
+      );
       await GeminiUsageTracker.instance.recordSuccess(
         tokens: response.usageMetadata?.totalTokenCount ?? 0,
         actualInputTokens: response.usageMetadata?.promptTokenCount,
@@ -643,19 +673,36 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
 
   Future<Uint8List> _prepareImageBytes(File file, int maxDimension) async {
     final bytes = await file.readAsBytes();
+
+    // The user asked for the photo as taken, so it goes as taken. Returning
+    // early is not only correct but the cheap path: decoding a 16-megapixel
+    // page in Dart only to re-encode it unchanged costs seconds and a great
+    // deal of memory on a phone, and the re-encode would be one more lossy
+    // pass over the strokes this setting exists to preserve.
+    if (maxDimension <= 0) return bytes;
+
     try {
       final decodedImage = img.decodeImage(bytes);
       if (decodedImage == null) return bytes;
 
-      final longest = decodedImage.width > decodedImage.height
-          ? decodedImage.width
-          : decodedImage.height;
+      // Baked before anything is measured. copyResize does this for itself,
+      // but a photo already smaller than the chosen size is never resized, and
+      // the re-encode below would then drop the rotation the camera recorded
+      // and hand the model a sideways page. Baking also swaps width and height
+      // on a quarter turn, so the measurement has to come after it.
+      final upright = img.bakeOrientation(decodedImage);
 
-      img.Image processed = decodedImage;
-      if (longest > maxDimension) {
-        processed = decodedImage.width >= decodedImage.height
-            ? img.copyResize(decodedImage, width: maxDimension)
-            : img.copyResize(decodedImage, height: maxDimension);
+      final longest = upright.width > upright.height
+          ? upright.width
+          : upright.height;
+
+      img.Image processed = upright;
+      // Zero means the user asked for the photo as taken, so nothing is taken
+      // off it. See CaptureDetail.full.
+      if (maxDimension > 0 && longest > maxDimension) {
+        processed = upright.width >= upright.height
+            ? img.copyResize(upright, width: maxDimension)
+            : img.copyResize(upright, height: maxDimension);
       }
 
       final compressed = img.encodeJpg(
@@ -736,11 +783,9 @@ CRITICAL — do not invent text. If a question or its options cannot be read cle
       preferredModel = 'gemini-flash-latest';
     }
 
-    final modelsToTry = [
-      preferredModel,
-      if (preferredModel != 'gemini-flash-latest') 'gemini-flash-latest',
-      'gemini-flash-lite-latest',
-    ];
+    // The user's model, and nothing else unless they said otherwise. A busy
+    // server is waited out below rather than answered by a weaker model.
+    final modelsToTry = await modelsToTryFor(preferredModel);
 
     // Check content-hash cache
     final cacheKey = GeminiResultCache.instance.computeKey(

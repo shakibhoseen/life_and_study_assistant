@@ -118,5 +118,51 @@ void main() {
         greaterThan(CaptureDetail.standard.dimension),
       );
     });
+
+    test('the full preset takes nothing off the photo', () {
+      // The ceiling used to be 1280 whatever the page needed. Two readings of
+      // one page at that size disagreed on six answers out of eighteen, every
+      // one a খ/ঘ/ব mix-up, so the choice to send the photo whole is the
+      // user's to make.
+      expect(CaptureDetail.full.reduces, isFalse);
+      expect(CaptureDetail.full.dimension, 0);
+    });
+
+    test('every other preset does reduce', () {
+      for (final detail in CaptureDetail.values) {
+        if (detail == CaptureDetail.full) continue;
+        expect(detail.reduces, isTrue, reason: detail.name);
+      }
+    });
+
+    test('the presets stay in order, with full at the end', () {
+      // The chips are built straight from CaptureDetail.values, so the order
+      // here is the order on screen.
+      expect(CaptureDetail.values.last, CaptureDetail.full);
+      expect(
+        CaptureDetail.values.map((d) => d.name).toList(),
+        ['low', 'standard', 'high', 'full'],
+      );
+    });
+
+    test('a photo is re-encoded once, and the crop does not count', () {
+      // It used to be three times — picker, crop, then again on the way out —
+      // and each pass ate the thin strokes that tell খ, ঘ and ব apart.
+      expect(
+        AiMediaLimits.pickerMaxDimension,
+        isNull,
+        reason: 'the picker hands over what the camera gave it',
+      );
+      expect(
+        AiMediaLimits.cropQuality,
+        100,
+        reason: 'the crop has to write a file, not throw anything away',
+      );
+      expect(
+        AiMediaLimits.jpegQuality,
+        greaterThanOrEqualTo(90),
+        reason: 'the one lossy step can afford to be gentle',
+      );
+    });
   });
 }

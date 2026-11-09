@@ -12,6 +12,8 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/ai_media_limits.dart';
 import '../../../../core/services/ai/cross_check_answers.dart';
+import '../../domain/scan_preferences.dart';
+import '../../domain/scan_review_tally.dart';
 import '../../../../core/services/ai/models/question_bank_extract_result.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/question_bank_ocr_service.dart';
@@ -29,6 +31,22 @@ import '../../domain/merge_scanned_pages.dart';
 import '../../../../core/widgets/photo_source_sheet.dart';
 
 enum ScannerInputMode { imageOcr, textPaste }
+
+/// What the review list is showing.
+///
+/// The first few come from the scan itself and are known the moment the page
+/// comes back. The last two come from the optional AI verification pass, which
+/// is what this filter used to consist of entirely — three bare ints with a
+/// comment explaining them.
+enum ReviewFilter {
+  all,
+  noAnswer,
+  answersDisagree,
+  unreadable,
+  clean,
+  aiWarning,
+  aiVerified,
+}
 
 class QuestionBankScannerModal extends ConsumerStatefulWidget {
   final List<QuizQuestion>? initialQuestions;
@@ -80,7 +98,11 @@ class _QuestionBankScannerModalState
   final List<File> _questionImages = [];
   File? _answerKeyImage;
   String _selectedSubject = 'Auto Detect';
-  CaptureDetail _detail = CaptureDetail.standard;
+  /// A full page of small Bengali print is what this screen is for, which is
+  /// what [CaptureDetail.high] describes and what the service itself defaults
+  /// to. The modal used to send `standard` over the top of that, so a page
+  /// went to the model at 1024px unless the user noticed and said otherwise.
+  CaptureDetail _detail = CaptureDetail.high;
 
   /// Whether only an answer printed on the page may be kept.
   ///
@@ -127,7 +149,7 @@ class _QuestionBankScannerModalState
   bool _isVerifyingAll = false;
 
   // Search & Filter State
-  int _filterIndex = 0; // 0: All, 1: Warnings, 2: Verified
+  ReviewFilter _filter = ReviewFilter.all;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -143,9 +165,34 @@ class _QuestionBankScannerModalState
     'Geography & Environment',
   ];
 
+  /// Writes the four scanning settings back, so the next page starts where
+  /// the last one left off rather than at the defaults.
+  void _rememberScanPreferences() {
+    unawaited(
+      ScanPreferences(
+        trustPrintedAnswersOnly: _trustPrintedAnswersOnly,
+        withExplanations: _withExplanations,
+        crossCheckAnswers: _crossCheckAnswers,
+        detail: _detail,
+      ).save(),
+    );
+  }
+
+  Future<void> _loadScanPreferences() async {
+    final saved = await ScanPreferences.load();
+    if (!mounted) return;
+    setState(() {
+      _trustPrintedAnswersOnly = saved.trustPrintedAnswersOnly;
+      _withExplanations = saved.withExplanations;
+      _crossCheckAnswers = saved.crossCheckAnswers;
+      _detail = saved.detail;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    unawaited(_loadScanPreferences());
     if (widget.initialText != null && widget.initialText!.isNotEmpty) {
       _pastedTextController.text = widget.initialText!;
       _inputMode = ScannerInputMode.textPaste;
@@ -267,9 +314,11 @@ class _QuestionBankScannerModalState
       if (!isAnswerKey && source == ImageSource.gallery) {
         final picker = ImagePicker();
         final pickedList = await picker.pickMultiImage(
-          maxWidth: 1920,
-          maxHeight: 1920,
-          imageQuality: 90,
+          // As taken. This call used to carry its own 1920/90 and never
+          // consulted AiMediaLimits, so picking "পূর্ণ" below could not
+          // actually get a full-sized page.
+          maxWidth: AiMediaLimits.pickerMaxDimension,
+          maxHeight: AiMediaLimits.pickerMaxDimension,
         );
         if (pickedList.isNotEmpty) {
           setState(() {
@@ -1961,7 +2010,10 @@ class _QuestionBankScannerModalState
                 final selected = d == _detail;
                 return ChoiceChip(
                   selected: selected,
-                  onSelected: (_) => setState(() => _detail = d),
+                  onSelected: (_) {
+                    setState(() => _detail = d);
+                    _rememberScanPreferences();
+                  },
                   label: Text(
                     '${d.label} · ~${d.approxTokens}',
                     style: TextStyle(
@@ -1976,7 +2028,10 @@ class _QuestionBankScannerModalState
             const SizedBox(height: 10),
             _ScanToggle(
               value: _trustPrintedAnswersOnly,
-              onChanged: (v) => setState(() => _trustPrintedAnswersOnly = v),
+              onChanged: (v) {
+                setState(() => _trustPrintedAnswersOnly = v);
+                _rememberScanPreferences();
+              },
               isDark: isDark,
               title: 'শুধু বইয়ের ছাপা উত্তর নেবে',
               subtitle: _trustPrintedAnswersOnly
@@ -1985,7 +2040,10 @@ class _QuestionBankScannerModalState
             ),
             _ScanToggle(
               value: _crossCheckAnswers,
-              onChanged: (v) => setState(() => _crossCheckAnswers = v),
+              onChanged: (v) {
+                setState(() => _crossCheckAnswers = v);
+                _rememberScanPreferences();
+              },
               isDark: isDark,
               title: 'উত্তর দুইবার মিলিয়ে নেবে',
               subtitle: _crossCheckAnswers
@@ -1994,7 +2052,10 @@ class _QuestionBankScannerModalState
             ),
             _ScanToggle(
               value: _withExplanations,
-              onChanged: (v) => setState(() => _withExplanations = v),
+              onChanged: (v) {
+                setState(() => _withExplanations = v);
+                _rememberScanPreferences();
+              },
               isDark: isDark,
               title: 'ব্যাখ্যাও লিখিয়ে নেবে',
               subtitle: _withExplanations
@@ -2900,6 +2961,115 @@ class _QuestionBankScannerModalState
   // ========================================================
   // REVIEW & START EXAM STATE
   // ========================================================
+  /// The scan's own figures, as a row of chips that also filter the list.
+  ///
+  /// Always here once there are questions, which is the point: the screen used
+  /// to show only what the optional AI verification had found, so a set nobody
+  /// had verified looked perfect however much of it could not be read. These
+  /// come from the scan itself and are there the moment the page comes back.
+  Widget _buildTallyStrip(
+    ScanTally tally,
+    int warningCount,
+    int verifiedCount,
+    bool isDark,
+  ) {
+    Widget chip(
+      ReviewFilter filter,
+      String label,
+      int count,
+      Color colour, {
+      bool alwaysShow = false,
+    }) {
+      if (count == 0 && !alwaysShow) return const SizedBox.shrink();
+      final selected = _filter == filter;
+      return Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: ChoiceChip(
+          label: Text(
+            '$label ($count)',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: selected ? null : colour,
+            ),
+          ),
+          selected: selected,
+          selectedColor: colour.withValues(alpha: isDark ? 0.32 : 0.18),
+          visualDensity: VisualDensity.compact,
+          // Tapping a count takes the reader to the questions it counted,
+          // which is the only reason to show a count on a screen like this.
+          onSelected: (_) => setState(
+            () => _filter = selected ? ReviewFilter.all : filter,
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          chip(
+            ReviewFilter.all,
+            'সব',
+            tally.total,
+            isDark ? Colors.white70 : Colors.black87,
+            alwaysShow: true,
+          ),
+          chip(
+            ReviewFilter.noAnswer,
+            '⚠️ উত্তর নেই',
+            tally.noAnswer,
+            Colors.amber.shade800,
+          ),
+          chip(
+            ReviewFilter.answersDisagree,
+            '✕ দুই পাঠে মেলেনি',
+            tally.disagreed,
+            Colors.deepOrange.shade700,
+          ),
+          chip(
+            ReviewFilter.unreadable,
+            '👁 পড়া যায়নি',
+            tally.unreadable,
+            Colors.red.shade700,
+          ),
+          chip(
+            ReviewFilter.aiWarning,
+            '⚠️ অসঙ্গতি',
+            warningCount,
+            Colors.amber.shade900,
+          ),
+          chip(
+            ReviewFilter.aiVerified,
+            '✓ যাচাই হয়েছে',
+            verifiedCount,
+            Colors.green.shade800,
+          ),
+          chip(
+            ReviewFilter.clean,
+            '✓ ঠিক আছে',
+            tally.clean,
+            Colors.green.shade700,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Whether a question belongs in the list under the filter now chosen.
+  bool _passesFilter(QuizQuestion q, QuestionVerificationResult? v) {
+    return switch (_filter) {
+      ReviewFilter.all => true,
+      ReviewFilter.noAnswer => !q.hasAnswer,
+      ReviewFilter.answersDisagree => answersDisagree(q),
+      ReviewFilter.unreadable => !q.legible,
+      ReviewFilter.clean => !q.needsReview,
+      ReviewFilter.aiWarning => v != null && (!v.isCorrect || v.isAmbiguous),
+      ReviewFilter.aiVerified => v != null && v.isCorrect && !v.isAmbiguous,
+    };
+  }
+
   Widget _buildResultReviewState(bool isDark) {
     final verifiedCount = _verifications.values
         .where((v) => v.isCorrect && !v.isAmbiguous)
@@ -2907,8 +3077,8 @@ class _QuestionBankScannerModalState
     final warningCount = _verifications.values
         .where((v) => !v.isCorrect || v.isAmbiguous)
         .length;
-    final unsolvedCount =
-        _editableQuestions.where((q) => q.correctIndex < 0).length;
+    final tally = tallyScanIssues(_editableQuestions);
+    final unsolvedCount = tally.noAnswer;
 
     return Column(
       children: [
@@ -3308,58 +3478,9 @@ class _QuestionBankScannerModalState
                   ),
                 ],
               ),
-              if (warningCount > 0 || verifiedCount > 0) ...[
+              if (_editableQuestions.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      ChoiceChip(
-                        label: Text(
-                          'সব (${_editableQuestions.length})',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                        selected: _filterIndex == 0,
-                        onSelected: (_) => setState(() => _filterIndex = 0),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      if (warningCount > 0) ...[
-                        const SizedBox(width: 6),
-                        ChoiceChip(
-                          label: Text(
-                            '⚠️ অসঙ্গতি ($warningCount)',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.amber.shade900,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          selected: _filterIndex == 1,
-                          selectedColor: Colors.amber.shade100,
-                          onSelected: (_) => setState(() => _filterIndex = 1),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ],
-                      if (verifiedCount > 0) ...[
-                        const SizedBox(width: 6),
-                        ChoiceChip(
-                          label: Text(
-                            '✓ সঠিক ($verifiedCount)',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.green.shade900,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          selected: _filterIndex == 2,
-                          selectedColor: Colors.green.shade100,
-                          onSelected: (_) => setState(() => _filterIndex = 2),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                _buildTallyStrip(tally, warningCount, verifiedCount, isDark),
               ],
               if (unsolvedCount > 0) ...[
                 const SizedBox(height: 8),
@@ -3463,15 +3584,7 @@ class _QuestionBankScannerModalState
             final filteredIndices = <int>[];
             for (int i = 0; i < _editableQuestions.length; i++) {
               final q = _editableQuestions[i];
-              final v = _verifications[i];
-              if (_filterIndex == 1 &&
-                  (v == null || (v.isCorrect && !v.isAmbiguous))) {
-                continue;
-              }
-              if (_filterIndex == 2 &&
-                  (v == null || !v.isCorrect || v.isAmbiguous)) {
-                continue;
-              }
+              if (!_passesFilter(q, _verifications[i])) continue;
               if (_searchQuery.isNotEmpty) {
                 final query = _searchQuery.toLowerCase();
                 final matchQ = q.questionText.toLowerCase().contains(query);

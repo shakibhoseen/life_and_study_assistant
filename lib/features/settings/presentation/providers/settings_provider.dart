@@ -15,6 +15,13 @@ class SettingsState {
   final String lastMealResponse;
   final bool isWifiMonitoringActive;
   final bool isWeaknessHealingEnabled;
+
+  /// Whether a busy model may be answered by a different one.
+  ///
+  /// Off by default. The model is chosen here, and silently answering with a
+  /// weaker one means the quality picked is not the quality delivered, with
+  /// nothing on screen to say so. A busy server is waited out instead.
+  final bool allowModelFallback;
   final List<int>
   offDays; // Weekday integers: 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun
 
@@ -28,6 +35,7 @@ class SettingsState {
     required this.lastMealResponse,
     required this.isWifiMonitoringActive,
     this.isWeaknessHealingEnabled = true,
+    this.allowModelFallback = false,
     this.offDays = const [DateTime.thursday, DateTime.friday],
   });
 
@@ -54,6 +62,7 @@ class SettingsState {
     String? lastMealResponse,
     bool? isWifiMonitoringActive,
     bool? isWeaknessHealingEnabled,
+    bool? allowModelFallback,
     List<int>? offDays,
   }) {
     return SettingsState(
@@ -68,6 +77,7 @@ class SettingsState {
           isWifiMonitoringActive ?? this.isWifiMonitoringActive,
       isWeaknessHealingEnabled:
           isWeaknessHealingEnabled ?? this.isWeaknessHealingEnabled,
+      allowModelFallback: allowModelFallback ?? this.allowModelFallback,
       offDays: offDays ?? this.offDays,
     );
   }
@@ -132,6 +142,8 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
       isWeaknessHealingEnabled:
           prefs.getBool(NotificationConstants.prefWeaknessHealingEnabled) ??
           true,
+      allowModelFallback:
+          prefs.getBool(NotificationConstants.prefAllowModelFallback) ?? false,
       offDays: offDays,
     );
   }
@@ -144,6 +156,15 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
     );
     state = AsyncValue.data(
       state.value!.copyWith(isWeaknessHealingEnabled: enabled),
+    );
+  }
+
+  /// Lets a busy model be answered by another one, or stops it.
+  Future<void> setAllowModelFallback(bool allow) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(NotificationConstants.prefAllowModelFallback, allow);
+    state = AsyncValue.data(
+      state.value!.copyWith(allowModelFallback: allow),
     );
   }
 

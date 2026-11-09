@@ -11,6 +11,12 @@ void main() {
   group('CaptureDetail Tile Boundary Tests', () {
     test('every preset costs what it claims, in both orientations', () {
       for (final d in CaptureDetail.values) {
+        // Except the one with no fixed size. CaptureDetail.full sends the
+        // photo as taken, so what it costs depends on the photo and cannot be
+        // worked out here — its figure is a stated guess, and the badge during
+        // a scan reports the real one.
+        if (!d.reduces) continue;
+
         // A 4:3 photo reduced to this longest side.
         final long = d.dimension;
         final short = (d.dimension * 3 / 4).round();

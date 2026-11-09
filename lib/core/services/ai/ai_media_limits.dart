@@ -24,16 +24,34 @@ class AiMediaLimits {
   /// it, because intermediate values cost the same as the step above them.
   static const int maxImageDimension = 1280;
 
-  /// JPEG quality used when re-encoding.
-  static const int jpegQuality = 85;
-
-  /// What the image picker is allowed to hand over.
+  /// JPEG quality for the one re-encode a photo is allowed.
   ///
-  /// Above every [CaptureDetail] on purpose. The picker is not the place to
-  /// economise: if it cropped straight to the chosen preset, raising the
-  /// setting afterwards could not recover detail that was already thrown
-  /// away. The real reduction happens just before the request instead.
-  static const int pickerHeadroom = 2048;
+  /// One, not three. A photo used to be re-encoded by the picker, again by the
+  /// crop screen and again on its way to the model, each pass eating the thin
+  /// strokes that tell খ, ঘ and ব apart in Bengali print. The picker hands
+  /// over what the camera gave it, the crop screen writes at
+  /// [cropQuality], and this is the single lossy step, just before the
+  /// request.
+  static const int jpegQuality = 92;
+
+  /// What the crop screen writes its result at.
+  ///
+  /// Near enough to lossless to not be a second reduction. The crop has to
+  /// write a file, so it cannot avoid re-encoding; it can avoid throwing
+  /// anything away while it does.
+  static const int cropQuality = 100;
+
+  /// Nothing. The picker hands over the photo as the camera took it.
+  ///
+  /// It used to cap the longest side at 2048, with a comment explaining that
+  /// the picker is not the place to economise because detail thrown away there
+  /// cannot be recovered by raising the setting afterwards. That reasoning was
+  /// right and the number contradicted it: a 4624px page arrived already down
+  /// to 1920 or 2048 before the user's own choice was even consulted.
+  ///
+  /// The only reduction now is the one the user picked, and
+  /// [CaptureDetail.full] means none at all.
+  static const double? pickerMaxDimension = null;
 }
 
 /// How much detail a photo needs, chosen before the shot is taken.
@@ -48,12 +66,29 @@ class AiMediaLimits {
 enum CaptureDetail {
   low(768, 258, 'কাছ থেকে', 'একটি MCQ বা কয়েক লাইন, বড় লেখা'),
   standard(1024, 516, 'সাধারণ', 'আধা পাতা বা একটি অনুচ্ছেদ'),
-  high(1280, 1032, 'পুরো পাতা', 'দূর থেকে তোলা পুরো পাতা, ছোট লেখা');
+  high(1280, 1032, 'পুরো পাতা', 'দূর থেকে তোলা পুরো পাতা, ছোট লেখা'),
+
+  /// The photo as taken, with nothing taken off it.
+  ///
+  /// Here because the choice is the user's to make, and until now the ceiling
+  /// was 1280 however much detail the page needed. Measured on one
+  /// question-bank page: two readings of it at 1280 disagreed on six answers
+  /// out of eighteen, every one a খ/ঘ/ব mix-up — the strokes that separate
+  /// those letters are a pixel or two wide, and this is the step that was
+  /// losing them.
+  ///
+  /// The token figure is a guess for a typical phone photo and will be wrong
+  /// for any particular one; the badge during a scan reports what it actually
+  /// cost, which is the number worth looking at.
+  full(0, 3100, 'পূর্ণ', 'যেমন তুলেছেন তেমনই — ছোট করা হবে না');
 
   const CaptureDetail(this.dimension, this.approxTokens, this.label, this.hint);
 
-  /// Longest side, in pixels, the photo is reduced to.
+  /// Longest side, in pixels, the photo is reduced to. Zero means it is not.
   final int dimension;
+
+  /// Whether this setting reduces the photo at all.
+  bool get reduces => dimension > 0;
 
   /// Roughly what the image alone costs at this size.
   final int approxTokens;

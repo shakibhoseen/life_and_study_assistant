@@ -641,19 +641,36 @@ Return ONLY a valid JSON object matching the requested schema.
 
   Future<Uint8List> _prepareImageBytes(File file, int maxDimension) async {
     final bytes = await file.readAsBytes();
+
+    // The user asked for the photo as taken, so it goes as taken. Returning
+    // early is not only correct but the cheap path: decoding a 16-megapixel
+    // page in Dart only to re-encode it unchanged costs seconds and a great
+    // deal of memory on a phone, and the re-encode would be one more lossy
+    // pass over the strokes this setting exists to preserve.
+    if (maxDimension <= 0) return bytes;
+
     try {
       final decodedImage = img.decodeImage(bytes);
       if (decodedImage == null) return bytes;
 
-      final longest = decodedImage.width > decodedImage.height
-          ? decodedImage.width
-          : decodedImage.height;
+      // Baked before anything is measured. copyResize does this for itself,
+      // but a photo already smaller than the chosen size is never resized, and
+      // the re-encode below would then drop the rotation the camera recorded
+      // and hand the model a sideways page. Baking also swaps width and height
+      // on a quarter turn, so the measurement has to come after it.
+      final upright = img.bakeOrientation(decodedImage);
 
-      img.Image processed = decodedImage;
-      if (longest > maxDimension) {
-        processed = decodedImage.width >= decodedImage.height
-            ? img.copyResize(decodedImage, width: maxDimension)
-            : img.copyResize(decodedImage, height: maxDimension);
+      final longest = upright.width > upright.height
+          ? upright.width
+          : upright.height;
+
+      img.Image processed = upright;
+      // Zero means the user asked for the photo as taken, so nothing is taken
+      // off it. See CaptureDetail.full.
+      if (maxDimension > 0 && longest > maxDimension) {
+        processed = upright.width >= upright.height
+            ? img.copyResize(upright, width: maxDimension)
+            : img.copyResize(upright, height: maxDimension);
       }
 
       final compressed = img.encodeJpg(

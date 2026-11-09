@@ -361,7 +361,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
+
+                      // Whether the chosen model may be swapped out. Here
+                      // rather than buried in a scanner, because it is about
+                      // the model chosen just above it.
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'ব্যস্ত থাকলে অন্য মডেল ব্যবহার করুক',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  settings.allowModelFallback
+                                      ? 'সার্ভার ব্যস্ত হলে দুর্বল মডেলে উত্তর আসতে পারে — '
+                                            'স্ক্রিনে তা বলা থাকবে না'
+                                      : 'আপনার বাছাই করা মডেলই ব্যবহার হবে — '
+                                            'ব্যস্ত থাকলে অপেক্ষা করে আবার চেষ্টা করবে',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    height: 1.3,
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Switch(
+                            value: settings.allowModelFallback,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            onChanged: (v) => ref
+                                .read(settingsNotifierProvider.notifier)
+                                .setAllowModelFallback(v),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
 
                       // API Key Presentation: Either Secured Connected Box OR Input Box
                       if (hasKey && !_isEditingApiKey)

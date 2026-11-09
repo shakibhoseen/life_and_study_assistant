@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/services/ai/ai_media_limits.dart';
 import '../../../../core/services/ai/models/voice_mistake_result.dart';
 import '../../../../core/services/ai/voice_mistake_parser_service.dart';
 import '../../../../core/services/overlay/live_mcq_bubble_service.dart';
@@ -333,9 +334,10 @@ class _VoiceMistakeBottomSheetState
       final picker = ImagePicker();
       final picked = await picker.pickImage(
         source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
+        // As taken; the reduction belongs just before the request, where the
+        // user's own setting is read.
+        maxWidth: AiMediaLimits.pickerMaxDimension,
+        maxHeight: AiMediaLimits.pickerMaxDimension,
       );
       if (picked == null) return;
 

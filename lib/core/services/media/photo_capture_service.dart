@@ -62,7 +62,9 @@ class PhotoCaptureService {
     final cropped = await ImageCropper().cropImage(
       sourcePath: photo.path,
       compressFormat: ImageCompressFormat.jpg,
-      compressQuality: AiMediaLimits.jpegQuality,
+      // Near enough to lossless: the crop has to write a file, so it cannot
+      // avoid re-encoding, but it can avoid being a second reduction.
+      compressQuality: AiMediaLimits.cropQuality,
       uiSettings: [
         AndroidUiSettings(
           toolbarTitle: title,
@@ -96,12 +98,13 @@ class PhotoCaptureService {
   }) async {
     final picked = await picker.pickImage(
       source: source,
-      // Deliberately above every preset: the picker keeps headroom and the
-      // real reduction happens just before the request, so a sharper setting
-      // chosen after the shot still has pixels to work with.
-      maxWidth: AiMediaLimits.pickerHeadroom.toDouble(),
-      maxHeight: AiMediaLimits.pickerHeadroom.toDouble(),
-      imageQuality: AiMediaLimits.jpegQuality,
+      // Nothing. The photo arrives as the camera took it, and the only
+      // reduction is the one the user chose, applied just before the request.
+      // Capping it here meant a 4624px page was already down to 2048 before
+      // that choice was even consulted, and nothing downstream could get it
+      // back.
+      maxWidth: AiMediaLimits.pickerMaxDimension,
+      maxHeight: AiMediaLimits.pickerMaxDimension,
     );
     if (picked == null) return null;
 

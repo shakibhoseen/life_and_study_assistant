@@ -117,4 +117,22 @@ class NotificationConstants {
   static const String prefOffDays =
       'weekly_off_days'; // Comma-separated weekdays (e.g. "4,5" for Thu, Fri)
   static const String prefWeaknessHealingEnabled = 'weakness_healing_enabled';
+
+  /// Whether a busy or failing model may be swapped for another one.
+  ///
+  /// The model is the user's choice, made in Settings. Quietly answering with
+  /// a different one — usually a cheaper, weaker one — means the quality they
+  /// picked is not the quality they get, and nothing on screen says so. Off by
+  /// default: a 503 is retried on the chosen model instead.
+  static const String prefAllowModelFallback = 'ai_allow_model_fallback';
+
+  /// The scanner's own settings, remembered between scans.
+  ///
+  /// They used to live only in the modal's state, so every setting the user
+  /// chose was forgotten the moment the sheet closed and had to be chosen
+  /// again on the next page. A control that does not stick is not control.
+  static const String prefScanTrustPrintedAnswers = 'scan_trust_printed';
+  static const String prefScanWithExplanations = 'scan_with_explanations';
+  static const String prefScanCrossCheck = 'scan_cross_check';
+  static const String prefScanDetail = 'scan_capture_detail';
 }
