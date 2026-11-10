@@ -87,6 +87,67 @@ String auditNote(QuestionAuditStatus status, String reason) {
   return trimmed.isEmpty ? label : '$label: $trimmed';
 }
 
+/// The explanation a flagged question should carry, or null when there is
+/// nothing to add — the verdict earns no mark, or the same mark is already
+/// there from an earlier pass.
+String? explanationWithNote(
+  String existing,
+  QuestionAuditStatus status,
+  String reason,
+) {
+  final note = auditNote(status, reason);
+  if (note.isEmpty || existing.contains(note)) return null;
+  final trimmed = existing.trim();
+  return trimmed.isEmpty ? note : '$trimmed\n$note';
+}
+
+/// What a spoken remark amounts to, when it raises a doubt rather than giving
+/// an answer.
+///
+/// Said out loud, "এই প্রশ্নে ভুল আছে" and "বই দেখে নিতে হবে" are different
+/// things: the first says something is wrong, the second says it cannot be
+/// settled here. Neither of them establishes an answer, so both only mark the
+/// question. Null when the words raise no doubt at all.
+QuestionAuditStatus? spokenDoubt(String line) {
+  final text = line.toLowerCase();
+
+  const needsSource = [
+    'যাচাই',
+    'উৎস',
+    'বই দেখ',
+    'নিশ্চিত না',
+    'নিশ্চিত নই',
+    'শিওর না',
+    'verify',
+    'source',
+  ];
+  for (final word in needsSource) {
+    if (text.contains(word)) return QuestionAuditStatus.needsSource;
+  }
+
+  const ambiguous = [
+    'ভুল আছে',
+    'ভুল হয়েছে',
+    'ঠিক নেই',
+    'ঠিক নয়',
+    'সন্দেহ',
+    'অস্পষ্ট',
+    'একাধিক উত্তর',
+    'দুইটা উত্তর',
+    'দুটো উত্তর',
+    'সংশোধন করতে হবে',
+    'ঠিক করতে হবে',
+    'গোলমাল',
+    'ambiguous',
+    'wrong',
+  ];
+  for (final word in ambiguous) {
+    if (text.contains(word)) return QuestionAuditStatus.ambiguous;
+  }
+
+  return null;
+}
+
 /// The instruction block appended to the copied questions.
 ///
 /// Written at the other assistant, not at this app's own model: it is read by

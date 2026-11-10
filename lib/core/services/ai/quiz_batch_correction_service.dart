@@ -124,15 +124,10 @@ class QuestionCorrectionItem {
     // column for a verdict, so it is written where the question is read: at
     // the end of its explanation, labelled, so it reads as a warning rather
     // than as fact.
-    final note = auditNote(status, rawReason);
     final rawNewExplanation = json['new_explanation']?.toString().trim() ?? '';
     final newExplanation = rawNewExplanation.isNotEmpty
         ? rawNewExplanation
-        : (note.isEmpty || q.explanation.contains(note)
-              ? null
-              : (q.explanation.trim().isEmpty
-                    ? note
-                    : '${q.explanation.trim()}\n$note'));
+        : explanationWithNote(q.explanation, status, rawReason);
 
     final effectiveOptions = newOptions ?? q.options;
 
@@ -719,6 +714,51 @@ If the text says all answers are correct or no fixes are suggested, return: []
         );
         break;
       }
+    }
+
+    // Said out loud, a doubt is far more common than a correction: "এই
+    // প্রশ্নে ভুল আছে", "বই দেখে নিতে হবে". None of that names an answer, and
+    // all of it used to vanish without trace. It marks the question instead —
+    // the same mark an external audit leaves, since it is the same claim.
+    for (final line in clauses) {
+      final status = spokenDoubt(line);
+      if (status == null) continue;
+
+      final numberMatch = RegExp(r'([০-৯\d]+)').firstMatch(line);
+      int? idx;
+      if (numberMatch != null) {
+        final n = int.tryParse(
+          BengaliMathSanitizer.toEnglishDigits(numberMatch.group(1)!),
+        );
+        if (n != null) idx = indexForNumber(n);
+      } else if (questions.length == 1) {
+        // Nothing to disambiguate: the one question on screen is the subject.
+        idx = 0;
+      }
+      // With a list up and no number said, there is no way to tell which
+      // question is meant, and marking the wrong one is worse than silence.
+      if (idx == null) continue;
+      if (items.any((it) => it.questionIndex == idx)) continue;
+
+      final q = questions[idx];
+      final note = explanationWithNote(q.explanation, status, line.trim());
+      if (note == null) continue;
+
+      final oldOpt = (q.correctIndex >= 0 && q.correctIndex < q.options.length)
+          ? q.options[q.correctIndex]
+          : '';
+      items.add(
+        QuestionCorrectionItem(
+          questionIndex: idx,
+          questionSnippet: q.questionText,
+          proposedCorrectIndex: null,
+          proposedOptionText: '',
+          oldOptionText: oldOpt,
+          isDelete: false,
+          newExplanation: note,
+          reason: line.trim(),
+        ),
+      );
     }
 
     return items;
