@@ -9,6 +9,7 @@ import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/quiz_batch_correction_service.dart';
+import '../../domain/external_audit_brief.dart';
 import '../../../../core/services/voice/voice_recording_service.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
 import '../providers/drill_history_provider.dart';
@@ -390,7 +391,70 @@ class QuizBatchCorrectionSheet {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 6),
+
+                    // The grammar, where it is used. A reader that understands
+                    // seven phrases and says so is more use than one that
+                    // understands nine and keeps them to itself.
+                    Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        childrenPadding: const EdgeInsets.only(bottom: 8),
+                        leading: const Icon(Icons.mic_none, size: 18),
+                        title: const Text(
+                          'মুখে বা টাইপ করে কীভাবে বলবেন',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        children: [
+                          for (final (phrase, effect) in voiceFixPhrasebook)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('• ', style: TextStyle(fontSize: 12)),
+                                  Expanded(
+                                    child: RichText(
+                                      text: TextSpan(
+                                        style: DefaultTextStyle.of(
+                                          context,
+                                        ).style.copyWith(fontSize: 11.5),
+                                        children: [
+                                          TextSpan(
+                                            text: '"$phrase"',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          TextSpan(text: ' — $effect'),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 2),
+                          Text(
+                            voiceTargetHelp,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.white60
+                                  : Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 6),
 
                     TextField(
                       controller: textController,

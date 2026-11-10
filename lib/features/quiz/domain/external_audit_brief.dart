@@ -148,6 +148,27 @@ QuestionAuditStatus? spokenDoubt(String line) {
   return null;
 }
 
+/// What can be said out loud, or typed, and acted on without a model.
+///
+/// Shown in the fix sheet rather than left in a chat log, because a grammar
+/// nobody can see is a grammar nobody uses. Every line here is covered by a
+/// test; if a line leaves this list it stops being promised.
+const List<(String, String)> voiceFixPhrasebook = [
+  ('উত্তর গ হবে', 'সঠিক উত্তর বদলায়'),
+  ('অপশন খ হবে: তঞ্চঙ্গ্যা', 'শুধু ওই অপশনটা বদলায়, বাকিগুলো থাকে'),
+  ('প্রশ্ন হবে: …', 'প্রশ্নের লেখাটাই বদলায় — যা বলবেন, হুবহু তাই'),
+  ('ব্যাখ্যা হবে: …', 'উত্তর ঠিক রেখে শুধু ব্যাখ্যা বদলায়'),
+  ('এই প্রশ্নে ভুল আছে', 'উত্তর না বদলে প্রশ্নে সতর্কতা বসে'),
+  ('বই দেখে নিতে হবে', 'উৎস যাচাই দরকার — সতর্কতা বসে'),
+  ('প্রশ্নটা বাদ দাও', 'প্রশ্নটি মুছে ফেলার প্রস্তাব হয়'),
+];
+
+/// How to say which question, when more than one is on screen.
+const String voiceTargetHelp =
+    'একটামাত্র প্রশ্ন সামনে থাকলে নম্বর বলার দরকার নেই। তালিকা থাকলে শুরুতে '
+    '"প্রশ্ন ৩ এর …" বা পাশে লেখা আইডি ধরে "প্রশ্ন ১৮০ এর …" বলুন। নম্বর না '
+    'বললে কোন প্রশ্ন বোঝা যায় না, তাই কিছুই বসানো হয় না।';
+
 /// The instruction block appended to the copied questions.
 ///
 /// Written at the other assistant, not at this app's own model: it is read by

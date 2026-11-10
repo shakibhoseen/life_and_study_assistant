@@ -568,6 +568,119 @@ If the text says all answers are correct or no fixes are suggested, return: []
       return null;
     }
 
+    // Dictation runs first, over whole lines rather than clauses, because a
+    // dictated question or option contains commas and full stops of its own
+    // and the clause splitter would cut it in half.
+    //
+    // Each dictated line is folded into one draft per question, so saying the
+    // option on one line and the explanation on the next lands as a single
+    // edit rather than the second being dropped as a duplicate.
+    final drafts = <int, Map<String, dynamic>>{};
+
+    /// "প্রশ্ন ৩ এর ...", "Q-180 এর ..." or, with one question on screen,
+    /// nothing at all. Returns the index and what is left of the line.
+    (int, String)? targetOf(String line) {
+      final m = RegExp(
+        r'^(?:প্রশ্ন|q)[\s\-.]*([০-৯\d]+)(?:\s*(?:নম্বর|নং|এর|এ|তে|র))?\s*[:\-–—]?\s*(.*)$',
+        caseSensitive: false,
+      ).firstMatch(line);
+      if (m != null) {
+        final n = int.tryParse(
+          BengaliMathSanitizer.toEnglishDigits(m.group(1)!),
+        );
+        final at = n == null ? null : indexForNumber(n);
+        if (at == null) return null;
+        return (at, m.group(2)!.trim());
+      }
+      if (questions.length == 1) return (0, line);
+      return null;
+    }
+
+    for (final rawLine in text.split('\n')) {
+      final line = rawLine.trim();
+      if (line.isEmpty) continue;
+      final target = targetOf(line);
+      if (target == null) continue;
+      final (idx, rest) = target;
+      if (rest.isEmpty) continue;
+
+      // "প্রশ্নটা হবে: …" — the printed question itself is wrong and the
+      // corrected wording is being dictated. Never guessed: only what is
+      // actually said after the colon is written.
+      final qText = RegExp(
+        r'^(?:প্রশ্ন|প্রশ্নটা|প্রশ্নটি|question)\s*(?:হবে|হলো|হইবে)\s*[:\-–—]?\s*(.{4,})$',
+        caseSensitive: false,
+      ).firstMatch(rest);
+      if (qText != null) {
+        drafts.putIfAbsent(idx, () => {'question_index': idx})['new_question_text'] =
+            qText.group(1)!.trim();
+        continue;
+      }
+
+      // "অপশন খ হবে: …" — one option is rewritten and the rest stand.
+      final optText = RegExp(
+        r'^(?:অপশন|option)\s*([কখগঘabcd])\s*(?:হবে|হলো)\s*[:\-–—]?\s*(.{1,})$',
+        caseSensitive: false,
+      ).firstMatch(rest);
+      if (optText != null) {
+        final at = optionCharToIndex(optText.group(1)!);
+        if (at != null && at < questions[idx].options.length) {
+          final draft = drafts.putIfAbsent(idx, () => {'question_index': idx});
+          final current = (draft['new_options'] as List<String>?) ??
+              List<String>.from(questions[idx].options);
+          current[at] = optText.group(2)!.trim();
+          draft['new_options'] = current;
+          continue;
+        }
+      }
+
+      // "ব্যাখ্যা হবে: …" — the answer stands, the reason under it does not.
+      final expText = RegExp(
+        r'^(?:ব্যাখ্যা|explanation)\s*(?:হবে|হলো)\s*[:\-–—]?\s*(.{4,})$',
+        caseSensitive: false,
+      ).firstMatch(rest);
+      if (expText != null) {
+        drafts.putIfAbsent(idx, () => {'question_index': idx})['new_explanation'] =
+            expText.group(1)!.trim();
+        continue;
+      }
+
+      // "প্রশ্নটা বাদ দাও" — with one question on screen this carries no
+      // number, and the numbered delete pattern further down needs one.
+      if (RegExp(
+        r'(বাদ\s*দা|বাতিল|মুছ|delete|remove)',
+        caseSensitive: false,
+      ).hasMatch(rest)) {
+        drafts.putIfAbsent(idx, () => {'question_index': idx})['is_delete'] =
+            true;
+        continue;
+      }
+
+      // "উত্তর গ হবে" on a line of its own, so that a dictated option and the
+      // answer that goes with it end up in the same edit. Without this the
+      // second line would be dropped as a repeat of the first.
+      final ansText = RegExp(
+        r'^(?:সঠিক\s*)?(?:উত্তর\s*)?([কখগঘabcd])\s*(?:হবে|সঠিক|হলো)\s*\.?$',
+        caseSensitive: false,
+      ).firstMatch(rest);
+      if (ansText != null) {
+        final at = optionCharToIndex(ansText.group(1)!);
+        // Saying the answer it already has is not a correction.
+        if (at != null && at != questions[idx].correctIndex) {
+          drafts.putIfAbsent(
+            idx,
+            () => {'question_index': idx},
+          )['proposed_correct_index'] = at;
+        }
+      }
+    }
+
+    for (final draft in drafts.values) {
+      draft['reason'] ??= 'ভয়েস নির্দেশনায় সম্পাদনা';
+      final item = QuestionCorrectionItem.tryFromJson(draft, questions);
+      if (item != null && item.hasEdit) items.add(item);
+    }
+
     final clauses = <String>[];
     for (final rawLine in text.split('\n')) {
       final line = rawLine.trim();
