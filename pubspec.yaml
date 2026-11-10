@@ -60,6 +60,8 @@ dependencies:
   flutter_overlay_window: ^1.0.2
   crypto: ^3.0.3
   speech_to_text: ^7.5.0
+  local_ocr:
+    path: packages/local_ocr
 
   # Local: carries Android's microphone foreground-service type only while the
   # microphone is open. See packages/overlay_bridge/lib for why.
@@ -100,6 +102,8 @@ flutter:
 
   assets:
     - assets/branding/
+    - assets/tessdata_config.json
+    - assets/tessdata/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

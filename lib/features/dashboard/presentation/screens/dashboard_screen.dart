@@ -38,6 +38,7 @@ import '../widgets/multi_track_exam_countdown_card.dart';
 import '../widgets/study_plan_card.dart';
 import '../../../weekly_routine/presentation/widgets/weekly_routine_card.dart';
 import '../widgets/next_exam_revision_card.dart';
+import '../../../image_to_text/presentation/screens/image_to_text_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -455,6 +456,21 @@ class DashboardScreen extends ConsumerWidget {
             label: 'Voice Mistake',
             badge: 'Bubble 🎙️',
             onTap: () => VoiceMistakeBottomSheet.show(context),
+          ),
+          const SizedBox(width: 8),
+
+          // 0.2. Image to Text (Offline Local OCR)
+          _buildQuickActionPill(
+            context,
+            icon: Icons.document_scanner_rounded,
+            iconColor: const Color(0xFF0284C7),
+            bgColor: const Color(0xFF0284C7).withValues(alpha: 0.12),
+            label: 'Image to Text',
+            badge: 'Local OCR 📴',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ImageToTextScreen()),
+            ),
           ),
           const SizedBox(width: 8),
 

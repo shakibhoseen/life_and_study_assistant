@@ -1,0 +1,21 @@
+name: local_ocr
+description: Modern offline OCR plugin for Bengali, English, and Math using Tesseract4Android
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.2
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  path_provider: ^2.1.6
+  path: ^1.9.1
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.zavisoft.local_ocr
+        pluginClass: LocalOcrPlugin
