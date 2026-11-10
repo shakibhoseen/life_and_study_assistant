@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/export/app_export_service.dart';
+import '../../../../core/services/export/preference_backup.dart';
 
 class BackupRestoreCard extends ConsumerWidget {
   const BackupRestoreCard({super.key});
@@ -119,7 +120,10 @@ class BackupRestoreCard extends ConsumerWidget {
   Future<void> _handleExportBackup(BuildContext context, WidgetRef ref) async {
     try {
       final db = ref.read(appDatabaseProvider);
-      final jsonString = await db.exportBackupJson();
+      // Half of what makes the app yours lives outside the database.
+      final jsonString = await db.exportBackupJson(
+        extraPreferences: await PreferenceBackup.collect(),
+      );
       final Map<String, dynamic> parsed =
           jsonDecode(jsonString) as Map<String, dynamic>;
 
@@ -608,6 +612,21 @@ class BackupRestoreCard extends ConsumerWidget {
       final db = ref.read(appDatabaseProvider);
       final result = await db.importBackupJson(jsonString);
 
+      // The settings outside the database go back too, except the API key,
+      // which is never written to a backup file in the first place.
+      var restoredPrefs = 0;
+      try {
+        final decoded = jsonDecode(jsonString.trim());
+        if (decoded is Map) {
+          restoredPrefs = await PreferenceBackup.restore(
+            decoded['preferences'],
+          );
+        }
+      } catch (_) {
+        // A file that will not decode has already failed above; the counts
+        // below simply show nothing for it.
+      }
+
       final topicsCount = result['weak_topics'] ?? 0;
       final examsCount = result['exam_schedules'] ?? 0;
       final logsCount = result['daily_energy_logs'] ?? 0;
@@ -648,6 +667,19 @@ class BackupRestoreCard extends ConsumerWidget {
                 Text(
                   '• $mistakesCount টি Mistake Notebook প্রশ্ন রিস্টোর হয়েছে',
                 ),
+              if ((result['drill_records'] ?? 0) > 0)
+                Text('• ${result['drill_records']} টি ড্রিলের রেকর্ড ফিরেছে'),
+              if ((result['spaced_reviews'] ?? 0) > 0)
+                Text('• ${result['spaced_reviews']} টি রিভিশন কার্ড ফিরেছে'),
+              if (restoredPrefs > 0)
+                Text('• $restoredPrefs টি সেটিংস ফিরেছে'),
+              const SizedBox(height: 8),
+              // Said every time: it is the one thing a restore cannot do for
+              // you, and finding out later costs a failed scan.
+              const Text(
+                'API key ব্যাকআপ ফাইলে রাখা হয় না — সেটি আবার বসাতে হবে।',
+                style: TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic),
+              ),
             ],
           ),
           actions: [

@@ -110,7 +110,9 @@ void main() {
         expect(jsonStr.isNotEmpty, isTrue);
 
         final Map<String, dynamic> parsed = jsonDecode(jsonStr);
-        expect(parsed['version'], equals(1));
+        // Version 2 added the drill history, the review schedule, the
+        // settings table and the preferences that live outside the database.
+        expect(parsed['version'], equals(2));
         expect(parsed['exported_at'], isNotNull);
 
         final topics = parsed['weak_topics'] as List;

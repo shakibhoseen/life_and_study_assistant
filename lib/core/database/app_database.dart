@@ -1285,7 +1285,19 @@ class AppDatabase extends _$AppDatabase {
   // --- Backup & Restore Queries ---
 
   /// Exports all weak topics, exam schedules, and energy logs as a JSON string.
-  Future<String> exportBackupJson() async {
+  /// Everything worth keeping, as one file.
+  ///
+  /// Version 1 held four tables: weak topics, exams, energy logs and the
+  /// mistake notebook. It left out the drill history the heatmap is drawn
+  /// from, the spaced-repetition schedule, and the settings table — so a
+  /// restore brought back the questions and none of the record of working
+  /// through them. [extraPreferences] carries what lives outside the database.
+  ///
+  /// It is written as version 2 and still reads version 1, because an old file
+  /// in somebody's Downloads folder is the only copy they have.
+  Future<String> exportBackupJson({
+    Map<String, Object?> extraPreferences = const {},
+  }) async {
     final allTopics = await (select(
       weakTopics,
     )..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
@@ -1302,9 +1314,52 @@ class AppDatabase extends _$AppDatabase {
       drillQuestions,
     )..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
 
+    final allDrills = await (select(
+      drillRecords,
+    )..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+
+    final allReviews = await (select(
+      spacedReviewItems,
+    )..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+
+    final allSettings = await select(appSettings).get();
+
     final backupMap = {
-      'version': 1,
+      'version': 2,
       'exported_at': DateTime.now().toIso8601String(),
+      'preferences': extraPreferences,
+      'drill_records': allDrills
+          .map(
+            (d) => {
+              'subject': d.subject,
+              'topic': d.topic,
+              'total_questions': d.totalQuestions,
+              'correct_count': d.correctCount,
+              'incorrect_count': d.incorrectCount,
+              'score_percentage': d.scorePercentage,
+              'created_at': d.createdAt.toIso8601String(),
+            },
+          )
+          .toList(),
+      'spaced_review_items': allReviews
+          .map(
+            (r) => {
+              'subject': r.subject,
+              'topic': r.topic,
+              'title': r.title,
+              'key_rule': r.keyRule,
+              'repetition_level': r.repetitionLevel,
+              'interval_days': r.intervalDays,
+              'next_review_date': r.nextReviewDate.toIso8601String(),
+              'last_reviewed_at': r.lastReviewedAt?.toIso8601String(),
+              'is_mastered': r.isMastered,
+              'created_at': r.createdAt.toIso8601String(),
+            },
+          )
+          .toList(),
+      'app_settings': allSettings
+          .map((e) => {'key': e.key, 'value': e.value})
+          .toList(),
       'weak_topics': allTopics
           .map(
             (t) => {
@@ -1618,6 +1673,86 @@ class AppDatabase extends _$AppDatabase {
       }
     }
 
+    // The three that version 1 never carried. Each is matched on what makes
+    // it the same row rather than on its id, because an id from another
+    // install means nothing here.
+    var importedDrills = 0;
+    if (data['drill_records'] is List) {
+      final existing = await select(drillRecords).get();
+      final seen = existing
+          .map((d) => '${d.subject}|${d.topic}|${d.createdAt.toIso8601String()}')
+          .toSet();
+      for (final raw in data['drill_records'] as List) {
+        if (raw is! Map) continue;
+        final created = DateTime.tryParse(raw['created_at']?.toString() ?? '');
+        if (created == null) continue;
+        final subject = (raw['subject'] ?? 'General').toString();
+        final topic = (raw['topic'] ?? '').toString();
+        if (!seen.add('$subject|$topic|${created.toIso8601String()}')) continue;
+        await into(drillRecords).insert(
+          DrillRecordsCompanion.insert(
+            subject: subject,
+            topic: topic,
+            totalQuestions: (raw['total_questions'] as num?)?.toInt() ?? 0,
+            correctCount: (raw['correct_count'] as num?)?.toInt() ?? 0,
+            incorrectCount: (raw['incorrect_count'] as num?)?.toInt() ?? 0,
+            scorePercentage:
+                (raw['score_percentage'] as num?)?.toDouble() ?? 0,
+            createdAt: Value(created),
+          ),
+        );
+        importedDrills++;
+      }
+    }
+
+    var importedReviews = 0;
+    if (data['spaced_review_items'] is List) {
+      final existing = await select(spacedReviewItems).get();
+      final seen = existing.map((r) => '${r.subject}|${r.title}').toSet();
+      for (final raw in data['spaced_review_items'] as List) {
+        if (raw is! Map) continue;
+        final title = (raw['title'] ?? '').toString().trim();
+        if (title.isEmpty) continue;
+        final subject = (raw['subject'] ?? 'General').toString();
+        if (!seen.add('$subject|$title')) continue;
+        final next =
+            DateTime.tryParse(raw['next_review_date']?.toString() ?? '') ??
+            DateTime.now();
+        await into(spacedReviewItems).insert(
+          SpacedReviewItemsCompanion.insert(
+            subject: subject,
+            topic: (raw['topic'] ?? '').toString(),
+            title: title,
+            keyRule: (raw['key_rule'] ?? '').toString(),
+            nextReviewDate: next,
+            repetitionLevel: Value(
+              (raw['repetition_level'] as num?)?.toInt() ?? 1,
+            ),
+            intervalDays: Value((raw['interval_days'] as num?)?.toInt() ?? 1),
+            lastReviewedAt: Value(
+              DateTime.tryParse(raw['last_reviewed_at']?.toString() ?? ''),
+            ),
+            isMastered: Value(raw['is_mastered'] == true),
+          ),
+        );
+        importedReviews++;
+      }
+    }
+
+    var importedSettings = 0;
+    if (data['app_settings'] is List) {
+      for (final raw in data['app_settings'] as List) {
+        if (raw is! Map) continue;
+        final key = raw['key']?.toString();
+        final value = raw['value']?.toString();
+        if (key == null || key.isEmpty || value == null) continue;
+        await into(appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion.insert(key: key, value: value),
+        );
+        importedSettings++;
+      }
+    }
+
     final result = <String, int>{
       'weak_topics': importedTopics,
       'exam_schedules': importedExams,
@@ -1625,6 +1760,15 @@ class AppDatabase extends _$AppDatabase {
     };
     if (data.containsKey('drill_questions')) {
       result['mistakes'] = importedMistakes;
+    }
+    if (data.containsKey('drill_records')) {
+      result['drill_records'] = importedDrills;
+    }
+    if (data.containsKey('spaced_review_items')) {
+      result['spaced_reviews'] = importedReviews;
+    }
+    if (data.containsKey('app_settings')) {
+      result['settings'] = importedSettings;
     }
     return result;
   }
