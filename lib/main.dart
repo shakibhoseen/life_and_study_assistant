@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/services/ai/gemini_ai_service.dart';
+import 'core/database/database_provider.dart';
 import 'core/services/ai/gemini_result_cache.dart';
+import 'core/services/export/auto_backup_service.dart';
 import 'core/services/background/wifi_monitor_service.dart';
 import 'core/services/background/workmanager_service.dart';
 import 'core/services/notification/notification_service.dart';
@@ -61,11 +63,32 @@ void main() async {
   runApp(const ProviderScope(child: LifeAndStudyApp()));
 }
 
-class LifeAndStudyApp extends ConsumerWidget {
+class LifeAndStudyApp extends ConsumerStatefulWidget {
   const LifeAndStudyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LifeAndStudyApp> createState() => _LifeAndStudyAppState();
+}
+
+class _LifeAndStudyAppState extends ConsumerState<LifeAndStudyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // A backup nobody has to remember. At most one a day, written beside the
+    // manual ones, and never waited on — the app opens while it happens.
+    //
+    // Here rather than in main() so it borrows the one database connection
+    // the app already has, instead of opening a second one against the same
+    // file at the moment everything else is starting.
+    // Not tied to the first frame. Measured on a real phone: launched with
+    // the screen off, or held behind a permission dialog, no frame is ever
+    // produced and a post-frame callback simply never fires — so the backup
+    // would quietly not happen on exactly the launches nobody is watching.
+    unawaited(AutoBackupService.runIfDue(db: ref.read(appDatabaseProvider)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final darkTheme = ref.watch(currentDarkThemeProvider);
 

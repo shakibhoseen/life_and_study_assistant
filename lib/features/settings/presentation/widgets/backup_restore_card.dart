@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/export/app_export_service.dart';
+import '../../../../core/services/export/auto_backup_service.dart';
 import '../../../../core/services/export/preference_backup.dart';
 
 class BackupRestoreCard extends ConsumerWidget {
@@ -36,6 +37,10 @@ class BackupRestoreCard extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(
               children: [
+                // Where a silent failure becomes visible: the automatic backup
+                // never interrupts anything, so this line is the only place
+                // anybody would notice it had stopped happening.
+                const _AutoBackupStatus(),
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(8),
@@ -711,5 +716,69 @@ class BackupRestoreCard extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+/// When the app last wrote a backup on its own, and where those go.
+class _AutoBackupStatus extends StatelessWidget {
+  const _AutoBackupStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return FutureBuilder<DateTime?>(
+      future: AutoBackupService.lastRunAt(),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const SizedBox.shrink();
+        }
+        final at = snap.data;
+        final text = at == null
+            ? 'স্বয়ংক্রিয় ব্যাকআপ এখনো হয়নি — অ্যাপ খুললেই প্রথমটি হবে'
+            : 'সর্বশেষ স্বয়ংক্রিয় ব্যাকআপ: '
+                  '${at.day}/${at.month}/${at.year} '
+                  '${at.hour.toString().padLeft(2, '0')}:'
+                  '${at.minute.toString().padLeft(2, '0')}';
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                at == null ? Icons.schedule : Icons.verified_outlined,
+                size: 15,
+                color: at == null ? Colors.orange : Colors.teal,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      text,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      'Download/${AppExportService.defaultSubfolder} ফোল্ডারে, '
+                      'দিনে একবার, শেষ ${AutoBackupService.keepCount}টি রাখা হয়',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: isDark ? Colors.white38 : Colors.black45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
