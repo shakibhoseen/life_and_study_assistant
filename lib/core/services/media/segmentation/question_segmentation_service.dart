@@ -5,6 +5,8 @@ import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 
 import '../layout/layout_detection_models.dart';
+import 'context_aware_marker_recovery_service.dart';
+import 'marker_recovery_models.dart';
 import 'segmentation_models.dart';
 
 /// Service responsible for Column-wise Question & Option Block Segmentation (Phase 2).
@@ -124,11 +126,13 @@ class QuestionSegmentationService {
       final lineText = line.text.trim();
       if (lineText.isEmpty) continue;
 
-      // Check if this line is a question header
+      // Check if this line is a question header with context
       final questionHeader = _detectQuestionHeader(
-        lineText: lineText,
-        box: line.boundingBox,
+        line: line,
         columnWidth: columnBox.width,
+        columnId: columnId,
+        previousQuestionNumber: currentBlock?.questionNumber,
+        allPreviousOptionsCompleted: currentBlock == null || currentBlock.optionItems.isNotEmpty,
       );
 
       if (questionHeader != null) {
@@ -155,6 +159,7 @@ class QuestionSegmentationService {
           allBoxes: [line.boundingBox],
           confidences: [line.confidence],
           isOrphan: false,
+          questionMarkerAudit: questionHeader.audit,
         );
       } else {
         // Line belongs to current block or is an orphan line before first question
@@ -168,22 +173,46 @@ class QuestionSegmentationService {
             isOrphan: true,
           );
         } else {
-          // Check if this line contains option markers
-          final parsedOptions = _extractOptionsFromLine(lineText);
-          if (parsedOptions.isNotEmpty) {
-            currentBlock.optionItems.addAll(parsedOptions);
-            currentBlock.allBoxes.add(line.boundingBox);
-            currentBlock.confidences.add(line.confidence);
-          } else {
-            // Continues prompt or note
-            if (currentBlock.optionItems.isEmpty) {
-              currentBlock.promptLines.add(lineText);
-            } else {
-              // Note/explanation below options
-              currentBlock.explanationLines.add(lineText);
+          // Check if this line contains option markers using context-aware recovery
+          final recoveredOptions = ContextAwareMarkerRecoveryService.instance.extractOptionsWithContext(
+            line: line,
+            columnWidth: columnBox.width,
+            existingOptionsInCurrentQuestion: currentBlock.optionAudits.map((a) => ContextualOptionItem(
+              markerAudit: a,
+              rawBodyText: '',
+              cleanBodyText: '',
+              boundingBox: a.glyphBoundingBox,
+            )).toList(),
+          );
+
+          if (recoveredOptions.isNotEmpty) {
+            for (final ro in recoveredOptions) {
+              currentBlock.optionItems.add(_ExtractedOption(
+                marker: ro.markerAudit.recoveredText,
+                text: ro.cleanBodyText,
+              ));
+              currentBlock.optionAudits.add(ro.markerAudit);
             }
             currentBlock.allBoxes.add(line.boundingBox);
             currentBlock.confidences.add(line.confidence);
+          } else {
+            // Fallback: standard option extraction
+            final parsedOptions = _extractOptionsFromLine(lineText);
+            if (parsedOptions.isNotEmpty) {
+              currentBlock.optionItems.addAll(parsedOptions);
+              currentBlock.allBoxes.add(line.boundingBox);
+              currentBlock.confidences.add(line.confidence);
+            } else {
+              // Continues prompt or note
+              if (currentBlock.optionItems.isEmpty) {
+                currentBlock.promptLines.add(lineText);
+              } else {
+                // Note/explanation below options
+                currentBlock.explanationLines.add(lineText);
+              }
+              currentBlock.allBoxes.add(line.boundingBox);
+              currentBlock.confidences.add(line.confidence);
+            }
           }
         }
       }
@@ -210,17 +239,44 @@ class QuestionSegmentationService {
 
   /// Detects question number from line text and spatial position.
   _QuestionHeader? _detectQuestionHeader({
-    required String lineText,
-    required TextBoundingBox box,
+    required TextLineBox line,
     required int columnWidth,
+    required int columnId,
+    String? previousQuestionNumber,
+    bool allPreviousOptionsCompleted = true,
   }) {
-    // Spatial rule: A question start must begin in the left 40% of the column.
-    // If a number appears far to the right, it is likely part of a sentence or math.
-    if (box.left > columnWidth * 0.40) {
+    // 1. Try Context-Aware Recovery first
+    final recoveryAudit = ContextAwareMarkerRecoveryService.instance.evaluateQuestionHeader(
+      line: line,
+      columnWidth: columnWidth,
+      columnId: columnId,
+      previousQuestionNumberInSameColumn: previousQuestionNumber,
+      hasOpenQuestionBlock: previousQuestionNumber != null,
+      allPreviousOptionsCompleted: allPreviousOptionsCompleted,
+    );
+
+    if (recoveryAudit != null) {
+      final cleanNum = recoveryAudit.recoveredText.replaceAll(RegExp(r'[\.\:\-\s]'), '');
+      final rawMatchIndex = line.text.indexOf(recoveryAudit.originalText);
+      final rest = (rawMatchIndex != -1)
+          ? line.text.substring(rawMatchIndex + recoveryAudit.originalText.length).trim()
+          : line.text.replaceFirst(recoveryAudit.originalText, '').trim();
+
+      return _QuestionHeader(
+        number: cleanNum,
+        remainingText: rest,
+        audit: recoveryAudit,
+      );
+    }
+
+    // Spatial rule fallback
+    if (line.boundingBox.left > columnWidth * 0.40) {
       return null;
     }
 
-    // 1. Check Bengali numbers (১., ১।, ১), (১))
+    final lineText = line.text.trim();
+
+    // 2. Check Bengali numbers (১., ১।, ১), (১))
     final benMatch = _bengaliQuestionPattern.firstMatch(lineText);
     if (benMatch != null) {
       final numStr = benMatch.group(1) ?? '';
@@ -228,7 +284,7 @@ class QuestionSegmentationService {
       return _QuestionHeader(number: numStr, remainingText: rest);
     }
 
-    // 2. Check English / Q numbers (1., 1), Q1, Q.1)
+    // 3. Check English / Q numbers (1., 1), Q1, Q.1)
     final engMatch = _englishQuestionPattern.firstMatch(lineText);
     if (engMatch != null) {
       final numStr = engMatch.group(1) ?? engMatch.group(2) ?? '';
@@ -418,6 +474,8 @@ class QuestionSegmentationService {
       diagramCropPath: diagramCropRef,
       hasDiagram: hasDiagramOrMath,
       isOrphan: draft.isOrphan,
+      questionMarkerAudit: draft.questionMarkerAudit,
+      optionAudits: draft.optionAudits,
     );
   }
 
@@ -514,6 +572,8 @@ class _DraftQuestionBlock {
   final List<TextBoundingBox> allBoxes;
   final List<double> confidences;
   final bool isOrphan;
+  final RecoveredMarkerAudit? questionMarkerAudit;
+  final List<RecoveredMarkerAudit> optionAudits = [];
 
   _DraftQuestionBlock({
     required this.questionNumber,
@@ -521,13 +581,19 @@ class _DraftQuestionBlock {
     required this.allBoxes,
     required this.confidences,
     required this.isOrphan,
+    this.questionMarkerAudit,
   });
 }
 
 class _QuestionHeader {
   final String number;
   final String remainingText;
-  _QuestionHeader({required this.number, required this.remainingText});
+  final RecoveredMarkerAudit? audit;
+  _QuestionHeader({
+    required this.number,
+    required this.remainingText,
+    this.audit,
+  });
 }
 
 class _ExtractedOption {

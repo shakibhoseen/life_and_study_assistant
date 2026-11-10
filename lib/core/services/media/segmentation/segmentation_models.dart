@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../../ai/models/quiz_question.dart';
 import '../layout/layout_detection_models.dart';
+import 'marker_recovery_models.dart';
 
 /// A bounding box for layout or text segment in pixel coordinates.
 class TextBoundingBox {
@@ -108,6 +109,8 @@ class SegmentedQuestionBlock {
   final String? diagramCropPath;
   final bool hasDiagram;
   final bool isOrphan;
+  final RecoveredMarkerAudit? questionMarkerAudit;
+  final List<RecoveredMarkerAudit> optionAudits;
 
   const SegmentedQuestionBlock({
     required this.questionNumber,
@@ -124,6 +127,8 @@ class SegmentedQuestionBlock {
     this.diagramCropPath,
     this.hasDiagram = false,
     this.isOrphan = false,
+    this.questionMarkerAudit,
+    this.optionAudits = const [],
   });
 
   /// Seamlessly bridges into the standard application [QuizQuestion].
@@ -158,6 +163,8 @@ class SegmentedQuestionBlock {
         'diagramCropPath': diagramCropPath,
         'hasDiagram': hasDiagram,
         'isOrphan': isOrphan,
+        'questionMarkerAudit': questionMarkerAudit?.toJson(),
+        'optionAudits': optionAudits.map((a) => a.toJson()).toList(),
       };
 
   SegmentedQuestionBlock copyWith({
