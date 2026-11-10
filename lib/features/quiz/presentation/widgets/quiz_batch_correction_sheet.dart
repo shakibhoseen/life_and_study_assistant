@@ -256,6 +256,10 @@ class QuizBatchCorrectionSheet {
                                                     questions: questions,
                                                     externalAnalysis:
                                                         transcribed.trim(),
+                                                    questionIds:
+                                                        mistakeQuestions
+                                                            ?.map((q) => q.id)
+                                                            .toList(),
                                                   );
                                           if (items.isNotEmpty) {
                                             setSheetState(() {
@@ -499,12 +503,26 @@ class QuizBatchCorrectionSheet {
                                     .parseCorrections(
                                       questions: questions,
                                       externalAnalysis: text,
+                                      // The notebook copies questions out with
+                                      // their ids printed, so a reply keyed on
+                                      // those reads back without a model call.
+                                      questionIds: mistakeQuestions
+                                          ?.map((q) => q.id)
+                                          .toList(),
                                       cancellation: cancellation,
                                     );
                                 if (items.isEmpty) {
                                   setSheetState(() {
                                     isAnalyzing = false;
-                                    statusMessage = 'কোনো সুনির্দিষ্ট প্রশ্ন সংশোধন চিহ্নিত করা যায়নি। অনুগ্রহ করে বিশ্লেষণ টেক্সটটি যাচাই করুন।';
+                                    statusMessage =
+                                        'এই লেখায় এমন কিছু পাওয়া যায়নি যা '
+                                        'কোনো প্রশ্নে বসানো যায়।\n\n'
+                                        'সাধারণ কারণ: উত্তরটা শুধু বর্ণনা, '
+                                        'JSON নয়; অথবা প্রশ্ন নম্বর এই '
+                                        'তালিকার সাথে মেলে না।\n\n'
+                                        'কপি বাটনে যে নির্দেশনা যায়, সেটাসহ '
+                                        'প্রশ্নগুলো পেস্ট করলে উত্তরটা এখানে '
+                                        'হুবহু বসবে।';
                                   });
                                 } else {
                                   final service =

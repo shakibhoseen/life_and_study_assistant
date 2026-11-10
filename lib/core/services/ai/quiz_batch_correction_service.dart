@@ -11,6 +11,7 @@ import '../../utils/bengali_math_sanitizer.dart';
 import '../../utils/embedded_json.dart';
 import 'gemini_ai_service.dart';
 import 'gemini_usage_tracker.dart';
+import '../../../features/quiz/domain/external_audit_brief.dart';
 import 'models/quiz_question.dart';
 import 'ai_cancellation.dart';
 
@@ -79,18 +80,28 @@ class QuestionCorrectionItem {
   /// An out-of-range index used to fall back to 0, which quietly rewrote the
   /// first question instead of the one the analysis meant — and an external
   /// report that numbers from ১ makes that an easy mistake to trigger.
+  /// [questionIds] are the ids printed beside the questions when they were
+  /// copied out — `[Q-180]` and so on. The notebook shows those, not
+  /// positions, so a reply keyed on them is the reply one actually gets; an
+  /// id that is not in the list belongs to another batch and is dropped.
   static QuestionCorrectionItem? tryFromJson(
     Map<String, dynamic> json,
-    List<QuizQuestion> questions,
-  ) {
-    final idx = (json['question_index'] as num?)?.toInt();
-    if (idx == null || idx < 0 || idx >= questions.length) return null;
-    final validIdx = idx;
+    List<QuizQuestion> questions, {
+    List<int>? questionIds,
+  }) {
+    final validIdx = _resolveIndex(json, questions.length, questionIds);
+    if (validIdx == null) return null;
     final q = questions[validIdx];
+    final status = QuestionAuditStatus.parse(json['status']?.toString());
 
     final isDel =
         json['is_delete'] == true || json['action'] == 'delete_question';
-    final rawPIdx = (json['proposed_correct_index'] as num?)?.toInt();
+    // Doubt never moves a key. An "ambiguous" or "needs_source" verdict that
+    // also names an option is taking its own uncertainty back; the mark is
+    // kept, the answer is not touched.
+    final rawPIdx = status.blocksAnswerChange
+        ? null
+        : (json['proposed_correct_index'] as num?)?.toInt();
 
     final rawNewOptions = json['new_options'];
     List<String>? newOptions;
@@ -105,8 +116,23 @@ class QuestionCorrectionItem {
     final rawNewText = json['new_question_text']?.toString().trim() ?? '';
     final newQuestionText = rawNewText.isEmpty ? null : rawNewText;
 
+    final rawReason = BengaliMathSanitizer.sanitize(
+      json['reason']?.toString() ?? '',
+    );
+
+    // A flag has to leave something behind or it did not happen. There is no
+    // column for a verdict, so it is written where the question is read: at
+    // the end of its explanation, labelled, so it reads as a warning rather
+    // than as fact.
+    final note = auditNote(status, rawReason);
     final rawNewExplanation = json['new_explanation']?.toString().trim() ?? '';
-    final newExplanation = rawNewExplanation.isEmpty ? null : rawNewExplanation;
+    final newExplanation = rawNewExplanation.isNotEmpty
+        ? rawNewExplanation
+        : (note.isEmpty || q.explanation.contains(note)
+              ? null
+              : (q.explanation.trim().isEmpty
+                    ? note
+                    : '${q.explanation.trim()}\n$note'));
 
     final effectiveOptions = newOptions ?? q.options;
 
@@ -138,11 +164,38 @@ class QuestionCorrectionItem {
       newQuestionText: newQuestionText,
       newOptions: newOptions,
       newExplanation: newExplanation,
-      reason: BengaliMathSanitizer.sanitize(
-        json['reason']?.toString() ?? 'External AI সংশোধন',
-      ),
+      reason: rawReason.isEmpty ? 'External AI সংশোধন' : rawReason,
       isSelected: true,
     );
+  }
+
+  /// Which question this correction is about.
+  ///
+  /// Three ways of saying it, in order of how little guessing each needs: the
+  /// printed id, a 0-based position, or the serial number the copy prints
+  /// ("প্রশ্ন ৪"), which is one-based. Anything that lands outside the batch
+  /// is dropped rather than bent into range — an out-of-range index used to
+  /// fall back to 0, which quietly rewrote the first question.
+  static int? _resolveIndex(
+    Map<String, dynamic> json,
+    int count,
+    List<int>? questionIds,
+  ) {
+    final id = (json['question_id'] as num?)?.toInt();
+    if (id != null && questionIds != null) {
+      final at = questionIds.indexOf(id);
+      return at >= 0 ? at : null;
+    }
+
+    final idx = (json['question_index'] as num?)?.toInt();
+    if (idx != null) return (idx >= 0 && idx < count) ? idx : null;
+
+    final serial = (json['serial'] as num?)?.toInt();
+    if (serial != null) {
+      final at = serial - 1;
+      return (at >= 0 && at < count) ? at : null;
+    }
+    return null;
   }
 }
 
@@ -176,10 +229,15 @@ final _correctionSchema = Schema.array(
             'Corrected explanation when the printed one is wrong, or empty '
             'string to keep it',
       ),
+      'status': Schema.string(
+        description:
+            'verified | incorrect | ambiguous | needs_source | duplicate',
+      ),
       'reason': Schema.string(description: 'One short Bengali sentence'),
     },
     requiredProperties: [
       'question_index',
+      'status',
       'is_delete',
       'new_question_text',
       'new_options',
@@ -251,9 +309,13 @@ class QuizBatchCorrectionService {
   /// The reply is not cut short to save tokens — a half-written correction is
   /// worth nothing, and the reasoning has already been paid for by the time
   /// the writing starts. Stopping is the user's decision instead.
+  /// [questionIds] are the ids printed beside these questions when they were
+  /// copied out, in the same order. Given them, a reply keyed on `question_id`
+  /// is read without a model call; without them, only positions are understood.
   Future<List<QuestionCorrectionItem>> parseCorrections({
     required List<QuizQuestion> questions,
     required String externalAnalysis,
+    List<int>? questionIds,
     AiCancellation? cancellation,
   }) async {
     if (questions.isEmpty || externalAnalysis.trim().isEmpty) return const [];
@@ -274,6 +336,7 @@ class QuizBatchCorrectionService {
               final parsed = QuestionCorrectionItem.tryFromJson(
                 item,
                 questions,
+                questionIds: questionIds,
               );
               if (parsed != null) direct.add(parsed);
             }
@@ -296,6 +359,7 @@ class QuizBatchCorrectionService {
           apiKey: apiKey,
           questions: questions,
           externalAnalysis: externalAnalysis,
+          questionIds: questionIds,
           cancellation: cancellation,
         );
         debugPrint(
@@ -327,7 +391,7 @@ class QuizBatchCorrectionService {
 
     // Offline / Regex fallback, which also costs nothing.
     lastParseWasFree = true;
-    final offline = _parseOffline(questions, externalAnalysis);
+    final offline = _parseOffline(questions, externalAnalysis, questionIds);
     debugPrint(
       'Batch correction: fell back to offline parsing, '
       '${offline.length} corrections',
@@ -338,6 +402,7 @@ class QuizBatchCorrectionService {
   Future<List<QuestionCorrectionItem>> _parseWithGemini({
     required String apiKey,
     required List<QuizQuestion> questions,
+    List<int>? questionIds,
     required String externalAnalysis,
     AiCancellation? cancellation,
   }) async {
@@ -380,7 +445,10 @@ For each correction, identify:
 - new_options: the corrected full option list when the analysis says the OPTIONS are wrong, duplicated or do not contain the answer. Empty array when the options are fine.
     * Only rewrite when the analysis actually supplies or clearly implies the correct wording. Never invent a question or an option to fill a gap — recommend deletion instead.
 - new_explanation: the corrected explanation when the analysis says the EXPLANATION is wrong, even if the answer itself is fine. A wrong explanation teaches the wrong thing, so it is worth fixing on its own. Empty string when the explanation is fine.
-- reason: concise 1-sentence Bengali reason explaining why this question was corrected or discarded.
+- status: one of "incorrect", "ambiguous", "needs_source", "duplicate".
+    * "incorrect" only when the analysis states a definite error. "ambiguous" when it says more than one option works or the wording does not pin an answer down. "needs_source" when it says the point cannot be settled without checking a source. "duplicate" when it says the same question appears twice.
+    * An analysis that merely raises a doubt is "ambiguous" or "needs_source", never "incorrect". Those three leave the answer where it is and only mark the question, so proposed_correct_index must be null for them. Include them: a flagged question is the point of the exercise, and dropping them is what used to make a page of findings come back as "nothing to fix".
+- reason: concise 1-sentence Bengali reason explaining why this question was corrected or flagged.
 
 Return JSON array ONLY:
 [
@@ -453,7 +521,11 @@ If the text says all answers are correct or no fixes are suggested, return: []
       final items = <QuestionCorrectionItem>[];
       for (final item in decoded) {
         if (item is Map<String, dynamic>) {
-          final parsed = QuestionCorrectionItem.tryFromJson(item, questions);
+          final parsed = QuestionCorrectionItem.tryFromJson(
+            item,
+            questions,
+            questionIds: questionIds,
+          );
           // A correction that points at no real question is dropped, not
           // redirected onto another one.
           if (parsed != null) items.add(parsed);
@@ -465,11 +537,31 @@ If the text says all answers are correct or no fixes are suggested, return: []
   }
 
   /// Rule-based regex parser fallback for offline use and spoken natural language.
+  ///
+  /// This is the path a spoken fix takes, so it has to understand the question
+  /// the way the user sees it on screen: by its serial ("প্রশ্ন ৪"), by the id
+  /// printed beside it ("[Q-180]"), or — when there is only one question in
+  /// front of them — by not naming it at all.
   List<QuestionCorrectionItem> _parseOffline(
     List<QuizQuestion> questions,
-    String text,
-  ) {
+    String text, [
+    List<int>? questionIds,
+  ]) {
     final items = <QuestionCorrectionItem>[];
+
+    /// A spoken or written number, read as the serial first because that is
+    /// what the list shows biggest, and as a printed id only when it cannot
+    /// be a serial. Saying "একশো আশি" about a list of three can only mean the
+    /// id; saying "চার" about that list means the fourth question.
+    int? indexForNumber(int number) {
+      final serial = number - 1;
+      if (serial >= 0 && serial < questions.length) return serial;
+      if (questionIds != null) {
+        final at = questionIds.indexOf(number);
+        if (at >= 0) return at;
+      }
+      return null;
+    }
 
     // Maps Bengali/English option letters to 0..3
     int? optionCharToIndex(String char) {
@@ -518,8 +610,8 @@ If the text says all answers are correct or no fixes are suggested, return: []
         final qNumStr = delMatch.group(1)!;
         final qNum =
             int.tryParse(BengaliMathSanitizer.toEnglishDigits(qNumStr)) ?? 0;
-        final qIdx = qNum - 1;
-        if (qIdx >= 0 && qIdx < questions.length) {
+        final qIdx = indexForNumber(qNum) ?? -1;
+        if (qIdx >= 0) {
           if (!items.any((it) => it.questionIndex == qIdx)) {
             final oldOpt = (questions[qIdx].correctIndex >= 0 &&
                     questions[qIdx].correctIndex < questions[qIdx].options.length)
@@ -560,7 +652,7 @@ If the text says all answers are correct or no fixes are suggested, return: []
         final optChar = match.group(2)!;
         final qNum =
             int.tryParse(BengaliMathSanitizer.toEnglishDigits(qNumStr)) ?? 0;
-        final qIdx = qNum - 1;
+        final qIdx = indexForNumber(qNum) ?? -1;
         final optIdx = optionCharToIndex(optChar);
 
         if (qIdx >= 0 &&
@@ -589,6 +681,43 @@ If the text says all answers are correct or no fixes are suggested, return: []
             );
           }
         }
+      }
+    }
+
+    // One question on screen, nothing matched: a fix spoken about it does not
+    // name it. "উত্তর খ হবে" is the whole sentence, and insisting on a number
+    // there would be asking the user to read out a label they can already see.
+    if (items.isEmpty && questions.length == 1) {
+      final bare = RegExp(
+        r'^(?:সঠিক\s*)?(?:উত্তর\s*)?(?:হবে\s*)?([কখগঘabcd])'
+        r'(?:\s*(?:হবে|সঠিক|option|অপশন))?$',
+        caseSensitive: false,
+      );
+      for (final line in clauses) {
+        final m = bare.firstMatch(line.trim());
+        if (m == null) continue;
+        final optIdx = optionCharToIndex(m.group(1)!);
+        final q = questions.first;
+        if (optIdx == null ||
+            optIdx >= q.options.length ||
+            optIdx == q.correctIndex) {
+          continue;
+        }
+        final oldOpt = (q.correctIndex >= 0 && q.correctIndex < q.options.length)
+            ? q.options[q.correctIndex]
+            : '';
+        items.add(
+          QuestionCorrectionItem(
+            questionIndex: 0,
+            questionSnippet: q.questionText,
+            proposedCorrectIndex: optIdx,
+            proposedOptionText: q.options[optIdx],
+            oldOptionText: oldOpt,
+            isDelete: false,
+            reason: 'ভয়েস নির্দেশনায় সঠিক উত্তর সংশোধন',
+          ),
+        );
+        break;
       }
     }
 

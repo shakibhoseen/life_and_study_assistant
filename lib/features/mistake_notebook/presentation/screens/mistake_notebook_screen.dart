@@ -14,6 +14,7 @@ import '../widgets/mastery_overview_card.dart';
 import '../widgets/mistake_question_card.dart';
 import '../widgets/nightly_review_modal.dart';
 import '../../../../core/utils/option_label.dart';
+import '../../../quiz/domain/external_audit_brief.dart';
 
 class MistakeNotebookScreen extends ConsumerStatefulWidget {
   final String? initialSubjectFolder;
@@ -115,17 +116,17 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
       }
       buffer.writeln();
     }
-    buffer.writeln('==============================');
-    buffer.writeln(
-      'নির্দেশনা: অনুগ্রহ করে উপরের প্রতিটি ভুল প্রশ্নের উত্তর ও ব্যাখ্যা নিরপেক্ষভাবে যাচাই করুন। কোনো প্রশ্নে অসঙ্গতি থাকলে সঠিক উত্তরটি জানিয়ে দিন।',
-    );
+    // The brief goes with the questions, because the reply has to come
+    // back in a shape this app can read. Asking only "please check these"
+    // got back a careful page of prose the fix sheet could do nothing with.
+    buffer.writeln(externalAuditBrief);
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: const Color(0xFF4F46E5),
         content: Text(
-          '${questions.length}টি ভুল প্রশ্ন কপি হয়েছে — ChatGPT বা Claude-এ পেস্ট করতে পারেন!',
+          '${questions.length}টি প্রশ্ন ও নির্দেশনা কপি হয়েছে — ChatGPT বা Claude-এ পেস্ট করে উত্তরটা হুবহু ফেরত আনুন।',
         ),
       ),
     );
