@@ -6,6 +6,11 @@ import 'chat_context_resolver.dart';
 
 /// Shape of an adaptive study plan.
 ///
+/// There is no motivationalQuote here any more. It was a sentence the model
+/// wrote on every plan, out of the same unchanging inputs, and the app now
+/// takes that line from its own pool — so asking for it was paying for output
+/// that went straight in the bin, and getting a tired sentence for the money.
+///
 /// Field names must match what AdaptiveStudyPlan.fromJson and StudyTask read.
 /// This lived in the prompt as example JSON; the API enforces it from here,
 /// which also stops the model inventing fields or dropping required ones.
@@ -14,9 +19,6 @@ final studyPlanSchema = Schema.object(
     'date': Schema.string(description: 'Today, YYYY-MM-DD'),
     'energyLevel': Schema.string(),
     'fatigueScore': Schema.integer(),
-    'motivationalQuote': Schema.string(
-      description: 'Short, empathetic, non-cliche; English or Bengali',
-    ),
     'summary': Schema.string(
       description: "1-2 sentences on tonight's realistic goal",
     ),
@@ -58,7 +60,6 @@ final studyPlanSchema = Schema.object(
     'date',
     'energyLevel',
     'fatigueScore',
-    'motivationalQuote',
     'summary',
     'recommendedStudyMinutes',
     'recommendedFamilyMinutes',
@@ -142,7 +143,7 @@ The user attends multiple concurrent LiveMCQ tracks (e.g. Daily Vocabulary Boost
 
 Fill every field of the required schema. Echo back the date, energy level and fatigue score you were given.
 
-The motivationalQuote is read once a day, every day, by the same person. Write it about THIS evening — the energy, the fatigue score, the nearest exam, the particular weak topic you are sending them to — and not as a general saying about effort or small steps. No proverbs, no mountains, no journeys. One or two sentences, Bengali, the way a friend who knows the week would say it.
+Do not write any encouragement or motivational line. The app has its own and will not use yours. Spend the words on the tasks instead: what to study, where, and for how long.
 ''';
   }
 

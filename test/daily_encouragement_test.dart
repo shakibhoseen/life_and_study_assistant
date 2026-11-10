@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:life_and_study_assistant/core/services/ai/gemini_prompts.dart';
+import 'package:life_and_study_assistant/core/services/ai/models/adaptive_study_plan.dart';
 import 'package:life_and_study_assistant/features/study_planner/domain/daily_encouragement.dart';
 
 /// There were four encouragement lines in the whole app, one per energy level,
@@ -79,6 +83,45 @@ void main() {
     test('anything unrecognised lands on the middle pool', () {
       expect(moodFrom(energyLevel: '', isOffDay: false), DayMood.medium);
       expect(moodFrom(energyLevel: 'মাঝারি', isOffDay: false), DayMood.medium);
+    });
+  });
+
+  group('the model is not asked for one', () {
+    test('the plan schema has no field for it', () {
+      final schema = jsonDecode(jsonEncode(studyPlanSchema.toJson())) as Map;
+      final properties = (schema['properties'] as Map).keys.cast<String>();
+
+      // Output that is never read is output paid for twice: once in tokens,
+      // once in being ignored.
+      expect(properties, isNot(contains('motivationalQuote')));
+    });
+
+    test('the prompt tells the model to spend the words elsewhere', () {
+      final prompt = GeminiPrompts.buildStudyPlanPrompt(
+        energyLevel: 'Low',
+        fatigueScore: 8,
+        weakTopics: const [],
+        upcomingExams: const [],
+        today: DateTime(2026, 11, 10),
+      );
+
+      expect(prompt, contains('Do not write any encouragement'));
+    });
+
+    test('a quote in the json is ignored, not shown', () {
+      final plan = AdaptiveStudyPlan.fromJson({
+        'date': '2026-11-10',
+        'energyLevel': 'Low',
+        'motivationalQuote': 'Small consistent steps lead to great things.',
+        'tasks': const [],
+      });
+
+      // Plans cached before the change still carry one.
+      expect(plan.motivationalQuote, isNot(contains('Small consistent')));
+      expect(
+        plan.motivationalQuote,
+        encouragementFor(date: DateTime(2026, 11, 10), energyLevel: 'Low'),
+      );
     });
   });
 

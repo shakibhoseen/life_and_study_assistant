@@ -66,7 +66,12 @@ void main() {
       final parsed = AdaptiveStudyPlan.fromJsonString(jsonStr);
 
       expect(parsed, isNotNull);
-      expect(parsed!.energyLevel, equals('Low'));
+      // The encouragement is deliberately not round-tripped: it comes from the
+      // app's own pool on every read, so a stale one cannot come back with a
+      // cached plan. Everything the plan actually plans does round-trip.
+      expect(parsed!.motivationalQuote, isNot('Take it easy tonight.'));
+      expect(parsed.motivationalQuote, isNotEmpty);
+      expect(parsed.energyLevel, equals('Low'));
       expect(parsed.fatigueScore, equals(8));
       expect(parsed.recommendedStudyMinutes, equals(10));
       expect(parsed.recommendedFamilyMinutes, equals(90));
@@ -107,7 +112,6 @@ void main() {
           'date',
           'energyLevel',
           'fatigueScore',
-          'motivationalQuote',
           'summary',
           'recommendedStudyMinutes',
           'recommendedFamilyMinutes',

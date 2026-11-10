@@ -59,18 +59,18 @@ class AdaptiveStudyPlan {
           DateTime.now().toIso8601String().substring(0, 10),
       energyLevel: json['energyLevel'] as String? ?? 'Medium',
       fatigueScore: (json['fatigueScore'] as num?)?.toInt() ?? 5,
-      // The fallback used to be one English sentence about small consistent
-      // steps, which is what anybody saw whenever the model left the field
-      // out — the same words, every time, for ever.
-      motivationalQuote:
-          (json['motivationalQuote'] as String?)?.trim().isNotEmpty == true
-          ? json['motivationalQuote'] as String
-          : encouragementFor(
-              date:
-                  DateTime.tryParse(json['date'] as String? ?? '') ??
-                  DateTime.now(),
-              energyLevel: json['energyLevel'] as String? ?? 'medium',
-            ),
+      // Always the app's own line, never the model's.
+      //
+      // The model used to write one on every plan, from inputs that barely
+      // change — so it came out much the same every evening, and it was output
+      // paid for twice over: once in tokens, once in being read and ignored.
+      // A plan cached from before this change may still carry one; it is not
+      // read, so the line turns over for those plans too.
+      motivationalQuote: encouragementFor(
+        date:
+            DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
+        energyLevel: json['energyLevel'] as String? ?? 'medium',
+      ),
       summary: json['summary'] as String? ?? 'Today’s customized study plan.',
       recommendedStudyMinutes:
           (json['recommendedStudyMinutes'] as num?)?.toInt() ?? 20,
