@@ -10,6 +10,7 @@ import '../../../../core/services/ai/gemini_ai_service.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/quiz_batch_correction_service.dart';
 import '../../domain/external_audit_brief.dart';
+import '../../domain/spoken_edit.dart';
 import '../../../../core/services/voice/voice_recording_service.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
 import '../providers/drill_history_provider.dart';
@@ -412,6 +413,20 @@ class QuizBatchCorrectionSheet {
                           ),
                         ),
                         children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              voicePhrasingHelp,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black87,
+                              ),
+                            ),
+                          ),
                           for (final (phrase, effect) in voiceFixPhrasebook)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 6),
@@ -453,6 +468,37 @@ class QuizBatchCorrectionSheet {
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Tap a tag, then say or type only the words. Free speech
+                    // is read too, but a tag removes the guessing: it is the
+                    // difference between the app hoping it understood and
+                    // knowing it did.
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      children: [
+                        for (final (label, prefix) in spokenEditChips)
+                          ActionChip(
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            labelStyle: const TextStyle(fontSize: 11),
+                            label: Text(label),
+                            onPressed: () {
+                              final existing = textController.text.trimRight();
+                              final lead = existing.isEmpty ? '' : '$existing\n';
+                              textController.text = '$lead$prefix';
+                              textController.selection =
+                                  TextSelection.fromPosition(
+                                    TextPosition(
+                                      offset: textController.text.length,
+                                    ),
+                                  );
+                            },
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 6),
 

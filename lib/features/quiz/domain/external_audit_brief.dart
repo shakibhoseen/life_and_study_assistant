@@ -163,6 +163,13 @@ const List<(String, String)> voiceFixPhrasebook = [
   ('প্রশ্নটা বাদ দাও', 'প্রশ্নটি মুছে ফেলার প্রস্তাব হয়'),
 ];
 
+/// Said once at the top of the help, because the list under it looks like a
+/// set of commands and is not one.
+const String voicePhrasingHelp =
+    'হুবহু এভাবে বলতে হবে না — কথাটা কোন বিষয়ে (উত্তর, অপশন, প্রশ্ন, ব্যাখ্যা) '
+    'বুঝতে পারলেই হলো। উপরের ট্যাগে চাপ দিলে শুরুটা বসে যায়, তারপর শুধু '
+    'কথাটুকু বলুন। যা বোঝা গেছে তা সেভের আগে তালিকায় দেখানো হয়।';
+
 /// How to say which question, when more than one is on screen.
 const String voiceTargetHelp =
     'একটামাত্র প্রশ্ন সামনে থাকলে নম্বর বলার দরকার নেই। তালিকা থাকলে শুরুতে '

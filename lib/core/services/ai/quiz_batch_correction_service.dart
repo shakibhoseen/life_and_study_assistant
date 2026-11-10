@@ -12,6 +12,7 @@ import '../../utils/embedded_json.dart';
 import 'gemini_ai_service.dart';
 import 'gemini_usage_tracker.dart';
 import '../../../features/quiz/domain/external_audit_brief.dart';
+import '../../../features/quiz/domain/spoken_edit.dart';
 import 'models/quiz_question.dart';
 import 'ai_cancellation.dart';
 
@@ -604,75 +605,48 @@ If the text says all answers are correct or no fixes are suggested, return: []
       final (idx, rest) = target;
       if (rest.isEmpty) continue;
 
-      // "প্রশ্নটা হবে: …" — the printed question itself is wrong and the
-      // corrected wording is being dictated. Never guessed: only what is
-      // actually said after the colon is written.
-      final qText = RegExp(
-        r'^(?:প্রশ্ন|প্রশ্নটা|প্রশ্নটি|question)\s*(?:হবে|হলো|হইবে)\s*[:\-–—]?\s*(.{4,})$',
-        caseSensitive: false,
-      ).firstMatch(rest);
-      if (qText != null) {
-        drafts.putIfAbsent(idx, () => {'question_index': idx})['new_question_text'] =
-            qText.group(1)!.trim();
-        continue;
-      }
+      final edit = readSpokenEdit(rest);
+      Map<String, dynamic> draft() =>
+          drafts.putIfAbsent(idx, () => {'question_index': idx});
 
-      // "অপশন খ হবে: …" — one option is rewritten and the rest stand.
-      final optText = RegExp(
-        r'^(?:অপশন|option)\s*([কখগঘabcd])\s*(?:হবে|হলো)\s*[:\-–—]?\s*(.{1,})$',
-        caseSensitive: false,
-      ).firstMatch(rest);
-      if (optText != null) {
-        final at = optionCharToIndex(optText.group(1)!);
-        if (at != null && at < questions[idx].options.length) {
-          final draft = drafts.putIfAbsent(idx, () => {'question_index': idx});
-          final current = (draft['new_options'] as List<String>?) ??
-              List<String>.from(questions[idx].options);
-          current[at] = optText.group(2)!.trim();
-          draft['new_options'] = current;
-          continue;
-        }
-      }
+      switch (edit.kind) {
+        case SpokenEditKind.delete:
+          draft()['is_delete'] = true;
 
-      // "ব্যাখ্যা হবে: …" — the answer stands, the reason under it does not.
-      final expText = RegExp(
-        r'^(?:ব্যাখ্যা|explanation)\s*(?:হবে|হলো)\s*[:\-–—]?\s*(.{4,})$',
-        caseSensitive: false,
-      ).firstMatch(rest);
-      if (expText != null) {
-        drafts.putIfAbsent(idx, () => {'question_index': idx})['new_explanation'] =
-            expText.group(1)!.trim();
-        continue;
-      }
+        case SpokenEditKind.option:
+          final at = edit.optionIndex!;
+          if (at < questions[idx].options.length) {
+            final d = draft();
+            final current =
+                (d['new_options'] as List<String>?) ??
+                List<String>.from(questions[idx].options);
+            current[at] = edit.payload;
+            d['new_options'] = current;
+          }
 
-      // "প্রশ্নটা বাদ দাও" — with one question on screen this carries no
-      // number, and the numbered delete pattern further down needs one.
-      if (RegExp(
-        r'(বাদ\s*দা|বাতিল|মুছ|delete|remove)',
-        caseSensitive: false,
-      ).hasMatch(rest)) {
-        drafts.putIfAbsent(idx, () => {'question_index': idx})['is_delete'] =
-            true;
-        continue;
-      }
+        case SpokenEditKind.questionText:
+          draft()['new_question_text'] = edit.payload;
 
-      // "উত্তর গ হবে" on a line of its own, so that a dictated option and the
-      // answer that goes with it end up in the same edit. Without this the
-      // second line would be dropped as a repeat of the first.
-      final ansText = RegExp(
-        r'^(?:সঠিক\s*)?(?:উত্তর\s*)?([কখগঘabcd])\s*(?:হবে|সঠিক|হলো)\s*\.?$',
-        caseSensitive: false,
-      ).firstMatch(rest);
-      if (ansText != null) {
-        final at = optionCharToIndex(ansText.group(1)!);
-        // Saying the answer it already has is not a correction.
-        if (at != null && at != questions[idx].correctIndex) {
-          drafts.putIfAbsent(
-            idx,
-            () => {'question_index': idx},
-          )['proposed_correct_index'] = at;
-        }
+        case SpokenEditKind.explanation:
+          draft()['new_explanation'] = edit.payload;
+
+        case SpokenEditKind.answer:
+          // Saying the answer it already has is not a correction.
+          if (edit.optionIndex != questions[idx].correctIndex) {
+            draft()['proposed_correct_index'] = edit.optionIndex;
+          }
+
+        case SpokenEditKind.doubt:
+          final d = draft();
+          d['status'] = edit.status!.wireName;
+          d['reason'] = line;
+
+        case SpokenEditKind.none:
+          break;
       }
+      // What was said is kept as the reason, so a misread is visible in the
+      // list before anything is saved.
+      if (drafts.containsKey(idx)) drafts[idx]!['reason'] ??= line;
     }
 
     for (final draft in drafts.values) {
