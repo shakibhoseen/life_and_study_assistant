@@ -14,6 +14,7 @@ import 'models/chat_verification_result.dart';
 import 'models/evidence_review.dart';
 import 'models/mcq_verification.dart';
 import 'gemini_usage_tracker.dart';
+import '../../../features/study_planner/domain/daily_encouragement.dart';
 import 'models/adaptive_study_plan.dart';
 import 'models/study_sheet_summary.dart';
 import 'models/study_task.dart';
@@ -337,6 +338,7 @@ class GeminiAiService {
       fatigueScore: fatigueScore,
       weakTopics: weakTopicsMap,
       upcomingExams: examsMap,
+      today: todayStart,
       isOffDay: isOffDay,
     );
 
@@ -1318,7 +1320,8 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
     required List<ExamSchedule> upcomingExams,
     bool isOffDay = false,
   }) {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final now = DateTime.now();
+    final today = now.toIso8601String().substring(0, 10);
     final isLowEnergy = energyLevel.toLowerCase() == 'low' || fatigueScore >= 7;
     final isMediumEnergy =
         energyLevel.toLowerCase() == 'medium' && fatigueScore < 7;
@@ -1334,7 +1337,13 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
         date: today,
         energyLevel: 'Weekend/Off-Day',
         fatigueScore: 0,
-        motivationalQuote: 'আজ আপনার ছুটির দিন! কোনো অফিস তাড়াহুড়া নেই। আজকের দিনটি BCS প্রস্তুতিতে এগিয়ে যাওয়ার সেরা এক্সিলারেটর।',
+        // One fixed sentence per branch meant the same line on every
+        // off-day for as long as the app was installed. Picked by date now.
+        motivationalQuote: encouragementFor(
+          date: now,
+          energyLevel: 'medium',
+          isOffDay: true,
+        ),
         summary: 'আজকের ডেডিকেটেড প্ল্যান: দুর্বল টপিক রিভিশন ও ১টি মডেল টেস্ট প্র্যাকটিস, সাথে সুন্দর ফ্যামিলি টাইম।',
         recommendedStudyMinutes: 75,
         recommendedFamilyMinutes: 180,
@@ -1383,7 +1392,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
         date: today,
         energyLevel: 'Low',
         fatigueScore: fatigueScore,
-        motivationalQuote: 'আজকের সারাদিনের কোডিংয়ের পর আপনার মস্তিষ্কের বিশ্রাম দরকার। মাত্র ১০ মিনিটের মাইক্রো-কমিটমেন্টই যথেষ্ট!',
+        motivationalQuote: encouragementFor(date: now, energyLevel: 'low'),
         summary: 'আজ ভারী পড়া একেবারেই বাদ দিন। মাত্র ১০ মিনিট একটি দুর্বল বিষয়ে চোখ বুলিয়ে বাকি সন্ধ্যা পরিবারকে দিন।',
         recommendedStudyMinutes: 10,
         recommendedFamilyMinutes: 90,
@@ -1411,7 +1420,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
         date: today,
         energyLevel: 'Medium',
         fatigueScore: fatigueScore,
-        motivationalQuote: 'ধারাবাহিকতাই আসল চাবিকাঠি। ৩০ মিনিটের ব্যালান্সড রিভিশন আপনাকে এগিয়ে রাখবে।',
+        motivationalQuote: encouragementFor(date: now, energyLevel: 'medium'),
         summary: 'পরবর্তী LiveMCQ পরীক্ষার একটি দুর্বল টপিক রিভিশন এবং ১৫টি প্র্যাকটিস প্রশ্ন।',
         recommendedStudyMinutes: 25,
         recommendedFamilyMinutes: 60,
@@ -1446,7 +1455,7 @@ ${explanation.isNotEmpty ? explanation : 'এই নিয়মটি ভালো
         date: today,
         energyLevel: 'High',
         fatigueScore: fatigueScore,
-        motivationalQuote: 'আজ এনার্জি লেভেল চমৎকার! কঠিন দুর্বল বিষয়গুলো শেষ করার সেরা সুযোগ।',
+        motivationalQuote: encouragementFor(date: now, energyLevel: 'high'),
         summary: 'আসন্ন LiveMCQ পরীক্ষার জন্য ৪৫ মিনিটের ইন-ডেপথ দুর্বল টপিক প্র্যাকটিস ও স্পিড ড্রিল।',
         recommendedStudyMinutes: 45,
         recommendedFamilyMinutes: 45,

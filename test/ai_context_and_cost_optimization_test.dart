@@ -104,6 +104,7 @@ void main() {
         fatigueScore: 5,
         weakTopics: weakTopicsMap,
         upcomingExams: examsMap,
+        today: DateTime(2026, 11, 10),
         isOffDay: false,
       );
 

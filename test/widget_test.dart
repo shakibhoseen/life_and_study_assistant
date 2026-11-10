@@ -83,6 +83,7 @@ void main() {
         upcomingExams: [
           {'title': 'LiveMCQ Final 14', 'examDate': '2026-10-28'},
         ],
+        today: DateTime(2026, 11, 10),
       );
 
       expect(prompt, contains('User Energy Level: Low'));

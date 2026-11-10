@@ -92,13 +92,32 @@ Key Tenets:
 5. Write maths and science in native Unicode (১৮০°, →, ×, a² + b², √, π), never LaTeX or \$...\$ delimiters.
 ''';
 
+  /// [today] is passed in rather than read from the clock so the prompt is
+  /// reproducible — and it is in the prompt at all for two reasons. The model
+  /// is asked to echo the date back and had no way of knowing it, so it was
+  /// guessing; and the day's plan is cached under a hash of this text, so
+  /// without the date a plan written late one evening could be served again
+  /// after midnight as though it were the next day's.
   static String buildStudyPlanPrompt({
     required String energyLevel,
     required int fatigueScore,
     required List<Map<String, dynamic>> weakTopics,
     required List<Map<String, dynamic>> upcomingExams,
+    required DateTime today,
     bool isOffDay = false,
   }) {
+    const weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    final dateLine =
+        '${today.toIso8601String().substring(0, 10)} '
+        '(${weekdays[today.weekday - 1]})';
     final scheduleContext = isOffDay
         ? 'SPECIAL SCHEDULE: TODAY IS AN OFF-DAY / WEEKEND (NO OFFICE WORK)! The user has Thursday/Friday off. This is their prime BCS acceleration day! Schedule deeper focus study blocks (e.g. 60-120 mins total), model tests on LiveMCQ, and thorough weak topic drills, while reserving ample quality time for family/spouse.'
         : 'SCHEDULE: Regular office day with coding hours. Office fatigue is $fatigueScore/10. Emphasize micro-commitments (5-20 mins) and burnout prevention.';
@@ -106,6 +125,7 @@ Key Tenets:
     return '''
 Generate a personalized, adaptive daily study plan for today based on the user's status:
 
+TODAY IS: $dateLine
 $scheduleContext
 User Energy Level: $energyLevel
 Office Fatigue Score: $fatigueScore / 10
@@ -120,7 +140,9 @@ The user attends multiple concurrent LiveMCQ tracks (e.g. Daily Vocabulary Boost
 - On office/work days: Favor quick micro-drills from daily tracks like Vocabulary Booster or single-topic syllabus revision (5-20 min).
 - On off-days (Thursday/Friday): Schedule deep preparation or review for Full Syllabus Model Tests and upcoming 135-day major exams.
 
-Fill every field of the required schema. Echo back today's date, the energy level and the fatigue score you were given.
+Fill every field of the required schema. Echo back the date, energy level and fatigue score you were given.
+
+The motivationalQuote is read once a day, every day, by the same person. Write it about THIS evening — the energy, the fatigue score, the nearest exam, the particular weak topic you are sending them to — and not as a general saying about effort or small steps. No proverbs, no mountains, no journeys. One or two sentences, Bengali, the way a friend who knows the week would say it.
 ''';
   }
 

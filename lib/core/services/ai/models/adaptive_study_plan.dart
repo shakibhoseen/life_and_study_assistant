@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../../features/study_planner/domain/daily_encouragement.dart';
 import 'study_task.dart';
 
 class AdaptiveStudyPlan {
@@ -58,9 +59,18 @@ class AdaptiveStudyPlan {
           DateTime.now().toIso8601String().substring(0, 10),
       energyLevel: json['energyLevel'] as String? ?? 'Medium',
       fatigueScore: (json['fatigueScore'] as num?)?.toInt() ?? 5,
+      // The fallback used to be one English sentence about small consistent
+      // steps, which is what anybody saw whenever the model left the field
+      // out — the same words, every time, for ever.
       motivationalQuote:
-          json['motivationalQuote'] as String? ??
-          'Small consistent steps lead to great achievements.',
+          (json['motivationalQuote'] as String?)?.trim().isNotEmpty == true
+          ? json['motivationalQuote'] as String
+          : encouragementFor(
+              date:
+                  DateTime.tryParse(json['date'] as String? ?? '') ??
+                  DateTime.now(),
+              energyLevel: json['energyLevel'] as String? ?? 'medium',
+            ),
       summary: json['summary'] as String? ?? 'Today’s customized study plan.',
       recommendedStudyMinutes:
           (json['recommendedStudyMinutes'] as num?)?.toInt() ?? 20,
