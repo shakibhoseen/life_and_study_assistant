@@ -93,6 +93,15 @@ class QuestionCorrectionItem {
     final validIdx = _resolveIndex(json, questions.length, questionIds);
     if (validIdx == null) return null;
     final q = questions[validIdx];
+
+    // The id and the question have to agree. A real reply slipped from the
+    // printed id to the serial number on one entry out of twenty-one, which
+    // pointed an explanation about the internet's inventors at a question on
+    // Garo dance. Asked to echo a few words of the question it is correcting,
+    // a reply that has slipped says so for free.
+    if (!_snippetMatches(json['question_snippet']?.toString(), q.questionText)) {
+      return null;
+    }
     final status = QuestionAuditStatus.parse(json['status']?.toString());
 
     final isDel =
@@ -143,9 +152,50 @@ class QuestionCorrectionItem {
       oldOpt = q.options[q.correctIndex];
     }
 
+    // New options and no index to go with them: the old index now points into
+    // a list it was never measured against. Follow the answer's own text
+    // instead, and when that text is gone, do not quietly keep the number.
+    var effectiveNewOptions = newOptions;
+    var pIdxWithOptions = pIdx;
+    if (newOptions != null && pIdx == null) {
+      final oldCorrect =
+          (q.correctIndex >= 0 && q.correctIndex < q.options.length)
+          ? q.options[q.correctIndex].trim()
+          : '';
+      final moved = oldCorrect.isEmpty
+          ? -1
+          : newOptions.indexWhere((o) => o.trim() == oldCorrect);
+      // How many slots actually changed. One is a rewording — including a
+      // rewording of the answer itself, which is the commonest dictated edit
+      // of all ("অপশন গ হবে: তঞ্চঙ্গ্যা") — and the answer keeps its place.
+      // Several at once is a new list, and the old number means nothing in it.
+      final changed = newOptions.length == q.options.length
+          ? [
+              for (var i = 0; i < newOptions.length; i++)
+                if (newOptions[i].trim() != q.options[i].trim()) i,
+            ].length
+          : -1;
+
+      if (moved >= 0) {
+        pIdxWithOptions = moved;
+      } else if (changed == 1) {
+        // Leave the index alone: the slot it points at is still the answer,
+        // now worded differently.
+      } else {
+        // The answer cannot be found in the new list. Rewriting the options
+        // would leave the key pointing at whatever landed in that slot, which
+        // is how a right answer becomes a wrong one without anybody editing
+        // it. Keep the options and say so instead.
+        effectiveNewOptions = null;
+      }
+    }
+
+    final shownOptions = effectiveNewOptions ?? q.options;
     String propOpt = '';
-    if (pIdx != null && pIdx >= 0 && pIdx < effectiveOptions.length) {
-      propOpt = effectiveOptions[pIdx];
+    if (pIdxWithOptions != null &&
+        pIdxWithOptions >= 0 &&
+        pIdxWithOptions < shownOptions.length) {
+      propOpt = shownOptions[pIdxWithOptions];
     } else if (json['proposed_option_text'] != null) {
       propOpt = json['proposed_option_text'].toString();
     }
@@ -153,16 +203,47 @@ class QuestionCorrectionItem {
     return QuestionCorrectionItem(
       questionIndex: validIdx,
       questionSnippet: q.questionText,
-      proposedCorrectIndex: pIdx,
+      proposedCorrectIndex: pIdxWithOptions,
       proposedOptionText: propOpt,
       oldOptionText: oldOpt,
       isDelete: isDel,
       newQuestionText: newQuestionText,
-      newOptions: newOptions,
+      newOptions: effectiveNewOptions,
       newExplanation: newExplanation,
       reason: rawReason.isEmpty ? 'External AI সংশোধন' : rawReason,
       isSelected: true,
     );
+  }
+
+  /// Whether the few words the reply echoed back belong to the question the
+  /// id resolved to.
+  ///
+  /// Generous on purpose: no echo at all passes, since most replies will not
+  /// carry one, and so does any real overlap. It is there to catch a entry
+  /// aimed at a different question, not to grade the quoting.
+  static bool _snippetMatches(String? snippet, String questionText) {
+    final said = (snippet ?? '').trim();
+    if (said.isEmpty) return true;
+
+    String bare(String t) => t
+        .replaceAll(RegExp(r'[\s\u0964.,;:?!()\[\]"\u2018\u2019\u201c\u201d]+'), '')
+        .toLowerCase();
+
+    final a = bare(said);
+    final b = bare(questionText);
+    if (a.isEmpty || b.isEmpty) return true;
+    if (b.contains(a) || a.contains(b)) return true;
+
+    // Failing a clean containment, two words of real length in common is
+    // enough — the echo may be a paraphrase or may have been trimmed.
+    final words = said
+        .split(RegExp(r'\s+'))
+        .where((w) => w.length >= 3)
+        .map(bare)
+        .where((w) => w.isNotEmpty)
+        .toSet();
+    final shared = words.where((w) => b.contains(w)).length;
+    return shared >= 2 || (words.length == 1 && shared == 1);
   }
 
   /// Which question this correction is about.
@@ -224,6 +305,11 @@ final _correctionSchema = Schema.array(
         description:
             'Corrected explanation when the printed one is wrong, or empty '
             'string to keep it',
+      ),
+      'question_snippet': Schema.string(
+        description:
+            'The first few words of that question, copied, so a wrong index '
+            'can be caught',
       ),
       'status': Schema.string(
         description:
@@ -321,7 +407,7 @@ class QuizBatchCorrectionService {
     // A paste that is already in this shape needs no model: the prompt the
     // sheet hands out asks for exactly it, so the reply can be read straight
     // back in at no cost. Prose is still welcome, it just has to be read.
-    final embedded = extractFirstJson(externalAnalysis);
+    final embedded = extractFirstJson(cleanPastedJson(externalAnalysis));
     if (embedded != null) {
       try {
         final decoded = jsonDecode(embedded);
@@ -441,6 +527,7 @@ For each correction, identify:
 - new_options: the corrected full option list when the analysis says the OPTIONS are wrong, duplicated or do not contain the answer. Empty array when the options are fine.
     * Only rewrite when the analysis actually supplies or clearly implies the correct wording. Never invent a question or an option to fill a gap — recommend deletion instead.
 - new_explanation: the corrected explanation when the analysis says the EXPLANATION is wrong, even if the answer itself is fine. A wrong explanation teaches the wrong thing, so it is worth fixing on its own. Empty string when the explanation is fine.
+- question_snippet: the first few words of that question, copied from the list above. It is checked against the question the index points at, and the correction is dropped if they do not match, so this is what stops a slip of the index rewriting an unrelated question.
 - status: one of "incorrect", "ambiguous", "needs_source", "duplicate".
     * "incorrect" only when the analysis states a definite error. "ambiguous" when it says more than one option works or the wording does not pin an answer down. "needs_source" when it says the point cannot be settled without checking a source. "duplicate" when it says the same question appears twice.
     * An analysis that merely raises a doubt is "ambiguous" or "needs_source", never "incorrect". Those three leave the answer where it is and only mark the question, so proposed_correct_index must be null for them. Include them: a flagged question is the point of the exercise, and dropping them is what used to make a page of findings come back as "nothing to fix".
