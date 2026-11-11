@@ -60,6 +60,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _lateWarningEnabled = true;
   bool _isBatteryOptIgnored = false;
   bool _simulationMode = false;
+  bool _officeDowntimeStudyEnabled = true;
   String _officeAddress = 'ZaviSoft Office, Dhaka';
   String _bannerDisplayMode = 'contextual';
 
@@ -111,6 +112,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           prefs.getBool(NotificationConstants.prefLateWarningEnabled) ?? true;
       _simulationMode =
           prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
+      _officeDowntimeStudyEnabled =
+          prefs.getBool(NotificationConstants.prefOfficeDowntimeFlashcardEnabled) ?? true;
       _officeAddress =
           prefs.getString(NotificationConstants.prefOfficeAddress) ??
               'ZaviSoft Office, Dhaka';
@@ -2252,6 +2255,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 await prefs.setBool(NotificationConstants.prefAutoCheckOutEnabled, val);
                 setState(() => _autoCheckOutEnabled = val);
                 await WorkmanagerService.instance.syncWatchdogWithPrefs();
+              },
+            ),
+            const Divider(height: 20),
+
+            // Switch 4: Office Downtime BCS Micro-Nudges (1:15 PM & 4:30 PM)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Office Downtime Micro-Study Nudges',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              subtitle: const Text(
+                'অফিসের লাঞ্চ বিরতি (১:১৫ PM) ও বিকালের চা পানের সময়ে (৪:৩০ PM) ১ মিনিটের হালকা বিসিএস রিভিশন পুশ দেবে (শব্দহীন ও কাজের ক্ষতি না করে)।',
+                style: TextStyle(fontSize: 11),
+              ),
+              value: _officeDowntimeStudyEnabled,
+              onChanged: (val) async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool(
+                  NotificationConstants.prefOfficeDowntimeFlashcardEnabled,
+                  val,
+                );
+                setState(() => _officeDowntimeStudyEnabled = val);
+                if (val) {
+                  await NotificationService.instance.scheduleOfficeDowntimeFlashcards();
+                } else {
+                  await NotificationService.instance.cancelOfficeDowntimeFlashcards();
+                }
               },
             ),
             const Divider(height: 20),

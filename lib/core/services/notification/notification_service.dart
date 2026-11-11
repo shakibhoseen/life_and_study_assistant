@@ -666,6 +666,88 @@ class NotificationService {
     debugPrint('Morning office watchdogs cancelled.');
   }
 
+  /// Schedules micro-flashcard study nudges during office break periods (1:15 PM lunch and 4:30 PM tea break)
+  /// Non-intrusive (no sound, soft priority) so work is never disturbed while BCS revision continues.
+  Future<void> scheduleOfficeDowntimeFlashcards() async {
+    final now = tz.TZDateTime.now(tz.local);
+
+    final breaks = [
+      (
+        id: NotificationConstants.officeDowntimeFlashcardLunch,
+        hour: 13,
+        minute: 15,
+        title: '☕ Lunch Downtime Revision',
+        body: 'লাঞ্চ বিরতিতে ১ মিনিটের কুইক রিভিশন: বিসিএস ফ্ল্যাশকার্ড দেখে নিন!',
+      ),
+      (
+        id: NotificationConstants.officeDowntimeFlashcardTea,
+        hour: 16,
+        minute: 30,
+        title: '🫖 Tea Break Micro-Study',
+        body: 'বিকালের বিরতিতে বিসিএস সাধারণ জ্ঞান বা ভোকাবুলারির ১টি কুইক রুল রিফ্রেশ করুন!',
+      ),
+    ];
+
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.flashcardChannelId,
+      NotificationConstants.flashcardChannelName,
+      channelDescription: NotificationConstants.flashcardChannelDesc,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      playSound: false,
+      enableVibration: false,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: false,
+        presentSound: false,
+      ),
+    );
+
+    for (final b in breaks) {
+      var scheduledDate = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        b.hour,
+        b.minute,
+      );
+
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id: b.id,
+          title: b.title,
+          body: b.body,
+          scheduledDate: scheduledDate,
+          notificationDetails: details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+        debugPrint('Office downtime flashcard scheduled for ${b.hour}:${b.minute}');
+      } catch (e) {
+        debugPrint('Error scheduling office downtime flashcard: $e');
+      }
+    }
+  }
+
+  /// Cancels scheduled office downtime flashcard nudges
+  Future<void> cancelOfficeDowntimeFlashcards() async {
+    await _notificationsPlugin.cancel(
+      id: NotificationConstants.officeDowntimeFlashcardLunch,
+    );
+    await _notificationsPlugin.cancel(
+      id: NotificationConstants.officeDowntimeFlashcardTea,
+    );
+  }
+
   /// Instant test/manual trigger for the meal reminder notification
   Future<void> showInstantDinnerReminder() async {
     const androidDetails = AndroidNotificationDetails(

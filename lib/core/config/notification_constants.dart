@@ -44,6 +44,11 @@ class NotificationConstants {
   static const int lunchReminderNotificationId = 2002;
   static const int studyPlanNotificationId = 3001;
   static const int flashcardNotificationId = 4001;
+  static const int officeDowntimeFlashcardLunch = 4010;
+  static const int officeDowntimeFlashcardTea = 4011;
+
+  static const String prefOfficeDowntimeFlashcardEnabled =
+      'office_downtime_flashcards_enabled';
 
   /// Block reserved for the recurring flashcard series.
   ///

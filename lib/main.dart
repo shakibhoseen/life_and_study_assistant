@@ -43,6 +43,9 @@ void main() async {
   // 2.1 Schedule Morning 9:00 AM - 9:15 AM Late Prevention Watchdogs (Exact Alarms)
   await NotificationService.instance.scheduleMorningOfficeWatchdogs();
 
+  // 2.2 Schedule Office Downtime Micro-Study Nudges (1:15 PM Lunch & 4:30 PM Tea Break)
+  await NotificationService.instance.scheduleOfficeDowntimeFlashcards();
+
   // 3. Start Background Wi-Fi SSID Change Monitor
   await WifiMonitorService.instance.startMonitoring();
 
