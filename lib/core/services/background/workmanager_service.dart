@@ -101,6 +101,23 @@ class WorkmanagerService {
     }
   }
 
+  /// Schedules a 15-minute fail-safe one-off task in WorkManager.
+  /// If the foreground sentinel is killed by the user or OS while attendance is pending,
+  /// this safety task wakes up, checks status, and revives the sentinel.
+  Future<void> scheduleSafetyWatchdog({Duration delay = const Duration(minutes: 15)}) async {
+    try {
+      await Workmanager().registerOneOffTask(
+        'sentinel-failsafe-watchdog',
+        backgroundTaskWifiCheck,
+        initialDelay: delay,
+        existingWorkPolicy: ExistingWorkPolicy.replace,
+      );
+      debugPrint('Workmanager: 15-minute fail-safe safety watchdog scheduled.');
+    } catch (e) {
+      debugPrint('Workmanager: scheduleSafetyWatchdog error: $e');
+    }
+  }
+
   /// Cancels all background tasks registered in WorkManager
   Future<void> cancelAll() async {
     try {

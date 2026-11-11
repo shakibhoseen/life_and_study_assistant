@@ -10,6 +10,7 @@ import '../../config/notification_constants.dart';
 import '../attendance/packly_attendance_service.dart';
 import '../notification/notification_service.dart';
 import 'wifi_monitor_service.dart';
+import 'workmanager_service.dart';
 
 @pragma('vm:entry-point')
 void startSentinelCallback() {
@@ -442,6 +443,7 @@ class OfficeSentinelService {
         (now.hour == 10 && now.minute <= 0);
     if (autoIn && isMorningTime && !isCheckedIn) {
       await startMorningSentinel();
+      unawaited(WorkmanagerService.instance.scheduleSafetyWatchdog(delay: const Duration(minutes: 15)));
       return;
     }
 
@@ -451,6 +453,7 @@ class OfficeSentinelService {
         (now.hour == 22 && now.minute <= 30);
     if (autoOut && isEveningTime && !isCheckedOut) {
       await startEveningSentinel();
+      unawaited(WorkmanagerService.instance.scheduleSafetyWatchdog(delay: const Duration(minutes: 15)));
       return;
     }
   }
