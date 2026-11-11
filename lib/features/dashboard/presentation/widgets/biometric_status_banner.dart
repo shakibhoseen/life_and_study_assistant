@@ -659,20 +659,24 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
                         children: [
                           Row(
                             children: [
-                              Text(
-                                isPunchedOut
-                                    ? 'Workday Ended'
-                                    : (isPunchedIn
-                                        ? 'Punched In ✓'
-                                        : 'Punch Pending'),
-                                style: TextStyle(
-                                  color: isPunchedOut
-                                      ? Colors.blueAccent
+                              Flexible(
+                                child: Text(
+                                  isPunchedOut
+                                      ? 'Workday Ended'
                                       : (isPunchedIn
-                                          ? Colors.greenAccent
-                                          : Colors.amberAccent),
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
+                                          ? 'Punched In ✓'
+                                          : 'Punch Pending'),
+                                  style: TextStyle(
+                                    color: isPunchedOut
+                                        ? Colors.blueAccent
+                                        : (isPunchedIn
+                                            ? Colors.greenAccent
+                                            : Colors.amberAccent),
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
                                 ),
                               ),
                               if (_isLate && isPunchedIn) ...[
@@ -733,6 +737,8 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
                               color: Colors.white70,
                               fontSize: 11,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -835,6 +841,8 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const Text(
                             'Daily Cutoff: 6:00 PM (Steadfast Catering)',
@@ -842,6 +850,8 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
                               color: Colors.white60,
                               fontSize: 10.5,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),

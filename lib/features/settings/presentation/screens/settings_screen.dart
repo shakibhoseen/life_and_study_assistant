@@ -2009,8 +2009,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.end,
                     children: [
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
@@ -2036,7 +2038,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           );
                         },
                       ),
-                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.teal.shade700,
@@ -2554,8 +2555,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.end,
                     children: [
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
@@ -2590,7 +2593,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           );
                         },
                       ),
-                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.deepOrange.shade700,
@@ -2707,18 +2709,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   : Colors.grey,
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              todayBooked == true
-                                  ? 'বুক করা আছে ✓'
-                                  : (todayBooked == false
-                                      ? 'বুক নেই (Off)'
-                                      : 'সিঙ্ক করুন'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: todayBooked == true
-                                    ? Colors.green
-                                    : (isDark ? Colors.white70 : Colors.black87),
+                            Expanded(
+                              child: Text(
+                                todayBooked == true
+                                    ? 'বুক করা আছে ✓'
+                                    : (todayBooked == false
+                                        ? 'বুক নেই (Off)'
+                                        : 'সিঙ্ক করুন'),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: todayBooked == true
+                                      ? Colors.green
+                                      : (isDark ? Colors.white70 : Colors.black87),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ],
@@ -2749,6 +2755,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                         const SizedBox(height: 4),
                         Row(
@@ -2763,22 +2771,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   : Colors.orange,
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              tomorrowBooked == true
-                                  ? 'বুক করা আছে ✓'
-                                  : (tomorrowBooked == false
-                                      ? 'বুক নেই (Off)'
-                                      : 'সিঙ্ক করুন'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: tomorrowBooked == true
-                                    ? Colors.green
+                            Expanded(
+                              child: Text(
+                                tomorrowBooked == true
+                                    ? 'বুক করা আছে ✓'
                                     : (tomorrowBooked == false
-                                        ? Colors.orange
-                                        : (isDark
-                                            ? Colors.white70
-                                            : Colors.black87)),
+                                        ? 'বুক নেই (Off)'
+                                        : 'সিঙ্ক করুন'),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: tomorrowBooked == true
+                                      ? Colors.green
+                                      : (tomorrowBooked == false
+                                          ? Colors.orange
+                                          : (isDark
+                                              ? Colors.white70
+                                              : Colors.black87)),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ],
@@ -2820,15 +2832,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             : Icons.check_circle,
                         size: 16,
                       ),
-                label: Text(
-                  lunchState.isToggling
-                      ? 'Updating Server...'
-                      : (tomorrowBooked == true
-                          ? 'Cancel Tomorrow\'s Lunch (লাঞ্চ বাতিল করুন)'
-                          : 'Book Tomorrow\'s Lunch (আগামীকালের লাঞ্চ বুক করুন)'),
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.bold,
+                label: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    lunchState.isToggling
+                        ? 'Updating Server...'
+                        : (tomorrowBooked == true
+                            ? 'Cancel Tomorrow\'s Lunch (লাঞ্চ বাতিল করুন)'
+                            : 'Book Tomorrow\'s Lunch (আগামীকালের লাঞ্চ বুক করুন)'),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 onPressed: lunchState.isToggling
@@ -2871,9 +2886,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   size: 16,
                   color: Colors.deepOrange,
                 ),
-                label: const Text(
-                  'Open Meal Calendar & Office Portal ➔',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Open Meal Calendar & Office Portal ➔',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 onPressed: () {
                   Navigator.push(

@@ -324,6 +324,8 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                       Text(
                         'আগামীকাল ($tomorrowStr)',
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
                       Row(
@@ -445,16 +447,23 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_month_rounded, color: Colors.deepOrange, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      monthLabel,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                  ],
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_month_rounded, color: Colors.deepOrange, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          monthLabel,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -468,7 +477,7 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                       const Icon(Icons.check, size: 12, color: Colors.green),
                       const SizedBox(width: 4),
                       Text(
-                        '$bookedCount Booked Meals',
+                        '$bookedCount Booked',
                         style: const TextStyle(
                           color: Colors.green,
                           fontSize: 11,
@@ -781,27 +790,34 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          isOfficeConnected ? Icons.wifi : Icons.wifi_off,
-                          color: isOfficeConnected ? Colors.tealAccent : Colors.white70,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          isOfficeConnected
-                              ? 'Office Wi-Fi Active ($currentSsid)'
-                              : 'Away from Office Wi-Fi',
-                          style: TextStyle(
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            isOfficeConnected ? Icons.wifi : Icons.wifi_off,
                             color: isOfficeConnected ? Colors.tealAccent : Colors.white70,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12.5,
+                            size: 18,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              isOfficeConnected
+                                  ? 'Office Wi-Fi Active ($currentSsid)'
+                                  : 'Away from Office Wi-Fi',
+                              style: TextStyle(
+                                color: isOfficeConnected ? Colors.tealAccent : Colors.white70,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12.5,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    if (state.isSimulationMode)
+                    if (state.isSimulationMode) ...[
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
@@ -818,6 +834,7 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                           ),
                         ),
                       ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -931,24 +948,31 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  metrics.isNineHoursCompleted ? Icons.check_circle : Icons.timer,
-                                  size: 14,
-                                  color: metrics.isNineHoursCompleted ? Colors.greenAccent : Colors.amberAccent,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Workday: ${metrics.hours}h ${metrics.minutes.toString().padLeft(2, '0')}m / 9h Target',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.bold,
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    metrics.isNineHoursCompleted ? Icons.check_circle : Icons.timer,
+                                    size: 14,
+                                    color: metrics.isNineHoursCompleted ? Colors.greenAccent : Colors.amberAccent,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Workday: ${metrics.hours}h ${metrics.minutes.toString().padLeft(2, '0')}m / 9h',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             if (metrics.isNineHoursCompleted)
                               Text(
                                 metrics.overtimeMinutes > 0
@@ -962,7 +986,7 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                               )
                             else
                               Text(
-                                '${metrics.remainingMinutes ~/ 60 > 0 ? '${metrics.remainingMinutes ~/ 60}h ' : ''}${metrics.remainingMinutes % 60}m remaining',
+                                '${metrics.remainingMinutes ~/ 60 > 0 ? '${metrics.remainingMinutes ~/ 60}h ' : ''}${metrics.remainingMinutes % 60}m left',
                                 style: const TextStyle(color: Colors.amberAccent, fontSize: 11),
                               ),
                           ],
@@ -1005,9 +1029,12 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                               )
                             : Icon(isCheckedIn ? Icons.check_circle : Icons.login, size: 16),
-                        label: Text(
-                          isCheckedIn ? 'Checked In ✓' : 'Check In Now',
-                          style: const TextStyle(fontSize: 12),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            isCheckedIn ? 'Checked In ✓' : 'Check In Now',
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ),
                         onPressed: (state.isLoading || isCheckedIn)
                             ? null
@@ -1043,11 +1070,14 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                           isCheckedOut ? Icons.update : Icons.logout,
                           size: 16,
                         ),
-                        label: Text(
-                          !isCheckedIn
-                              ? 'Pending Check-In'
-                              : (isCheckedOut ? 'Update Out (OT)' : 'Check Out Now'),
-                          style: const TextStyle(fontSize: 12),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            !isCheckedIn
+                                ? 'Pending In'
+                                : (isCheckedOut ? 'Update Out' : 'Check Out Now'),
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ),
                         onPressed: (state.isLoading || !isCheckedIn)
                             ? null
