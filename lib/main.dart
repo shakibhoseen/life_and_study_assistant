@@ -84,21 +84,26 @@ class LifeAndStudyApp extends ConsumerStatefulWidget {
   ConsumerState<LifeAndStudyApp> createState() => _LifeAndStudyAppState();
 }
 
-class _LifeAndStudyAppState extends ConsumerState<LifeAndStudyApp> {
+class _LifeAndStudyAppState extends ConsumerState<LifeAndStudyApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // A backup nobody has to remember. At most one a day, written beside the
-    // manual ones, and never waited on — the app opens while it happens.
-    //
-    // Here rather than in main() so it borrows the one database connection
-    // the app already has, instead of opening a second one against the same
-    // file at the moment everything else is starting.
-    // Not tied to the first frame. Measured on a real phone: launched with
-    // the screen off, or held behind a permission dialog, no frame is ever
-    // produced and a post-frame callback simply never fires — so the backup
-    // would quietly not happen on exactly the launches nobody is watching.
+    WidgetsBinding.instance.addObserver(this);
     unawaited(AutoBackupService.runIfDue(db: ref.read(appDatabaseProvider)));
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(OfficeSentinelService.instance.checkAndTriggerSentinelIfNeeded());
+    }
   }
 
   @override

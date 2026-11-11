@@ -758,8 +758,43 @@ class NotificationService {
         id: NotificationConstants.eveningDepartureAlarm615,
         hour: 18,
         minute: 15,
-        title: '🚨 6:15 PM Final Departure Notice',
+        title: '🚨 6:15 PM Departure Notice',
         body: 'If you left the office, mark attendance now so departure location is saved.',
+      ),
+      (
+        id: NotificationConstants.eveningDepartureAlarm630,
+        hour: 18,
+        minute: 30,
+        title: '🏢 6:30 PM Overtime / Departure Alert',
+        body: 'Still working or leaving office? Tap to check out now.',
+      ),
+      (
+        id: NotificationConstants.eveningDepartureAlarm700,
+        hour: 19,
+        minute: 0,
+        title: '🌙 7:00 PM Overtime Notice: Check Out Pending',
+        body: 'Office ended at 6:00 PM. Don\'t forget to punch out when leaving!',
+      ),
+      (
+        id: NotificationConstants.eveningDepartureAlarm715,
+        hour: 19,
+        minute: 15,
+        title: '🚨 7:15 PM Urgent: Did you punch Check-Out?',
+        body: 'You haven\'t checked out yet today. Tap to punch departure now!',
+      ),
+      (
+        id: NotificationConstants.eveningDepartureAlarm730,
+        hour: 19,
+        minute: 30,
+        title: '🚪 7:30 PM Evening Departure Sentinel',
+        body: 'Remember to check out before travelling away from office!',
+      ),
+      (
+        id: NotificationConstants.eveningDepartureAlarm800,
+        hour: 20,
+        minute: 0,
+        title: '🌙 8:00 PM Night Check-Out Alert',
+        body: 'Overtime duty completed? Tap to submit your departure punch.',
       ),
     ];
 
@@ -828,6 +863,11 @@ class NotificationService {
     await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm605);
     await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm610);
     await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm615);
+    await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm630);
+    await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm700);
+    await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm715);
+    await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm730);
+    await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm800);
     debugPrint('Evening departure watchdogs cancelled.');
   }
 

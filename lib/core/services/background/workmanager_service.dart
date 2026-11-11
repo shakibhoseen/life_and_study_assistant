@@ -4,6 +4,7 @@ import 'package:workmanager/workmanager.dart';
 
 import '../../config/notification_constants.dart';
 import '../notification/notification_service.dart';
+import 'office_sentinel_service.dart';
 import 'wifi_monitor_service.dart';
 
 const String backgroundTaskWifiCheck =
@@ -22,6 +23,8 @@ void callbackDispatcher() {
         await NotificationService.instance.init();
         await WifiMonitorService.instance.checkCurrentWifiStatus();
         await WifiMonitorService.instance.checkLateCutoffWarning();
+        await OfficeSentinelService.instance.init();
+        await OfficeSentinelService.instance.checkAndTriggerSentinelIfNeeded();
         break;
 
       case backgroundTaskDailyMeal:

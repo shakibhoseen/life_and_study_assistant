@@ -78,9 +78,9 @@ class OfficeSentinelTaskHandler extends TaskHandler {
       final isConnectedToOffice = isWifi && WifiMonitorService.isOfficeNetwork(ssid, configuredSsid);
 
       // =========================================================================
-      // 1. MORNING CRITICAL WINDOW (8:45 AM - 9:35 AM): Active until checked in
+      // 1. MORNING CRITICAL WINDOW (8:35 AM - 10:30 AM): Active until checked in
       // =========================================================================
-      if ((now.hour == 8 && now.minute >= 45) || (now.hour == 9 && now.minute <= 35)) {
+      if ((now.hour == 8 && now.minute >= 35) || (now.hour == 9) || (now.hour == 10 && now.minute <= 30)) {
         if (isAlreadyCheckedIn) {
           debugPrint('OfficeSentinel: Morning Check-In already done today. Stopping sentinel.');
           await FlutterForegroundTask.stopService();
@@ -135,9 +135,9 @@ class OfficeSentinelTaskHandler extends TaskHandler {
       }
 
       // =========================================================================
-      // 2. EVENING CRITICAL DEPARTURE WINDOW (5:45 PM - 7:30 PM): Active until checked out
+      // 2. EVENING CRITICAL DEPARTURE WINDOW (5:45 PM - 10:30 PM): Active until checked out
       // =========================================================================
-      if ((now.hour == 17 && now.minute >= 45) || now.hour == 18 || (now.hour == 19 && now.minute <= 30)) {
+      if ((now.hour == 17 && now.minute >= 45) || (now.hour >= 18 && now.hour <= 22) || (now.hour == 22 && now.minute <= 30)) {
         if (isAlreadyCheckedOut) {
           debugPrint('OfficeSentinel: Evening Check-Out already recorded today. Stopping sentinel.');
           await FlutterForegroundTask.stopService();
@@ -234,10 +234,10 @@ class OfficeSentinelTaskHandler extends TaskHandler {
         }
       }
 
-      // Outside critical windows
-      if ((now.hour < 8 || (now.hour == 8 && now.minute < 45)) ||
-          (now.hour > 19 || (now.hour == 19 && now.minute > 30))) {
-        debugPrint('OfficeSentinel: Outside critical office windows. Stopping sentinel.');
+      // Outside active office hours (Night 10:35 PM to Morning 8:35 AM)
+      if ((now.hour < 8 || (now.hour == 8 && now.minute < 35)) ||
+          (now.hour > 22 || (now.hour == 22 && now.minute > 30))) {
+        debugPrint('OfficeSentinel: Outside active office hours. Stopping sentinel.');
         await FlutterForegroundTask.stopService();
       }
     } finally {
@@ -369,14 +369,29 @@ class OfficeSentinelService {
     final autoIn = prefs.getBool(NotificationConstants.prefAutoCheckInEnabled) ?? true;
     final autoOut = prefs.getBool(NotificationConstants.prefAutoCheckOutEnabled) ?? true;
 
-    // Morning window: 8:50 AM to 9:20 AM
-    if (autoIn && (now.hour == 8 && now.minute >= 50 || now.hour == 9 && now.minute <= 20)) {
+    final today = now.toIso8601String().substring(0, 10);
+    final lastCheckInDate = prefs.getString(NotificationConstants.prefLastCheckInDate);
+    final lastCheckInStatus = prefs.getString(NotificationConstants.prefLastCheckInStatus);
+    final isCheckedIn = lastCheckInDate == today &&
+        (lastCheckInStatus == 'Punched' || lastCheckInStatus == 'Punched In');
+
+    final lastCheckOutDate = prefs.getString(NotificationConstants.prefLastCheckOutDate);
+    final isCheckedOut = lastCheckOutDate == today;
+
+    // 1. Morning window: 8:35 AM to 10:30 AM (runs until checked in)
+    final isMorningTime = (now.hour == 8 && now.minute >= 35) ||
+        (now.hour == 9) ||
+        (now.hour == 10 && now.minute <= 30);
+    if (autoIn && isMorningTime && !isCheckedIn) {
       await startMorningSentinel();
       return;
     }
 
-    // Evening window: 5:45 PM to 6:45 PM
-    if (autoOut && (now.hour == 17 && now.minute >= 45 || now.hour == 18 && now.minute <= 45)) {
+    // 2. Evening window: 5:45 PM (17:45) to 10:30 PM (22:30) (runs until checked out)
+    final isEveningTime = (now.hour == 17 && now.minute >= 45) ||
+        (now.hour >= 18 && now.hour <= 22) ||
+        (now.hour == 22 && now.minute <= 30);
+    if (autoOut && isEveningTime && !isCheckedOut) {
       await startEveningSentinel();
       return;
     }
