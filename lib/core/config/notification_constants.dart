@@ -40,6 +40,11 @@ class NotificationConstants {
   static const int morningCutoffAlarm900 = 1010;
   static const int morningCutoffAlarm906 = 1011;
   static const int morningCutoffAlarm912 = 1012;
+  static const int eveningDepartureAlarm555 = 1020;
+  static const int eveningDepartureAlarm600 = 1021;
+  static const int eveningDepartureAlarm605 = 1022;
+  static const int eveningDepartureAlarm610 = 1023;
+  static const int eveningDepartureAlarm615 = 1024;
   static const int mealNotificationId = 2001;
   static const int lunchReminderNotificationId = 2002;
   static const int studyPlanNotificationId = 3001;

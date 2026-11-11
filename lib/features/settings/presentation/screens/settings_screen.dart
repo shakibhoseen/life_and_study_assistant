@@ -2255,6 +2255,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setBool(NotificationConstants.prefAutoCheckOutEnabled, val);
                 setState(() => _autoCheckOutEnabled = val);
+                if (val) {
+                  await NotificationService.instance.scheduleEveningOfficeWatchdogs();
+                } else {
+                  await NotificationService.instance.cancelEveningOfficeWatchdogs();
+                }
                 await WorkmanagerService.instance.syncWatchdogWithPrefs();
               },
             ),

@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/notification_constants.dart';
 import '../attendance/packly_attendance_service.dart';
 import '../notification/notification_service.dart';
+import 'office_sentinel_service.dart';
 
 enum OfficeConnectionState { connected, disconnected, unknown }
 
@@ -364,6 +365,7 @@ class WifiMonitorService {
           time: timeStr,
           isLate: isLate,
         );
+        await OfficeSentinelService.instance.stopSentinel();
         return;
       } else {
         debugPrint('Auto Check-In failed: ${result.message}. Falling back to prompt.');
@@ -418,6 +420,7 @@ class WifiMonitorService {
         await NotificationService.instance.showOfficeCheckOutSuccessNotification(
           time: timeStr,
         );
+        await OfficeSentinelService.instance.stopSentinel();
         return;
       }
     }

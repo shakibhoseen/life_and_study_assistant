@@ -666,6 +666,118 @@ class NotificationService {
     debugPrint('Morning office watchdogs cancelled.');
   }
 
+  /// Schedules precise evening alarm triggers around 6:00 PM (5:55 PM, 6:00 PM, 6:05 PM, 6:10 PM, 6:15 PM)
+  /// so that if the user leaves office at 6:00 PM, they receive the check-out reminder immediately at departure
+  /// rather than waiting for any 15-minute background worker gap when they are already far away!
+  Future<void> scheduleEveningOfficeWatchdogs() async {
+    final now = tz.TZDateTime.now(tz.local);
+
+    final eveningWatchdogs = [
+      (
+        id: NotificationConstants.eveningDepartureAlarm555,
+        hour: 17,
+        minute: 55,
+        title: '🏢 5:55 PM: 5 Mins to Office Departure',
+        body: 'Office workday ends at 6:00 PM. Get ready to check out on departure!',
+      ),
+      (
+        id: NotificationConstants.eveningDepartureAlarm600,
+        hour: 18,
+        minute: 0,
+        title: '🏁 6:00 PM: Workday Completed! Check Out Now',
+        body: '9-Hour duty completed. Leaving office? Tap Check Out Now!',
+      ),
+      (
+        id: NotificationConstants.eveningDepartureAlarm605,
+        hour: 18,
+        minute: 5,
+        title: '🚪 6:05 PM Departure Sentinel: Did you leave office?',
+        body: 'Remember to check out before travelling! Tap to submit check-out.',
+      ),
+      (
+        id: NotificationConstants.eveningDepartureAlarm610,
+        hour: 18,
+        minute: 10,
+        title: '⏰ 6:10 PM Check-Out Reminder',
+        body: 'Tap to check out or continue working if on Overtime.',
+      ),
+      (
+        id: NotificationConstants.eveningDepartureAlarm615,
+        hour: 18,
+        minute: 15,
+        title: '🚨 6:15 PM Final Departure Notice',
+        body: 'If you left the office, mark attendance now so departure location is saved.',
+      ),
+    ];
+
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.officeChannelId,
+      NotificationConstants.officeChannelName,
+      channelDescription: NotificationConstants.officeChannelDesc,
+      importance: Importance.max,
+      priority: Priority.max,
+      category: AndroidNotificationCategory.reminder,
+      visibility: NotificationVisibility.public,
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          NotificationConstants.actionCheckOutNow,
+          '⚡ Check Out Now',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+      ],
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    for (final wd in eveningWatchdogs) {
+      var scheduledDate = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        wd.hour,
+        wd.minute,
+      );
+
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id: wd.id,
+          title: wd.title,
+          body: wd.body,
+          scheduledDate: scheduledDate,
+          notificationDetails: details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+        debugPrint('Evening watchdog [${wd.hour}:${wd.minute}] scheduled for $scheduledDate');
+      } catch (e) {
+        debugPrint('Error scheduling evening watchdog (${wd.id}): $e');
+      }
+    }
+  }
+
+  /// Cancels all scheduled evening watchdogs
+  Future<void> cancelEveningOfficeWatchdogs() async {
+    await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm555);
+    await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm600);
+    await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm605);
+    await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm610);
+    await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm615);
+    debugPrint('Evening departure watchdogs cancelled.');
+  }
+
   /// Schedules micro-flashcard study nudges during office break periods (1:15 PM lunch and 4:30 PM tea break)
   /// Non-intrusive (no sound, soft priority) so work is never disturbed while BCS revision continues.
   Future<void> scheduleOfficeDowntimeFlashcards() async {
