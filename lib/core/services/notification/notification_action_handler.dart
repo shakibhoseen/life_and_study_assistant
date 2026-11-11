@@ -1,3 +1,4 @@
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -88,9 +89,13 @@ Future<void> handleNotificationResponse(NotificationResponse response) async {
       await NotificationService.instance.showOfficeCheckOutSuccessNotification(
         time: timeStr,
       );
+      await NotificationService.instance.cancelCheckOutReminder();
+      await FlutterForegroundTask.stopService();
     }
   } else if (actionId == NotificationConstants.actionCheckOutDone) {
     await prefs.setString(NotificationConstants.prefLastCheckOutDate, todayIso);
+    await NotificationService.instance.cancelCheckOutReminder();
+    await FlutterForegroundTask.stopService();
   } else if (actionId == NotificationConstants.actionFlashcardGotIt) {
     await prefs.setString('last_flashcard_reviewed_date', todayIso);
 

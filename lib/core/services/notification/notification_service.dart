@@ -426,6 +426,59 @@ class NotificationService {
     );
   }
 
+  /// High priority urgent alert when leaving office without checking out and moving far away
+  Future<void> showUrgentDepartureWarningNotification({
+    required double distanceMeters,
+  }) async {
+    final km = (distanceMeters / 1000).toStringAsFixed(1);
+    final vibrationPattern = Int64List.fromList([0, 500, 200, 500, 200, 1000]);
+
+    final androidDetails = AndroidNotificationDetails(
+      NotificationConstants.officeChannelId,
+      NotificationConstants.officeChannelName,
+      channelDescription: NotificationConstants.officeChannelDesc,
+      importance: Importance.max,
+      priority: Priority.max,
+      category: AndroidNotificationCategory.alarm,
+      visibility: NotificationVisibility.public,
+      fullScreenIntent: true,
+      vibrationPattern: vibrationPattern,
+      enableVibration: true,
+      playSound: true,
+      actions: const <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          NotificationConstants.actionCheckOutNow,
+          '⚡ এখনই চেক-আউট পাঞ্চ দিন',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+      ],
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    await _notificationsPlugin.show(
+      id: NotificationConstants.urgentDistanceAlertNotificationId,
+      title: '🚨 জরুরি অ্যালার্ট: আপনি অফিস ছেড়ে দূরে যাচ্ছেন!',
+      body: 'আপনি অফিস থেকে প্রায় $km কিমি দূরে! কিন্তু চেক-আউট পাঞ্চ দেননি। এখনই চেক-আউট পাঞ্চ করতে ট্যাপ করুন।',
+      notificationDetails: details,
+    );
+  }
+
+  /// Cancels checkout reminders and distance alerts
+  Future<void> cancelCheckOutReminder() async {
+    await _notificationsPlugin.cancel(id: NotificationConstants.checkOutNotificationId);
+    await _notificationsPlugin.cancel(id: NotificationConstants.checkOutReminderNotificationId);
+    await _notificationsPlugin.cancel(id: NotificationConstants.urgentDistanceAlertNotificationId);
+  }
+
   /// Success confirmation after Check-In
   Future<void> showOfficeCheckInSuccessNotification({
     required String time,

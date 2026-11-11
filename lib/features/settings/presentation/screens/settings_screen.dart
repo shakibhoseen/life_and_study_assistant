@@ -29,8 +29,8 @@ import 'package:life_and_study_assistant/features/live_mcq/presentation/provider
 import '../providers/settings_provider.dart';
 import '../widgets/gemini_usage_monitor_card.dart';
 import '../widgets/ai_cache_card.dart';
-import '../widgets/automation_test_card.dart';
 import '../widgets/study_data_cleanup_card.dart';
+import 'attendance_test_lab_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -400,12 +400,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               // What the result cache is holding, and the means to empty it.
               const AiCacheCard(),
-              const SizedBox(height: 18),
-
-              // Firing the Wi-Fi triggers and notifications by hand, to see
-              // whether they work. It used to sit on the dashboard, where it
-              // was a developer's tool in the middle of the day's study.
-              const AutomationTestCard(),
               const SizedBox(height: 18),
 
               // Auto-Weakness Healer & Micro Drills Control
@@ -2117,29 +2111,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 14),
 
-            // Safe Simulation / Mock Mode Switch
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: _simulationMode
-                    ? (isDark
-                        ? Colors.amber.withValues(alpha: 0.15)
-                        : const Color(0xFFFEF3C7))
-                    : (isDark
-                        ? Colors.white.withValues(alpha: 0.04)
-                        : const Color(0xFFF1F5F9)),
+            // Navigation Card to dedicated Diagnostics & Simulation Test Lab
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
+                side: BorderSide(
                   color: _simulationMode
-                      ? Colors.amber
+                      ? Colors.amber.withValues(alpha: 0.5)
                       : (isDark ? Colors.white12 : const Color(0xFFCBD5E1)),
                   width: _simulationMode ? 1.5 : 1,
                 ),
               ),
-              child: SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                secondary: Container(
-                  padding: const EdgeInsets.all(6),
+              color: _simulationMode
+                  ? (isDark
+                      ? Colors.amber.withValues(alpha: 0.1)
+                      : const Color(0xFFFFFBEB))
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : const Color(0xFFF8FAFC)),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: _simulationMode
                         ? Colors.amber.withValues(alpha: 0.25)
@@ -2147,47 +2141,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    Icons.science,
+                    Icons.science_rounded,
                     color: _simulationMode ? Colors.amber : Colors.blueGrey,
-                    size: 20,
+                    size: 22,
                   ),
                 ),
-                title: Text(
-                  _simulationMode
-                      ? '🧪 Safe Simulation Mode: ON (ডামি টেস্ট সচল)'
-                      : 'Safe Simulation / Test Mode (ডামি টেস্ট মোড)',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: _simulationMode
-                        ? (isDark ? Colors.amberAccent : Colors.amber.shade900)
-                        : null,
-                  ),
+                title: Row(
+                  children: [
+                    const Text(
+                      'Portal & Automation Test Lab',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    if (_simulationMode) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade900,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'TEST MODE ON',
+                          style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 subtitle: Text(
                   _simulationMode
-                      ? 'চালু আছে: কোনো রিকোয়েস্ট Zavisoft সার্ভারে যাবে না! ড্যাশবোর্ড, নোটিফিকেশন বা বাটন থেকে যেকোনো চেক-ইন/আউট নিরাপদে টেস্ট করা যাবে।'
-                      : 'চালু করলে সার্ভারে আসল হাজিরা না পাঠিয়ে নিরাপদে ডামি চেক-ইন ও চেক-আউট পরীক্ষা করতে পারবেন।',
+                      ? '🧪 টেস্ট মোড সচল! ডামি টেস্ট ল্যাব থেকে নোটিফিকেশন, পিং ও ফলস পাঞ্চ পরিচালনা করুন।'
+                      : 'ডামি টেস্ট মোড, নোটিফিকেশন অ্যালার্ম, পিং ডায়াগনস্টিকস ও অটোমেশন ল্যাব স্ক্রিন খুলুন।',
                   style: const TextStyle(fontSize: 11),
                 ),
-                value: _simulationMode,
-                onChanged: (val) async {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool(NotificationConstants.prefPacklySimulationMode, val);
-                  setState(() => _simulationMode = val);
-                  await ref.read(officeAttendanceProvider.notifier).setSimulationMode(val);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: val ? Colors.amber.shade900 : Colors.teal.shade800,
-                        content: Text(
-                          val
-                              ? '🧪 Safe Simulation Mode ON! এখন নিরাপদে ডামি টেস্ট করতে পারেন।'
-                              : '✅ Live Mode ON! সিমুলেশন ডেটা রিসেট হয়েছে ও লাইভ পোর্টালের সাথে সিঙ্ক সম্পন্ন।',
-                        ),
-                      ),
-                    );
-                  }
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (ctx) => const AttendanceTestLabScreen(),
+                    ),
+                  );
+                  _loadPacklySettings();
                 },
               ),
             ),

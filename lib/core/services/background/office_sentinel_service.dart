@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,6 +19,9 @@ void startSentinelCallback() {
 class OfficeSentinelTaskHandler extends TaskHandler {
   final NetworkInfo _networkInfo = NetworkInfo();
   final Connectivity _connectivity = Connectivity();
+  DateTime? _lastInternetSync;
+  DateTime? _lastDistanceAlert;
+  bool _isProcessing = false;
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
@@ -31,114 +35,213 @@ class OfficeSentinelTaskHandler extends TaskHandler {
   }
 
   Future<void> _checkSentinelCondition() async {
-    final now = DateTime.now();
-    final today = now.toIso8601String().substring(0, 10);
-    final prefs = await SharedPreferences.getInstance();
+    if (_isProcessing) return;
+    _isProcessing = true;
+    try {
+      final now = DateTime.now();
+      final today = now.toIso8601String().substring(0, 10);
+      final prefs = await SharedPreferences.getInstance();
 
-    final lastCheckInDate = prefs.getString(NotificationConstants.prefLastCheckInDate);
-    final lastCheckInStatus = prefs.getString(NotificationConstants.prefLastCheckInStatus);
-    final isAlreadyCheckedIn = lastCheckInDate == today &&
-        (lastCheckInStatus == 'Punched' || lastCheckInStatus == 'Punched In');
-
-    final lastCheckOutDate = prefs.getString(NotificationConstants.prefLastCheckOutDate);
-    final isAlreadyCheckedOut = lastCheckOutDate == today;
-
-    // Check weekly off-day or holiday
-    final isClosed = await WifiMonitorService.instance.isOfficeClosedToday(now);
-    if (isClosed) {
-      debugPrint('OfficeSentinel: Office is closed today. Stopping sentinel.');
-      await FlutterForegroundTask.stopService();
-      return;
-    }
-
-    // 1. MORNING CRITICAL WINDOW (8:45 AM - 9:30 AM): Active until checked in
-    if (now.hour == 8 && now.minute >= 45 || now.hour == 9 && now.minute <= 30) {
-      if (isAlreadyCheckedIn) {
-        debugPrint('OfficeSentinel: Morning Check-In already done today. Stopping sentinel.');
+      // Check weekly off-day or holiday
+      final isClosed = await WifiMonitorService.instance.isOfficeClosedToday(now);
+      if (isClosed) {
+        debugPrint('OfficeSentinel: Office is closed today. Stopping sentinel.');
         await FlutterForegroundTask.stopService();
         return;
       }
 
-      // Check Wi-Fi
+      final autoIn = prefs.getBool(NotificationConstants.prefAutoCheckInEnabled) ?? true;
+      final autoOut = prefs.getBool(NotificationConstants.prefAutoCheckOutEnabled) ?? true;
+
+      final lastCheckInDate = prefs.getString(NotificationConstants.prefLastCheckInDate);
+      final lastCheckInStatus = prefs.getString(NotificationConstants.prefLastCheckInStatus);
+      final isAlreadyCheckedIn = lastCheckInDate == today &&
+          (lastCheckInStatus == 'Punched' || lastCheckInStatus == 'Punched In');
+
+      final lastCheckOutDate = prefs.getString(NotificationConstants.prefLastCheckOutDate);
+      final isAlreadyCheckedOut = lastCheckOutDate == today;
+
       final conn = await _connectivity.checkConnectivity();
-      if (conn.contains(ConnectivityResult.wifi)) {
-        String? ssid;
+      final hasInternet = !conn.contains(ConnectivityResult.none);
+      final isWifi = conn.contains(ConnectivityResult.wifi);
+
+      String? ssid;
+      if (isWifi) {
         try {
           ssid = await _networkInfo.getWifiName();
-          if (ssid != null) {
-            ssid = ssid.replaceAll('"', '').trim();
-          }
+          if (ssid != null) ssid = ssid.replaceAll('"', '').trim();
         } catch (_) {}
+      }
 
-        final configuredSsid = prefs.getString(NotificationConstants.prefOfficeWifiSsid) ??
-            'ZaviSoft, Secreat Star, SecretStar';
+      final configuredSsid = prefs.getString(NotificationConstants.prefOfficeWifiSsid) ??
+          'ZaviSoft, Secreat Star, SecretStar';
+      final isConnectedToOffice = isWifi && WifiMonitorService.isOfficeNetwork(ssid, configuredSsid);
 
-        if (WifiMonitorService.isOfficeNetwork(ssid, configuredSsid)) {
-          debugPrint('OfficeSentinel: Office Wi-Fi detected ($ssid)! Performing Check-In...');
-          final res = await PacklyAttendanceService.instance.checkIn();
-          if (res.success) {
-            final timeStr =
-                '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
-            final isLate = (now.hour > 9) || (now.hour == 9 && now.minute >= 15);
-            await NotificationService.instance.showOfficeCheckInSuccessNotification(
-              time: timeStr,
-              isLate: isLate,
-            );
-            debugPrint('OfficeSentinel: Check-in complete! Stopping sentinel (Until Checked In achieved ✓).');
-            await FlutterForegroundTask.stopService();
-            return;
-          }
+      // =========================================================================
+      // 1. MORNING CRITICAL WINDOW (8:45 AM - 9:35 AM): Active until checked in
+      // =========================================================================
+      if ((now.hour == 8 && now.minute >= 45) || (now.hour == 9 && now.minute <= 35)) {
+        if (isAlreadyCheckedIn) {
+          debugPrint('OfficeSentinel: Morning Check-In already done today. Stopping sentinel.');
+          await FlutterForegroundTask.stopService();
+          return;
         }
-      }
-    }
 
-    // 2. EVENING CRITICAL DEPARTURE WINDOW (5:45 PM - 7:00 PM): Active until checked out
-    if (now.hour == 17 && now.minute >= 45 || now.hour == 18 || now.hour == 19 && now.minute <= 15) {
-      if (isAlreadyCheckedOut) {
-        debugPrint('OfficeSentinel: Evening Check-Out already recorded today. Stopping sentinel.');
-        await FlutterForegroundTask.stopService();
-        return;
-      }
-
-      // Once past 6:00 PM, check if user disconnected from Office Wi-Fi
-      if (now.hour >= 18) {
-        final conn = await _connectivity.checkConnectivity();
-        final isWifi = conn.contains(ConnectivityResult.wifi);
-        String? ssid;
-        if (isWifi) {
+        // Periodic internet verification (e.g. if user punched directly on physical biometric machine)
+        final shouldSync = _lastInternetSync == null ||
+            now.difference(_lastInternetSync!).inSeconds >= 45;
+        if (hasInternet && shouldSync) {
+          _lastInternetSync = now;
           try {
-            ssid = await _networkInfo.getWifiName();
-            if (ssid != null) ssid = ssid.replaceAll('"', '').trim();
-          } catch (_) {}
+            final liveStatus = await PacklyAttendanceService.instance.getAttendanceStatus();
+            if (liveStatus.isCheckedIn) {
+              debugPrint('OfficeSentinel: Live portal confirms check-in already recorded (${liveStatus.checkInTime})! Stopping sentinel.');
+              await prefs.setString(NotificationConstants.prefLastCheckInDate, today);
+              await prefs.setString(NotificationConstants.prefLastCheckInStatus, 'Punched In');
+              if (liveStatus.checkInTime != null) {
+                await prefs.setString(NotificationConstants.prefLastCheckInTime, liveStatus.checkInTime!);
+              }
+              await FlutterForegroundTask.stopService();
+              return;
+            }
+          } catch (e) {
+            debugPrint('OfficeSentinel: Morning portal check error: $e');
+          }
         }
 
-        final configuredSsid = prefs.getString(NotificationConstants.prefOfficeWifiSsid) ??
-            'ZaviSoft, Secreat Star, SecretStar';
-        final isConnectedToOffice = isWifi && WifiMonitorService.isOfficeNetwork(ssid, configuredSsid);
-
-        // If disconnected from office Wi-Fi at/after 6:00 PM
-        if (!isConnectedToOffice) {
-          debugPrint('OfficeSentinel: Office Wi-Fi disconnected after 6 PM! User left office. Submitting Check-Out...');
-          final res = await PacklyAttendanceService.instance.checkOut();
-          if (res.success) {
-            final timeStr =
-                '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
-            await NotificationService.instance.showOfficeCheckOutSuccessNotification(
-              time: timeStr,
+        // When connected to Office Wi-Fi:
+        if (isConnectedToOffice) {
+          debugPrint('OfficeSentinel: Office Wi-Fi detected ($ssid)! Performing Check-In...');
+          if (autoIn) {
+            final res = await PacklyAttendanceService.instance.checkIn();
+            if (res.success) {
+              final timeStr =
+                  '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
+              final isLate = (now.hour > 9) || (now.hour == 9 && now.minute >= 15);
+              await NotificationService.instance.showOfficeCheckInSuccessNotification(
+                time: timeStr,
+                isLate: isLate,
+              );
+              debugPrint('OfficeSentinel: Check-in complete! Stopping sentinel (Until Checked In achieved ✓).');
+              await FlutterForegroundTask.stopService();
+              return;
+            }
+          } else {
+            await NotificationService.instance.showOfficeCheckInReminder(
+              officeSsid: ssid,
             );
-            debugPrint('OfficeSentinel: Check-out recorded! Stopping sentinel (Until Checked Out achieved ✓).');
-            await FlutterForegroundTask.stopService();
-            return;
           }
         }
       }
-    }
 
-    // Outside critical windows
-    if ((now.hour < 8 || (now.hour == 8 && now.minute < 45)) ||
-        (now.hour > 19 || (now.hour == 19 && now.minute > 15))) {
-      debugPrint('OfficeSentinel: Outside critical office windows. Stopping sentinel.');
-      await FlutterForegroundTask.stopService();
+      // =========================================================================
+      // 2. EVENING CRITICAL DEPARTURE WINDOW (5:45 PM - 7:30 PM): Active until checked out
+      // =========================================================================
+      if ((now.hour == 17 && now.minute >= 45) || now.hour == 18 || (now.hour == 19 && now.minute <= 30)) {
+        if (isAlreadyCheckedOut) {
+          debugPrint('OfficeSentinel: Evening Check-Out already recorded today. Stopping sentinel.');
+          await FlutterForegroundTask.stopService();
+          return;
+        }
+
+        // Check via internet whether checkout is already recorded on the server
+        if (hasInternet && !isConnectedToOffice) {
+          try {
+            final liveStatus = await PacklyAttendanceService.instance.getAttendanceStatus();
+            if (liveStatus.isCheckedOut) {
+              debugPrint('OfficeSentinel: Portal confirms check-out already completed (${liveStatus.checkOutTime}). Dismissing sentinel.');
+              await prefs.setString(NotificationConstants.prefLastCheckOutDate, today);
+              if (liveStatus.checkOutTime != null) {
+                await prefs.setString(NotificationConstants.prefLastCheckOutTime, liveStatus.checkOutTime!);
+              }
+              await NotificationService.instance.cancelCheckOutReminder();
+              await FlutterForegroundTask.stopService();
+              return;
+            }
+          } catch (e) {
+            debugPrint('OfficeSentinel: Live portal checkout verify error: $e');
+          }
+        }
+
+        // If disconnected from office Wi-Fi at/after 6:00 PM (departure detected):
+        if (now.hour >= 18 && !isConnectedToOffice) {
+          debugPrint('OfficeSentinel: Disconnected from office Wi-Fi after 6:00 PM. Evaluating location & departure...');
+
+          // Measure distance from office
+          double distance = 0.0;
+          Position? pos;
+          try {
+            final perm = await Geolocator.checkPermission();
+            if (perm == LocationPermission.always || perm == LocationPermission.whileInUse) {
+              pos = await Geolocator.getCurrentPosition(
+                locationSettings: const LocationSettings(
+                  accuracy: LocationAccuracy.medium,
+                  timeLimit: Duration(seconds: 8),
+                ),
+              );
+              final officeLat = prefs.getDouble(NotificationConstants.prefOfficeLatitude) ?? 23.7925;
+              final officeLng = prefs.getDouble(NotificationConstants.prefOfficeLongitude) ?? 90.4078;
+              distance = Geolocator.distanceBetween(
+                pos.latitude,
+                pos.longitude,
+                officeLat,
+                officeLng,
+              );
+              debugPrint('OfficeSentinel: Distance to office: ${distance.toStringAsFixed(1)}m');
+            }
+          } catch (e) {
+            debugPrint('OfficeSentinel: Geolocator distance error: $e');
+          }
+
+          // Case A: User has moved FAR away from office (e.g. > 400m)
+          // DO NOT auto check out blindly without asking! Give urgent loud alert asking user to confirm!
+          if (distance > 400.0) {
+            final shouldAlert = _lastDistanceAlert == null ||
+                now.difference(_lastDistanceAlert!).inMinutes >= 3;
+            if (shouldAlert) {
+              _lastDistanceAlert = now;
+              debugPrint('OfficeSentinel: User is FAR from office (${distance.toStringAsFixed(1)}m)! Triggering urgent alarm alert.');
+              await NotificationService.instance.showUrgentDepartureWarningNotification(
+                distanceMeters: distance,
+              );
+              FlutterForegroundTask.updateService(
+                notificationTitle: '🚨 জরুরি সতর্কতা: চেক-আউট দেননি!',
+                notificationText: 'অফিস থেকে দূরে সরে গেছেন। এখনই চেক-আউট পাঞ্চ করুন।',
+              );
+            }
+          } else {
+            // Case B: User is right at the building boundary / exit (distance <= 400m)
+            if (autoOut) {
+              debugPrint('OfficeSentinel: Performing Safe Auto Check-Out...');
+              final res = await PacklyAttendanceService.instance.checkOut(
+                latitude: pos?.latitude,
+                longitude: pos?.longitude,
+              );
+              if (res.success) {
+                final timeStr =
+                    '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
+                await NotificationService.instance.showOfficeCheckOutSuccessNotification(
+                  time: timeStr,
+                );
+                debugPrint('OfficeSentinel: Check-out recorded! Stopping sentinel (Until Checked Out achieved ✓).');
+                await FlutterForegroundTask.stopService();
+                return;
+              }
+            } else {
+              await NotificationService.instance.showOfficeCheckOutReminder();
+            }
+          }
+        }
+      }
+
+      // Outside critical windows
+      if ((now.hour < 8 || (now.hour == 8 && now.minute < 45)) ||
+          (now.hour > 19 || (now.hour == 19 && now.minute > 30))) {
+        debugPrint('OfficeSentinel: Outside critical office windows. Stopping sentinel.');
+        await FlutterForegroundTask.stopService();
+      }
+    } finally {
+      _isProcessing = false;
     }
   }
 

@@ -37,6 +37,7 @@ class NotificationConstants {
   static const int checkOutNotificationId = 1002;
   static const int lateWarningNotificationId = 1003;
   static const int checkOutReminderNotificationId = 1004;
+  static const int urgentDistanceAlertNotificationId = 1030;
   static const int morningCutoffAlarm900 = 1010;
   static const int morningCutoffAlarm906 = 1011;
   static const int morningCutoffAlarm912 = 1012;
