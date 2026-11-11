@@ -320,7 +320,10 @@ class NotificationService {
   }
 
   /// Prompt notification when Office Wi-Fi disconnects
-  Future<void> showOfficeCheckOutReminder({bool ignoreOffDay = false}) async {
+  Future<void> showOfficeCheckOutReminder({
+    bool ignoreOffDay = false,
+    bool isEarly = false,
+  }) async {
     if (!ignoreOffDay) {
       final prefs = await SharedPreferences.getInstance();
       final offDaysStr = prefs.getString(NotificationConstants.prefOffDays);
@@ -372,10 +375,17 @@ class NotificationService {
       ),
     );
 
+    final title = isEarly
+        ? '⚠️ Early Departure Alert (Before 6:00 PM)'
+        : '🚪 Leaving Office?';
+    final body = isEarly
+        ? 'অফিস সময় সন্ধ্যা ৬:০০ টা পর্যন্ত (৯ ঘণ্টা)। নির্ধারিত সময়ের পূর্বে বের হলে ম্যানেজমেন্টের অনুমতি সাপেক্ষে ট্যাপ করে চেক-আউট দিন।'
+        : "Disconnected from office network. Don't forget your biometric check-out punch!";
+
     await _notificationsPlugin.show(
       id: NotificationConstants.checkOutNotificationId,
-      title: '🚪 Leaving Office?',
-      body: "Disconnected from office network. Don't forget your biometric check-out punch!",
+      title: title,
+      body: body,
       notificationDetails: details,
     );
   }
