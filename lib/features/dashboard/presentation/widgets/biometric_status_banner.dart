@@ -60,8 +60,6 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
   Future<void> _loadSavedStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final today = DateTime.now().toIso8601String().substring(0, 10);
-    final lastCheckInDate =
-        prefs.getString(NotificationConstants.prefLastCheckInDate);
     final holiday =
         await PacklyAttendanceService.instance.getHolidayForDate(DateTime.now());
     final bannerMode =
@@ -70,20 +68,40 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
         prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
     final lunchBooked =
         prefs.getBool(NotificationConstants.prefLunchLastKnownTomorrowBooked);
+
+    String? inTime;
+    String? outTime;
+    bool isLate = false;
+
+    if (isSim) {
+      final simDate = prefs.getString(NotificationConstants.prefSimulatedCheckInDate);
+      if (simDate == today) {
+        inTime = prefs.getString(NotificationConstants.prefSimulatedCheckInTime);
+        outTime = prefs.getString(NotificationConstants.prefSimulatedCheckOutTime);
+        isLate = prefs.getBool(NotificationConstants.prefSimulatedCheckInIsLate) ?? false;
+      }
+    } else {
+      final lastCheckInDate =
+          prefs.getString(NotificationConstants.prefLastCheckInDate);
+      if (lastCheckInDate == today) {
+        inTime = prefs.getString(NotificationConstants.prefLastCheckInTime);
+        final lastOutDate = prefs.getString(NotificationConstants.prefLastCheckOutDate);
+        outTime = (lastOutDate == today)
+            ? prefs.getString(NotificationConstants.prefLastCheckOutTime)
+            : null;
+        isLate = prefs.getBool(NotificationConstants.prefLastCheckInIsLate) ?? false;
+      }
+    }
+
     if (mounted) {
       setState(() {
         _bannerMode = bannerMode;
         _isSimulationMode = isSim;
         _todayHoliday = holiday;
         _tomorrowLunchBooked = lunchBooked;
-        if (lastCheckInDate == today) {
-          _lastCheckInTime =
-              prefs.getString(NotificationConstants.prefLastCheckInTime);
-          _lastCheckOutTime =
-              prefs.getString(NotificationConstants.prefLastCheckOutTime);
-          _isLate =
-              prefs.getBool(NotificationConstants.prefLastCheckInIsLate) ?? false;
-        }
+        _lastCheckInTime = inTime;
+        _lastCheckOutTime = outTime;
+        _isLate = isLate;
       });
     }
   }
@@ -104,9 +122,7 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
             _lastCheckInTime = status.checkInTime;
             _isLate = status.isLate;
           }
-          if (status.checkOutTime != null) {
-            _lastCheckOutTime = status.checkOutTime;
-          }
+          _lastCheckOutTime = status.checkOutTime;
           _isLoading = false;
         });
         if (status.isCheckedIn) {

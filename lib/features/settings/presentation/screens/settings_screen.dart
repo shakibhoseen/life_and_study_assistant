@@ -2175,6 +2175,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool(NotificationConstants.prefPacklySimulationMode, val);
                   setState(() => _simulationMode = val);
+                  await ref.read(officeAttendanceProvider.notifier).setSimulationMode(val);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -2182,7 +2183,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         content: Text(
                           val
                               ? '🧪 Safe Simulation Mode ON! এখন নিরাপদে ডামি টেস্ট করতে পারেন।'
-                              : '✅ Live Mode ON! এখন অফিস ওয়াই-ফাইতে রিয়েল চেক-ইন কার্যকর হবে।',
+                              : '✅ Live Mode ON! সিমুলেশন ডেটা রিসেট হয়েছে ও লাইভ পোর্টালের সাথে সিঙ্ক সম্পন্ন।',
                         ),
                       ),
                     );

@@ -98,6 +98,40 @@ void main() {
       expect(checkOutResult.message, contains('[TEST MODE]'));
       expect(checkOutResult.status?.isCheckedOut, isTrue);
       expect(checkOutResult.status?.checkOutTime, isNotNull);
+
+      // Verify that simulation mode NEVER contaminated production keys
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(NotificationConstants.prefLastCheckOutDate), isNull);
+      expect(prefs.getString(NotificationConstants.prefLastCheckOutTime), isNull);
+      expect(prefs.getString(NotificationConstants.prefLastCheckInDate), isNull);
+
+      // Verify simulated keys WERE populated
+      expect(prefs.getString(NotificationConstants.prefSimulatedCheckOutDate), isNotNull);
+      expect(prefs.getString(NotificationConstants.prefSimulatedCheckOutTime), isNotNull);
+      expect(prefs.getString(NotificationConstants.prefSimulatedCheckInDate), isNotNull);
+
+      // Verify clearSimulationData wipes them cleanly
+      await PacklyAttendanceService.instance.clearSimulationData();
+      expect(prefs.getString(NotificationConstants.prefSimulatedCheckOutDate), isNull);
+      expect(prefs.getString(NotificationConstants.prefSimulatedCheckOutTime), isNull);
+      expect(prefs.getString(NotificationConstants.prefSimulatedCheckInDate), isNull);
+    });
+
+    test('clearSimulationData sanitizes any legacy mock values in real keys', () async {
+      SharedPreferences.setMockInitialValues({
+        NotificationConstants.prefLastCheckInStatus: 'Punched In (Test Mode)',
+        NotificationConstants.prefLastCheckInDate: '2026-11-11',
+        NotificationConstants.prefLastCheckOutDate: '2026-11-11',
+        NotificationConstants.prefLastCheckOutTime: '06:00 PM',
+      });
+
+      await PacklyAttendanceService.instance.clearSimulationData(sanitizeRealKeys: true);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(NotificationConstants.prefLastCheckInStatus), isNull);
+      expect(prefs.getString(NotificationConstants.prefLastCheckInDate), isNull);
+      expect(prefs.getString(NotificationConstants.prefLastCheckOutDate), isNull);
+      expect(prefs.getString(NotificationConstants.prefLastCheckOutTime), isNull);
     });
 
     test('prefPacklySimulationMode toggle enables safe simulation', () async {

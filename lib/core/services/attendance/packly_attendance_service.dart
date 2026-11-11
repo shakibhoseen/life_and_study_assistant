@@ -334,12 +334,12 @@ class PacklyAttendanceService {
 
     if (isSim) {
       final today = DateTime.now().toIso8601String().substring(0, 10);
-      final lastCheckinDate = prefs.getString(NotificationConstants.prefLastCheckInDate);
-      final lastCheckinStatus = prefs.getString(NotificationConstants.prefLastCheckInStatus);
-      final lastCheckinTime = prefs.getString(NotificationConstants.prefLastCheckInTime);
-      final lastCheckoutDate = prefs.getString(NotificationConstants.prefLastCheckOutDate);
-      final lastCheckoutTime = prefs.getString(NotificationConstants.prefLastCheckOutTime);
-      final isLate = prefs.getBool(NotificationConstants.prefLastCheckInIsLate) ?? false;
+      final lastCheckinDate = prefs.getString(NotificationConstants.prefSimulatedCheckInDate);
+      final lastCheckinStatus = prefs.getString(NotificationConstants.prefSimulatedCheckInStatus);
+      final lastCheckinTime = prefs.getString(NotificationConstants.prefSimulatedCheckInTime);
+      final lastCheckoutDate = prefs.getString(NotificationConstants.prefSimulatedCheckOutDate);
+      final lastCheckoutTime = prefs.getString(NotificationConstants.prefSimulatedCheckOutTime);
+      final isLate = prefs.getBool(NotificationConstants.prefSimulatedCheckInIsLate) ?? false;
 
       final isCheckedIn = lastCheckinDate == today &&
           (lastCheckinStatus == 'Punched In' || lastCheckinStatus == 'Punched');
@@ -430,6 +430,10 @@ class PacklyAttendanceService {
             if (isCheckedOut) {
               await prefs.setString(NotificationConstants.prefLastCheckOutDate, todayIso);
               await prefs.setString(NotificationConstants.prefLastCheckOutTime, checkOutTime);
+            } else {
+              // Portal confirms check-out is pending; clear any stale local mock state
+              await prefs.remove(NotificationConstants.prefLastCheckOutDate);
+              await prefs.remove(NotificationConstants.prefLastCheckOutTime);
             }
 
             return PacklyAttendanceStatus(
@@ -643,10 +647,10 @@ class PacklyAttendanceService {
       final isLate = (now.hour > 9) || (now.hour == 9 && now.minute >= 15);
       final todayIso = now.toIso8601String().substring(0, 10);
 
-      await prefs.setString(NotificationConstants.prefLastCheckInDate, todayIso);
-      await prefs.setString(NotificationConstants.prefLastCheckInStatus, 'Punched In');
-      await prefs.setString(NotificationConstants.prefLastCheckInTime, nowTimeStr);
-      await prefs.setBool(NotificationConstants.prefLastCheckInIsLate, isLate);
+      await prefs.setString(NotificationConstants.prefSimulatedCheckInDate, todayIso);
+      await prefs.setString(NotificationConstants.prefSimulatedCheckInStatus, 'Punched In');
+      await prefs.setString(NotificationConstants.prefSimulatedCheckInTime, nowTimeStr);
+      await prefs.setBool(NotificationConstants.prefSimulatedCheckInIsLate, isLate);
 
       final status = PacklyAttendanceStatus(
         isCheckedIn: true,
@@ -836,13 +840,13 @@ class PacklyAttendanceService {
           '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
       final todayIso = now.toIso8601String().substring(0, 10);
 
-      await prefs.setString(NotificationConstants.prefLastCheckOutDate, todayIso);
-      await prefs.setString(NotificationConstants.prefLastCheckOutTime, nowTimeStr);
+      await prefs.setString(NotificationConstants.prefSimulatedCheckOutDate, todayIso);
+      await prefs.setString(NotificationConstants.prefSimulatedCheckOutTime, nowTimeStr);
 
       final status = PacklyAttendanceStatus(
         isCheckedIn: true,
         isCheckedOut: true,
-        checkInTime: prefs.getString(NotificationConstants.prefLastCheckInTime) ?? '09:00:00 AM',
+        checkInTime: prefs.getString(NotificationConstants.prefSimulatedCheckInTime) ?? '09:00:00 AM',
         checkOutTime: nowTimeStr,
         statusText: 'Workday Completed (Test Mode)',
       );
@@ -979,6 +983,31 @@ class PacklyAttendanceService {
         success: false,
         message: 'Check-out error: $e',
       );
+    }
+  }
+
+  /// Completely clears mock simulation data so it never contaminates production attendance
+  Future<void> clearSimulationData({bool sanitizeRealKeys = true}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(NotificationConstants.prefSimulatedCheckInDate);
+    await prefs.remove(NotificationConstants.prefSimulatedCheckInTime);
+    await prefs.remove(NotificationConstants.prefSimulatedCheckInStatus);
+    await prefs.remove(NotificationConstants.prefSimulatedCheckInIsLate);
+    await prefs.remove(NotificationConstants.prefSimulatedCheckOutDate);
+    await prefs.remove(NotificationConstants.prefSimulatedCheckOutTime);
+
+    if (sanitizeRealKeys) {
+      // Clean up if a previous bug leaked simulated values into real keys
+      final lastCheckInStatus = prefs.getString(NotificationConstants.prefLastCheckInStatus);
+      if (lastCheckInStatus != null && lastCheckInStatus.contains('Test')) {
+        await prefs.remove(NotificationConstants.prefLastCheckInDate);
+        await prefs.remove(NotificationConstants.prefLastCheckInStatus);
+        await prefs.remove(NotificationConstants.prefLastCheckInTime);
+        await prefs.remove(NotificationConstants.prefLastCheckInIsLate);
+      }
+      // Remove stale checkout keys so live server sync will repopulate only if genuine
+      await prefs.remove(NotificationConstants.prefLastCheckOutDate);
+      await prefs.remove(NotificationConstants.prefLastCheckOutTime);
     }
   }
 }

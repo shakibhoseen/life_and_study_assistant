@@ -156,6 +156,14 @@ class NotificationConstants {
   static const String prefOfficeBannerMode = 'office_banner_display_mode';
   static const String prefPacklySimulationMode = 'packly_simulation_mode';
 
+  // Simulation Mode Keys (Strictly isolated to prevent mock data polluting live attendance)
+  static const String prefSimulatedCheckInDate = 'simulated_check_in_date';
+  static const String prefSimulatedCheckInTime = 'simulated_check_in_time';
+  static const String prefSimulatedCheckInStatus = 'simulated_check_in_status';
+  static const String prefSimulatedCheckInIsLate = 'simulated_check_in_is_late';
+  static const String prefSimulatedCheckOutDate = 'simulated_check_out_date';
+  static const String prefSimulatedCheckOutTime = 'simulated_check_out_time';
+
   // Steadfast Courier Lunch & Meal Portal Settings
   static const String prefLunchEmail = 'lunch_email';
   static const String prefLunchPassword = 'lunch_password';

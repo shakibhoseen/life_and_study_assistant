@@ -329,6 +329,8 @@ class AttendanceState {
     PacklyHoliday? todayHoliday,
     String? lastCheckInTime,
     String? lastCheckOutTime,
+    bool clearCheckOutTime = false,
+    bool clearCheckInTime = false,
     bool? isLate,
     bool? isSimulationMode,
     String? bannerMode,
@@ -337,8 +339,8 @@ class AttendanceState {
       isLoading: isLoading ?? this.isLoading,
       status: status ?? this.status,
       todayHoliday: todayHoliday ?? this.todayHoliday,
-      lastCheckInTime: lastCheckInTime ?? this.lastCheckInTime,
-      lastCheckOutTime: lastCheckOutTime ?? this.lastCheckOutTime,
+      lastCheckInTime: clearCheckInTime ? null : (lastCheckInTime ?? this.lastCheckInTime),
+      lastCheckOutTime: clearCheckOutTime ? null : (lastCheckOutTime ?? this.lastCheckOutTime),
       isLate: isLate ?? this.isLate,
       isSimulationMode: isSimulationMode ?? this.isSimulationMode,
       bannerMode: bannerMode ?? this.bannerMode,
@@ -356,7 +358,6 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
   Future<void> _loadSavedStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final today = DateTime.now().toIso8601String().substring(0, 10);
-    final lastCheckInDate = prefs.getString(NotificationConstants.prefLastCheckInDate);
     final holiday = await PacklyAttendanceService.instance.getHolidayForDate(DateTime.now());
     final bannerMode = prefs.getString(NotificationConstants.prefOfficeBannerMode) ?? 'contextual';
     final isSim = prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
@@ -365,10 +366,23 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
     String? outTime;
     bool isLate = false;
 
-    if (lastCheckInDate == today) {
-      inTime = prefs.getString(NotificationConstants.prefLastCheckInTime);
-      outTime = prefs.getString(NotificationConstants.prefLastCheckOutTime);
-      isLate = prefs.getBool(NotificationConstants.prefLastCheckInIsLate) ?? false;
+    if (isSim) {
+      final simDate = prefs.getString(NotificationConstants.prefSimulatedCheckInDate);
+      if (simDate == today) {
+        inTime = prefs.getString(NotificationConstants.prefSimulatedCheckInTime);
+        outTime = prefs.getString(NotificationConstants.prefSimulatedCheckOutTime);
+        isLate = prefs.getBool(NotificationConstants.prefSimulatedCheckInIsLate) ?? false;
+      }
+    } else {
+      final lastCheckInDate = prefs.getString(NotificationConstants.prefLastCheckInDate);
+      if (lastCheckInDate == today) {
+        inTime = prefs.getString(NotificationConstants.prefLastCheckInTime);
+        final lastOutDate = prefs.getString(NotificationConstants.prefLastCheckOutDate);
+        outTime = (lastOutDate == today)
+            ? prefs.getString(NotificationConstants.prefLastCheckOutTime)
+            : null;
+        isLate = prefs.getBool(NotificationConstants.prefLastCheckInIsLate) ?? false;
+      }
     }
 
     state = state.copyWith(
@@ -377,6 +391,7 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
       isSimulationMode: isSim,
       lastCheckInTime: inTime,
       lastCheckOutTime: outTime,
+      clearCheckOutTime: outTime == null,
       isLate: isLate,
     );
 
@@ -396,8 +411,9 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
         isLoading: false,
         status: status,
         isSimulationMode: isSim,
-        lastCheckInTime: status.checkInTime ?? state.lastCheckInTime,
-        lastCheckOutTime: status.checkOutTime ?? state.lastCheckOutTime,
+        lastCheckInTime: status.checkInTime ?? (isSim ? state.lastCheckInTime : null),
+        lastCheckOutTime: status.checkOutTime,
+        clearCheckOutTime: status.checkOutTime == null,
         isLate: status.isLate,
       );
     } catch (e) {
@@ -442,8 +458,13 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
     }
   }
 
-  void setSimulationMode(bool isSim) {
+  Future<void> setSimulationMode(bool isSim) async {
     state = state.copyWith(isSimulationMode: isSim);
+    if (!isSim) {
+      await PacklyAttendanceService.instance.clearSimulationData();
+      state = state.copyWith(clearCheckOutTime: true);
+    }
+    await syncLiveAttendance();
   }
 }
 
