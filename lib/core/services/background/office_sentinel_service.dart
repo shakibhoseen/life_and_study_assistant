@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -33,6 +34,20 @@ class OfficeSentinelTaskHandler extends TaskHandler {
   @override
   void onRepeatEvent(DateTime timestamp) {
     _checkSentinelCondition();
+  }
+
+  Future<bool> _hasRealInternet(SharedPreferences prefs) async {
+    final isSim = prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
+    if (isSim) return true;
+    try {
+      final conn = await _connectivity.checkConnectivity();
+      if (conn.contains(ConnectivityResult.none)) return false;
+      final lookup = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 3));
+      return lookup.isNotEmpty && lookup[0].rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _checkSentinelCondition() async {
@@ -185,27 +200,40 @@ class OfficeSentinelTaskHandler extends TaskHandler {
         }
 
         // User is DISCONNECTED from office Wi-Fi:
-        // Step 1: Check via internet: is check-out already recorded on the server today?
-        if (hasInternet) {
-          try {
-            final liveStatus = await PacklyAttendanceService.instance.getAttendanceStatus();
-            if (liveStatus.isCheckedOut) {
-              debugPrint('OfficeSentinel: Portal confirms check-out already completed (${liveStatus.checkOutTime}). Dismissing sentinel.');
-              await prefs.setString(NotificationConstants.prefLastCheckOutDate, today);
-              if (liveStatus.checkOutTime != null) {
-                await prefs.setString(NotificationConstants.prefLastCheckOutTime, liveStatus.checkOutTime!);
-              }
-              await NotificationService.instance.cancelCheckOutReminder();
-              await FlutterForegroundTask.stopService();
-              await WorkmanagerService.instance.cancelSafetyWatchdog();
-              return;
-            }
-          } catch (e) {
-            debugPrint('OfficeSentinel: Live portal checkout verify error: $e');
-          }
+        // Step 1: Check if mobile internet / data is active & working.
+        // If user is in room, elevator, or stairs with no mobile signal yet,
+        // stay alive in foreground and keep polling every interval until internet is restored!
+        final realInternet = await _hasRealInternet(prefs);
+        if (!realInternet) {
+          debugPrint(
+            'OfficeSentinel: Disconnected from office Wi-Fi, but mobile internet is not yet reachable. Polling every interval to finalize checkout...',
+          );
+          FlutterForegroundTask.updateService(
+            notificationTitle: '📶 Wi-Fi বিচ্ছিন্ন - ইন্টারনেটের অপেক্ষা...',
+            notificationText: 'রুম/সিঁড়িতে সংযোগ বিচ্ছিন্ন। মোবাইল নেটওয়ার্ক সচল হওয়া মাত্রই চেক-আউট হবে...',
+          );
+          return;
         }
 
-        // Step 2: Wi-Fi disconnected and checkout NOT done yet on server:
+        // Step 2: Internet is online! Check via server: is check-out already recorded on the server today?
+        try {
+          final liveStatus = await PacklyAttendanceService.instance.getAttendanceStatus();
+          if (liveStatus.isCheckedOut) {
+            debugPrint('OfficeSentinel: Portal confirms check-out already completed (${liveStatus.checkOutTime}). Dismissing sentinel.');
+            await prefs.setString(NotificationConstants.prefLastCheckOutDate, today);
+            if (liveStatus.checkOutTime != null) {
+              await prefs.setString(NotificationConstants.prefLastCheckOutTime, liveStatus.checkOutTime!);
+            }
+            await NotificationService.instance.cancelCheckOutReminder();
+            await FlutterForegroundTask.stopService();
+            await WorkmanagerService.instance.cancelSafetyWatchdog();
+            return;
+          }
+        } catch (e) {
+          debugPrint('OfficeSentinel: Live portal checkout verify error: $e');
+        }
+
+        // Step 3: Wi-Fi disconnected, internet is active, and checkout NOT done yet on server:
         // Subcase A: Before 6:00 PM (Early Out)
         // Rule: NEVER auto check-out without asking before 6:00 PM! Ask the user!
         if (now.hour < 18) {

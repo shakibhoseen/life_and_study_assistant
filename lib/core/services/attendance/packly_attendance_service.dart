@@ -74,6 +74,85 @@ class PacklyHoliday {
         (d.isAtSameMomentAs(e) || d.isBefore(e));
   }
 
+  /// Returns Bengali day of week name (e.g. 'শুক্রবার', 'শনিবার')
+  static String weekdayNameBn(int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return 'সোমবার';
+      case DateTime.tuesday:
+        return 'মঙ্গলবার';
+      case DateTime.wednesday:
+        return 'বুধবার';
+      case DateTime.thursday:
+        return 'বৃহস্পতিবার';
+      case DateTime.friday:
+        return 'শুক্রবার';
+      case DateTime.saturday:
+        return 'শনিবার';
+      case DateTime.sunday:
+        return 'রবিবার';
+      default:
+        return '';
+    }
+  }
+
+  /// Returns English day of week name (e.g. 'Fri', 'Sat')
+  static String weekdayNameEn(int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return 'Mon';
+      case DateTime.tuesday:
+        return 'Tue';
+      case DateTime.wednesday:
+        return 'Wed';
+      case DateTime.thursday:
+        return 'Thu';
+      case DateTime.friday:
+        return 'Fri';
+      case DateTime.saturday:
+        return 'Sat';
+      case DateTime.sunday:
+        return 'Sun';
+      default:
+        return '';
+    }
+  }
+
+  /// Returns English month short name
+  static String monthName(int month) {
+    const m = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return (month >= 1 && month <= 12) ? m[month] : '';
+  }
+
+  /// Formatted date range with day of the week (Bengali)
+  /// e.g. "21 Feb (শুক্রবার)" or "10-12 Apr (বৃহস্পতি - শনি)"
+  String get formattedWithWeekday {
+    final isSameDay = startDate.year == endDate.year &&
+        startDate.month == endDate.month &&
+        startDate.day == endDate.day;
+
+    if (isSameDay) {
+      final m = monthName(startDate.month);
+      final day = startDate.day;
+      final wBn = weekdayNameBn(startDate.weekday);
+      return '$day $m ($wBn)';
+    } else {
+      final sM = monthName(startDate.month);
+      final sDay = startDate.day;
+      final sWBn = weekdayNameBn(startDate.weekday);
+
+      final eM = monthName(endDate.month);
+      final eDay = endDate.day;
+      final eWBn = weekdayNameBn(endDate.weekday);
+
+      if (startDate.month == endDate.month) {
+        return '$sDay-$eDay $sM ($sWBn - $eWBn)';
+      } else {
+        return '$sDay $sM ($sWBn) - $eDay $eM ($eWBn)';
+      }
+    }
+  }
+
   Map<String, dynamic> toJson() => {
         'name': name,
         'startDate': startDate.toIso8601String(),

@@ -384,7 +384,7 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'ZaviSoft office is closed today for ${_todayHoliday!.name}! Biometric check-in, check-out, and 9:15 AM late warnings are paused.',
+                    'আজ ${_todayHoliday!.formattedWithWeekday} উপলক্ষে ZaviSoft অফিস বন্ধ! ${_todayHoliday!.name} এর জন্য বায়োমেট্রিক চেক-ইন ও কাটঅফ অ্যালার্ট স্থগিত রয়েছে।',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 13,
@@ -409,9 +409,10 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
       // 2. Weekly Off-Day Banner (e.g. Thursday & Friday)
       if (isTodayOff) {
         final now = DateTime.now();
-        final dayName = now.weekday == DateTime.thursday
+        final dayNameEn = now.weekday == DateTime.thursday
             ? 'Thursday'
             : (now.weekday == DateTime.friday ? 'Friday' : 'Weekend');
+        final dayNameBn = PacklyHoliday.weekdayNameBn(now.weekday);
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
@@ -447,7 +448,7 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Weekly Off-Day ($dayName)',
+                                'Weekly Off-Day ($dayNameEn - $dayNameBn)',
                                 style: const TextStyle(
                                   color: Colors.tealAccent,
                                   fontWeight: FontWeight.bold,

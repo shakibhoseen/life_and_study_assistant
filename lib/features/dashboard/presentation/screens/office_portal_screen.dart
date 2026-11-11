@@ -643,15 +643,23 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
     );
   }
 
+  String _dateWithWeekday(String dateStr) {
+    final dt = DateTime.tryParse(dateStr);
+    if (dt == null) return dateStr;
+    final wBn = PacklyHoliday.weekdayNameBn(dt.weekday);
+    return '$dateStr ($wBn)';
+  }
+
   void _handleDayTap(SteadfastDayMeal day) {
+    final formattedDate = _dateWithWeekday(day.date);
     if (!day.isEditable) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 2),
           content: Text(
             day.afterCutoff
-                ? 'Locked: ${day.date} এর ৬:০০ PM কাটঅফ পার হয়ে গেছে।'
-                : 'Locked: ${day.date} অতীত বা ছুটির দিন হওয়ায় পরিবর্তনযোগ্য নয়।',
+                ? 'Locked: $formattedDate এর ৬:০০ PM কাটঅফ পার হয়ে গেছে।'
+                : 'Locked: $formattedDate অতীত বা ছুটির দিন হওয়ায় পরিবর্তনযোগ্য নয়।',
           ),
         ),
       );
@@ -666,8 +674,8 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
         title: Text(willBook ? 'Book Lunch?' : 'Cancel Lunch?'),
         content: Text(
           willBook
-              ? '${day.date} তারিখের জন্য কি লাঞ্চ বুক করতে চান?'
-              : '${day.date} তারিখের লাঞ্চ কি বাতিল করতে চান?',
+              ? '$formattedDate তারিখের জন্য কি লাঞ্চ বুক করতে চান?'
+              : '$formattedDate তারিখের লাঞ্চ কি বাতিল করতে চান?',
         ),
         actions: [
           TextButton(
@@ -1240,27 +1248,55 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                     ..._holidays.take(6).map((h) {
                       final isUpcoming = h.endDate.isAfter(DateTime.now());
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 5),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Icon(
                               isUpcoming ? Icons.event_available : Icons.event_busy,
-                              size: 14,
+                              size: 16,
                               color: isUpcoming ? Colors.teal : Colors.grey,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Text(
-                                h.name,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isUpcoming ? FontWeight.w600 : FontWeight.normal,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    h.name,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: isUpcoming ? FontWeight.w600 : FontWeight.normal,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    h.formattedWithWeekday,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isUpcoming ? Colors.teal.shade700 : Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            Text(
-                              '${h.startDate.day}/${h.startDate.month}',
-                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isUpcoming
+                                    ? Colors.teal.withValues(alpha: 0.12)
+                                    : Colors.grey.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                isUpcoming ? 'আসন্ন' : 'সমাপ্ত',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isUpcoming ? Colors.teal : Colors.grey,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ],
                         ),

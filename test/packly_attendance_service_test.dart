@@ -74,6 +74,20 @@ void main() {
       expect(holidayRange.containsDate(DateTime(2026, 3, 24)), isFalse);
     });
 
+    test('PacklyHoliday formattedWithWeekday and weekdayNameBn work accurately', () {
+      // 2026-02-21 is Saturday (শনিবার)
+      final holidaySingle = PacklyHoliday(
+        name: 'Martyrs Day',
+        startDate: DateTime(2026, 2, 21),
+        endDate: DateTime(2026, 2, 21),
+      );
+
+      expect(holidaySingle.formattedWithWeekday, contains('21 Feb'));
+      expect(holidaySingle.formattedWithWeekday, contains('শনিবার'));
+      expect(PacklyHoliday.weekdayNameBn(DateTime.friday), equals('শুক্রবার'));
+      expect(PacklyHoliday.weekdayNameBn(DateTime.thursday), equals('বৃহস্পতিবার'));
+    });
+
     test('forceSimulate checkIn and checkOut produces mock success without server hit', () async {
       final checkInResult = await PacklyAttendanceService.instance.checkIn(
         forceSimulate: true,
