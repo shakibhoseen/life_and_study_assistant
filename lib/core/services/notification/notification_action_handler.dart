@@ -2,6 +2,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/notification_constants.dart';
+import '../attendance/packly_attendance_service.dart';
+import '../attendance/steadfast_lunch_service.dart';
 import '../flashcards/flashcard_service.dart';
 import 'notification_service.dart';
 
@@ -57,12 +59,36 @@ Future<void> handleNotificationResponse(NotificationResponse response) async {
       NotificationConstants.prefLastMealResponseDate,
       todayIso,
     );
+  } else if (actionId == NotificationConstants.actionLunchToggleTomorrow) {
+    await SteadfastLunchService.instance.toggleTomorrowMeal();
+  } else if (actionId == NotificationConstants.actionCheckInNow) {
+    final result = await PacklyAttendanceService.instance.checkIn();
+    if (result.success) {
+      final now = DateTime.now();
+      final timeStr =
+          '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
+      final isLate = (now.hour > 9) || (now.hour == 9 && now.minute >= 15);
+      await NotificationService.instance.showOfficeCheckInSuccessNotification(
+        time: timeStr,
+        isLate: isLate,
+      );
+    }
   } else if (actionId == NotificationConstants.actionCheckInDone) {
     await prefs.setString(
       NotificationConstants.prefLastCheckInStatus,
       'Punched In',
     );
     await prefs.setString(NotificationConstants.prefLastCheckInDate, todayIso);
+  } else if (actionId == NotificationConstants.actionCheckOutNow) {
+    final result = await PacklyAttendanceService.instance.checkOut();
+    if (result.success) {
+      final now = DateTime.now();
+      final timeStr =
+          '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
+      await NotificationService.instance.showOfficeCheckOutSuccessNotification(
+        time: timeStr,
+      );
+    }
   } else if (actionId == NotificationConstants.actionCheckOutDone) {
     await prefs.setString(NotificationConstants.prefLastCheckOutDate, todayIso);
   } else if (actionId == NotificationConstants.actionFlashcardGotIt) {

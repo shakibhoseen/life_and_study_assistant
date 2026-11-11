@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/notification_constants.dart';
+import '../attendance/packly_attendance_service.dart';
 import '../notification/notification_service.dart';
 
 enum OfficeConnectionState { connected, disconnected, unknown }
@@ -245,17 +246,90 @@ class WifiMonitorService {
     return list.contains(date.weekday);
   }
 
-  Future<void> _onOfficeWifiConnected(String ssid) async {
+  /// Checks whether office is closed today: either a weekly off-day (Thu/Fri) OR an official Packly holiday
+  Future<bool> isOfficeClosedToday([DateTime? testDate]) async {
+    final date = testDate ?? DateTime.now();
     final prefs = await SharedPreferences.getInstance();
     final offDaysStr = prefs.getString(NotificationConstants.prefOffDays);
 
-    // Suppress office check-in reminder on off-days (Thursday & Friday)
-    if (isOffDay(DateTime.now(), offDaysStr)) {
+    // 1. Check weekly off-day (e.g. Thursday, Friday)
+    if (isOffDay(date, offDaysStr)) return true;
+
+    // 2. Check official company holiday (e.g. Eid, Victory Day, etc.)
+    final holiday =
+        await PacklyAttendanceService.instance.getHolidayForDate(date);
+    if (holiday != null) {
+      debugPrint('Today is an official holiday: ${holiday.name}');
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Request exemption from Android's battery optimization (stops OS from killing background tasks)
+  Future<bool> requestIgnoreBatteryOptimization() async {
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+      if (!status.isGranted) {
+        final result = await Permission.ignoreBatteryOptimizations.request();
+        return result.isGranted;
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error requesting battery optimization exemption: $e');
+      return false;
+    }
+  }
+
+  /// Checks if 9:15 AM late cutoff warning should fire
+  Future<void> checkLateCutoffWarning() async {
+    final now = DateTime.now();
+
+    // Suppress if weekly off-day or official holiday
+    if (await isOfficeClosedToday(now)) return;
+
+    final prefs = await SharedPreferences.getInstance();
+
+    // Check if late warnings enabled in prefs (default true)
+    final warningsEnabled =
+        prefs.getBool(NotificationConstants.prefLateWarningEnabled) ?? true;
+    if (!warningsEnabled) return;
+
+    final today = now.toIso8601String().substring(0, 10);
+    final lastCheckinDate =
+        prefs.getString(NotificationConstants.prefLastCheckInDate);
+    final lastCheckinStatus =
+        prefs.getString(NotificationConstants.prefLastCheckInStatus);
+    final isAlreadyPunched = lastCheckinDate == today &&
+        (lastCheckinStatus == 'Punched' || lastCheckinStatus == 'Punched In');
+
+    if (isAlreadyPunched) return;
+
+    // Office timing window: Check-in starts at 9:00 AM, Late cutoff is strictly 9:15 AM
+    // Warning interval: between 8:50 AM and 9:15 AM
+    if (now.hour == 8 && now.minute >= 50) {
+      final minutesRemaining = (9 * 60 + 15) - (8 * 60 + now.minute);
+      await NotificationService.instance.showLateWarningNotification(
+        minutesRemaining: minutesRemaining,
+      );
+    } else if (now.hour == 9 && now.minute < 15) {
+      final minutesRemaining = 15 - now.minute;
+      await NotificationService.instance.showLateWarningNotification(
+        minutesRemaining: minutesRemaining,
+      );
+    }
+  }
+
+  Future<void> _onOfficeWifiConnected(String ssid) async {
+    // Suppress office check-in reminder on off-days (Thursday & Friday) or official holidays
+    if (await isOfficeClosedToday()) {
       debugPrint(
-        'Today is an off-day (${DateTime.now().weekday}). Suppressing office check-in alert.',
+        'Office is closed today (Off-day or Holiday). Suppressing office check-in alert.',
       );
       return;
     }
+
+    final prefs = await SharedPreferences.getInstance();
 
     final today = DateTime.now().toIso8601String().substring(0, 10);
     final lastCheckinDate = prefs.getString(
@@ -265,29 +339,87 @@ class WifiMonitorService {
       NotificationConstants.prefLastCheckInStatus,
     );
 
-    // Debounce: fire check-in notification if not already punched in today
+    // Debounce: check if already punched in today
     final isAlreadyPunched =
         lastCheckinDate == today &&
         (lastCheckinStatus == 'Punched' || lastCheckinStatus == 'Punched In');
 
-    if (!isAlreadyPunched) {
-      debugPrint(
-        'Office Wi-Fi connected ($ssid). Triggering check-in reminder.',
-      );
-      await NotificationService.instance.showOfficeCheckInReminder(
-        officeSsid: ssid,
-      );
+    if (isAlreadyPunched) {
+      debugPrint('Already punched in today ($today). Skipping auto check-in.');
+      return;
     }
+
+    final isAutoCheckInEnabled =
+        prefs.getBool(NotificationConstants.prefAutoCheckInEnabled) ?? true;
+
+    if (isAutoCheckInEnabled) {
+      debugPrint('Office Wi-Fi connected ($ssid). Performing Auto Check-In...');
+      final result = await PacklyAttendanceService.instance.checkIn();
+      if (result.success) {
+        final now = DateTime.now();
+        final timeStr =
+            '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
+        final isLate = (now.hour > 9) || (now.hour == 9 && now.minute >= 15);
+        await NotificationService.instance.showOfficeCheckInSuccessNotification(
+          time: timeStr,
+          isLate: isLate,
+        );
+        return;
+      } else {
+        debugPrint('Auto Check-In failed: ${result.message}. Falling back to prompt.');
+      }
+    }
+
+    debugPrint(
+      'Office Wi-Fi connected ($ssid). Triggering check-in reminder.',
+    );
+    await NotificationService.instance.showOfficeCheckInReminder(
+      officeSsid: ssid,
+    );
   }
 
   Future<void> _onOfficeWifiDisconnected() async {
-    final prefs = await SharedPreferences.getInstance();
-    final offDaysStr = prefs.getString(NotificationConstants.prefOffDays);
-
-    // Suppress office check-out reminder on off-days
-    if (isOffDay(DateTime.now(), offDaysStr)) {
-      debugPrint('Today is an off-day. Suppressing office check-out alert.');
+    // Suppress office check-out reminder on off-days or official holidays
+    if (await isOfficeClosedToday()) {
+      debugPrint('Office is closed today (Off-day or Holiday). Suppressing office check-out alert.');
       return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+
+    final now = DateTime.now();
+    final today = now.toIso8601String().substring(0, 10);
+    final lastCheckOutDate =
+        prefs.getString(NotificationConstants.prefLastCheckOutDate);
+
+    if (lastCheckOutDate == today) {
+      debugPrint('Already checked out today ($today). Skipping check-out.');
+      return;
+    }
+
+    // Office timing: 9:00 AM to 6:00 PM.
+    // Before 6:00 PM (18:00), do NOT auto check-out to prevent premature checkout during temporary drops.
+    if (now.hour < 18) {
+      debugPrint(
+        'Disconnected from Office Wi-Fi before 6:00 PM (${now.hour}:${now.minute}). Suppressing auto check-out.',
+      );
+      return;
+    }
+
+    final isAutoCheckOutEnabled =
+        prefs.getBool(NotificationConstants.prefAutoCheckOutEnabled) ?? true;
+
+    if (isAutoCheckOutEnabled) {
+      debugPrint('Workday ended (6 PM+) and Wi-Fi disconnected. Performing Auto Check-Out...');
+      final result = await PacklyAttendanceService.instance.checkOut();
+      if (result.success) {
+        final timeStr =
+            '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
+        await NotificationService.instance.showOfficeCheckOutSuccessNotification(
+          time: timeStr,
+        );
+        return;
+      }
     }
 
     debugPrint(

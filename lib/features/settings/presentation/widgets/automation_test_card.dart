@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/routine_parser_service.dart';
+import '../../../../core/services/attendance/packly_attendance_service.dart';
+import '../../../../core/services/attendance/steadfast_lunch_service.dart';
 import '../../../../core/services/background/wifi_monitor_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
@@ -53,6 +55,162 @@ class AutomationTestCard extends ConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
+                _buildChip(
+                  isDark: isDark,
+                  icon: Icons.lunch_dining_rounded,
+                  color: Colors.deepOrange,
+                  label: '🍱 Ping Lunch Portal',
+                  onPressed: () async {
+                    final res = await SteadfastLunchService.instance.ping();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: res.success ? Colors.green.shade800 : Colors.red.shade800,
+                          content: Text(res.message),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildChip(
+                  isDark: isDark,
+                  icon: Icons.notifications_active,
+                  color: Colors.orange,
+                  label: '🍱 Test 5 PM Lunch Reminder',
+                  onPressed: () async {
+                    await NotificationService.instance.requestPermissions();
+                    await NotificationService.instance.showSteadfastLunchReminderNotification(
+                      isTomorrowBooked: false,
+                      cutoff: '6:00 PM',
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('🍱 Fired 5:00 PM Lunch Reminder with "Book Tomorrow" button! Check tray.'),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildChip(
+                  isDark: isDark,
+                  icon: Icons.swap_horiz,
+                  color: Colors.brown,
+                  label: '🍱 Mock Toggle Tomorrow Lunch',
+                  onPressed: () async {
+                    final res = await SteadfastLunchService.instance.toggleTomorrowMeal(forceSimulate: true);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: res.success ? Colors.green.shade800 : Colors.red.shade800,
+                          content: Text(res.message),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildChip(
+                  isDark: isDark,
+                  icon: Icons.check_circle_outline,
+                  color: Colors.green,
+                  label: '🧪 Mock Check-In (On-Time)',
+                  onPressed: () async {
+                    final res = await PacklyAttendanceService.instance.checkIn(forceSimulate: true);
+                    await NotificationService.instance.showOfficeCheckInSuccessNotification(
+                      time: res.status?.checkInTime ?? '09:05 AM',
+                      isLate: false,
+                    );
+                    await ref.read(settingsNotifierProvider.notifier).updateCheckInStatus('Punched In');
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: Colors.green.shade800,
+                          content: Text('${res.message} (Notification sent)'),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildChip(
+                  isDark: isDark,
+                  icon: Icons.warning_amber_rounded,
+                  color: Colors.orange,
+                  label: '🧪 Mock Check-In (Late)',
+                  onPressed: () async {
+                    await PacklyAttendanceService.instance.checkIn(forceSimulate: true);
+                    await NotificationService.instance.showOfficeCheckInSuccessNotification(
+                      time: '09:18 AM',
+                      isLate: true,
+                    );
+                    await ref.read(settingsNotifierProvider.notifier).updateCheckInStatus('Punched In');
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: Colors.orange.shade900,
+                          content: const Text('[TEST MODE] Simulated Check-In at 09:18 AM (LATE > 9:14 AM)'),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildChip(
+                  isDark: isDark,
+                  icon: Icons.logout,
+                  color: Colors.teal,
+                  label: '🧪 Mock Check-Out',
+                  onPressed: () async {
+                    final res = await PacklyAttendanceService.instance.checkOut(forceSimulate: true);
+                    await NotificationService.instance.showOfficeCheckOutSuccessNotification(
+                      time: res.status?.checkOutTime ?? '06:05 PM',
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: Colors.teal.shade800,
+                          content: Text('${res.message} (Check notification tray)'),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildChip(
+                  isDark: isDark,
+                  icon: Icons.alarm,
+                  color: Colors.redAccent,
+                  label: '🚨 Test 9:15 AM Late Alarm',
+                  onPressed: () async {
+                    await NotificationService.instance.requestPermissions();
+                    await NotificationService.instance.showLateWarningNotification(
+                      minutesRemaining: 4,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('🚨 Fired 9:15 AM Late Warning Alarm with "Punch In Now" button! Check tray.'),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildChip(
+                  isDark: isDark,
+                  icon: Icons.alarm_off,
+                  color: Colors.deepOrange,
+                  label: '🚨 Test 9:15 AM Cutoff Passed',
+                  onPressed: () async {
+                    await NotificationService.instance.requestPermissions();
+                    await NotificationService.instance.showLateWarningNotification(
+                      minutesRemaining: 0,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('🚨 Fired 9:15 AM Cutoff Passed penalty alert! Check tray.'),
+                        ),
+                      );
+                    }
+                  },
+                ),
                 _buildChip(
                   isDark: isDark,
                   icon: Icons.notifications_active,

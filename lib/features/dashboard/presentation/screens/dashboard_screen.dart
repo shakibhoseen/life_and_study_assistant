@@ -29,6 +29,7 @@ import '../../../weakness_healer/presentation/widgets/weakness_healing_card.dart
 import '../../../analytics/presentation/providers/today_activity_provider.dart';
 import '../../domain/next_study_action.dart';
 import '../../domain/today_progress.dart';
+import 'office_portal_screen.dart';
 import '../widgets/biometric_status_banner.dart';
 import '../widgets/attention_card.dart';
 import '../widgets/next_action_card.dart';
@@ -238,9 +239,8 @@ class DashboardScreen extends ConsumerWidget {
               _buildQuickActionStrip(context, ref),
               const SizedBox(height: 14),
 
-              // 1. Office & Attendance Status Banner
+              // 1. Office & Attendance Status Banner (Context-aware: shows when at office / office hours)
               const BiometricStatusBanner(),
-              const SizedBox(height: 16),
 
               // 2. Post-work Energy & Mood Tracker
               const EnergyTrackerCard(),
@@ -510,6 +510,21 @@ class DashboardScreen extends ConsumerWidget {
             label: 'Book to Drill',
             badge: '⚡ Vision',
             onTap: () => StudySheetCameraModal.show(context),
+          ),
+          const SizedBox(width: 8),
+
+          // 2.5. Office Portal (Attendance & Steadfast Lunch)
+          _buildQuickActionPill(
+            context,
+            icon: Icons.domain_rounded,
+            iconColor: const Color(0xFF00B795),
+            bgColor: const Color(0xFF00B795).withValues(alpha: 0.12),
+            label: 'Office Portal',
+            badge: 'Packly & Lunch 🏢',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const OfficePortalScreen()),
+            ),
           ),
           const SizedBox(width: 8),
 

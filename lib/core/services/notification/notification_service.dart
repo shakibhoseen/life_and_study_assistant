@@ -277,6 +277,12 @@ class NotificationService {
       ticker: 'Office Wi-Fi Connected!',
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
+          NotificationConstants.actionCheckInNow,
+          '⚡ Punch In Now',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+        AndroidNotificationAction(
           NotificationConstants.actionCheckInDone,
           '✓ Punched In',
           showsUserInterface: false,
@@ -343,6 +349,12 @@ class NotificationService {
       visibility: NotificationVisibility.public,
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
+          NotificationConstants.actionCheckOutNow,
+          '🚪 Punch Out Now',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+        AndroidNotificationAction(
           NotificationConstants.actionCheckOutDone,
           '✓ Punched Out',
           showsUserInterface: false,
@@ -364,6 +376,117 @@ class NotificationService {
       id: NotificationConstants.checkOutNotificationId,
       title: '🚪 Leaving Office?',
       body: "Disconnected from office network. Don't forget your biometric check-out punch!",
+      notificationDetails: details,
+    );
+  }
+
+  /// High priority alarm when 9:15 AM late cutoff is approaching
+  Future<void> showLateWarningNotification({
+    required int minutesRemaining,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.officeChannelId,
+      NotificationConstants.officeChannelName,
+      channelDescription: NotificationConstants.officeChannelDesc,
+      importance: Importance.max,
+      priority: Priority.max,
+      category: AndroidNotificationCategory.alarm,
+      visibility: NotificationVisibility.public,
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          NotificationConstants.actionCheckInNow,
+          '⚡ Punch In Now',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+      ],
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    final title = minutesRemaining > 0
+        ? '🚨 9:15 AM Late Warning ($minutesRemaining min left!)'
+        : '🚨 9:15 AM Cutoff Passed - Mark Attendance Now!';
+    final body = minutesRemaining > 0
+        ? 'Office late penalty starts at 9:15 AM! You have not punched yet. Connect to Wi-Fi and punch now.'
+        : 'It is 9:15 AM or later. Late deduction policy applies. Punch immediately!';
+
+    await _notificationsPlugin.show(
+      id: NotificationConstants.lateWarningNotificationId,
+      title: title,
+      body: body,
+      notificationDetails: details,
+    );
+  }
+
+  /// Success confirmation after Check-In
+  Future<void> showOfficeCheckInSuccessNotification({
+    required String time,
+    required bool isLate,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.officeChannelId,
+      NotificationConstants.officeChannelName,
+      channelDescription: NotificationConstants.officeChannelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.status,
+      visibility: NotificationVisibility.public,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    await _notificationsPlugin.show(
+      id: NotificationConstants.checkInNotificationId,
+      title: isLate ? '⚠️ Office Check-In (LATE)' : '✅ Office Check-In Successful',
+      body: isLate
+          ? 'Recorded at $time (After 9:14 AM late cutoff).'
+          : 'Recorded at $time (On-Time ✓). Have a productive day at ZaviSoft!',
+      notificationDetails: details,
+    );
+  }
+
+  /// Success confirmation after Check-Out
+  Future<void> showOfficeCheckOutSuccessNotification({
+    required String time,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.officeChannelId,
+      NotificationConstants.officeChannelName,
+      channelDescription: NotificationConstants.officeChannelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.status,
+      visibility: NotificationVisibility.public,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    await _notificationsPlugin.show(
+      id: NotificationConstants.checkOutNotificationId,
+      title: '🚪 Office Check-Out Done',
+      body: 'Workday completed at $time. Have a relaxing evening!',
       notificationDetails: details,
     );
   }
@@ -441,6 +564,108 @@ class NotificationService {
     }
   }
 
+  /// Schedules precise morning alarm triggers between 9:00 AM and 9:15 AM
+  /// using Android's ExactAlarmManager so that even if the app was completely killed
+  /// and WorkManager is sleeping, the user will be alerted before the strict 9:15 AM late cutoff.
+  Future<void> scheduleMorningOfficeWatchdogs() async {
+    final now = tz.TZDateTime.now(tz.local);
+
+    final watchdogs = [
+      (
+        id: NotificationConstants.morningCutoffAlarm900,
+        hour: 9,
+        minute: 0,
+        minLeft: 15,
+      ),
+      (
+        id: NotificationConstants.morningCutoffAlarm906,
+        hour: 9,
+        minute: 6,
+        minLeft: 9,
+      ),
+      (
+        id: NotificationConstants.morningCutoffAlarm912,
+        hour: 9,
+        minute: 12,
+        minLeft: 3,
+      ),
+    ];
+
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.officeChannelId,
+      NotificationConstants.officeChannelName,
+      channelDescription: NotificationConstants.officeChannelDesc,
+      importance: Importance.max,
+      priority: Priority.max,
+      category: AndroidNotificationCategory.alarm,
+      visibility: NotificationVisibility.public,
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          NotificationConstants.actionCheckInNow,
+          '⚡ Punch In Now',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+      ],
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    for (final wd in watchdogs) {
+      var scheduledDate = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        wd.hour,
+        wd.minute,
+      );
+
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id: wd.id,
+          title: '🚨 9:15 AM Late Prevention (${wd.minLeft}m Left!)',
+          body:
+              'Office late penalty starts at 9:15 AM! Connect to Wi-Fi and tap Punch In Now.',
+          scheduledDate: scheduledDate,
+          notificationDetails: details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+        debugPrint(
+          'Morning watchdog [${wd.hour}:${wd.minute.toString().padLeft(2, '0')}] scheduled for $scheduledDate',
+        );
+      } catch (e) {
+        debugPrint('Error scheduling morning watchdog (${wd.id}): $e');
+      }
+    }
+  }
+
+  /// Cancels all scheduled morning watchdogs
+  Future<void> cancelMorningOfficeWatchdogs() async {
+    await _notificationsPlugin.cancel(
+      id: NotificationConstants.morningCutoffAlarm900,
+    );
+    await _notificationsPlugin.cancel(
+      id: NotificationConstants.morningCutoffAlarm906,
+    );
+    await _notificationsPlugin.cancel(
+      id: NotificationConstants.morningCutoffAlarm912,
+    );
+    debugPrint('Morning office watchdogs cancelled.');
+  }
+
   /// Instant test/manual trigger for the meal reminder notification
   Future<void> showInstantDinnerReminder() async {
     const androidDetails = AndroidNotificationDetails(
@@ -480,6 +705,53 @@ class NotificationService {
       id: NotificationConstants.mealNotificationId,
       title: '🍽️ Office Dinner Confirmation Cutoff',
       body: 'Daily meal confirmation deadline is approaching! Will you have dinner at the office today?',
+      notificationDetails: details,
+    );
+  }
+
+  /// Steadfast Courier Lunch Cutoff reminder (e.g. at 5:00 PM, 1 hour before 6:00 PM cutoff)
+  Future<void> showSteadfastLunchReminderNotification({
+    required bool isTomorrowBooked,
+    String cutoff = '6:00 PM',
+  }) async {
+    final androidDetails = AndroidNotificationDetails(
+      NotificationConstants.mealChannelId,
+      NotificationConstants.mealChannelName,
+      channelDescription: NotificationConstants.mealChannelDesc,
+      importance: Importance.max,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.reminder,
+      visibility: NotificationVisibility.public,
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          NotificationConstants.actionLunchToggleTomorrow,
+          isTomorrowBooked ? '❌ Cancel Tomorrow Lunch' : '⚡ Book Tomorrow Lunch',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+      ],
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    final title = isTomorrowBooked
+        ? '🍱 Steadfast Lunch: Tomorrow is Booked (Cutoff $cutoff)'
+        : '⚠️ Steadfast Lunch: Tomorrow is NOT Booked! (Cutoff $cutoff)';
+    final body = isTomorrowBooked
+        ? 'আগামীকালের লাঞ্চ বুক করা আছে। পরিবর্তন করতে চাইলে আজ সন্ধ্যা $cutoff-এর আগেই পরিবর্তন করতে হবে।'
+        : 'আগামীকালের লাঞ্চ এখনো বুক করেননি! আগামীকাল অফিসে লাঞ্চ পেতে চাইলে আজ সন্ধ্যা $cutoff-এর আগে বুক করুন।';
+
+    await _notificationsPlugin.show(
+      id: NotificationConstants.lunchReminderNotificationId,
+      title: title,
+      body: body,
       notificationDetails: details,
     );
   }

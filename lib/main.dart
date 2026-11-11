@@ -40,6 +40,9 @@ void main() async {
   // 2. Schedule Daily 4:00 PM Dinner Confirmation Reminder
   await NotificationService.instance.scheduleDailyDinnerReminder();
 
+  // 2.1 Schedule Morning 9:00 AM - 9:15 AM Late Prevention Watchdogs (Exact Alarms)
+  await NotificationService.instance.scheduleMorningOfficeWatchdogs();
+
   // 3. Start Background Wi-Fi SSID Change Monitor
   await WifiMonitorService.instance.startMonitoring();
 

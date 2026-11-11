@@ -13,8 +13,13 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/services/attendance/packly_attendance_service.dart';
 import '../../../../core/services/background/wifi_monitor_service.dart';
+import '../../../../core/services/background/workmanager_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:life_and_study_assistant/features/dashboard/presentation/providers/office_portal_provider.dart';
+import 'package:life_and_study_assistant/features/dashboard/presentation/screens/office_portal_screen.dart';
 import '../widgets/backup_restore_card.dart';
 import '../widgets/theme_selector_card.dart';
 import '../widgets/weakness_healer_toggle_card.dart';
@@ -50,6 +55,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _flashcardStartHour = NotificationConstants.flashcardPushDefaultStartHour;
   int _flashcardEndHour = NotificationConstants.flashcardPushDefaultEndHour;
   bool _isPinging = false;
+  bool _autoCheckInEnabled = true;
+  bool _autoCheckOutEnabled = true;
+  bool _lateWarningEnabled = true;
+  bool _isBatteryOptIgnored = false;
+  bool _simulationMode = false;
+  String _officeAddress = 'ZaviSoft Office, Dhaka';
+  String _bannerDisplayMode = 'contextual';
+
+  // Packly Attendance Credentials & Ping
+  String _packlyEmail = 'shakibhossen100@gmail.com';
+  bool _isPacklyPinging = false;
+
+  // Steadfast Lunch Credentials & Live State
+  String _lunchEmail = 'shakibhossen100@gmail.com';
+  bool? _lunchTodayBooked;
+  bool? _lunchTomorrowBooked;
+  bool _lunchAutoReminderEnabled = true;
 
   @override
   void initState() {
@@ -63,6 +85,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) setState(() {});
     });
     _loadFlashcardPushPrefs();
+    _loadPacklySettings();
+  }
+
+  Future<void> _loadPacklySettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isIgnored = await Permission.ignoreBatteryOptimizations.isGranted;
+    if (!mounted) return;
+    setState(() {
+      _packlyEmail = prefs.getString(NotificationConstants.prefPacklyEmail) ??
+          'shakibhossen100@gmail.com';
+      _lunchEmail = prefs.getString(NotificationConstants.prefLunchEmail) ??
+          'shakibhossen100@gmail.com';
+      _lunchAutoReminderEnabled =
+          prefs.getBool(NotificationConstants.prefLunchAutoReminderEnabled) ?? true;
+      _lunchTodayBooked =
+          prefs.getBool(NotificationConstants.prefLunchLastKnownTodayBooked);
+      _lunchTomorrowBooked =
+          prefs.getBool(NotificationConstants.prefLunchLastKnownTomorrowBooked);
+      _autoCheckInEnabled =
+          prefs.getBool(NotificationConstants.prefAutoCheckInEnabled) ?? true;
+      _autoCheckOutEnabled =
+          prefs.getBool(NotificationConstants.prefAutoCheckOutEnabled) ?? true;
+      _lateWarningEnabled =
+          prefs.getBool(NotificationConstants.prefLateWarningEnabled) ?? true;
+      _simulationMode =
+          prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
+      _officeAddress =
+          prefs.getString(NotificationConstants.prefOfficeAddress) ??
+              'ZaviSoft Office, Dhaka';
+      _bannerDisplayMode =
+          prefs.getString(NotificationConstants.prefOfficeBannerMode) ??
+              'contextual';
+      _isBatteryOptIgnored = isIgnored;
+    });
   }
 
   Future<void> _loadFlashcardPushPrefs() async {
@@ -136,116 +192,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildOfficeWifiSection(settings, currentSsid),
               const SizedBox(height: 18),
 
-              // 2. Dinner Reminder Cutoff Time
+              // 2. Zavisoft Packly Attendance Portal
               _buildSectionHeader(
-                'Office Dinner Cutoff Alert',
-                Icons.restaurant_rounded,
+                'Zavisoft Packly Attendance Portal',
+                Icons.fingerprint_rounded,
+                Colors.teal.shade700,
+              ),
+              _buildPacklyAutomationSection(),
+              const SizedBox(height: 18),
+
+              // 3. Steadfast Office Lunch / Meal Portal
+              _buildSectionHeader(
+                'Steadfast Office Lunch / Meal Portal',
+                Icons.lunch_dining_rounded,
                 Colors.deepOrange.shade700,
               ),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white12
-                        : const Color(0xFFE2E8F0),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? Colors.deepOrange.withValues(alpha: 0.2)
-                                : Colors.deepOrange.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.access_time_filled,
-                            color: Colors.deepOrange,
-                            size: 22,
-                          ),
-                        ),
-                        title: const Text(
-                          'Daily Cutoff Reminder Time',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${settings.dinnerHour.toString().padLeft(2, '0')}:${settings.dinnerMinute.toString().padLeft(2, '0')} (Default 4:00 PM)',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black87,
-                          ),
-                        ),
-                        trailing: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF1E293B)
-                                : Colors.white,
-                            foregroundColor: Colors.deepOrange,
-                            side: BorderSide(
-                              color:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.deepOrange.withValues(alpha: 0.4)
-                                  : Colors.deepOrange.shade200,
-                            ),
-                            elevation: 0,
-                          ),
-                          onPressed: () async {
-                            final picked = await showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay(
-                                hour: settings.dinnerHour,
-                                minute: settings.dinnerMinute,
-                              ),
-                            );
-                            if (picked != null) {
-                              ref
-                                  .read(settingsNotifierProvider.notifier)
-                                  .updateDinnerTime(picked.hour, picked.minute);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Daily dinner reminder rescheduled for ${picked.format(context)}',
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          child: const Text('Change'),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Notification appears with two tray action buttons: [✓ Yes, Count Me In] and [✗ No, Skip].',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white70
-                              : Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              _buildSteadfastLunchSection(),
               const SizedBox(height: 18),
 
               // 3. Gemini AI Configuration (Premium Credential Box)
@@ -1899,6 +1861,1078 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 10),
             _buildWeekdayChips(settings.offDays),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditCredentialsDialog({
+    required String title,
+    required String initialEmail,
+    required String prefEmailKey,
+    required String prefPasswordKey,
+    required VoidCallback onSaved,
+  }) async {
+    final emailCtrl = TextEditingController(text: initialEmail);
+    final passCtrl = TextEditingController();
+    bool obscure = true;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: emailCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Email Address',
+                  prefixIcon: Icon(Icons.email_outlined, size: 20),
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passCtrl,
+                obscureText: obscure,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscure ? Icons.visibility : Icons.visibility_off,
+                      size: 18,
+                    ),
+                    onPressed: () => setDlgState(() => obscure = !obscure),
+                  ),
+                  isDense: true,
+                  hintText: 'Enter new password if changed',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                if (emailCtrl.text.trim().isNotEmpty) {
+                  await prefs.setString(prefEmailKey, emailCtrl.text.trim());
+                }
+                if (passCtrl.text.isNotEmpty) {
+                  await prefs.setString(prefPasswordKey, passCtrl.text);
+                }
+                if (ctx.mounted) Navigator.pop(ctx);
+                onSaved();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPacklyAutomationSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Portal Account Info & Edit / Ping Row
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF0FDFA),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : const Color(0xFFCCFBF1),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.domain, color: Colors.teal, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'ZaviSoft Packly Attendance Portal',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              '$_packlyEmail • Shift: 9:00 AM – 6:00 PM',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white60 : Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.edit, size: 14),
+                        label: const Text('Edit Credentials', style: TextStyle(fontSize: 11.5)),
+                        onPressed: () {
+                          _showEditCredentialsDialog(
+                            title: 'Edit Packly Attendance Credentials',
+                            initialEmail: _packlyEmail,
+                            prefEmailKey: NotificationConstants.prefPacklyEmail,
+                            prefPasswordKey: NotificationConstants.prefPacklyPassword,
+                            onSaved: () {
+                              _loadPacklySettings();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Packly credentials saved!')),
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: _isPacklyPinging
+                            ? const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.sync, size: 14),
+                        label: Text(
+                          _isPacklyPinging ? 'Pinging...' : 'Ping / Test Login',
+                          style: const TextStyle(fontSize: 11.5),
+                        ),
+                        onPressed: _isPacklyPinging
+                            ? null
+                            : () async {
+                                setState(() => _isPacklyPinging = true);
+                                final res = await PacklyAttendanceService.instance.ping();
+                                if (mounted) {
+                                  setState(() => _isPacklyPinging = false);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: res.success
+                                          ? Colors.teal.shade800
+                                          : Colors.red.shade800,
+                                      content: Text(res.message),
+                                    ),
+                                  );
+                                }
+                              },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Strict Policy & Grace Period Notice
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.amber.withValues(alpha: 0.12)
+                    : const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.amber.withValues(alpha: 0.3)
+                      : const Color(0xFFFDE68A),
+                ),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: Colors.amber, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'অফিস নিয়ম: ৯:১৪ AM পর্যন্ত অন-টাইম, ৯:১৫ AM বাজলেই LATE হিসেবে গণ্য হবে। ৩ দিন লেট হলে ১ দিনের বেতন/ছুটি কর্তন ও শোকজ নোটিশ কার্যকর হয়।',
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Safe Simulation / Mock Mode Switch
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _simulationMode
+                    ? (isDark
+                        ? Colors.amber.withValues(alpha: 0.15)
+                        : const Color(0xFFFEF3C7))
+                    : (isDark
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : const Color(0xFFF1F5F9)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _simulationMode
+                      ? Colors.amber
+                      : (isDark ? Colors.white12 : const Color(0xFFCBD5E1)),
+                  width: _simulationMode ? 1.5 : 1,
+                ),
+              ),
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                secondary: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: _simulationMode
+                        ? Colors.amber.withValues(alpha: 0.25)
+                        : (isDark ? Colors.white10 : Colors.black12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.science,
+                    color: _simulationMode ? Colors.amber : Colors.blueGrey,
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  _simulationMode
+                      ? '🧪 Safe Simulation Mode: ON (ডামি টেস্ট সচল)'
+                      : 'Safe Simulation / Test Mode (ডামি টেস্ট মোড)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: _simulationMode
+                        ? (isDark ? Colors.amberAccent : Colors.amber.shade900)
+                        : null,
+                  ),
+                ),
+                subtitle: Text(
+                  _simulationMode
+                      ? 'চালু আছে: কোনো রিকোয়েস্ট Zavisoft সার্ভারে যাবে না! ড্যাশবোর্ড, নোটিফিকেশন বা বাটন থেকে যেকোনো চেক-ইন/আউট নিরাপদে টেস্ট করা যাবে।'
+                      : 'চালু করলে সার্ভারে আসল হাজিরা না পাঠিয়ে নিরাপদে ডামি চেক-ইন ও চেক-আউট পরীক্ষা করতে পারবেন।',
+                  style: const TextStyle(fontSize: 11),
+                ),
+                value: _simulationMode,
+                onChanged: (val) async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool(NotificationConstants.prefPacklySimulationMode, val);
+                  setState(() => _simulationMode = val);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: val ? Colors.amber.shade900 : Colors.teal.shade800,
+                        content: Text(
+                          val
+                              ? '🧪 Safe Simulation Mode ON! এখন নিরাপদে ডামি টেস্ট করতে পারেন।'
+                              : '✅ Live Mode ON! এখন অফিস ওয়াই-ফাইতে রিয়েল চেক-ইন কার্যকর হবে।',
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Switch 1: Auto Check-In on Office Wi-Fi
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Auto Check-In (Office Wi-Fi)',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              subtitle: const Text(
+                'অফিস ওয়াই-ফাইতে ("Zavisoft" / "SecretStar") কানেক্ট হওয়া মাত্রই সকাল ৯:০০ টার আগে স্বয়ংক্রিয়ভাবে জিপিএস ও অনুমোদিত আইপি দিয়ে চেক-ইন সাবমিট হবে।',
+                style: TextStyle(fontSize: 11),
+              ),
+              value: _autoCheckInEnabled,
+              onChanged: (val) async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool(NotificationConstants.prefAutoCheckInEnabled, val);
+                setState(() => _autoCheckInEnabled = val);
+                await WorkmanagerService.instance.syncWatchdogWithPrefs();
+              },
+            ),
+            const Divider(height: 20),
+
+            // Switch 2: 9:15 AM Late Prevention Warning
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                '9:15 AM Late Prevention Alarm',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              subtitle: const Text(
+                'সকাল ৮:৫০ ও ৯:১০ এ আপনি পাঞ্চ না করে থাকলে অ্যালার্মধর্মী হাই-প্রায়োরিটি নোটিফিকেশন পাঠাবে, যাতে কোনোভাবেই ৯:১৫ এর লেট পেনাল্টি না পড়ে।',
+                style: TextStyle(fontSize: 11),
+              ),
+              value: _lateWarningEnabled,
+              onChanged: (val) async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool(NotificationConstants.prefLateWarningEnabled, val);
+                setState(() => _lateWarningEnabled = val);
+                if (val) {
+                  await NotificationService.instance.scheduleMorningOfficeWatchdogs();
+                } else {
+                  await NotificationService.instance.cancelMorningOfficeWatchdogs();
+                }
+                await WorkmanagerService.instance.syncWatchdogWithPrefs();
+              },
+            ),
+            const Divider(height: 20),
+
+            // Switch 3: Auto Check-Out after 6:00 PM
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Smart Check-Out (After 6:00 PM)',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              subtitle: const Text(
+                'সন্ধ্যা ৬:০০ টার পর অফিস ছেড়ে বের হলে (ওয়াই-ফাই বিচ্ছিন্ন হলে) অটো চেক-আউট সাবমিট করবে। সময়ের আগে ভুলবশত কোনো চেক-আউট হবে না।',
+                style: TextStyle(fontSize: 11),
+              ),
+              value: _autoCheckOutEnabled,
+              onChanged: (val) async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool(NotificationConstants.prefAutoCheckOutEnabled, val);
+                setState(() => _autoCheckOutEnabled = val);
+                await WorkmanagerService.instance.syncWatchdogWithPrefs();
+              },
+            ),
+            const Divider(height: 20),
+
+            // Study Dashboard Display Mode (User can choose to keep dashboard clean for studies)
+            const Text(
+              'Study Dashboard Display Mode',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'আপনার ড্যাশবোর্ড যেন সম্পূর্ণ পড়াশোনার জন্য শান্ত ও নিরবচ্ছিন্ন থাকে, সেজন্য অফিস ব্যানার কখন দেখাবে তা নির্বাচন করুন:',
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.white60 : Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  _buildDisplayModeOption(
+                    value: 'contextual',
+                    title: 'শুধুমাত্র অফিসে বা অফিস টাইমে দেখাও',
+                    subtitle: 'পড়াশোনার সময় (সন্ধ্যা, রাত বা ছুটির দিন) ড্যাশবোর্ড ক্লিন থাকবে। কুইক অ্যাকশন পিল থেকে যেকোনো সময় খোলা যাবে। (Recommended)',
+                    isDark: isDark,
+                  ),
+                  const Divider(height: 1),
+                  _buildDisplayModeOption(
+                    value: 'always',
+                    title: 'সবসময় ড্যাশবোর্ডে দেখাও',
+                    subtitle: 'পড়াশোনা বা অন্য সব অবস্থাতেই ড্যাশবোর্ডের উপরে ব্যানার দৃশ্যমান থাকবে।',
+                    isDark: isDark,
+                  ),
+                  const Divider(height: 1),
+                  _buildDisplayModeOption(
+                    value: 'hidden',
+                    title: 'ড্যাশবোর্ড থেকে হাইড রাখো (শুধু কুইক অ্যাকশনে)',
+                    subtitle: 'ড্যাশবোর্ড ১০০% পড়াশোনার জন্য সংরক্ষিত থাকবে। অফিস দেখতে Quick Action পিল ট্যাপ করুন।',
+                    isDark: isDark,
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 20),
+
+            // Kill Mode / Battery Optimization
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _isBatteryOptIgnored
+                    ? (isDark
+                        ? Colors.green.withValues(alpha: 0.15)
+                        : const Color(0xFFECFDF5))
+                    : (isDark
+                        ? Colors.red.withValues(alpha: 0.15)
+                        : const Color(0xFFFEF2F2)),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _isBatteryOptIgnored
+                      ? (isDark ? Colors.green.withValues(alpha: 0.3) : const Color(0xFFA7F3D0))
+                      : (isDark ? Colors.red.withValues(alpha: 0.3) : const Color(0xFFFECACA)),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        _isBatteryOptIgnored ? Icons.shield_rounded : Icons.battery_alert_rounded,
+                        color: _isBatteryOptIgnored ? Colors.green : Colors.redAccent,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _isBatteryOptIgnored
+                              ? 'কিল মোড সুরক্ষা সক্রিয় (OS Always Runs App)'
+                              : 'কিল মোড সমাধান: ব্যাটারি অপ্টিমাইজেশন বন্ধ করুন',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.5,
+                            color: _isBatteryOptIgnored
+                                ? (isDark ? Colors.greenAccent : Colors.green.shade800)
+                                : (isDark ? Colors.redAccent : Colors.red.shade800),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _isBatteryOptIgnored
+                        ? 'অ্যাপ সোয়াইপ করে বন্ধ রাখলেও অ্যান্ড্রয়েড ওএস ব্যাকগ্রাউন্ডে ওয়াই-ফাই ডিটেকশন ও চেক-ইন অ্যালার্ট সচল রাখবে।'
+                        : 'অ্যান্ড্রয়েড ওএস যাতে অ্যাপ ব্যাকগ্রাউন্ডে বন্ধ (Kill) না করে এবং সঠিক সময়ে চেক-ইন ও নোটিফিকেশন পাঠাতে পারে, সেজন্য এটি সক্রিয় করুন।',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  if (!_isBatteryOptIgnored) ...[
+                    const SizedBox(height: 10),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      icon: const Icon(Icons.bolt, size: 14),
+                      label: const Text('Allow Always in Background', style: TextStyle(fontSize: 11.5)),
+                      onPressed: () async {
+                        final granted = await WifiMonitorService.instance.requestIgnoreBatteryOptimization();
+                        if (mounted) {
+                          setState(() => _isBatteryOptIgnored = granted);
+                        }
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Office Location Geofence row
+            Row(
+              children: [
+                const Icon(Icons.location_on, color: Colors.blueAccent, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Office GPS Location Geofence',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      Text(
+                        _officeAddress,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                  icon: const Icon(Icons.my_location, size: 14),
+                  label: const Text('Calibrate', style: TextStyle(fontSize: 11)),
+                  onPressed: () async {
+                    try {
+                      final pos = await Geolocator.getCurrentPosition(
+                        locationSettings: const LocationSettings(
+                          accuracy: LocationAccuracy.high,
+                          timeLimit: Duration(seconds: 10),
+                        ),
+                      );
+                      final addr = await PacklyAttendanceService.instance
+                          .reverseGeocode(pos.latitude, pos.longitude);
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setDouble(NotificationConstants.prefOfficeLatitude, pos.latitude);
+                      await prefs.setDouble(NotificationConstants.prefOfficeLongitude, pos.longitude);
+                      await prefs.setString(NotificationConstants.prefOfficeAddress, addr);
+                      if (mounted) {
+                        setState(() => _officeAddress = addr);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Office location updated: $addr')),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Location error: $e')),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSteadfastLunchSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lunchState = ref.watch(lunchProvider);
+    final tomorrowBooked = lunchState.tomorrowBooked ?? _lunchTomorrowBooked;
+    final todayBooked = lunchState.todayBooked ?? _lunchTodayBooked;
+
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    final tomorrowStr = '${tomorrow.day}/${tomorrow.month}/${tomorrow.year}';
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Account Info & Edit / Ping Row
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : const Color(0xFFFFEDD5),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.deepOrange.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.lunch_dining_rounded,
+                          color: Colors.deepOrange,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Steadfast Courier Lunch Portal',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              '$_lunchEmail • Cutoff: Daily 6:00 PM',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white60 : Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.edit, size: 14),
+                        label: const Text(
+                          'Edit Credentials',
+                          style: TextStyle(fontSize: 11.5),
+                        ),
+                        onPressed: () {
+                          _showEditCredentialsDialog(
+                            title: 'Edit Lunch Portal Credentials',
+                            initialEmail: _lunchEmail,
+                            prefEmailKey: NotificationConstants.prefLunchEmail,
+                            prefPasswordKey:
+                                NotificationConstants.prefLunchPassword,
+                            onSaved: () {
+                              _loadPacklySettings();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Lunch credentials saved!'),
+                                  ),
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepOrange.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: lunchState.isLoading
+                            ? const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.sync, size: 14),
+                        label: Text(
+                          lunchState.isLoading ? 'Checking...' : 'Ping / Check Status',
+                          style: const TextStyle(fontSize: 11.5),
+                        ),
+                        onPressed: lunchState.isLoading
+                            ? null
+                            : () async {
+                                final res =
+                                    await ref.read(lunchProvider.notifier).ping();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: res.success
+                                          ? Colors.green.shade800
+                                          : Colors.red.shade800,
+                                      content: Text(res.message),
+                                    ),
+                                  );
+                                }
+                              },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Strict Cutoff Rule Notice
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.orange.withValues(alpha: 0.12)
+                    : const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.orange.withValues(alpha: 0.3)
+                      : const Color(0xFFFED7AA),
+                ),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: Colors.deepOrange, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'লাঞ্চ নিয়ম: আগামীকালের লাঞ্চ পেতে হলে আজ সন্ধ্যা ৬:০০ টার মধ্যে বুক করতে হবে। ৬:০০ টা বেজে গেলে ক্যালেন্ডার স্বয়ংক্রিয়ভাবে লক হয়ে যায় এবং আর বুকিং সম্ভব হয় না।',
+                      style: TextStyle(fontSize: 11, height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Live Meal Status Tiles (Today & Tomorrow)
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.04)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'আজকের লাঞ্চ (Today)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              todayBooked == true
+                                  ? Icons.check_circle
+                                  : Icons.cancel_outlined,
+                              size: 16,
+                              color: todayBooked == true
+                                  ? Colors.green
+                                  : Colors.grey,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              todayBooked == true
+                                  ? 'বুক করা আছে ✓'
+                                  : (todayBooked == false
+                                      ? 'বুক নেই (Off)'
+                                      : 'সিঙ্ক করুন'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: todayBooked == true
+                                    ? Colors.green
+                                    : (isDark ? Colors.white70 : Colors.black87),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.04)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'আগামীকাল ($tomorrowStr)',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              tomorrowBooked == true
+                                  ? Icons.check_circle
+                                  : Icons.cancel_outlined,
+                              size: 16,
+                              color: tomorrowBooked == true
+                                  ? Colors.green
+                                  : Colors.orange,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              tomorrowBooked == true
+                                  ? 'বুক করা আছে ✓'
+                                  : (tomorrowBooked == false
+                                      ? 'বুক নেই (Off)'
+                                      : 'সিঙ্ক করুন'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: tomorrowBooked == true
+                                    ? Colors.green
+                                    : (tomorrowBooked == false
+                                        ? Colors.orange
+                                        : (isDark
+                                            ? Colors.white70
+                                            : Colors.black87)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Toggle Tomorrow's Lunch Quick Action Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tomorrowBooked == true
+                      ? Colors.redAccent.shade700
+                      : Colors.teal.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: lunchState.isToggling
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(
+                        tomorrowBooked == true
+                            ? Icons.cancel
+                            : Icons.check_circle,
+                        size: 16,
+                      ),
+                label: Text(
+                  lunchState.isToggling
+                      ? 'Updating Server...'
+                      : (tomorrowBooked == true
+                          ? 'Cancel Tomorrow\'s Lunch (লাঞ্চ বাতিল করুন)'
+                          : 'Book Tomorrow\'s Lunch (আগামীকালের লাঞ্চ বুক করুন)'),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: lunchState.isToggling
+                    ? null
+                    : () async {
+                        final res = await ref
+                            .read(lunchProvider.notifier)
+                            .toggleTomorrowMeal();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: res.success
+                                  ? Colors.green.shade800
+                                  : Colors.red.shade800,
+                              content: Text(res.message),
+                            ),
+                          );
+                        }
+                      },
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Button to Open Full Interactive Calendar & Office Portal
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark ? Colors.white : Colors.black87,
+                  side: BorderSide(
+                    color: isDark ? Colors.white24 : Colors.grey.shade400,
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: const Icon(
+                  Icons.calendar_month_rounded,
+                  size: 16,
+                  color: Colors.deepOrange,
+                ),
+                label: const Text(
+                  'Open Meal Calendar & Office Portal ➔',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const OfficePortalScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(height: 24),
+
+            // 5:00 PM Auto Reminder Switch
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                '5:00 PM Daily Lunch Cutoff Alarm',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              subtitle: const Text(
+                'প্রতিদিন বিকেল ৫:০০ টায় (৬:০০ টার কাটঅফের ১ ঘণ্টা আগে) আগামীকালের লাঞ্চ বুক করা না থাকলে নোটিফিকেশন পাঠাবে এবং নোটিফিকেশনে বুক করার বাটন দেবে।',
+                style: TextStyle(fontSize: 11),
+              ),
+              value: _lunchAutoReminderEnabled,
+              onChanged: (val) async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool(
+                  NotificationConstants.prefLunchAutoReminderEnabled,
+                  val,
+                );
+                setState(() => _lunchAutoReminderEnabled = val);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisplayModeOption({
+    required String value,
+    required String title,
+    required String subtitle,
+    required bool isDark,
+  }) {
+    final isSelected = _bannerDisplayMode == value;
+    return InkWell(
+      onTap: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(NotificationConstants.prefOfficeBannerMode, value);
+        setState(() => _bannerDisplayMode = value);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: isSelected ? Colors.teal : (isDark ? Colors.white38 : Colors.black38),
+              size: 18,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected
+                          ? (isDark ? Colors.tealAccent : Colors.teal.shade800)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

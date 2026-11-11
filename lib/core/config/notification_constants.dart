@@ -35,7 +35,13 @@ class NotificationConstants {
   // Notification IDs
   static const int checkInNotificationId = 1001;
   static const int checkOutNotificationId = 1002;
+  static const int lateWarningNotificationId = 1003;
+  static const int checkOutReminderNotificationId = 1004;
+  static const int morningCutoffAlarm900 = 1010;
+  static const int morningCutoffAlarm906 = 1011;
+  static const int morningCutoffAlarm912 = 1012;
   static const int mealNotificationId = 2001;
+  static const int lunchReminderNotificationId = 2002;
   static const int studyPlanNotificationId = 3001;
   static const int flashcardNotificationId = 4001;
 
@@ -89,13 +95,17 @@ class NotificationConstants {
   // Action IDs for Meal Notification
   static const String actionMealYes = 'meal_action_yes';
   static const String actionMealNo = 'meal_action_no';
+  static const String actionLunchToggleTomorrow = 'lunch_action_toggle_tomorrow';
+  static const String actionLunchOpen = 'lunch_action_open';
 
   // Action IDs for Biometric Check-In Notification
   static const String actionCheckInDone = 'checkin_action_done';
+  static const String actionCheckInNow = 'checkin_action_now';
   static const String actionCheckInSnooze = 'checkin_action_snooze';
 
   // Action IDs for Biometric Check-Out Notification
   static const String actionCheckOutDone = 'checkout_action_done';
+  static const String actionCheckOutNow = 'checkout_action_now';
 
   // Action IDs for Flashcards & Spaced Repetition
   static const String actionFlashcardGotIt = 'flashcard_action_got_it';
@@ -117,6 +127,35 @@ class NotificationConstants {
   static const String prefOffDays =
       'weekly_off_days'; // Comma-separated weekdays (e.g. "4,5" for Thu, Fri)
   static const String prefWeaknessHealingEnabled = 'weakness_healing_enabled';
+
+  // Zavisoft Packly Attendance & Office Geofence Settings
+  static const String prefPacklyEmail = 'packly_email';
+  static const String prefPacklyPassword = 'packly_password';
+  static const String prefAutoCheckInEnabled = 'packly_auto_checkin_enabled';
+  static const String prefAutoCheckOutEnabled = 'packly_auto_checkout_enabled';
+  static const String prefLateWarningEnabled = 'packly_late_warning_enabled';
+  static const String prefOfficeLatitude = 'office_latitude';
+  static const String prefOfficeLongitude = 'office_longitude';
+  static const String prefOfficeAddress = 'office_address';
+  static const String prefOfficeRadiusMeters = 'office_radius_meters';
+  static const String prefLastCheckInTime = 'packly_last_checkin_time';
+  static const String prefLastCheckOutTime = 'packly_last_checkout_time';
+  static const String prefLastCheckInIsLate = 'packly_last_checkin_is_late';
+  static const String prefPacklyHolidaysCache = 'packly_holidays_cache';
+  static const String prefPacklyHolidaysLastSync = 'packly_holidays_last_sync';
+  static const String prefOfficeBannerMode = 'office_banner_display_mode';
+  static const String prefPacklySimulationMode = 'packly_simulation_mode';
+
+  // Steadfast Courier Lunch & Meal Portal Settings
+  static const String prefLunchEmail = 'lunch_email';
+  static const String prefLunchPassword = 'lunch_password';
+  static const String prefLunchAutoReminderEnabled = 'lunch_auto_reminder_enabled';
+  static const String prefLunchReminderHour = 'lunch_reminder_hour';
+  static const String prefLunchReminderMinute = 'lunch_reminder_minute';
+  static const String prefLunchSimulationMode = 'lunch_simulation_mode';
+  static const String prefLunchLastKnownTomorrowBooked = 'lunch_tomorrow_booked';
+  static const String prefLunchLastKnownTodayBooked = 'lunch_today_booked';
+  static const String prefLunchLastSyncTime = 'lunch_last_sync_time';
 
   /// Whether a busy or failing model may be swapped for another one.
   ///
