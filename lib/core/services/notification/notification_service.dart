@@ -241,6 +241,18 @@ class NotificationService {
     await androidImplementation.createNotificationChannel(studyChannel);
     await androidImplementation.createNotificationChannel(flashcardChannel);
     await androidImplementation.createNotificationChannel(spacedChannel);
+
+    // Completely silent channel for ongoing Foreground Sentinel (Zero vibration, zero sound)
+    const sentinelChannel = AndroidNotificationChannel(
+      NotificationConstants.sentinelChannelId,
+      NotificationConstants.sentinelChannelName,
+      description: NotificationConstants.sentinelChannelDesc,
+      importance: Importance.low,
+      playSound: false,
+      enableVibration: false,
+      showBadge: false,
+    );
+    await androidImplementation.createNotificationChannel(sentinelChannel);
   }
 
   /// High-priority heads-up reminder when Office Wi-Fi is detected

@@ -5,6 +5,11 @@ class NotificationConstants {
   static const String officeChannelDesc =
       'High priority heads-up reminders for biometric check-in and check-out based on Wi-Fi/Geofence.';
 
+  static const String sentinelChannelId = 'office_sentinel_silent_channel_v1';
+  static const String sentinelChannelName = 'Office Arrival & Departure Monitor';
+  static const String sentinelChannelDesc =
+      'Silent ongoing background monitor for office arrival and departure. Zero sound and zero vibration.';
+
   static const String mealChannelId = 'meal_reminders_channel';
   static const String mealChannelName = 'Office Meal / Dinner Cutoff';
   static const String mealChannelDesc =

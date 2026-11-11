@@ -23,7 +23,24 @@ class OfficeSentinelTaskHandler extends TaskHandler {
   final Connectivity _connectivity = Connectivity();
   DateTime? _lastInternetSync;
   DateTime? _lastDistanceAlert;
+  DateTime? _lastReminderAlert;
+  String? _lastNotifTitle;
+  String? _lastNotifText;
   bool _isProcessing = false;
+
+  void _updateForegroundNotification({
+    required String title,
+    required String text,
+  }) {
+    // Prevent spamming Android OS NotificationManager and vibrating if content is identical
+    if (_lastNotifTitle == title && _lastNotifText == text) return;
+    _lastNotifTitle = title;
+    _lastNotifText = text;
+    FlutterForegroundTask.updateService(
+      notificationTitle: title,
+      notificationText: text,
+    );
+  }
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
@@ -166,9 +183,14 @@ class OfficeSentinelTaskHandler extends TaskHandler {
               return;
             }
           } else {
-            await NotificationService.instance.showOfficeCheckInReminder(
-              officeSsid: ssid,
-            );
+            final canRemind = _lastReminderAlert == null ||
+                now.difference(_lastReminderAlert!).inMinutes >= 5;
+            if (canRemind) {
+              _lastReminderAlert = now;
+              await NotificationService.instance.showOfficeCheckInReminder(
+                officeSsid: ssid,
+              );
+            }
           }
         }
         return;
@@ -192,9 +214,9 @@ class OfficeSentinelTaskHandler extends TaskHandler {
 
         // While user is connected to office Wi-Fi, duty is in progress inside office
         if (isConnectedToOffice) {
-          FlutterForegroundTask.updateService(
-            notificationTitle: '🏢 Office Departure Sentinel Active',
-            notificationText: 'Connected to office network ($ssid). Monitoring 6:00 PM+ departure...',
+          _updateForegroundNotification(
+            title: '🏢 Office Departure Sentinel Active',
+            text: 'Connected to office network ($ssid). Monitoring 6:00 PM+ departure...',
           );
           return;
         }
@@ -208,9 +230,9 @@ class OfficeSentinelTaskHandler extends TaskHandler {
           debugPrint(
             'OfficeSentinel: Disconnected from office Wi-Fi, but mobile internet is not yet reachable. Polling every interval to finalize checkout...',
           );
-          FlutterForegroundTask.updateService(
-            notificationTitle: '📶 Wi-Fi বিচ্ছিন্ন - ইন্টারনেটের অপেক্ষা...',
-            notificationText: 'রুম/সিঁড়িতে সংযোগ বিচ্ছিন্ন। মোবাইল নেটওয়ার্ক সচল হওয়া মাত্রই চেক-আউট হবে...',
+          _updateForegroundNotification(
+            title: '📶 Wi-Fi বিচ্ছিন্ন - ইন্টারনেটের অপেক্ষা...',
+            text: 'রুম/সিঁড়িতে সংযোগ বিচ্ছিন্ন। মোবাইল নেটওয়ার্ক সচল হওয়া মাত্রই চেক-আউট হবে...',
           );
           return;
         }
@@ -243,9 +265,9 @@ class OfficeSentinelTaskHandler extends TaskHandler {
             _lastDistanceAlert = now;
             debugPrint('OfficeSentinel: Disconnected before 6:00 PM. Asking user for early departure.');
             await NotificationService.instance.showOfficeCheckOutReminder(isEarly: true);
-            FlutterForegroundTask.updateService(
-              notificationTitle: '⚠️ Early Departure Alert (Before 6 PM)',
-              notificationText: 'অফিস সময় ৬:০০ টা পর্যন্ত। বের হলে ট্যাপ করে চেক-আউট দিন।',
+            _updateForegroundNotification(
+              title: '⚠️ Early Departure Alert (Before 6 PM)',
+              text: 'অফিস সময় ৬:০০ টা পর্যন্ত। বের হলে ট্যাপ করে চেক-আউট দিন।',
             );
           }
           return;
@@ -292,9 +314,9 @@ class OfficeSentinelTaskHandler extends TaskHandler {
             await NotificationService.instance.showUrgentDepartureWarningNotification(
               distanceMeters: distance,
             );
-            FlutterForegroundTask.updateService(
-              notificationTitle: '🚨 জরুরি সতর্কতা: চেক-আউট দেননি!',
-              notificationText: 'অফিস থেকে দূরে সরে গেছেন। এখনই চেক-আউট পাঞ্চ করুন।',
+            _updateForegroundNotification(
+              title: '🚨 জরুরি সতর্কতা: চেক-আউট দেননি!',
+              text: 'অফিস থেকে দূরে সরে গেছেন। এখনই চেক-আউট পাঞ্চ করুন।',
             );
           }
         } else {
@@ -318,7 +340,12 @@ class OfficeSentinelTaskHandler extends TaskHandler {
               return;
             }
           } else {
-            await NotificationService.instance.showOfficeCheckOutReminder();
+            final canRemind = _lastReminderAlert == null ||
+                now.difference(_lastReminderAlert!).inMinutes >= 5;
+            if (canRemind) {
+              _lastReminderAlert = now;
+              await NotificationService.instance.showOfficeCheckOutReminder();
+            }
           }
         }
         return;
@@ -370,11 +397,15 @@ class OfficeSentinelService {
     FlutterForegroundTask.initCommunicationPort();
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
-        channelId: NotificationConstants.officeChannelId,
-        channelName: NotificationConstants.officeChannelName,
-        channelDescription: 'High-precision office arrival and departure sentinel',
-        channelImportance: NotificationChannelImportance.DEFAULT,
-        priority: NotificationPriority.DEFAULT,
+        channelId: NotificationConstants.sentinelChannelId,
+        channelName: NotificationConstants.sentinelChannelName,
+        channelDescription: NotificationConstants.sentinelChannelDesc,
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+        enableVibration: false,
+        playSound: false,
+        showBadge: false,
+        onlyAlertOnce: true,
       ),
       iosNotificationOptions: const IOSNotificationOptions(
         showNotification: true,
