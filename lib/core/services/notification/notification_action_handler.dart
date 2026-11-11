@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/notification_constants.dart';
 import '../attendance/packly_attendance_service.dart';
 import '../attendance/steadfast_lunch_service.dart';
+import '../background/workmanager_service.dart';
 import '../flashcards/flashcard_service.dart';
 import 'notification_service.dart';
 
@@ -73,6 +74,8 @@ Future<void> handleNotificationResponse(NotificationResponse response) async {
         time: timeStr,
         isLate: isLate,
       );
+      await FlutterForegroundTask.stopService();
+      await WorkmanagerService.instance.cancelSafetyWatchdog();
     }
   } else if (actionId == NotificationConstants.actionCheckInDone) {
     await prefs.setString(
@@ -80,6 +83,8 @@ Future<void> handleNotificationResponse(NotificationResponse response) async {
       'Punched In',
     );
     await prefs.setString(NotificationConstants.prefLastCheckInDate, todayIso);
+    await FlutterForegroundTask.stopService();
+    await WorkmanagerService.instance.cancelSafetyWatchdog();
   } else if (actionId == NotificationConstants.actionCheckOutNow) {
     final result = await PacklyAttendanceService.instance.checkOut();
     if (result.success) {
@@ -91,11 +96,13 @@ Future<void> handleNotificationResponse(NotificationResponse response) async {
       );
       await NotificationService.instance.cancelCheckOutReminder();
       await FlutterForegroundTask.stopService();
+      await WorkmanagerService.instance.cancelSafetyWatchdog();
     }
   } else if (actionId == NotificationConstants.actionCheckOutDone) {
     await prefs.setString(NotificationConstants.prefLastCheckOutDate, todayIso);
     await NotificationService.instance.cancelCheckOutReminder();
     await FlutterForegroundTask.stopService();
+    await WorkmanagerService.instance.cancelSafetyWatchdog();
   } else if (actionId == NotificationConstants.actionFlashcardGotIt) {
     await prefs.setString('last_flashcard_reviewed_date', todayIso);
 

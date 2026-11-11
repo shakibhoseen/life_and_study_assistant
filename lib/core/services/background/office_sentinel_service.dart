@@ -104,6 +104,7 @@ class OfficeSentinelTaskHandler extends TaskHandler {
         if (isAlreadyCheckedIn) {
           debugPrint('OfficeSentinel: Morning Check-In already done. Stopping morning sentinel.');
           await FlutterForegroundTask.stopService();
+          await WorkmanagerService.instance.cancelSafetyWatchdog();
           return;
         }
 
@@ -123,6 +124,7 @@ class OfficeSentinelTaskHandler extends TaskHandler {
               }
               debugPrint('OfficeSentinel: Morning punch verified. Stopping sentinel (Goal achieved ✓).');
               await FlutterForegroundTask.stopService();
+              await WorkmanagerService.instance.cancelSafetyWatchdog();
               return;
             }
           } catch (e) {
@@ -145,6 +147,7 @@ class OfficeSentinelTaskHandler extends TaskHandler {
               );
               debugPrint('OfficeSentinel: Check-in complete! Stopping morning sentinel (Goal achieved ✓).');
               await FlutterForegroundTask.stopService();
+              await WorkmanagerService.instance.cancelSafetyWatchdog();
               return;
             }
           } else {
@@ -168,6 +171,7 @@ class OfficeSentinelTaskHandler extends TaskHandler {
         if (isAlreadyCheckedOut) {
           debugPrint('OfficeSentinel: Check-Out already completed today. Dismissing sentinel.');
           await FlutterForegroundTask.stopService();
+          await WorkmanagerService.instance.cancelSafetyWatchdog();
           return;
         }
 
@@ -193,6 +197,7 @@ class OfficeSentinelTaskHandler extends TaskHandler {
               }
               await NotificationService.instance.cancelCheckOutReminder();
               await FlutterForegroundTask.stopService();
+              await WorkmanagerService.instance.cancelSafetyWatchdog();
               return;
             }
           } catch (e) {
@@ -281,6 +286,7 @@ class OfficeSentinelTaskHandler extends TaskHandler {
               );
               debugPrint('OfficeSentinel: Auto Check-out recorded! Stopping sentinel (Until Checked Out achieved ✓).');
               await FlutterForegroundTask.stopService();
+              await WorkmanagerService.instance.cancelSafetyWatchdog();
               return;
             }
           } else {
@@ -314,9 +320,11 @@ class OfficeSentinelTaskHandler extends TaskHandler {
     if (id == 'check_in_now') {
       await PacklyAttendanceService.instance.checkIn();
       await FlutterForegroundTask.stopService();
+      await WorkmanagerService.instance.cancelSafetyWatchdog();
     } else if (id == 'check_out_now') {
       await PacklyAttendanceService.instance.checkOut();
       await FlutterForegroundTask.stopService();
+      await WorkmanagerService.instance.cancelSafetyWatchdog();
     }
   }
 }
@@ -441,7 +449,13 @@ class OfficeSentinelService {
     final isMorningTime = (now.hour == 8 && now.minute >= 40) ||
         (now.hour == 9) ||
         (now.hour == 10 && now.minute <= 0);
-    if (autoIn && isMorningTime && !isCheckedIn) {
+    if (autoIn && isMorningTime) {
+      if (isCheckedIn) {
+        debugPrint('OfficeSentinel: Morning punch already completed. Ensuring watchdog cancelled.');
+        await stopSentinel();
+        await WorkmanagerService.instance.cancelSafetyWatchdog();
+        return;
+      }
       await startMorningSentinel();
       unawaited(WorkmanagerService.instance.scheduleSafetyWatchdog(delay: const Duration(minutes: 15)));
       return;
@@ -451,7 +465,13 @@ class OfficeSentinelService {
     final isEveningTime = (now.hour == 17 && now.minute >= 45) ||
         (now.hour >= 18 && now.hour <= 22) ||
         (now.hour == 22 && now.minute <= 30);
-    if (autoOut && isEveningTime && !isCheckedOut) {
+    if (autoOut && isEveningTime) {
+      if (isCheckedOut) {
+        debugPrint('OfficeSentinel: Evening checkout already completed. Ensuring watchdog cancelled.');
+        await stopSentinel();
+        await WorkmanagerService.instance.cancelSafetyWatchdog();
+        return;
+      }
       await startEveningSentinel();
       unawaited(WorkmanagerService.instance.scheduleSafetyWatchdog(delay: const Duration(minutes: 15)));
       return;

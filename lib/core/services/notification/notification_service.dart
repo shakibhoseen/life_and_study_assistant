@@ -635,6 +635,12 @@ class NotificationService {
 
     final watchdogs = [
       (
+        id: NotificationConstants.morningArrivalAlarm850,
+        hour: 8,
+        minute: 50,
+        minLeft: 25,
+      ),
+      (
         id: NotificationConstants.morningCutoffAlarm900,
         hour: 9,
         minute: 0,
@@ -717,6 +723,9 @@ class NotificationService {
 
   /// Cancels all scheduled morning watchdogs
   Future<void> cancelMorningOfficeWatchdogs() async {
+    await _notificationsPlugin.cancel(
+      id: NotificationConstants.morningArrivalAlarm850,
+    );
     await _notificationsPlugin.cancel(
       id: NotificationConstants.morningCutoffAlarm900,
     );

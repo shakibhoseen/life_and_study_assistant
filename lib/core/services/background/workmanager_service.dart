@@ -51,9 +51,13 @@ class WorkmanagerService {
   }
 
   /// Syncs background task registration with user settings preferences.
-  /// If all office background automations are disabled, the task is completely removed from Android OS JobScheduler.
+  /// Eliminates 24/7 periodic polling to conserve 100% battery during midday and night.
+  /// Tasks are only invoked dynamically in the 2 critical windows via Foreground Sentinel + chained fail-safe.
   Future<void> syncWatchdogWithPrefs() async {
     try {
+      // Cancel legacy 24/7 periodic task permanently from OS scheduler
+      await cancelWifiWatchdog();
+
       final prefs = await SharedPreferences.getInstance();
       final autoIn =
           prefs.getBool(NotificationConstants.prefAutoCheckInEnabled) ?? true;
@@ -64,34 +68,16 @@ class WorkmanagerService {
 
       if (!autoIn && !lateWarn && !autoOut) {
         debugPrint(
-          'Workmanager: All office background automations disabled by user. Cancelling periodic task.',
+          'Workmanager: All office background automations disabled by user. Cancelling safety watchdog.',
         );
-        await cancelWifiWatchdog();
-      } else {
-        await registerWifiWatchdog();
+        await cancelSafetyWatchdog();
       }
     } catch (e) {
       debugPrint('Error syncing watchdog with prefs: $e');
     }
   }
 
-  /// Registers the 15-minute periodic watchdog task in Android WorkManager / JobScheduler
-  Future<void> registerWifiWatchdog() async {
-    try {
-      await Workmanager().registerPeriodicTask(
-        'periodic-wifi-watchdog',
-        backgroundTaskWifiCheck,
-        frequency: const Duration(minutes: 15),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-        constraints: Constraints(networkType: NetworkType.connected),
-      );
-      debugPrint('Workmanager: periodic-wifi-watchdog registered.');
-    } catch (e) {
-      debugPrint('Workmanager: failed to register periodic-wifi-watchdog: $e');
-    }
-  }
-
-  /// Completely cancels the periodic watchdog task from Android WorkManager / OS scheduler
+  /// Completely cancels the legacy periodic watchdog task from Android WorkManager / OS scheduler
   Future<void> cancelWifiWatchdog() async {
     try {
       await Workmanager().cancelByUniqueName('periodic-wifi-watchdog');
@@ -115,6 +101,17 @@ class WorkmanagerService {
       debugPrint('Workmanager: 15-minute fail-safe safety watchdog scheduled.');
     } catch (e) {
       debugPrint('Workmanager: scheduleSafetyWatchdog error: $e');
+    }
+  }
+
+  /// Completely cancels the 15-minute fail-safe safety watchdog task from Android WorkManager.
+  /// Called immediately once check-in or check-out is complete so zero tasks remain in OS queue.
+  Future<void> cancelSafetyWatchdog() async {
+    try {
+      await Workmanager().cancelByUniqueName('sentinel-failsafe-watchdog');
+      debugPrint('Workmanager: safety watchdog cancelled from OS scheduler.');
+    } catch (e) {
+      debugPrint('Workmanager: failed to cancel safety watchdog: $e');
     }
   }
 
