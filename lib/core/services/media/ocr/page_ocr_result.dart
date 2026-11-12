@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import '../layout/layout_detection_models.dart';
 import '../segmentation/segmentation_models.dart';
 
@@ -36,19 +37,21 @@ class ColumnOcrResult {
   });
 
   Map<String, dynamic> toJson() => {
-        'columnIndex': columnIndex,
-        'cropBox': cropBox.toJson(),
-        'lineCount': pageLines.length,
-        'ocrElapsedMs': ocrElapsedMs,
-        'lines': pageLines
-            .map((l) => {
-                  'text': l.text,
-                  'box': l.boundingBox.toJson(),
-                  'confidence': l.confidence,
-                  'columnId': l.columnId,
-                })
-            .toList(),
-      };
+    'columnIndex': columnIndex,
+    'cropBox': cropBox.toJson(),
+    'lineCount': pageLines.length,
+    'ocrElapsedMs': ocrElapsedMs,
+    'lines': pageLines
+        .map(
+          (l) => {
+            'text': l.text,
+            'box': l.boundingBox.toJson(),
+            'confidence': l.confidence,
+            'columnId': l.columnId,
+          },
+        )
+        .toList(),
+  };
 }
 
 /// The aggregated full-page OCR output preserving reading order and global geometry.
@@ -97,16 +100,16 @@ class PageOcrResult {
   bool get isDualColumn => columns.length == 2;
 
   Map<String, dynamic> toJson() => {
-        'pageWidth': pageWidth,
-        'imageHeight': imageHeight,
-        'layoutType': layoutType.name,
-        'isDualColumn': isDualColumn,
-        'gutter': gutter?.toJson(),
-        'columnCount': columns.length,
-        'mergedLineCount': mergedLines.length,
-        'layoutElapsedMs': layoutElapsedMs,
-        'totalOcrElapsedMs': totalOcrElapsedMs,
-        'totalElapsedMs': totalElapsedMs,
-        'columns': columns.map((c) => c.toJson()).toList(),
-      };
+    'pageWidth': pageWidth,
+    'imageHeight': imageHeight,
+    'layoutType': layoutType.name,
+    'isDualColumn': isDualColumn,
+    'gutter': gutter?.toJson(),
+    'columnCount': columns.length,
+    'mergedLineCount': mergedLines.length,
+    'layoutElapsedMs': layoutElapsedMs,
+    'totalOcrElapsedMs': totalOcrElapsedMs,
+    'totalElapsedMs': totalElapsedMs,
+    'columns': columns.map((c) => c.toJson()).toList(),
+  };
 }

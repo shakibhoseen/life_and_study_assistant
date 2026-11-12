@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:local_ocr/local_ocr.dart';
 
@@ -203,11 +204,7 @@ class LocalOcrService {
 
       // If hOCR returned no lines but rawText exists, synthesize fallback line boxes
       if (localLines.isEmpty && rawText.isNotEmpty) {
-        localLines = _synthesizeLinesFromRawText(
-          rawText,
-          colCropBox,
-          colIdx,
-        );
+        localLines = _synthesizeLinesFromRawText(rawText, colCropBox, colIdx);
       }
 
       // 4. Map bounding boxes to Original Page Coordinates:
@@ -222,7 +219,9 @@ class LocalOcrService {
       );
 
       // Sort lines inside column strictly from top to bottom
-      pageMappedLines.sort((a, b) => a.boundingBox.top.compareTo(b.boundingBox.top));
+      pageMappedLines.sort(
+        (a, b) => a.boundingBox.top.compareTo(b.boundingBox.top),
+      );
 
       columnResults.add(
         ColumnOcrResult(
@@ -302,7 +301,10 @@ class LocalOcrService {
     TextBoundingBox cropBox,
     int columnIndex,
   ) {
-    final lines = rawText.split('\n').where((l) => l.trim().isNotEmpty).toList();
+    final lines = rawText
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
     if (lines.isEmpty) return [];
 
     final double lineH = cropBox.height / (lines.length + 1);

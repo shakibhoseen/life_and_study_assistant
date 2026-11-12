@@ -12,27 +12,31 @@ void main() {
     final sampleFile = File('test/fixtures/sample_text_block.jpg');
     final colLeftFile = File('test/fixtures/col_left_exact.jpg');
 
-    test('TC-PREP-01: Original input image is strictly immutable and preserved', () async {
-      expect(sampleFile.existsSync(), isTrue);
-      final originalBytes = await sampleFile.readAsBytes();
+    test(
+      'TC-PREP-01: Original input image is strictly immutable and preserved',
+      () async {
+        expect(sampleFile.existsSync(), isTrue);
+        final originalBytes = await sampleFile.readAsBytes();
 
-      final processed = await ImagePreprocessorService.instance.processImage(
-        inputFile: sampleFile,
-        filterMode: ImageFilterMode.enhancedContrast,
-      );
+        final processed = await ImagePreprocessorService.instance.processImage(
+          inputFile: sampleFile,
+          filterMode: ImageFilterMode.enhancedContrast,
+        );
 
-      // Verify original file bytes are 100% untouched
-      final afterBytes = await sampleFile.readAsBytes();
-      expect(afterBytes, equals(originalBytes));
+        // Verify original file bytes are 100% untouched
+        final afterBytes = await sampleFile.readAsBytes();
+        expect(afterBytes, equals(originalBytes));
 
-      // Verify processed file is a distinct new file
-      expect(processed.path, isNot(equals(sampleFile.path)));
-      expect(await processed.exists(), isTrue);
-      expect(await processed.length(), greaterThan(0));
-    });
+        // Verify processed file is a distinct new file
+        expect(processed.path, isNot(equals(sampleFile.path)));
+        expect(await processed.exists(), isTrue);
+        expect(await processed.length(), greaterThan(0));
+      },
+    );
 
     test('TC-PREP-02: Image quality assessment correctly computes dimensions, luminance & contrast', () async {
-      final quality = await ImagePreprocessorService.instance.assessImageQuality(sampleFile);
+      final quality = await ImagePreprocessorService.instance
+          .assessImageQuality(sampleFile);
 
       expect(quality.width, equals(1595));
       expect(quality.height, equals(800));
@@ -45,22 +49,26 @@ void main() {
       expect(quality.recommendation, contains('উপযুক্ত'));
     });
 
-    test('TC-PREP-03: Quality assessment correctly flags low-resolution images', () async {
-      // Create a small 200x200 low-resolution image
-      final tinyImg = img.Image(width: 200, height: 200);
-      img.fill(tinyImg, color: img.ColorRgb8(240, 240, 240));
-      final tempFile = File('${Directory.systemTemp.path}/tiny_test.jpg');
-      await tempFile.writeAsBytes(img.encodeJpg(tinyImg));
+    test(
+      'TC-PREP-03: Quality assessment correctly flags low-resolution images',
+      () async {
+        // Create a small 200x200 low-resolution image
+        final tinyImg = img.Image(width: 200, height: 200);
+        img.fill(tinyImg, color: img.ColorRgb8(240, 240, 240));
+        final tempFile = File('${Directory.systemTemp.path}/tiny_test.jpg');
+        await tempFile.writeAsBytes(img.encodeJpg(tinyImg));
 
-      final quality = await ImagePreprocessorService.instance.assessImageQuality(tempFile);
-      expect(quality.isLowResolution, isTrue);
-      expect(quality.isAdequateForOcr, isFalse);
-      expect(quality.recommendation, contains('রেজোলিউশন কম'));
+        final quality = await ImagePreprocessorService.instance
+            .assessImageQuality(tempFile);
+        expect(quality.isLowResolution, isTrue);
+        expect(quality.isAdequateForOcr, isFalse);
+        expect(quality.recommendation, contains('রেজোলিউশন কম'));
 
-      if (await tempFile.exists()) {
-        await tempFile.delete();
-      }
-    });
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      },
+    );
 
     test('TC-PREP-04: Conservative contrast enhancement stretches dynamic range without clipping', () async {
       final processed = await ImagePreprocessorService.instance.processImage(
@@ -139,7 +147,9 @@ void main() {
     });
 
     test('TC-PREP-08: Dual column splitting preserves aspect ratio and generates two crops', () async {
-      final splits = await ImagePreprocessorService.instance.splitTwoColumns(sampleFile);
+      final splits = await ImagePreprocessorService.instance.splitTwoColumns(
+        sampleFile,
+      );
       expect(splits.length, equals(2));
       expect(await splits[0].exists(), isTrue);
       expect(await splits[1].exists(), isTrue);

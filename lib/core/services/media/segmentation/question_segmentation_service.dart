@@ -132,7 +132,8 @@ class QuestionSegmentationService {
         columnWidth: columnBox.width,
         columnId: columnId,
         previousQuestionNumber: currentBlock?.questionNumber,
-        allPreviousOptionsCompleted: currentBlock == null || currentBlock.optionItems.isNotEmpty,
+        allPreviousOptionsCompleted:
+            currentBlock == null || currentBlock.optionItems.isNotEmpty,
       );
 
       if (questionHeader != null) {
@@ -174,23 +175,30 @@ class QuestionSegmentationService {
           );
         } else {
           // Check if this line contains option markers using context-aware recovery
-          final recoveredOptions = ContextAwareMarkerRecoveryService.instance.extractOptionsWithContext(
-            line: line,
-            columnWidth: columnBox.width,
-            existingOptionsInCurrentQuestion: currentBlock.optionAudits.map((a) => ContextualOptionItem(
-              markerAudit: a,
-              rawBodyText: '',
-              cleanBodyText: '',
-              boundingBox: a.glyphBoundingBox,
-            )).toList(),
-          );
+          final recoveredOptions = ContextAwareMarkerRecoveryService.instance
+              .extractOptionsWithContext(
+                line: line,
+                columnWidth: columnBox.width,
+                existingOptionsInCurrentQuestion: currentBlock.optionAudits
+                    .map(
+                      (a) => ContextualOptionItem(
+                        markerAudit: a,
+                        rawBodyText: '',
+                        cleanBodyText: '',
+                        boundingBox: a.glyphBoundingBox,
+                      ),
+                    )
+                    .toList(),
+              );
 
           if (recoveredOptions.isNotEmpty) {
             for (final ro in recoveredOptions) {
-              currentBlock.optionItems.add(_ExtractedOption(
-                marker: ro.markerAudit.recoveredText,
-                text: ro.cleanBodyText,
-              ));
+              currentBlock.optionItems.add(
+                _ExtractedOption(
+                  marker: ro.markerAudit.recoveredText,
+                  text: ro.cleanBodyText,
+                ),
+              );
               currentBlock.optionAudits.add(ro.markerAudit);
             }
             currentBlock.allBoxes.add(line.boundingBox);
@@ -246,20 +254,26 @@ class QuestionSegmentationService {
     bool allPreviousOptionsCompleted = true,
   }) {
     // 1. Try Context-Aware Recovery first
-    final recoveryAudit = ContextAwareMarkerRecoveryService.instance.evaluateQuestionHeader(
-      line: line,
-      columnWidth: columnWidth,
-      columnId: columnId,
-      previousQuestionNumberInSameColumn: previousQuestionNumber,
-      hasOpenQuestionBlock: previousQuestionNumber != null,
-      allPreviousOptionsCompleted: allPreviousOptionsCompleted,
-    );
+    final recoveryAudit = ContextAwareMarkerRecoveryService.instance
+        .evaluateQuestionHeader(
+          line: line,
+          columnWidth: columnWidth,
+          columnId: columnId,
+          previousQuestionNumberInSameColumn: previousQuestionNumber,
+          hasOpenQuestionBlock: previousQuestionNumber != null,
+          allPreviousOptionsCompleted: allPreviousOptionsCompleted,
+        );
 
     if (recoveryAudit != null) {
-      final cleanNum = recoveryAudit.recoveredText.replaceAll(RegExp(r'[\.\:\-\s]'), '');
+      final cleanNum = recoveryAudit.recoveredText.replaceAll(
+        RegExp(r'[\.\:\-\s]'),
+        '',
+      );
       final rawMatchIndex = line.text.indexOf(recoveryAudit.originalText);
       final rest = (rawMatchIndex != -1)
-          ? line.text.substring(rawMatchIndex + recoveryAudit.originalText.length).trim()
+          ? line.text
+                .substring(rawMatchIndex + recoveryAudit.originalText.length)
+                .trim()
           : line.text.replaceFirst(recoveryAudit.originalText, '').trim();
 
       return _QuestionHeader(
@@ -310,7 +324,9 @@ class QuestionSegmentationService {
       final match = matches[i];
       final marker = _normalizeOptionMarker(match.group(1)?.trim() ?? '');
       final start = match.end;
-      final end = (i + 1 < matches.length) ? matches[i + 1].start : lineText.length;
+      final end = (i + 1 < matches.length)
+          ? matches[i + 1].start
+          : lineText.length;
 
       final optionText = lineText.substring(start, end).trim();
       if (optionText.isNotEmpty || marker.isNotEmpty) {
@@ -410,11 +426,14 @@ class QuestionSegmentationService {
 
     if (avgOcrConf < 0.60) {
       reviewRequired = true;
-      reviewReasons.add('OCR কনফিডেন্স কম (${(avgOcrConf * 100).toStringAsFixed(1)}%)');
+      reviewReasons.add(
+        'OCR কনফিডেন্স কম (${(avgOcrConf * 100).toStringAsFixed(1)}%)',
+      );
     }
 
     // Check for math or diagram
-    final bool hasDiagramOrMath = _diagramKeywordPattern.hasMatch(questionPrompt) ||
+    final bool hasDiagramOrMath =
+        _diagramKeywordPattern.hasMatch(questionPrompt) ||
         _mathSymbolPattern.hasMatch(questionPrompt) ||
         (options.any((o) => _mathSymbolPattern.hasMatch(o)));
 
@@ -433,7 +452,10 @@ class QuestionSegmentationService {
       final safeLeft = pageBox.left.clamp(0, originalImage.width - 1);
       final safeTop = pageBox.top.clamp(0, originalImage.height - 1);
       final safeWidth = math.min(pageBox.width, originalImage.width - safeLeft);
-      final safeHeight = math.min(pageBox.height, originalImage.height - safeTop);
+      final safeHeight = math.min(
+        pageBox.height,
+        originalImage.height - safeTop,
+      );
 
       if (safeWidth > 10 && safeHeight > 10) {
         final crop = img.copyCrop(
@@ -521,7 +543,9 @@ class QuestionSegmentationService {
         for (final wm in wordMatches) {
           final conf = int.tryParse(wm.group(1) ?? '80') ?? 80;
           confidences.add(conf);
-          final wordClean = wm.group(2)
+          final wordClean =
+              wm
+                  .group(2)
                   ?.replaceAll(RegExp(r'<[^>]*>'), '')
                   .replaceAll(RegExp(r'\s+'), ' ')
                   .trim() ??

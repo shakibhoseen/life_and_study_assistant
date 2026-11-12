@@ -39,7 +39,10 @@ class LayoutDetectionService {
 
     // Write deskewed image file
     final deskewedFile = File('${tempDir.path}/layout_deskew_$stamp.jpg');
-    await deskewedFile.writeAsBytes(resultData['deskewedBytes'] as Uint8List, flush: true);
+    await deskewedFile.writeAsBytes(
+      resultData['deskewedBytes'] as Uint8List,
+      flush: true,
+    );
 
     // Write column crop files
     final cropByteList = resultData['cropByteList'] as List<Uint8List>;
@@ -130,7 +133,8 @@ class LayoutDetectionService {
     String? failureReason;
     Map<String, dynamic>? gutterData;
 
-    if (gutterResult != null && gutterResult.confidence >= minDualColumnConfidence) {
+    if (gutterResult != null &&
+        gutterResult.confidence >= minDualColumnConfidence) {
       gutterData = gutterResult.toJson();
       layoutType = gutterResult.hasDividerLine
           ? LayoutType.dualColumnDivider
@@ -182,28 +186,24 @@ class LayoutDetectionService {
     } else {
       // Safe fallback to single-column layout
       layoutType = LayoutType.singleColumn;
-      overallConfidence = gutterResult != null ? (1.0 - gutterResult.confidence) : 0.90;
+      overallConfidence = gutterResult != null
+          ? (1.0 - gutterResult.confidence)
+          : 0.90;
       failureReason = gutterResult == null
           ? 'No vertical gutter or divider detected across central page region'
           : 'Gutter confidence (${(gutterResult.confidence * 100).toInt()}%) below required threshold (${(minDualColumnConfidence * 100).toInt()}%). Safely defaulting to single column';
 
       columnBoxes = [
-        {
-          'index': 0,
-          'left': 0,
-          'top': 0,
-          'width': width,
-          'height': height,
-        }
+        {'index': 0, 'left': 0, 'top': 0, 'width': width, 'height': height},
       ];
 
       // Single crop is the deskewed page
-      cropByteList = [
-        Uint8List.fromList(img.encodeJpg(current, quality: 95)),
-      ];
+      cropByteList = [Uint8List.fromList(img.encodeJpg(current, quality: 95))];
     }
 
-    final deskewedBytes = Uint8List.fromList(img.encodeJpg(current, quality: 95));
+    final deskewedBytes = Uint8List.fromList(
+      img.encodeJpg(current, quality: 95),
+    );
 
     return {
       'deskewedBytes': deskewedBytes,
@@ -233,7 +233,11 @@ class LayoutDetectionService {
     final sampleLums = <int>[];
     final lumSampleStepX = max(1, (width * 0.05).round());
     final lumSampleStepY = max(1, (sampleHeight * 0.10).round());
-    for (int sx = (width * 0.35).round(); sx <= (width * 0.65).round(); sx += lumSampleStepX) {
+    for (
+      int sx = (width * 0.35).round();
+      sx <= (width * 0.65).round();
+      sx += lumSampleStepX
+    ) {
       for (int sy = 0; sy < sampleHeight; sy += lumSampleStepY) {
         final y = (sy * scaleY).round().clamp(0, height - 1);
         final p = image.getPixel(sx, y);
@@ -244,7 +248,9 @@ class LayoutDetectionService {
     }
     sampleLums.sort();
     // 80th percentile luminance represents paper background
-    final bgLum = sampleLums.isNotEmpty ? sampleLums[(sampleLums.length * 0.80).floor()] : 240;
+    final bgLum = sampleLums.isNotEmpty
+        ? sampleLums[(sampleLums.length * 0.80).floor()]
+        : 240;
     // Ink threshold: significantly darker than paper background, capped at 135
     final inkThreshold = min(135, (bgLum * 0.72).round());
 
@@ -287,7 +293,10 @@ class LayoutDetectionService {
 
     if (bestDividerX > 0) {
       final leftBoundary = max(0, bestDividerX - (width * 0.015).round());
-      final rightBoundary = min(width - 1, bestDividerX + (width * 0.015).round());
+      final rightBoundary = min(
+        width - 1,
+        bestDividerX + (width * 0.015).round(),
+      );
       return GutterRegion(
         left: leftBoundary,
         right: rightBoundary,
@@ -351,7 +360,10 @@ class LayoutDetectionService {
     final depthRatio = (1.0 - (minVal / avgPeak)).clamp(0.0, 1.0);
 
     // Gutter width expansion around minX
-    final threshold = min(avgPeak * 0.45, minVal + max(3.0, (avgPeak - minVal) * 0.25));
+    final threshold = min(
+      avgPeak * 0.45,
+      minVal + max(3.0, (avgPeak - minVal) * 0.25),
+    );
     int valleyLeft = minX;
     while (valleyLeft > (width * 0.25) && smoothed[valleyLeft] <= threshold) {
       valleyLeft--;
@@ -367,14 +379,18 @@ class LayoutDetectionService {
     // Both peaks must have substantial content (ratio between left and right peaks >= 0.35)
     final peakBalance = min(leftPeak, rightPeak) / max(leftPeak, rightPeak);
 
-    if (depthRatio >= 0.40 && valleyWidth >= minRequiredWidth && peakBalance >= 0.35) {
+    if (depthRatio >= 0.40 &&
+        valleyWidth >= minRequiredWidth &&
+        peakBalance >= 0.35) {
       final valleyCenter = (valleyLeft + valleyRight) ~/ 2;
 
       final widthScore = (valleyWidth / (width * 0.04)).clamp(0.0, 1.0);
-      final centerOffsetRatio = (valleyCenter - (width * 0.50)).abs() / (width * 0.25);
+      final centerOffsetRatio =
+          (valleyCenter - (width * 0.50)).abs() / (width * 0.25);
       final centralityScore = (1.0 - centerOffsetRatio).clamp(0.0, 1.0);
 
-      final confidence = (depthRatio * 0.45) +
+      final confidence =
+          (depthRatio * 0.45) +
           (widthScore * 0.25) +
           (centralityScore * 0.15) +
           (peakBalance * 0.15);
@@ -384,7 +400,9 @@ class LayoutDetectionService {
         right: valleyRight,
         center: valleyCenter,
         width: valleyWidth,
-        confidence: double.parse(confidence.clamp(0.0, 0.99).toStringAsFixed(3)),
+        confidence: double.parse(
+          confidence.clamp(0.0, 0.99).toStringAsFixed(3),
+        ),
         hasDividerLine: false,
       );
     }

@@ -54,18 +54,18 @@ class ImageQualityAssessment {
       !isLowResolution && !isTooDark && !isOverexposed && !isLowContrast;
 
   Map<String, dynamic> toJson() => {
-        'width': width,
-        'height': height,
-        'aspectRatio': aspectRatio,
-        'isLowResolution': isLowResolution,
-        'meanLuminance': meanLuminance,
-        'contrastRatio': contrastRatio,
-        'isTooDark': isTooDark,
-        'isOverexposed': isOverexposed,
-        'isLowContrast': isLowContrast,
-        'recommendation': recommendation,
-        'isAdequateForOcr': isAdequateForOcr,
-      };
+    'width': width,
+    'height': height,
+    'aspectRatio': aspectRatio,
+    'isLowResolution': isLowResolution,
+    'meanLuminance': meanLuminance,
+    'contrastRatio': contrastRatio,
+    'isTooDark': isTooDark,
+    'isOverexposed': isOverexposed,
+    'isLowContrast': isLowContrast,
+    'recommendation': recommendation,
+    'isAdequateForOcr': isAdequateForOcr,
+  };
 
   factory ImageQualityAssessment.fromJson(Map<String, dynamic> json) =>
       ImageQualityAssessment(
@@ -126,8 +126,7 @@ class ProcessedImageResult {
 /// 10. Runs heavy image transformations in background isolate.
 class ImagePreprocessorService {
   ImagePreprocessorService._();
-  static final ImagePreprocessorService instance =
-      ImagePreprocessorService._();
+  static final ImagePreprocessorService instance = ImagePreprocessorService._();
 
   /// Assesses image quality and dimensions without modifying the file.
   Future<ImageQualityAssessment> assessImageQuality(File inputFile) async {
@@ -147,7 +146,9 @@ class ImagePreprocessorService {
     bool autoDeskew = false,
     bool conservativeDenoise = false,
   }) async {
-    if (filterMode == ImageFilterMode.none && !autoDeskew && !conservativeDenoise) {
+    if (filterMode == ImageFilterMode.none &&
+        !autoDeskew &&
+        !conservativeDenoise) {
       return inputFile;
     }
 
@@ -195,7 +196,10 @@ class ImagePreprocessorService {
     final outPath =
         '${tempDir.path}/ocr_opt_${DateTime.now().microsecondsSinceEpoch}.jpg';
     final outFile = File(outPath);
-    await outFile.writeAsBytes(resultData['processedBytes'] as Uint8List, flush: true);
+    await outFile.writeAsBytes(
+      resultData['processedBytes'] as Uint8List,
+      flush: true,
+    );
 
     final quality = ImageQualityAssessment.fromJson(
       resultData['quality'] as Map<String, dynamic>,
@@ -294,7 +298,9 @@ class ImagePreprocessorService {
     return Uint8List.fromList(img.encodeJpg(current, quality: 95));
   }
 
-  static Map<String, dynamic> _runFullOptimization(Map<String, dynamic> params) {
+  static Map<String, dynamic> _runFullOptimization(
+    Map<String, dynamic> params,
+  ) {
     final Uint8List rawBytes = params['bytes'];
     final String modeName = params['mode'];
     final bool autoDeskew = params['autoDeskew'] ?? true;
@@ -349,7 +355,9 @@ class ImagePreprocessorService {
       current = img.luminanceThreshold(current, threshold: 0.52);
     }
 
-    final processedBytes = Uint8List.fromList(img.encodeJpg(current, quality: 95));
+    final processedBytes = Uint8List.fromList(
+      img.encodeJpg(current, quality: 95),
+    );
 
     return {
       'processedBytes': processedBytes,
@@ -373,12 +381,24 @@ class ImagePreprocessorService {
 
     // Left column: 0 to 52% of page width (small overlap to ensure no cut-off)
     final leftWidth = (width * 0.52).round().clamp(1, width);
-    final leftImg = img.copyCrop(upright, x: 0, y: 0, width: leftWidth, height: height);
+    final leftImg = img.copyCrop(
+      upright,
+      x: 0,
+      y: 0,
+      width: leftWidth,
+      height: height,
+    );
 
     // Right column: 48% to 100% of page width
     final rightStartX = (width * 0.48).round().clamp(0, width - 1);
     final rightWidth = (width - rightStartX).clamp(1, width);
-    final rightImg = img.copyCrop(upright, x: rightStartX, y: 0, width: rightWidth, height: height);
+    final rightImg = img.copyCrop(
+      upright,
+      x: rightStartX,
+      y: 0,
+      width: rightWidth,
+      height: height,
+    );
 
     return [
       Uint8List.fromList(img.encodeJpg(leftImg, quality: 95)),
@@ -482,17 +502,13 @@ class ImagePreprocessorService {
 
     String recommendation;
     if (isLowResolution) {
-      recommendation =
-          'রেজোলিউশন কম। পরিষ্কার পাঠযোগ্যতার জন্য কাছে থেকে বা উচ্চ রেজোলিউশনে ছবি তুলুন।';
+      recommendation = 'রেজোলিউশন কম। পরিষ্কার পাঠযোগ্যতার জন্য কাছে থেকে বা উচ্চ রেজোলিউশনে ছবি তুলুন।';
     } else if (isTooDark) {
-      recommendation =
-          'ছবিটিতে পর্যাপ্ত আলো নেই। পর্যাপ্ত আলোতে বা ফ্ল্যাশ ব্যবহার করে ছবি তুলুন।';
+      recommendation = 'ছবিটিতে পর্যাপ্ত আলো নেই। পর্যাপ্ত আলোতে বা ফ্ল্যাশ ব্যবহার করে ছবি তুলুন।';
     } else if (isOverexposed) {
-      recommendation =
-          'ছবিতে অতিরিক্ত আলো বা প্রতিফলন রয়েছে। আলো কিছুটা কমিয়ে বা কোণ বদলে ছবি তুলুন।';
+      recommendation = 'ছবিতে অতিরিক্ত আলো বা প্রতিফলন রয়েছে। আলো কিছুটা কমিয়ে বা কোণ বদলে ছবি তুলুন।';
     } else if (isLowContrast) {
-      recommendation =
-          'কালি ও কাগজের বৈসাদৃশ্য (কন্ট্রাস্ট) কম। গ্রেস্কেল বা কন্ট্রাস্ট ফিল্টার ব্যবহার করুন।';
+      recommendation = 'কালি ও কাগজের বৈসাদৃশ্য (কন্ট্রাস্ট) কম। গ্রেস্কেল বা কন্ট্রাস্ট ফিল্টার ব্যবহার করুন।';
     } else {
       recommendation = 'ছবির গুণমান ও রেজোলিউশন OCR-এর জন্য উপযুক্ত।';
     }
