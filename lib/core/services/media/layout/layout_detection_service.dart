@@ -229,6 +229,25 @@ class LayoutDetectionService {
     final sampleHeight = min(height, 800);
     final scaleY = height / sampleHeight;
 
+    // Sample background luminance across the central region to make ink threshold illumination-adaptive
+    final sampleLums = <int>[];
+    final lumSampleStepX = max(1, (width * 0.05).round());
+    final lumSampleStepY = max(1, (sampleHeight * 0.10).round());
+    for (int sx = (width * 0.35).round(); sx <= (width * 0.65).round(); sx += lumSampleStepX) {
+      for (int sy = 0; sy < sampleHeight; sy += lumSampleStepY) {
+        final y = (sy * scaleY).round().clamp(0, height - 1);
+        final p = image.getPixel(sx, y);
+        if (p.a != 0) {
+          sampleLums.add((p.r * 299 + p.g * 587 + p.b * 114) ~/ 1000);
+        }
+      }
+    }
+    sampleLums.sort();
+    // 80th percentile luminance represents paper background
+    final bgLum = sampleLums.isNotEmpty ? sampleLums[(sampleLums.length * 0.80).floor()] : 240;
+    // Ink threshold: significantly darker than paper background, capped at 135
+    final inkThreshold = min(135, (bgLum * 0.72).round());
+
     // Search window: central 25% to 75% of width
     final searchStartX = (width * 0.25).round();
     final searchEndX = (width * 0.75).round();
@@ -243,7 +262,7 @@ class LayoutDetectionService {
         // If transparent padding from rotation, treat as background
         if (p.a == 0) continue;
         final lum = (p.r * 299 + p.g * 587 + p.b * 114) ~/ 1000;
-        if (lum < 140) {
+        if (lum < inkThreshold) {
           ink++;
         }
       }
@@ -281,7 +300,7 @@ class LayoutDetectionService {
 
     // 2. Check for Whitespace Gutter (Adaptive Trough Detection):
     // Smooth the profile in the central region with a moving average window
-    final windowSize = max(4, (width * 0.015).round());
+    final windowSize = max(4, min(24, (width * 0.008).round()));
     final smoothed = List<double>.filled(width, 0.0);
     for (int x = windowSize; x < width - windowSize; x++) {
       double sum = 0;
@@ -291,9 +310,9 @@ class LayoutDetectionService {
       smoothed[x] = sum / (2 * windowSize + 1);
     }
 
-    // Search for minimum ink trough in central 35% to 65% of width
-    final troughStartX = (width * 0.35).round();
-    final troughEndX = (width * 0.65).round();
+    // Search for minimum ink trough in central 38% to 62% of width
+    final troughStartX = (width * 0.38).round();
+    final troughEndX = (width * 0.62).round();
 
     double minVal = double.infinity;
     int minX = -1;
@@ -306,15 +325,19 @@ class LayoutDetectionService {
 
     if (minX == -1) return null;
 
-    // Measure peak ink in left column text zone (15% to troughStartX)
+    // Measure peak ink in left column text zone (12% to minX - windowSize)
     double leftPeak = 0;
-    for (int x = (width * 0.15).round(); x < troughStartX; x++) {
+    final leftTextStart = (width * 0.12).round();
+    final leftTextEnd = max(leftTextStart + 1, minX - windowSize);
+    for (int x = leftTextStart; x < leftTextEnd; x++) {
       if (smoothed[x] > leftPeak) leftPeak = smoothed[x];
     }
 
-    // Measure peak ink in right column text zone (troughEndX to 85%)
+    // Measure peak ink in right column text zone (minX + windowSize to 88%)
     double rightPeak = 0;
-    for (int x = troughEndX; x < (width * 0.85).round(); x++) {
+    final rightTextStart = min(width - 1, minX + windowSize);
+    final rightTextEnd = (width * 0.88).round();
+    for (int x = rightTextStart; x < rightTextEnd; x++) {
       if (smoothed[x] > rightPeak) rightPeak = smoothed[x];
     }
 
@@ -328,7 +351,7 @@ class LayoutDetectionService {
     final depthRatio = (1.0 - (minVal / avgPeak)).clamp(0.0, 1.0);
 
     // Gutter width expansion around minX
-    final threshold = min(avgPeak * 0.60, minVal + max(3.0, (avgPeak - minVal) * 0.35));
+    final threshold = min(avgPeak * 0.45, minVal + max(3.0, (avgPeak - minVal) * 0.25));
     int valleyLeft = minX;
     while (valleyLeft > (width * 0.25) && smoothed[valleyLeft] <= threshold) {
       valleyLeft--;

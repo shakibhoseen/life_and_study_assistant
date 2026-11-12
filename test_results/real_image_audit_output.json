@@ -1,0 +1,333 @@
+[
+  {
+    "questionNumber": "১",
+    "questionText": "এমবেডেড সিস্টেমে বিদ্যুৎ খরচ- সমাজসেবা অধিদ্ডরের (সমাজসেবা অফিসার): ১৩; বিজেএস (সহকারী জজ): ০৩1",
+    "optionsCount": 5,
+    "options": [
+      "কম (low)",
+      "বেশি (many)",
+      "ay",
+      "few)",
+      "কোনোটিই নয় উ.ক"
+    ],
+    "optionMarkers": [
+      "(ক)",
+      "(খ)",
+      "(গ)",
+      "(ক)",
+      "(গ)"
+    ],
+    "reviewRequired": true,
+    "reviewReasons": [
+      "অপশন সংখ্যা 5 (৪টি প্রত্যাশিত)"
+    ],
+    "questionMarkerAudit": {
+      "originalText": "১.",
+      "recoveredText": "১.",
+      "glyphBoundingBox": {
+        "left": 45,
+        "top": 120,
+        "width": 53,
+        "height": 35
+      },
+      "confidenceLevel": "high",
+      "status": "exactMatch",
+      "evidenceSignals": [
+        "Spatial: left <= 35% of column (45/1547)",
+        "Pattern: Exact digit match \"১\""
+      ],
+      "needsReview": false,
+      "reviewReason": null,
+      "isAltered": false
+    },
+    "optionAudits": [
+      {
+        "originalText": "ও",
+        "recoveredText": "(ক)",
+        "glyphBoundingBox": {
+          "left": 90,
+          "top": 210,
+          "width": 54,
+          "height": 30
+        },
+        "confidenceLevel": "medium",
+        "status": "recovered",
+        "evidenceSignals": [
+          "Glyph: Shape similarity \"ও\" -> \"(খ)\" or \"(ক)\"",
+          "Sequence: First option in question flow"
+        ],
+        "needsReview": false,
+        "reviewReason": null,
+        "isAltered": true
+      },
+      {
+        "originalText": "@",
+        "recoveredText": "(খ)",
+        "glyphBoundingBox": {
+          "left": 361,
+          "top": 210,
+          "width": 81,
+          "height": 30
+        },
+        "confidenceLevel": "medium",
+        "status": "recovered",
+        "evidenceSignals": [
+          "Glyph: Shape similarity \"@\" -> \"(খ)\"",
+          "Spatial: Spatial position (361, 210) follows (ক) (90, 210) in reading order",
+          "Text: Option body \"বেশি (many)\" satisfies minimum length constraint"
+        ],
+        "needsReview": false,
+        "reviewReason": null,
+        "isAltered": true
+      },
+      {
+        "originalText": "@",
+        "recoveredText": "(গ)",
+        "glyphBoundingBox": {
+          "left": 90,
+          "top": 250,
+          "width": 43,
+          "height": 30
+        },
+        "confidenceLevel": "medium",
+        "status": "recovered",
+        "evidenceSignals": [
+          "Glyph: Shape similarity \"@\" -> \"(গ)\"",
+          "Sequence: Follows options (ক) and (খ)"
+        ],
+        "needsReview": false,
+        "reviewReason": null,
+        "isAltered": true
+      },
+      {
+        "originalText": "(a",
+        "recoveredText": "(ক)",
+        "glyphBoundingBox": {
+          "left": 177,
+          "top": 250,
+          "width": 87,
+          "height": 30
+        },
+        "confidenceLevel": "high",
+        "status": "exactMatch",
+        "evidenceSignals": [
+          "Pattern: Exact canonical option marker match \"Instance of '_OptionCandidateToken'.rawMarker\""
+        ],
+        "needsReview": false,
+        "reviewReason": null,
+        "isAltered": true
+      },
+      {
+        "originalText": "@",
+        "recoveredText": "(গ)",
+        "glyphBoundingBox": {
+          "left": 350,
+          "top": 250,
+          "width": 65,
+          "height": 30
+        },
+        "confidenceLevel": "medium",
+        "status": "recovered",
+        "evidenceSignals": [
+          "Glyph: Shape similarity \"@\" -> \"(গ)\"",
+          "Sequence: Follows options (ক) and (খ)"
+        ],
+        "needsReview": false,
+        "reviewReason": null,
+        "isAltered": true
+      }
+    ]
+  },
+  {
+    "questionNumber": "৪",
+    "questionText": "পামটপ কি? শিক্ষক নিবন্ধন ও প্রত্যয়ন পরীক্ষা (শিক্ষক) BA: ১২1",
+    "optionsCount": 4,
+    "options": [
+      "ছোট কুকুর",
+      "পর্বতারোহণ সামগ্রী",
+      "বাদ্যযন্ত্র",
+      "ছোট কম্পিউটার উ.ঘ"
+    ],
+    "optionMarkers": [
+      "@",
+      "@",
+      "€)",
+      "€"
+    ],
+    "reviewRequired": false,
+    "reviewReasons": [],
+    "questionMarkerAudit": {
+      "originalText": "৪.",
+      "recoveredText": "৪.",
+      "glyphBoundingBox": {
+        "left": 48,
+        "top": 350,
+        "width": 54,
+        "height": 36
+      },
+      "confidenceLevel": "high",
+      "status": "exactMatch",
+      "evidenceSignals": [
+        "Spatial: left <= 35% of column (48/1547)",
+        "Pattern: Exact digit match \"৪\""
+      ],
+      "needsReview": false,
+      "reviewReason": null,
+      "isAltered": false
+    },
+    "optionAudits": [
+      {
+        "originalText": "@",
+        "recoveredText": "@",
+        "glyphBoundingBox": {
+          "left": 90,
+          "top": 395,
+          "width": 38,
+          "height": 30
+        },
+        "confidenceLevel": "low",
+        "status": "ambiguous",
+        "evidenceSignals": [
+          "Ambiguous: No conclusive multi-signal alignment"
+        ],
+        "needsReview": true,
+        "reviewReason": "অস্পষ্ট অপশন মার্কার (@); অনুমান না করে রিভিউ ফ্ল্যাগ দেওয়া হয়েছে",
+        "isAltered": false
+      },
+      {
+        "originalText": "@",
+        "recoveredText": "@",
+        "glyphBoundingBox": {
+          "left": 296,
+          "top": 395,
+          "width": 56,
+          "height": 30
+        },
+        "confidenceLevel": "low",
+        "status": "ambiguous",
+        "evidenceSignals": [
+          "Ambiguous: No conclusive multi-signal alignment"
+        ],
+        "needsReview": true,
+        "reviewReason": "অস্পষ্ট অপশন মার্কার (@); অনুমান না করে রিভিউ ফ্ল্যাগ দেওয়া হয়েছে",
+        "isAltered": false
+      },
+      {
+        "originalText": "€)",
+        "recoveredText": "€)",
+        "glyphBoundingBox": {
+          "left": 90,
+          "top": 435,
+          "width": 55,
+          "height": 30
+        },
+        "confidenceLevel": "low",
+        "status": "ambiguous",
+        "evidenceSignals": [
+          "Ambiguous: No conclusive multi-signal alignment"
+        ],
+        "needsReview": true,
+        "reviewReason": "অস্পষ্ট অপশন মার্কার (€)); অনুমান না করে রিভিউ ফ্ল্যাগ দেওয়া হয়েছে",
+        "isAltered": false
+      },
+      {
+        "originalText": "€",
+        "recoveredText": "€",
+        "glyphBoundingBox": {
+          "left": 345,
+          "top": 435,
+          "width": 55,
+          "height": 30
+        },
+        "confidenceLevel": "low",
+        "status": "ambiguous",
+        "evidenceSignals": [
+          "Ambiguous: No conclusive multi-signal alignment"
+        ],
+        "needsReview": true,
+        "reviewReason": "অস্পষ্ট অপশন মার্কার (€); অনুমান না করে রিভিউ ফ্ল্যাগ দেওয়া হয়েছে",
+        "isAltered": false
+      }
+    ]
+  },
+  {
+    "questionNumber": "৫",
+    "questionText": "আধুনিক এমবেডেড সিস্টেমে কীসের ব্যবহার পরিলক্ষিত হয়? [বাংলাদেশ প্রাণিসম্পদ অধিদণ্ডরের (সহকারী পরিচালক): ০৫]",
+    "optionsCount": 2,
+    "options": [
+      "চিপস",
+      "প্রসেসর"
+    ],
+    "optionMarkers": [
+      "@",
+      "@"
+    ],
+    "reviewRequired": true,
+    "reviewReasons": [
+      "অপশন সংখ্যা 2 (৪টি প্রত্যাশিত)"
+    ],
+    "questionMarkerAudit": {
+      "originalText": "€.",
+      "recoveredText": "৫.",
+      "glyphBoundingBox": {
+        "left": 44,
+        "top": 520,
+        "width": 54,
+        "height": 36
+      },
+      "confidenceLevel": "medium",
+      "status": "recovered",
+      "evidenceSignals": [
+        "Spatial: Left margin 44 <= 35% of column 1547",
+        "Sequence: Numerical continuity verified (৪ -> ৫)",
+        "Context: Preceding question option sequence is finalized",
+        "Glyph: Shape features match Bengali digit ৫ (curvature & top loop misread as €)",
+        "Spatial: Left margin 44px <= 35% of column (1547px)",
+        "Spatial: Aspect ratio w/h=1.50 matches standalone digit bounding box",
+        "Sequence: Numerical continuity verified (৪ -> ৫)",
+        "Context: Preceding question options are fully concluded"
+      ],
+      "needsReview": false,
+      "reviewReason": null,
+      "isAltered": true
+    },
+    "optionAudits": [
+      {
+        "originalText": "@",
+        "recoveredText": "@",
+        "glyphBoundingBox": {
+          "left": 90,
+          "top": 610,
+          "width": 63,
+          "height": 30
+        },
+        "confidenceLevel": "low",
+        "status": "ambiguous",
+        "evidenceSignals": [
+          "Ambiguous: No conclusive multi-signal alignment"
+        ],
+        "needsReview": true,
+        "reviewReason": "অস্পষ্ট অপশন মার্কার (@); অনুমান না করে রিভিউ ফ্ল্যাগ দেওয়া হয়েছে",
+        "isAltered": false
+      },
+      {
+        "originalText": "@",
+        "recoveredText": "@",
+        "glyphBoundingBox": {
+          "left": 278,
+          "top": 610,
+          "width": 94,
+          "height": 30
+        },
+        "confidenceLevel": "low",
+        "status": "ambiguous",
+        "evidenceSignals": [
+          "Ambiguous: No conclusive multi-signal alignment"
+        ],
+        "needsReview": true,
+        "reviewReason": "অস্পষ্ট অপশন মার্কার (@); অনুমান না করে রিভিউ ফ্ল্যাগ দেওয়া হয়েছে",
+        "isAltered": false
+      }
+    ]
+  }
+]

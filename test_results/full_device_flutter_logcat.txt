@@ -1,0 +1,16 @@
+--------- beginning of main
+11-11 00:35:08.291 28388 28388 I flutter : Flashcard push: disabled, queue cleared
+11-11 00:39:27.117 28388 15341 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+11-11 00:39:29.561 28388 28388 I flutter : Native background WorkManager task triggered: com.example.life_and_study_assistant.wifi_check
+11-11 00:39:29.761 28388 28388 I flutter : Notification timezone: Asia/Dhaka
+11-11 00:45:03.236 28388 28388 I flutter : Flashcard push: disabled, queue cleared
+11-11 00:45:33.533 17585 17585 I flutter : [IMPORTANT:flutter/shell/common/shell.cc(527)] [Action Required]: Impeller opt-out deprecated.
+11-11 00:45:33.533 17585 17585 I flutter :     The application opted out of Impeller by either using the
+11-11 00:45:33.533 17585 17585 I flutter :     `--no-enable-impeller` flag or the
+11-11 00:45:33.533 17585 17585 I flutter :     `io.flutter.embedding.android.EnableImpeller` `AndroidManifest.xml` entry.
+11-11 00:45:33.533 17585 17585 I flutter :     These options are going to go away in an upcoming Flutter release. Remove
+11-11 00:45:33.533 17585 17585 I flutter :     the explicit opt-out. If you need to opt-out, please report a bug describing
+11-11 00:45:33.533 17585 17585 I flutter :     the issue.
+11-11 00:45:33.533 17585 17585 I flutter : 
+11-11 00:45:33.533 17585 17585 I flutter :     https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+11-11 00:45:33.533 17585 17585 I flutter : 

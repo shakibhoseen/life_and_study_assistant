@@ -1,0 +1,128 @@
+[
+  {
+    "questionNumber": "১",
+    "questionText": "এমবেডেড সিস্টেমে বিদ্যুৎ খরচ-",
+    "sourceExam": "সমাজসেবা অধিদপ্তরের (সমাজসেবা অফিসার): ১৩; বিজেএস (সহকারী জজ): ০৩",
+    "options": {
+      "ক": "কম (low)",
+      "খ": "বেশি (many)",
+      "গ": "কম (a few)",
+      "ঘ": "কোনোটিই নয়"
+    },
+    "printedAnswer": "ক",
+    "boundingBox": {
+      "left": 45,
+      "top": 120,
+      "width": 900,
+      "height": 160
+    }
+  },
+  {
+    "questionNumber": "৪",
+    "questionText": "পামটপ কি?",
+    "sourceExam": "শিক্ষক নিবন্ধন ও প্রত্যয়ন পরীক্ষা (শিক্ষক) BA: ১২",
+    "options": {
+      "ক": "ছোট কুকুর",
+      "খ": "পর্বতারোহণ সামগ্রী",
+      "গ": "বাদ্যযন্ত্র",
+      "ঘ": "ছোট কম্পিউটার"
+    },
+    "printedAnswer": "ঘ",
+    "boundingBox": {
+      "left": 48,
+      "top": 350,
+      "width": 950,
+      "height": 120
+    }
+  },
+  {
+    "questionNumber": "৫",
+    "questionText": "আধুনিক এমবেডেড সিস্টেমে কীসের ব্যবহার পরিলক্ষিত হয়?",
+    "sourceExam": "বাংলাদেশ প্রাণিসম্পদ অধিদপ্তরের (সহকারী পরিচালক): ০৫",
+    "options": {
+      "ক": "চিপস",
+      "খ": "প্রসেসর",
+      "গ": "মাইক্রোপ্রসেসর ও মাইক্রোকন্ট্রোলার",
+      "ঘ": "সবগুলো"
+    },
+    "printedAnswer": "uncertain",
+    "boundingBox": {
+      "left": 44,
+      "top": 520,
+      "width": 980,
+      "height": 130
+    }
+  },
+  {
+    "questionNumber": "৬",
+    "questionText": "এমবেডেড সিস্টেমে ব্যবহৃত হয় কোনটি?",
+    "sourceExam": "খাদ্য অধিদপ্তরের খাদ্য পরিদর্শক/উপ-খাদ্য পরিদর্শক: ০২",
+    "options": {
+      "ক": "রাউটার",
+      "খ": "মোবাইল ফোন",
+      "গ": "ATM",
+      "ঘ": "সবগুলো"
+    },
+    "printedAnswer": "ঘ",
+    "boundingBox": {
+      "left": 45,
+      "top": 700,
+      "width": 950,
+      "height": 140
+    }
+  },
+  {
+    "questionNumber": "৭",
+    "questionText": "ATM এর পূর্ণরূপ কী?",
+    "sourceExam": "",
+    "options": {
+      "ক": "Auto Timking Machine",
+      "খ": "Automated Teller Machine",
+      "গ": "Auto Touch Mobile",
+      "ঘ": "Automatic Talking Mobile"
+    },
+    "printedAnswer": "খ",
+    "boundingBox": {
+      "left": 45,
+      "top": 880,
+      "width": 950,
+      "height": 130
+    }
+  },
+  {
+    "questionNumber": "২",
+    "questionText": "Analog signal is measured in -",
+    "sourceExam": "Rupali Bank (ANE): 15",
+    "options": {
+      "a": "Volt",
+      "b": "Hertz",
+      "c": "Digits",
+      "d": "Watts"
+    },
+    "printedAnswer": "b",
+    "boundingBox": {
+      "left": 45,
+      "top": 1050,
+      "width": 950,
+      "height": 130
+    }
+  },
+  {
+    "questionNumber": "৩",
+    "questionText": "PDA এর পূর্ণরূপ কী?",
+    "sourceExam": "",
+    "options": {
+      "a": "Protocol disk administrator",
+      "b": "Primary digital assistant",
+      "c": "Processor digital add-on",
+      "d": "Personal digital assistant"
+    },
+    "printedAnswer": "d",
+    "boundingBox": {
+      "left": 45,
+      "top": 1220,
+      "width": 950,
+      "height": 130
+    }
+  }
+]

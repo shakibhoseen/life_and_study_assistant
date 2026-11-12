@@ -1,0 +1,46 @@
+--------- beginning of main
+11-11 00:09:21.145 28388 10066 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+11-11 00:09:23.723 28388 28388 I flutter : Native background WorkManager task triggered: com.example.life_and_study_assistant.wifi_check
+11-11 00:09:23.992 28388 28388 I flutter : Notification timezone: Asia/Dhaka
+11-11 00:13:59.859 28388 28388 I flutter : Flashcard push: disabled, queue cleared
+11-11 00:17:03.741 28388 28388 I flutter : Notification timezone: Asia/Dhaka
+11-11 00:17:04.002 28388 28388 I flutter : Daily dinner reminder scheduled for 2026-11-11 22:00:00.000+0600
+11-11 00:17:04.275 28388 28388 I flutter : GeminiAiService initialized with model gemini-flash-lite-latest
+11-11 00:17:18.199 28388 28388 I flutter : GeminiAiService initialized with model gemini-flash-lite-latest
+11-11 00:17:19.324 28388 28388 I flutter : GeminiResultCache: disk hit for study_plan|aa82b102140f9d01daa656cf92c6c6f256cc3599d29503caa6b32413a3980b76
+11-11 00:17:19.596 28388 28388 I flutter : Gemini cache hit: study_plan (hit #1 today)
+11-11 00:17:21.154 28388 28388 I flutter : Flashcard push: disabled, queue cleared
+11-11 00:17:40.503 28388 28388 I flutter : 🔍 [DEBUG] Starting Layout Analysis for: /data/user/0/com.example.life_and_study_assistant/cache/36dc7ebd-6d3b-46c7-b577-aa7b72ee5912/col_left_exact.jpg
+11-11 00:17:47.951 28388 28388 I flutter : 🔍 [DEBUG] Layout Analysis finished: layoutType=LayoutType.singleColumn, skewAngle=0.0, isDualColumn=false, crops=1
+11-11 00:18:13.630 28388 28388 I flutter : ⚡ [DEBUG] Extracting hOCR for Column 0 (/data/user/0/com.example.life_and_study_assistant/code_cache/layout_crop_0_1794334667695252.jpg)...
+11-11 00:18:22.176 28388 28388 I flutter : ⚡ [DEBUG] Column 0: Extracted 36 lines.
+11-11 00:18:22.177 28388 28388 I flutter :    Line 0: "১. এমবেডেড সিস্টেমে বিদ্যুৎ খরচ- সমাজসেবা অধিদ্ডরের" (conf: 0.8185714285714286)
+11-11 00:18:22.177 28388 28388 I flutter :    Line 1: "(সমাজসেবা অফিসার): ১৩; বিজেএস (সহকারী জজ): ০৩1" (conf: 0.8828571428571429)
+11-11 00:18:22.177 28388 28388 I flutter :    Line 2: "ও কম (low) @ বেশি (many)" (conf: 0.8566666666666667)
+11-11 00:18:22.177 28388 28388 I flutter :    Line 3: "@ ay (a few) @ কোনোটিই নয় উ.ক" (conf: 0.84875)
+11-11 00:18:22.177 28388 28388 I flutter :    Line 4: "৪. পামটপ কি? শিক্ষক নিবন্ধন ও প্রত্যয়ন পরীক্ষা (শিক্ষক) BA: ১২1" (conf: 0.8127272727272726)
+11-11 00:18:22.178 28388 28388 I flutter :    Line 5: "@ ছোট কুকুর @ পর্বতারোহণ সামগ্রী" (conf: 0.895)
+11-11 00:18:22.178 28388 28388 I flutter :    Line 6: "€) বাদ্যযন্ত্র € ছোট কম্পিউটার উ.ঘ" (conf: 0.7883333333333333)
+11-11 00:18:22.178 28388 28388 I flutter :    Line 7: "€. আধুনিক এমবেডেড সিস্টেমে কীসের ব্যবহার পরিলক্ষিত হয়?" (conf: 0.93125)
+11-11 00:18:22.178 28388 28388 I flutter :    Line 8: "[বাংলাদেশ প্রাণিসম্পদ অধিদণ্ডরের (সহকারী পরিচালক): ০৫]" (conf: 0.8266666666666667)
+11-11 00:18:22.178 28388 28388 I flutter :    Line 9: "@ চিপস @ প্রসেসর" (conf: 0.8475)
+11-11 00:18:23.182 28388 28388 I flutter : ⚡ [DEBUG] Segmentation result: 6 questions found, 0 valid MCQs, 0 orphans.
+11-11 00:18:23.190 28388 28388 I flutter :    Q[১]: "এমবেডেড সিস্টেমে বিদ্যুৎ খরচ- সমাজসেবা অধিদ্ডরের (সমাজসেবা অফিসার): ১৩; বিজেএস (সহকারী জজ): ০৩1" | options: 3 -> [বেশি (many), ay (a few), কোনোটিই নয় উ.ক]
+11-11 00:18:23.192 28388 28388 I flutter :    Q[৪]: "পামটপ কি? শিক্ষক নিবন্ধন ও প্রত্যয়ন পরীক্ষা (শিক্ষক) BA: ১২1" | options: 8 -> [ছোট কুকুর, পর্বতারোহণ সামগ্রী, ) বাদ্যযন্ত্র, ছোট কম্পিউটার উ.ঘ, . আধুনিক এমবেডেড সিস্টেমে কীসের ব্যবহার পরিলক্ষিত হয়?, চিপস, প্রসেসর, মাইক্রোপ্রসেসর ও মাইক্রোকন্ট্রোলার উ.ঘ]
+11-11 00:18:23.194 28388 28388 I flutter :    Q[৬]: "এমবেডেড সিস্টেমে ব্যবহৃত হয় কোনটি? খাদ্য অধিদণ্ডরের &#39;খোদ্য পরিদশর্ক/উপ-খাদ্য পরিদশর্ক): 02]" | options: 8 -> [রাউটার, মোবাইল ফোন, ) ATM, সবগুলো উ.ঘ, Auto Timking Machine, Automated Teller Machine, Auto Touch Mobile, Automatic Talking Mobile উ.খ]
+11-11 00:18:23.195 28388 28388 I flutter :    Q[২]: "Analog signal is measured in - ‘Rupali Bank (ANE):" | options: 0 -> []
+11-11 00:18:23.197 28388 28388 I flutter :    Q[21]: "" | options: 6 -> [Hertz, @Digits ৪ Watts Ga, Protocol diisk administrator, Primary digital assistant, Processor digital add-on, Personal digital assistant]
+11-11 00:18:23.198 28388 28388 I flutter :    Q[8]: "" | options: 3 -> [Maxframe -, Mainframe :, Notebook _ ae]
+11-11 00:24:24.174 28388 11886 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+11-11 00:24:26.640 28388 28388 I flutter : Native background WorkManager task triggered: com.example.life_and_study_assistant.wifi_check
+11-11 00:24:26.891 28388 28388 I flutter : Notification timezone: Asia/Dhaka
+11-11 00:32:57.390 13105 13105 I flutter : [IMPORTANT:flutter/shell/common/shell.cc(527)] [Action Required]: Impeller opt-out deprecated.
+11-11 00:32:57.390 13105 13105 I flutter :     The application opted out of Impeller by either using the
+11-11 00:32:57.390 13105 13105 I flutter :     `--no-enable-impeller` flag or the
+11-11 00:32:57.390 13105 13105 I flutter :     `io.flutter.embedding.android.EnableImpeller` `AndroidManifest.xml` entry.
+11-11 00:32:57.390 13105 13105 I flutter :     These options are going to go away in an upcoming Flutter release. Remove
+11-11 00:32:57.390 13105 13105 I flutter :     the explicit opt-out. If you need to opt-out, please report a bug describing
+11-11 00:32:57.390 13105 13105 I flutter :     the issue.
+11-11 00:32:57.390 13105 13105 I flutter : 
+11-11 00:32:57.390 13105 13105 I flutter :     https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+11-11 00:32:57.390 13105 13105 I flutter : 

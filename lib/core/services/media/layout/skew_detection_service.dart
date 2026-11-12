@@ -68,6 +68,8 @@ class SkewDetectionService {
     if (angleDegrees.abs() < 0.3) {
       return image;
     }
+    // Set background color to white before rotation so rotated canvas corners are paper-white
+    image.backgroundColor = img.ColorRgb8(255, 255, 255);
     // copyRotate rotates clockwise by angle; to deskew we rotate by -angle
     return img.copyRotate(
       image,
@@ -88,14 +90,47 @@ class SkewDetectionService {
 
   /// Calculates horizontal projection profile variance when rotated by [testAngle].
   double _computeProjectionVariance(img.Image thumb, double testAngle) {
-    final candidate = testAngle == 0.0
-        ? thumb
-        : img.copyRotate(thumb, angle: -testAngle, interpolation: img.Interpolation.nearest);
+    // If not rotating, compute directly
+    if (testAngle == 0.0) {
+      final startY = (thumb.height * 0.15).round();
+      final endY = (thumb.height * 0.85).round();
+      final startX = (thumb.width * 0.15).round();
+      final endX = (thumb.width * 0.85).round();
 
-    final startY = (candidate.height * 0.15).round();
-    final endY = (candidate.height * 0.85).round();
-    final startX = (candidate.width * 0.15).round();
-    final endX = (candidate.width * 0.85).round();
+      final counts = <int>[];
+      int totalInk = 0;
+      for (int y = startY; y < endY; y++) {
+        int inkInRow = 0;
+        for (int x = startX; x < endX; x++) {
+          final p = thumb.getPixel(x, y);
+          if (p.r < 140) inkInRow++;
+        }
+        counts.add(inkInRow);
+        totalInk += inkInRow;
+      }
+      if (counts.isEmpty || totalInk == 0) return 0.0;
+      final mean = totalInk / counts.length;
+      double sumSquaredDiff = 0.0;
+      for (final c in counts) {
+        final diff = c - mean;
+        sumSquaredDiff += diff * diff;
+      }
+      return sumSquaredDiff / counts.length;
+    }
+
+    // Set background color to white on thumb before rotating so canvas expansion is white
+    thumb.backgroundColor = img.ColorRgb8(255, 255, 255);
+    final candidate = img.copyRotate(
+      thumb,
+      angle: -testAngle,
+      interpolation: img.Interpolation.nearest,
+    );
+
+    // Keep analysis well inside the central unrotated region
+    final startY = (candidate.height * 0.25).round();
+    final endY = (candidate.height * 0.75).round();
+    final startX = (candidate.width * 0.25).round();
+    final endX = (candidate.width * 0.75).round();
 
     final counts = <int>[];
     int totalInk = 0;
@@ -104,7 +139,6 @@ class SkewDetectionService {
       int inkInRow = 0;
       for (int x = startX; x < endX; x++) {
         final p = candidate.getPixel(x, y);
-        if (p.a == 0) continue;
         // In grayscale, r channel is luminance. Ink pixels are dark (< 140)
         if (p.r < 140) {
           inkInRow++;
