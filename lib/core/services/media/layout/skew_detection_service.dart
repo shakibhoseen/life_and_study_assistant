@@ -68,6 +68,8 @@ class SkewDetectionService {
     if (angleDegrees.abs() < 0.3) {
       return image;
     }
+    // Set background color to white before rotation so rotated canvas corners are paper-white
+    image.backgroundColor = img.ColorRgb8(255, 255, 255);
     // copyRotate rotates clockwise by angle; to deskew we rotate by -angle
     return img.copyRotate(
       image,
