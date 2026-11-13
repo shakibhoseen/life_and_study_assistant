@@ -142,8 +142,8 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
           const Positioned.fill(
             child: AnimatedGradientBackground(child: SizedBox.expand()),
           ),
-          const FloatingOrb(top: 40, left: -40, size: 210, opacity: 0.06),
-          const FloatingOrb(bottom: 80, right: -40, size: 190, opacity: 0.06),
+          const FloatingOrb(top: 40, left: -40, size: 250, opacity: 0.15),
+          const FloatingOrb(bottom: 80, right: -40, size: 220, opacity: 0.13),
           TabBarView(
             controller: _tabController,
             children: [

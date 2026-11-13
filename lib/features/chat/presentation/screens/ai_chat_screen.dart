@@ -318,8 +318,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           const Positioned.fill(
             child: AnimatedGradientBackground(child: SizedBox.expand()),
           ),
-          const FloatingOrb(top: 50, right: -40, size: 200, opacity: 0.05),
-          const FloatingOrb(bottom: 120, left: -40, size: 180, opacity: 0.05),
+          const FloatingOrb(top: 50, right: -40, size: 240, opacity: 0.14),
+          const FloatingOrb(bottom: 120, left: -40, size: 210, opacity: 0.12),
           Column(
             children: [
               // 1. Dedicated Topic Thread Indicator (if active)

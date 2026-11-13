@@ -137,8 +137,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           const Positioned.fill(
             child: AnimatedGradientBackground(child: SizedBox.expand()),
           ),
-          const FloatingOrb(top: 30, right: -40, size: 220, opacity: 0.06),
-          const FloatingOrb(bottom: 60, left: -40, size: 180, opacity: 0.06),
+          const FloatingOrb(top: 30, right: -40, size: 260, opacity: 0.16),
+          const FloatingOrb(bottom: 60, left: -40, size: 220, opacity: 0.13),
           TabBarView(
             controller: _tabController,
             children: [_buildSchedulesTab(), _buildSummarizerTab()],

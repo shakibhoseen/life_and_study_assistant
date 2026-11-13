@@ -34,6 +34,7 @@ class PremiumGlassCard extends StatelessWidget {
   final double blurSigma;
 
   /// Opacity of the glass surface fill (0.0 – 1.0).
+  /// Higher = more opaque, less see-through glass. 0.12 is a good frosted look.
   final double opacity;
 
   /// Opacity of the glass border ring.
@@ -61,18 +62,33 @@ class PremiumGlassCard extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               decoration: BoxDecoration(
-                color: surface.withValues(alpha: opacity + 0.55),
+                // Frosted glass: surface tint + a touch of primary for the
+                // "coloured glass" look Microsoft uses in Mica/Acrylic
+                color: surface.withValues(alpha: 0.62),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    surface.withValues(alpha: 0.70),
+                    primary.withValues(alpha: 0.08),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(borderRadius),
                 border: Border.all(
-                  color: primary.withValues(alpha: borderOpacity),
-                  width: 1.2,
+                  color: primary.withValues(alpha: borderOpacity + 0.08),
+                  width: 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: primary.withValues(alpha: 0.08),
-                    blurRadius: 20,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 4),
+                    color: primary.withValues(alpha: 0.12),
+                    blurRadius: 24,
+                    spreadRadius: -2,
+                    offset: const Offset(0, 6),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),

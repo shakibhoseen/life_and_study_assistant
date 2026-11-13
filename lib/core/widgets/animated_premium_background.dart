@@ -51,24 +51,28 @@ class _AnimatedGradientBackgroundState
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final scaffold = Theme.of(context).scaffoldBackgroundColor;
-    final primary = colorScheme.primary.withValues(alpha: 0.08);
-    final secondary = colorScheme.secondary.withValues(alpha: 0.06);
 
     return AnimatedBuilder(
       animation: _controller,
       builder: (_, child) {
         final t = _controller.value;
+        // Stronger presence: primary orb moves diagonally, secondary follows
         return DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment(math.cos(t * math.pi) * 0.4, -0.6),
-              end: Alignment(math.sin(t * math.pi) * 0.4, 0.8),
+              begin: Alignment(math.cos(t * math.pi) * 0.8 - 0.6, -1.0),
+              end: Alignment(math.sin(t * math.pi) * 0.8 + 0.2, 1.0),
               colors: [
-                Color.lerp(scaffold, primary, 0.6 + t * 0.4) ?? scaffold,
-                Color.lerp(scaffold, secondary, 0.4 + (1 - t) * 0.4) ??
+                // Primary glow — noticeably tinted
+                Color.lerp(scaffold, colorScheme.primary, 0.22 + t * 0.12) ??
                     scaffold,
+                // Secondary tint at center
+                Color.lerp(scaffold, colorScheme.secondary, 0.14 + (1 - t) * 0.08) ??
+                    scaffold,
+                // Plain scaffold at the edges
                 scaffold,
               ],
+              stops: const [0.0, 0.55, 1.0],
             ),
           ),
           child: child,

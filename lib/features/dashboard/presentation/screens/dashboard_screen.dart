@@ -210,8 +210,8 @@ class DashboardScreen extends ConsumerWidget {
           // Animated gradient background fills the entire body.
           const Positioned.fill(child: AnimatedGradientBackground(child: SizedBox.expand())),
           // Floating orbs behind content.
-          const FloatingOrb(top: 40, left: -40, size: 240, opacity: 0.07),
-          const FloatingOrb(bottom: 80, right: -60, size: 200, opacity: 0.07),
+          const FloatingOrb(top: -40, left: -60, size: 320, opacity: 0.18),
+          const FloatingOrb(bottom: 60, right: -80, size: 280, opacity: 0.14),
           // Scrollable content on top.
           RefreshIndicator(
             onRefresh: () async {

@@ -26,6 +26,7 @@ import '../widgets/gemini_usage_monitor_card.dart';
 import '../widgets/ai_cache_card.dart';
 import '../widgets/automation_test_card.dart';
 import '../widgets/study_data_cleanup_card.dart';
+import '../../../../core/widgets/animated_premium_background.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -124,7 +125,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           final currentSsid = WifiMonitorService.instance.currentSsid;
           final hasKey = settings.geminiApiKey.isNotEmpty;
 
-          return ListView(
+          return Stack(
+            children: [
+              const Positioned.fill(
+                child: AnimatedGradientBackground(child: SizedBox.expand()),
+              ),
+              const FloatingOrb(top: -30, right: -50, size: 280, opacity: 0.14),
+              const FloatingOrb(bottom: 100, left: -60, size: 240, opacity: 0.11),
+              ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
               // 1. Office Wi-Fi & Schedule Configuration
@@ -693,6 +701,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 40),
+            ],
+          ),
             ],
           );
         },
