@@ -8,7 +8,8 @@ const String _prefThemeModeKey = 'app_theme_mode_preference';
 const String _prefDarkPresetKey = 'app_dark_theme_preset_preference';
 
 /// Available curated aesthetic dark theme presets.
-enum DarkThemePreset { cuteVelvet, cozyMocha, nordicTwilight, oledBatterySaver }
+enum DarkThemePreset { cuteVelvet, cozyMocha, nordicTwilight, oledBatterySaver, premiumGold, natureGreen, iceBlue }
+
 
 class DarkThemePresetNotifier extends Notifier<DarkThemePreset> {
   static DarkThemePreset? initialPreset;
@@ -17,6 +18,12 @@ class DarkThemePresetNotifier extends Notifier<DarkThemePreset> {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString(_prefDarkPresetKey);
     switch (saved) {
+      case 'premiumGold':
+        return DarkThemePreset.premiumGold;
+      case 'natureGreen':
+        return DarkThemePreset.natureGreen;
+      case 'iceBlue':
+        return DarkThemePreset.iceBlue;
       case 'cuteVelvet':
         return DarkThemePreset.cuteVelvet;
       case 'cozyMocha':
@@ -70,6 +77,12 @@ final currentDarkThemeProvider = Provider<ThemeData>((ref) {
       return AppTheme.nordicTwilightDarkTheme;
     case DarkThemePreset.oledBatterySaver:
       return AppTheme.darkTheme;
+    case DarkThemePreset.premiumGold:
+      return AppTheme.premiumGoldDarkTheme;
+    case DarkThemePreset.natureGreen:
+      return AppTheme.natureGreenDarkTheme;
+    case DarkThemePreset.iceBlue:
+      return AppTheme.iceBlueDarkTheme;
   }
 });
 

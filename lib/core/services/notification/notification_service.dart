@@ -441,6 +441,110 @@ class NotificationService {
     }
   }
 
+  /// Schedules daily morning exam & syllabus reminder (Default 8:30 AM)
+  Future<void> scheduleLiveMcqDailyNudge({
+    int hour = 8,
+    int minute = 30,
+  }) async {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.studyChannelId,
+      NotificationConstants.studyChannelName,
+      channelDescription: NotificationConstants.studyChannelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id: NotificationConstants.liveMcqExamReminderId,
+        title: '☀️ আজকের লাইভ পরীক্ষা ও সিলেবাস লক্ষ্য',
+        body: 'আজকের পরীক্ষার সিলেবাস রিভিশন ও স্টাডি টার্গেট সেট করুন!',
+        scheduledDate: scheduledDate,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint('Daily LiveMCQ morning nudge scheduled for $scheduledDate');
+    } catch (e) {
+      debugPrint('Error scheduling LiveMCQ morning nudge: $e');
+    }
+  }
+
+  /// Schedules daily evening accountability check-in (Default 10:00 PM)
+  Future<void> scheduleLiveMcqScorePrompt({
+    int hour = 22,
+    int minute = 0,
+  }) async {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.studyChannelId,
+      NotificationConstants.studyChannelName,
+      channelDescription: NotificationConstants.studyChannelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id: NotificationConstants.liveMcqScoreCheckinId,
+        title: '🎯 লাইভ পরীক্ষা সম্পন্ন করেছেন?',
+        body: 'আজকের পরীক্ষার স্কোর কত এলো? অ্যাপে লিখে আপনার প্রগ্রেস ট্র্যাক করুন!',
+        scheduledDate: scheduledDate,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint('Daily LiveMCQ score check-in scheduled for $scheduledDate');
+    } catch (e) {
+      debugPrint('Error scheduling LiveMCQ score check-in: $e');
+    }
+  }
+
   /// Instant test/manual trigger for the meal reminder notification
   Future<void> showInstantDinnerReminder() async {
     const androidDetails = AndroidNotificationDetails(

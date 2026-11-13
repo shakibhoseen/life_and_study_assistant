@@ -15,6 +15,7 @@ import 'package:life_and_study_assistant/core/services/overlay/bubble_handoff_pr
 import '../providers/topics_provider.dart';
 import '../widgets/mistake_bank_and_hub_tab.dart';
 import '../widgets/topic_card.dart';
+import '../../../../core/widgets/animated_premium_background.dart';
 
 class TopicsScreen extends ConsumerStatefulWidget {
   const TopicsScreen({super.key});
@@ -136,11 +137,20 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                     onPressed: () => _startMistakeBankDrill(wrongQuestions),
                   )
                 : null),
-      body: TabBarView(
-        controller: _tabController,
+      body: Stack(
         children: [
-          _buildWeakTopicsTab(),
-          _buildMistakeBankAndHubTab(wrongQuestions),
+          const Positioned.fill(
+            child: AnimatedGradientBackground(child: SizedBox.expand()),
+          ),
+          const FloatingOrb(top: 40, left: -40, size: 210, opacity: 0.06),
+          const FloatingOrb(bottom: 80, right: -40, size: 190, opacity: 0.06),
+          TabBarView(
+            controller: _tabController,
+            children: [
+              _buildWeakTopicsTab(),
+              _buildMistakeBankAndHubTab(wrongQuestions),
+            ],
+          ),
         ],
       ),
     );

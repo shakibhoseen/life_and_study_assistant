@@ -40,6 +40,10 @@ void main() async {
   // 2. Schedule Daily 4:00 PM Dinner Confirmation Reminder
   await NotificationService.instance.scheduleDailyDinnerReminder();
 
+  // 2.5 Schedule Daily LiveMCQ Morning Syllabus Nudge & Evening Score Prompt
+  await NotificationService.instance.scheduleLiveMcqDailyNudge();
+  await NotificationService.instance.scheduleLiveMcqScorePrompt();
+
   // 3. Start Background Wi-Fi SSID Change Monitor
   await WifiMonitorService.instance.startMonitoring();
 

@@ -37,6 +37,8 @@ class NotificationConstants {
   static const int checkOutNotificationId = 1002;
   static const int mealNotificationId = 2001;
   static const int studyPlanNotificationId = 3001;
+  static const int liveMcqExamReminderId = 3101;
+  static const int liveMcqScoreCheckinId = 3102;
   static const int flashcardNotificationId = 4001;
 
   /// Block reserved for the recurring flashcard series.

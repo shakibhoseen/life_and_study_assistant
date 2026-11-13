@@ -1,0 +1,172 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+
+/// An animated gradient background that gently shifts hues.
+///
+/// Wraps any scaffold body. The gradient adapts to the active [ThemeData]
+/// so it looks great on all presets (Nature Green, Ice Blue, etc.).
+///
+/// Usage:
+/// ```dart
+/// Scaffold(
+///   body: AnimatedGradientBackground(child: YourContent()),
+/// )
+/// ```
+class AnimatedGradientBackground extends StatefulWidget {
+  const AnimatedGradientBackground({
+    super.key,
+    required this.child,
+    this.duration = const Duration(seconds: 8),
+  });
+
+  final Widget child;
+
+  /// How long one gradient cycle takes (slower = more relaxing).
+  final Duration duration;
+
+  @override
+  State<AnimatedGradientBackground> createState() =>
+      _AnimatedGradientBackgroundState();
+}
+
+class _AnimatedGradientBackgroundState
+    extends State<AnimatedGradientBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final scaffold = Theme.of(context).scaffoldBackgroundColor;
+    final primary = colorScheme.primary.withValues(alpha: 0.08);
+    final secondary = colorScheme.secondary.withValues(alpha: 0.06);
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (_, child) {
+        final t = _controller.value;
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment(math.cos(t * math.pi) * 0.4, -0.6),
+              end: Alignment(math.sin(t * math.pi) * 0.4, 0.8),
+              colors: [
+                Color.lerp(scaffold, primary, 0.6 + t * 0.4) ?? scaffold,
+                Color.lerp(scaffold, secondary, 0.4 + (1 - t) * 0.4) ??
+                    scaffold,
+                scaffold,
+              ],
+            ),
+          ),
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+/// Floating orb accent — a large, blurry, low-opacity circle that drifts
+/// very gently, adding depth and atmosphere to the background.
+///
+/// Place inside a [Stack] behind your content.
+///
+/// ```dart
+/// Stack(children: [
+///   AnimatedGradientBackground(child: content),
+///   const FloatingOrb(top: 60, left: -40, size: 220),
+///   const FloatingOrb(bottom: 100, right: -60, size: 180),
+/// ])
+/// ```
+class FloatingOrb extends StatefulWidget {
+  const FloatingOrb({
+    super.key,
+    this.top,
+    this.bottom,
+    this.left,
+    this.right,
+    this.size = 200,
+    this.opacity = 0.12,
+  });
+
+  final double? top;
+  final double? bottom;
+  final double? left;
+  final double? right;
+  final double size;
+  final double opacity;
+
+  @override
+  State<FloatingOrb> createState() => _FloatingOrbState();
+}
+
+class _FloatingOrbState extends State<FloatingOrb>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _drift;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat(reverse: true);
+    _drift = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0, 12),
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Positioned(
+      top: widget.top,
+      bottom: widget.bottom,
+      left: widget.left,
+      right: widget.right,
+      child: AnimatedBuilder(
+        animation: _drift,
+        builder: (_, _) => Transform.translate(
+          offset: _drift.value,
+          child: RepaintBoundary(
+            child: Container(
+              width: widget.size,
+              height: widget.size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    primary.withValues(alpha: widget.opacity),
+                    primary.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
