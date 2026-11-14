@@ -1,5 +1,57 @@
 package com.example.life_and_study_assistant
 
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity()
+class MainActivity : FlutterActivity() {
+    private val CHANNEL = "com.example.life_and_study_assistant/system_settings"
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "openNotificationSettings" -> {
+                    try {
+                        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                            }
+                        } else {
+                            Intent("android.settings.APP_NOTIFICATION_SETTINGS").apply {
+                                putExtra("app_package", packageName)
+                                putExtra("app_uid", applicationInfo.uid)
+                            }
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR", e.message, null)
+                    }
+                }
+                "openNotificationListenerSettings" -> {
+                    try {
+                        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR", e.message, null)
+                    }
+                }
+                "openBatteryOptimizationSettings" -> {
+                    try {
+                        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR", e.message, null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+}

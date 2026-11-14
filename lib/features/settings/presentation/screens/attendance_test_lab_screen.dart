@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/config/notification_constants.dart';
@@ -8,6 +9,7 @@ import '../../../../core/services/attendance/steadfast_lunch_service.dart';
 import '../../../../core/services/background/lunch_sentinel_service.dart';
 import '../../../../core/services/background/office_sentinel_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
+import '../../../../core/services/system_settings_helper.dart';
 import '../../../../core/theme/fluent_tokens.dart';
 import '../../../dashboard/presentation/providers/office_portal_provider.dart';
 import '../widgets/automation_test_card.dart';
@@ -692,7 +694,68 @@ class _AttendanceTestLabScreenState
           ),
           const SizedBox(height: 18),
 
-          // 6. Automation Test Card (Full developer tools)
+          // 6. Permissions & Notification Access Hub
+          _buildSectionCard(
+            title: '🔐 Notification & System Access Settings',
+            icon: Icons.security,
+            context: context,
+            children: [
+              const Text(
+                'অ্যান্ড্রয়েডের নোটিফিকেশন চ্যানেল, সাউন্ড পারমিশন ও ব্যাকগ্রাউন্ড অ্যাক্সেস স্ক্রিন ওপেন করুন:',
+                style: TextStyle(fontSize: 11.5),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo.shade800,
+                      foregroundColor: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.notifications_active, size: 16),
+                    label: const Text('🔔 Notification Channels & Sounds'),
+                    onPressed: () async {
+                      await SystemSettingsHelper.openNotificationSettings();
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple.shade800,
+                      foregroundColor: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.mark_email_unread, size: 16),
+                    label: const Text('📬 Special Notification Access (Listener)'),
+                    onPressed: () async {
+                      await SystemSettingsHelper.openNotificationListenerSettings();
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                    icon: const Icon(Icons.battery_charging_full, size: 16),
+                    label: const Text('🔋 Battery Optimization Exemption'),
+                    onPressed: () async {
+                      await SystemSettingsHelper.openBatteryOptimizationSettings();
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                    icon: const Icon(Icons.settings, size: 16),
+                    label: const Text('⚙️ App Details & Permissions'),
+                    onPressed: () async {
+                      await openAppSettings();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // 7. Automation Test Card (Full developer tools)
           const AutomationTestCard(),
         ],
       ),
