@@ -49,22 +49,35 @@ class NotificationService {
     return FlashcardItem.tryFromPayload(response?.payload);
   }
 
-  /// Removes the first, silent flashcard channel.
+  /// Removes previous versions of channels whose sound or settings changed.
   ///
-  /// Harmless if it was never created. Without this the user would find two
-  /// flashcard entries in Android's notification settings, one of which does
-  /// nothing.
-  Future<void> _removeLegacyFlashcardChannel() async {
+  /// In Android 8+, notification channels are immutable once created.
+  /// Any channel setting update (like custom sounds) requires a new channel ID,
+  /// and old unused channels should be removed so users don't see duplicates in settings.
+  Future<void> _removeLegacyChannels() async {
     try {
       final android = _notificationsPlugin
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      await android?.deleteNotificationChannel(
+      if (android == null) return;
+      await android.deleteNotificationChannel(
         channelId: NotificationConstants.flashcardChannelIdLegacy,
       );
+      await android.deleteNotificationChannel(
+        channelId: NotificationConstants.officeChannelIdLegacy,
+      );
+      await android.deleteNotificationChannel(
+        channelId: NotificationConstants.officeChannelIdLegacyV2,
+      );
+      await android.deleteNotificationChannel(
+        channelId: NotificationConstants.mealChannelIdLegacy,
+      );
+      await android.deleteNotificationChannel(
+        channelId: NotificationConstants.urgentChannelIdLegacy,
+      );
     } catch (e) {
-      debugPrint('Could not delete the legacy flashcard channel: $e');
+      debugPrint('Could not delete legacy channels: $e');
     }
   }
 
@@ -123,7 +136,7 @@ class NotificationService {
 
     tz.initializeTimeZones();
     _configureLocalTimeZone();
-    await _removeLegacyFlashcardChannel();
+    await _removeLegacyChannels();
 
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -188,23 +201,36 @@ class NotificationService {
 
     if (androidImplementation == null) return;
 
-    // Office Check-In / Check-Out Channel (Heads-up / High Priority)
+    // Office Check-In / Check-Out Channel (Heads-up / High Priority with corporate chime)
     const officeChannel = AndroidNotificationChannel(
       NotificationConstants.officeChannelId,
       NotificationConstants.officeChannelName,
       description: NotificationConstants.officeChannelDesc,
       importance: Importance.max,
       playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundOfficeChime),
       enableVibration: true,
     );
 
-    // Meal / Dinner Reminder Channel
+    // Meal / Lunch Status Channel (Dining bell chime)
     const mealChannel = AndroidNotificationChannel(
       NotificationConstants.mealChannelId,
       NotificationConstants.mealChannelName,
       description: NotificationConstants.mealChannelDesc,
       importance: Importance.max,
       playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundMealBell),
+      enableVibration: true,
+    );
+
+    // Urgent Attendance & Cutoff Sirens Channel (High priority dual-pulse siren)
+    const urgentChannel = AndroidNotificationChannel(
+      NotificationConstants.urgentChannelId,
+      NotificationConstants.urgentChannelName,
+      description: NotificationConstants.urgentChannelDesc,
+      importance: Importance.max,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundUrgentSiren),
       enableVibration: true,
     );
 
@@ -238,6 +264,7 @@ class NotificationService {
 
     await androidImplementation.createNotificationChannel(officeChannel);
     await androidImplementation.createNotificationChannel(mealChannel);
+    await androidImplementation.createNotificationChannel(urgentChannel);
     await androidImplementation.createNotificationChannel(studyChannel);
     await androidImplementation.createNotificationChannel(flashcardChannel);
     await androidImplementation.createNotificationChannel(spacedChannel);
@@ -287,6 +314,8 @@ class NotificationService {
       category: AndroidNotificationCategory.reminder,
       visibility: NotificationVisibility.public,
       ticker: 'Office Wi-Fi Connected!',
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundOfficeChime),
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionCheckInNow,
@@ -315,6 +344,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'office_chime.wav',
       ),
     );
 
@@ -362,6 +392,8 @@ class NotificationService {
       priority: Priority.high,
       category: AndroidNotificationCategory.reminder,
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundOfficeChime),
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionCheckOutNow,
@@ -384,6 +416,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'office_chime.wav',
       ),
     );
 
@@ -407,13 +440,15 @@ class NotificationService {
     required int minutesRemaining,
   }) async {
     const androidDetails = AndroidNotificationDetails(
-      NotificationConstants.officeChannelId,
-      NotificationConstants.officeChannelName,
-      channelDescription: NotificationConstants.officeChannelDesc,
+      NotificationConstants.urgentChannelId,
+      NotificationConstants.urgentChannelName,
+      channelDescription: NotificationConstants.urgentChannelDesc,
       importance: Importance.max,
       priority: Priority.max,
       category: AndroidNotificationCategory.alarm,
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundUrgentSiren),
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionCheckInNow,
@@ -430,6 +465,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'urgent_siren.wav',
       ),
     );
 
@@ -456,9 +492,9 @@ class NotificationService {
     final vibrationPattern = Int64List.fromList([0, 500, 200, 500, 200, 1000]);
 
     final androidDetails = AndroidNotificationDetails(
-      NotificationConstants.officeChannelId,
-      NotificationConstants.officeChannelName,
-      channelDescription: NotificationConstants.officeChannelDesc,
+      NotificationConstants.urgentChannelId,
+      NotificationConstants.urgentChannelName,
+      channelDescription: NotificationConstants.urgentChannelDesc,
       importance: Importance.max,
       priority: Priority.max,
       category: AndroidNotificationCategory.alarm,
@@ -467,6 +503,7 @@ class NotificationService {
       vibrationPattern: vibrationPattern,
       enableVibration: true,
       playSound: true,
+      sound: const RawResourceAndroidNotificationSound(NotificationConstants.soundUrgentSiren),
       actions: const <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionCheckOutNow,
@@ -483,6 +520,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'urgent_siren.wav',
       ),
     );
 
@@ -514,6 +552,8 @@ class NotificationService {
       priority: Priority.high,
       category: AndroidNotificationCategory.status,
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundOfficeChime),
     );
 
     const NotificationDetails details = NotificationDetails(
@@ -522,6 +562,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'office_chime.wav',
       ),
     );
 
@@ -547,6 +588,8 @@ class NotificationService {
       priority: Priority.high,
       category: AndroidNotificationCategory.status,
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundOfficeChime),
     );
 
     const NotificationDetails details = NotificationDetails(
@@ -555,6 +598,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'office_chime.wav',
       ),
     );
 
@@ -598,6 +642,8 @@ class NotificationService {
       priority: Priority.high,
       category: AndroidNotificationCategory.reminder,
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundMealBell),
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionMealYes,
@@ -620,6 +666,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'meal_bell.wav',
       ),
     );
 
@@ -673,13 +720,15 @@ class NotificationService {
     ];
 
     const androidDetails = AndroidNotificationDetails(
-      NotificationConstants.officeChannelId,
-      NotificationConstants.officeChannelName,
-      channelDescription: NotificationConstants.officeChannelDesc,
+      NotificationConstants.urgentChannelId,
+      NotificationConstants.urgentChannelName,
+      channelDescription: NotificationConstants.urgentChannelDesc,
       importance: Importance.max,
       priority: Priority.max,
       category: AndroidNotificationCategory.alarm,
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundUrgentSiren),
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionCheckInNow,
@@ -696,6 +745,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'urgent_siren.wav',
       ),
     );
 
@@ -802,6 +852,8 @@ class NotificationService {
       priority: Priority.max,
       category: AndroidNotificationCategory.reminder,
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundOfficeChime),
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionCheckOutNow,
@@ -818,6 +870,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'office_chime.wav',
       ),
     );
 
@@ -860,6 +913,64 @@ class NotificationService {
     await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm610);
     await _notificationsPlugin.cancel(id: NotificationConstants.eveningDepartureAlarm615);
     debugPrint('Evening departure watchdogs cancelled.');
+  }
+
+  /// Schedules daily 12:25 PM lunch status sentinel trigger
+  Future<void> scheduleDailyLunchTrackingTrigger() async {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      12,
+      25,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.sentinelChannelId,
+      NotificationConstants.sentinelChannelName,
+      channelDescription: NotificationConstants.sentinelChannelDesc,
+      importance: Importance.low,
+      priority: Priority.low,
+      playSound: false,
+      enableVibration: false,
+      channelShowBadge: false,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: false,
+        presentBadge: false,
+        presentSound: false,
+      ),
+    );
+
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id: NotificationConstants.lunchTrackingAlarm1230,
+        title: '🍱 Steadfast Lunch Tracker Active',
+        body: 'Checking meal dispatch progress...',
+        scheduledDate: scheduledDate,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint('Daily lunch tracking trigger scheduled for $scheduledDate');
+    } catch (e) {
+      debugPrint('Error scheduling daily lunch tracking trigger: $e');
+    }
+  }
+
+  /// Cancels scheduled daily lunch tracking trigger
+  Future<void> cancelDailyLunchTrackingTrigger() async {
+    await _notificationsPlugin.cancel(id: NotificationConstants.lunchTrackingAlarm1230);
+    debugPrint('Daily lunch tracking trigger cancelled.');
   }
 
   /// Schedules micro-flashcard study nudges during office break periods (1:15 PM lunch and 4:30 PM tea break)
@@ -1058,6 +1169,8 @@ class NotificationService {
       priority: Priority.high,
       category: AndroidNotificationCategory.reminder,
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundMealBell),
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionMealYes,
@@ -1080,6 +1193,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'meal_bell.wav',
       ),
     );
 
@@ -1104,6 +1218,8 @@ class NotificationService {
       priority: Priority.high,
       category: AndroidNotificationCategory.reminder,
       visibility: NotificationVisibility.public,
+      playSound: true,
+      sound: const RawResourceAndroidNotificationSound(NotificationConstants.soundMealBell),
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
           NotificationConstants.actionLunchToggleTomorrow,
@@ -1120,6 +1236,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'meal_bell.wav',
       ),
     );
 
@@ -1134,6 +1251,84 @@ class NotificationService {
       id: NotificationConstants.lunchReminderNotificationId,
       title: title,
       body: body,
+      notificationDetails: details,
+    );
+  }
+
+  /// High-priority notification when the lunch car arrives at the office / canteen
+  Future<void> showLunchReceivedNotification({
+    String? time,
+    String? message,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.mealChannelId,
+      NotificationConstants.mealChannelName,
+      channelDescription: NotificationConstants.mealChannelDesc,
+      importance: Importance.max,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.reminder,
+      visibility: NotificationVisibility.public,
+      enableVibration: true,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundMealBell),
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'meal_bell.wav',
+      ),
+    );
+
+    final timeSuffix = time != null && time.isNotEmpty ? ' ($time)' : '';
+    await _notificationsPlugin.show(
+      id: NotificationConstants.lunchReceivedNotificationId,
+      title: '📦 লাঞ্চের গাড়ি অফিসে পৌঁছেছে!$timeSuffix',
+      body: message != null && message.isNotEmpty
+          ? message
+          : 'খাবার ক্যান্টিনে রিসিভ করা হয়েছে। কিছুক্ষণের মধ্যেই পরিবেশন শুরু হবে।',
+      notificationDetails: details,
+    );
+  }
+
+  /// High-priority notification when lunch is served and ready in cafeteria
+  Future<void> showLunchServedNotification({
+    String? time,
+    String? message,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.mealChannelId,
+      NotificationConstants.mealChannelName,
+      channelDescription: NotificationConstants.mealChannelDesc,
+      importance: Importance.max,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.reminder,
+      visibility: NotificationVisibility.public,
+      enableVibration: true,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(NotificationConstants.soundMealBell),
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'meal_bell.wav',
+      ),
+    );
+
+    final timeSuffix = time != null && time.isNotEmpty ? ' ($time)' : '';
+    await _notificationsPlugin.show(
+      id: NotificationConstants.lunchServedNotificationId,
+      title: '🍽️ লাঞ্চ পরিবেশন শুরু হয়েছে!$timeSuffix',
+      body: message != null && message.isNotEmpty
+          ? message
+          : 'ক্যান্টিনে খাবার পরিবেশন শুরু হয়েছে। আপনার লাঞ্চ গ্রহণ করতে পারেন।',
       notificationDetails: details,
     );
   }
