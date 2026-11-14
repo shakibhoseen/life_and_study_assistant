@@ -70,10 +70,28 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
       ),
       dividerTheme: const DividerThemeData(color: borderLight, thickness: 1),
-      tabBarTheme: const TabBarThemeData(
+      tabBarTheme: TabBarThemeData(
         labelColor: primaryLight,
-        unselectedLabelColor: Color(0xFF64748B),
+        unselectedLabelColor: const Color(0xFF64748B),
         indicatorColor: primaryLight,
+        indicatorSize: TabBarIndicatorSize.label,
+        indicator: UnderlineTabIndicator(
+          borderRadius: BorderRadius.circular(3),
+          borderSide: const BorderSide(color: primaryLight, width: 3.5),
+          insets: const EdgeInsets.symmetric(horizontal: 6),
+        ),
+        dividerColor: Colors.transparent,
+        labelStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+        ),
+        overlayColor: WidgetStatePropertyAll(
+          primaryLight.withValues(alpha: 0.08),
+        ),
       ),
       listTileTheme: const ListTileThemeData(
         textColor: Color(0xFF0F172A),
@@ -284,6 +302,27 @@ class AppTheme {
         labelColor: primary,
         unselectedLabelColor: textMuted,
         indicatorColor: primary,
+        // Fluent-style selection: a short rounded accent bar under the label
+        // itself, plus a real weight difference so the active tab reads even
+        // for someone who cannot pick the accent hue out of the background.
+        indicatorSize: TabBarIndicatorSize.label,
+        indicator: UnderlineTabIndicator(
+          borderRadius: BorderRadius.circular(3),
+          borderSide: BorderSide(color: primary, width: 3.5),
+          insets: const EdgeInsets.symmetric(horizontal: 6),
+        ),
+        dividerColor: Colors.transparent,
+        labelStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+        ),
+        overlayColor: WidgetStatePropertyAll(
+          primary.withValues(alpha: 0.08),
+        ),
       ),
       listTileTheme: ListTileThemeData(textColor: text, iconColor: text),
       popupMenuTheme: PopupMenuThemeData(
@@ -293,7 +332,22 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: inputFill,
+        // Without these three the selected chip fell back to `inputFill`
+        // too, so a picked filter looked exactly like an unpicked one.
+        selectedColor: Color.alphaBlend(
+          primary.withValues(alpha: 0.22),
+          inputFill,
+        ),
+        secondarySelectedColor: Color.alphaBlend(
+          primary.withValues(alpha: 0.22),
+          inputFill,
+        ),
+        checkmarkColor: primary,
         labelStyle: TextStyle(color: text),
+        secondaryLabelStyle: TextStyle(
+          color: primary,
+          fontWeight: FontWeight.bold,
+        ),
         side: BorderSide(color: border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),

@@ -200,6 +200,8 @@ class _WeeklyStudyGoalCardState extends ConsumerState<WeeklyStudyGoalCard> {
                       children: [
                         Text(
                           'সাপ্তাহিক স্টাডি ও এক্সাম গোল',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.bold,
@@ -208,6 +210,8 @@ class _WeeklyStudyGoalCardState extends ConsumerState<WeeklyStudyGoalCard> {
                         ),
                         Text(
                           'চলতি সপ্তাহের লক্ষ্যমাত্রা অর্জন',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
                             color: isDark ? Colors.white60 : Colors.black54,
@@ -230,26 +234,35 @@ class _WeeklyStudyGoalCardState extends ConsumerState<WeeklyStudyGoalCard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.assignment_turned_in_outlined,
-                        size: 15,
-                        color: Color(0xFF10B981),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'মডেল টেস্ট সম্পন্ন:',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.white70 : Colors.black87,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.assignment_turned_in_outlined,
+                          size: 15,
+                          color: Color(0xFF10B981),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'মডেল টেস্ট সম্পন্ন:',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     '$completedThisWeek / $_targetExams টি',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,

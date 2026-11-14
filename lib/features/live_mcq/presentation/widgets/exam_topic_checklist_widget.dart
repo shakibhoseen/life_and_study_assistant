@@ -163,22 +163,27 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      isAllDone
-                                          ? 'সিলেবাস পড়া শেষ! ✓'
-                                          : 'টপিক প্রস্তুতি ($completed/$total)',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: isAllDone
-                                            ? const Color(0xFF10B981)
-                                            : (isDark
-                                                ? Colors.white
-                                                : const Color(0xFF1E293B)),
+                                    Flexible(
+                                      child: Text(
+                                        isAllDone
+                                            ? 'সিলেবাস পড়া শেষ! ✓'
+                                            : 'টপিক প্রস্তুতি ($completed/$total)',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: isAllDone
+                                              ? const Color(0xFF10B981)
+                                              : (isDark
+                                                  ? Colors.white
+                                                  : const Color(0xFF1E293B)),
+                                        ),
                                       ),
                                     ),
-                                    const Spacer(),
+                                    const SizedBox(width: 6),
                                     Text(
                                       '${(progress * 100).toInt()}%',
                                       style: TextStyle(
@@ -295,17 +300,21 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                               : const Color(0xFF2563EB),
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          'সম্পূর্ণ টপিক বিবরণ (Original Topics):',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? const Color(0xFF93C5FD)
-                                : const Color(0xFF1E40AF),
+                        Expanded(
+                          child: Text(
+                            'সম্পূর্ণ টপিক বিবরণ (Original Topics):',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? const Color(0xFF93C5FD)
+                                  : const Color(0xFF1E40AF),
+                            ),
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 6),
                         IconButton(
                           icon: const Icon(Icons.copy, size: 14),
                           tooltip: 'টপিক কপি করুন',
@@ -460,25 +469,30 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          TextButton.icon(
-                            style: TextButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
+                          Flexible(
+                            child: TextButton.icon(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                               ),
+                              icon: const Icon(
+                                Icons.visibility_outlined,
+                                size: 13,
+                              ),
+                              label: const Text(
+                                'একনজরে আগের মতো সম্পূর্ণ টেক্সট দেখুন',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
+                                style: TextStyle(fontSize: 11),
+                              ),
+                              onPressed: () {
+                                setState(() => _showRawView = true);
+                              },
                             ),
-                            icon: const Icon(
-                              Icons.visibility_outlined,
-                              size: 13,
-                            ),
-                            label: const Text(
-                              'একনজরে আগের মতো সম্পূর্ণ টেক্সট দেখুন',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                            onPressed: () {
-                              setState(() => _showRawView = true);
-                            },
                           ),
                         ],
                       ),

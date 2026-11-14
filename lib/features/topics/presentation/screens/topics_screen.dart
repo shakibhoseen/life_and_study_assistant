@@ -86,7 +86,6 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
 
     final wrongQuestions = ref.watch(wrongQuestionsStreamProvider).value ?? [];
     final isTab0 = _tabController.index == 0;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -103,9 +102,11 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Theme.of(context).primaryColor,
-          unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
-          indicatorWeight: 3,
+          // Colours come from tabBarTheme. The old explicit
+          // `Theme.of(context).primaryColor` here was the dark-mode bug:
+          // on a dark ThemeData that getter resolves to colorScheme.surface
+          // (the card background), so the selected tab was painted in almost
+          // the same colour as the AppBar behind it.
           tabs: [
             const Tab(icon: Icon(Icons.bookmark_border), text: 'Weak Topics'),
             Tab(
@@ -235,9 +236,28 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
 
   Widget _buildFilterChip(String label) {
     final isSelected = _selectedFilter == label;
+    final scheme = Theme.of(context).colorScheme;
+
     return FilterChip(
       label: Text(label),
       selected: isSelected,
+      showCheckmark: true,
+      checkmarkColor: scheme.primary,
+      // Spelled out rather than left to the chip theme: the shared dark
+      // chipTheme paints every chip on `inputFill`, which left the selected
+      // one indistinguishable from the rest.
+      selectedColor: scheme.primary.withValues(alpha: 0.22),
+      labelStyle: TextStyle(
+        fontSize: 12.5,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+        color: isSelected ? scheme.primary : scheme.onSurface,
+      ),
+      side: BorderSide(
+        color: isSelected
+            ? scheme.primary
+            : scheme.onSurface.withValues(alpha: 0.22),
+        width: isSelected ? 1.4 : 1,
+      ),
       onSelected: (val) {
         setState(() {
           _selectedFilter = label;

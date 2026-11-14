@@ -1,5 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../theme/ui_style_provider.dart';
 
 /// A premium glass-morphism / acrylic card inspired by Microsoft Fluent UI.
 ///
@@ -12,7 +15,7 @@ import 'package:flutter/material.dart';
 ///   child: Text('Hello'),
 /// )
 /// ```
-class PremiumGlassCard extends StatelessWidget {
+class PremiumGlassCard extends ConsumerWidget {
   const PremiumGlassCard({
     super.key,
     required this.child,
@@ -45,10 +48,44 @@ class PremiumGlassCard extends StatelessWidget {
   final double? width;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final style = ref.watch(appUiStyleProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final primary = colorScheme.primary;
     final surface = colorScheme.surface;
+
+    // Classic and Mica both want a solid, fully opaque card: Mica tints the
+    // window *behind* the content, it does not make the content itself
+    // see-through. Only Acrylic frosts the card.
+    if (!style.usesAcrylic) {
+      final theme = Theme.of(context);
+      final cardColor = theme.cardTheme.color ?? theme.cardColor;
+      final borderColor = style == AppUiStyle.mica
+          ? primary.withValues(alpha: 0.22)
+          : theme.dividerColor;
+
+      return RepaintBoundary(
+        child: Container(
+          height: height,
+          width: width,
+          margin: margin,
+          padding: padding,
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(color: borderColor, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      );
+    }
 
     return RepaintBoundary(
       child: Container(

@@ -13,6 +13,7 @@ import 'core/services/background/workmanager_service.dart';
 import 'core/services/notification/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
+import 'core/theme/ui_style_provider.dart';
 import 'features/home/presentation/screens/home_shell_screen.dart';
 import 'features/live_mcq/presentation/widgets/floating_bubble_overlay.dart';
 
@@ -77,6 +78,7 @@ void main() async {
       await ThemeModeNotifier.loadInitialThemeMode();
   DarkThemePresetNotifier.initialPreset =
       await DarkThemePresetNotifier.loadInitialPreset();
+  AppUiStyleNotifier.initialStyle = await AppUiStyleNotifier.loadInitialStyle();
 
   runApp(const ProviderScope(child: LifeAndStudyApp()));
 }

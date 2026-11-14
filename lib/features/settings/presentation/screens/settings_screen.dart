@@ -22,6 +22,7 @@ import 'package:life_and_study_assistant/features/dashboard/presentation/provide
 import 'package:life_and_study_assistant/features/dashboard/presentation/screens/office_portal_screen.dart';
 import '../widgets/backup_restore_card.dart';
 import '../widgets/theme_selector_card.dart';
+import '../widgets/ui_style_selector_card.dart';
 import '../widgets/weakness_healer_toggle_card.dart';
 
 import 'package:life_and_study_assistant/features/live_mcq/presentation/providers/exam_schedule_provider.dart';
@@ -439,6 +440,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Colors.indigo.shade700,
               ),
               const ThemeSelectorCard(),
+              const SizedBox(height: 10),
+              const UiStyleSelectorCard(),
               const SizedBox(height: 18),
 
               // 5. Permissions & Reset
