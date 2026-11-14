@@ -60,6 +60,13 @@ class _AttendanceTestLabScreenState
         ),
       );
     }
+
+    if (val) {
+      await NotificationService.instance.showLunchReceivedNotification(
+        time: 'এখনই',
+        message: '🧪 সিমুলেশন মোড চালু হয়েছে! আপনার নোটিফিকেশন ও ডায়নিং সাউন্ড সঠিকভাবে কাজ করছে।',
+      );
+    }
   }
 
   Future<void> _clearSimulationData() async {
@@ -231,9 +238,17 @@ class _AttendanceTestLabScreenState
                       await ref
                           .read(officeAttendanceProvider.notifier)
                           .syncLiveAttendance();
+                      final now = DateTime.now();
+                      final timeStr =
+                          '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
+                      await NotificationService.instance
+                          .showOfficeCheckInSuccessNotification(
+                            time: timeStr,
+                            isLate: false,
+                          );
                       if (context.mounted) {
                         ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text(res.message)));
+                            .showSnackBar(SnackBar(content: Text('${res.message} (🔔 নোটিফিকেশন ফায়ার করা হয়েছে!)')));
                       }
                     },
                   ),
@@ -255,9 +270,58 @@ class _AttendanceTestLabScreenState
                       await ref
                           .read(officeAttendanceProvider.notifier)
                           .syncLiveAttendance();
+                      final now = DateTime.now();
+                      final timeStr =
+                          '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
+                      await NotificationService.instance
+                          .showOfficeCheckOutSuccessNotification(
+                            time: timeStr,
+                          );
                       if (context.mounted) {
                         ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text(res.message)));
+                            .showSnackBar(SnackBar(content: Text('${res.message} (🔔 নোটিফিকেশন ফায়ার করা হয়েছে!)')));
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                    ),
+                    icon: const Icon(Icons.wifi, size: 16),
+                    label: const Text('Mock Wi-Fi Connect (Check-In)'),
+                    onPressed: () async {
+                      await NotificationService.instance.showOfficeCheckInReminder(
+                        officeSsid: 'ZaviSoft-5G',
+                        ignoreOffDay: true,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('🔔 Check-In heads-up notification fired!')),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                    ),
+                    icon: const Icon(Icons.wifi_off, size: 16),
+                    label: const Text('Mock Wi-Fi Leave (Check-Out)'),
+                    onPressed: () async {
+                      await NotificationService.instance.showOfficeCheckOutReminder(
+                        ignoreOffDay: true,
+                        isEarly: false,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('🚪 Check-Out reminder notification fired!')),
+                        );
                       }
                     },
                   ),

@@ -19,11 +19,13 @@ class MainActivity : FlutterActivity() {
                         val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                                 putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                         } else {
                             Intent("android.settings.APP_NOTIFICATION_SETTINGS").apply {
                                 putExtra("app_package", packageName)
                                 putExtra("app_uid", applicationInfo.uid)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                         }
                         startActivity(intent)
@@ -34,7 +36,9 @@ class MainActivity : FlutterActivity() {
                 }
                 "openNotificationListenerSettings" -> {
                     try {
-                        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
                         startActivity(intent)
                         result.success(true)
                     } catch (e: Exception) {
@@ -43,7 +47,9 @@ class MainActivity : FlutterActivity() {
                 }
                 "openBatteryOptimizationSettings" -> {
                     try {
-                        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
                         startActivity(intent)
                         result.success(true)
                     } catch (e: Exception) {
