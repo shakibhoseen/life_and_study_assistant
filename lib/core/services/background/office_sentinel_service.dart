@@ -117,12 +117,50 @@ class OfficeSentinelTaskHandler extends TaskHandler {
         try {
           ssid = await _networkInfo.getWifiName();
           if (ssid != null) ssid = ssid.replaceAll('"', '').trim();
+          if (ssid == '<unknown ssid>' || ssid == 'unknown ssid' || ssid?.isEmpty == true) {
+            ssid = null;
+          }
         } catch (_) {}
       }
 
       final configuredSsid = prefs.getString(NotificationConstants.prefOfficeWifiSsid) ??
           'ZaviSoft, Secreat Star, SecretStar';
-      final isConnectedToOffice = isWifi && WifiMonitorService.isOfficeNetwork(ssid, configuredSsid);
+
+      // Measure physical distance to office
+      double distance = 0.0;
+      Position? pos;
+      try {
+        final perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.always || perm == LocationPermission.whileInUse) {
+          pos = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.medium,
+              timeLimit: Duration(seconds: 5),
+            ),
+          );
+          final officeLat = prefs.getDouble(NotificationConstants.prefOfficeLatitude) ?? 23.7925;
+          final officeLng = prefs.getDouble(NotificationConstants.prefOfficeLongitude) ?? 90.4078;
+          distance = Geolocator.distanceBetween(
+            pos.latitude,
+            pos.longitude,
+            officeLat,
+            officeLng,
+          );
+        }
+      } catch (_) {}
+
+      // Robust Office Wi-Fi detection (handles Android background SSID masking)
+      bool isConnectedToOffice = false;
+      if (isWifi) {
+        if (WifiMonitorService.isOfficeNetwork(ssid, configuredSsid)) {
+          isConnectedToOffice = true;
+        } else if (ssid == null || ssid.isEmpty) {
+          // If SSID is masked by Android, but user is inside office (< 150m) or monitor confirmed connected:
+          if (distance <= 150.0 || WifiMonitorService.instance.isOfficeConnected) {
+            isConnectedToOffice = true;
+          }
+        }
+      }
 
       // =========================================================================
       // 1. MORNING CRITICAL ARRIVAL WINDOW (8:40 AM - 10:00 AM)
@@ -212,23 +250,32 @@ class OfficeSentinelTaskHandler extends TaskHandler {
           return;
         }
 
-        // While user is connected to office Wi-Fi, duty is in progress inside office
+        // 1. While user is connected to office Wi-Fi, duty / overtime is IN PROGRESS!
+        // NEVER auto check-out while connected to office Wi-Fi!
         if (isConnectedToOffice) {
           _updateForegroundNotification(
             title: '🏢 Office Departure Sentinel Active',
-            text: 'Connected to office network ($ssid). Monitoring 6:00 PM+ departure...',
+            text: 'Office Wi-Fi connected. Monitoring departure (Overtime supported)...',
           );
           return;
         }
 
-        // User is DISCONNECTED from office Wi-Fi:
+        // 2. If user is physically inside/at office building (< 100m):
+        // DO NOT auto check-out! User is still in building (working overtime, router reset, etc.)
+        if (distance > 0 && distance < 100.0) {
+          _updateForegroundNotification(
+            title: '🏢 অফিস ভবনে অবস্থানরত',
+            text: 'Wi-Fi বিচ্ছিন্ন কিন্তু আপনি অফিসে আছেন। কাজ শেষে বের হলে চেক-আউট হবে।',
+          );
+          return;
+        }
+
+        // 3. User is DISCONNECTED from office Wi-Fi AND outside the building:
         // Step 1: Check if mobile internet / data is active & working.
-        // If user is in room, elevator, or stairs with no mobile signal yet,
-        // stay alive in foreground and keep polling every interval until internet is restored!
         final realInternet = await _hasRealInternet(prefs);
         if (!realInternet) {
           debugPrint(
-            'OfficeSentinel: Disconnected from office Wi-Fi, but mobile internet is not yet reachable. Polling every interval to finalize checkout...',
+            'OfficeSentinel: Disconnected from office Wi-Fi, but mobile internet is not yet reachable. Waiting for internet...',
           );
           _updateForegroundNotification(
             title: '📶 Wi-Fi বিচ্ছিন্ন - ইন্টারনেটের অপেক্ষা...',
@@ -274,33 +321,7 @@ class OfficeSentinelTaskHandler extends TaskHandler {
         }
 
         // Subcase B: At or after 6:00 PM (Normal / Overtime Departure)
-        debugPrint('OfficeSentinel: 6:00 PM+ departure detected. Evaluating distance...');
-
-        // Measure distance from office
-        double distance = 0.0;
-        Position? pos;
-        try {
-          final perm = await Geolocator.checkPermission();
-          if (perm == LocationPermission.always || perm == LocationPermission.whileInUse) {
-            pos = await Geolocator.getCurrentPosition(
-              locationSettings: const LocationSettings(
-                accuracy: LocationAccuracy.medium,
-                timeLimit: Duration(seconds: 8),
-              ),
-            );
-            final officeLat = prefs.getDouble(NotificationConstants.prefOfficeLatitude) ?? 23.7925;
-            final officeLng = prefs.getDouble(NotificationConstants.prefOfficeLongitude) ?? 90.4078;
-            distance = Geolocator.distanceBetween(
-              pos.latitude,
-              pos.longitude,
-              officeLat,
-              officeLng,
-            );
-            debugPrint('OfficeSentinel: Distance to office: ${distance.toStringAsFixed(1)}m');
-          }
-        } catch (e) {
-          debugPrint('OfficeSentinel: Geolocator distance error: $e');
-        }
+        debugPrint('OfficeSentinel: 6:00 PM+ departure detected outside building (${distance.toStringAsFixed(1)}m)...');
 
         // Rule for after 6:00 PM:
         // If distance > 400m (user far from office):
@@ -319,11 +340,11 @@ class OfficeSentinelTaskHandler extends TaskHandler {
               text: 'অফিস থেকে দূরে সরে গেছেন। এখনই চেক-আউট পাঞ্চ করুন।',
             );
           }
-        } else {
-          // If distance <= 400m (user is near office building gate / door as Wi-Fi drops):
+        } else if (distance >= 100.0) {
+          // User is between 100m and 400m (physically outside building exit):
           // Auto check-out is safe and authorized!
           if (autoOut) {
-            debugPrint('OfficeSentinel: Performing Safe Auto Check-Out at office exit...');
+            debugPrint('OfficeSentinel: Performing Safe Auto Check-Out at office exit (${distance.toStringAsFixed(1)}m)...');
             final res = await PacklyAttendanceService.instance.checkOut(
               latitude: pos?.latitude,
               longitude: pos?.longitude,

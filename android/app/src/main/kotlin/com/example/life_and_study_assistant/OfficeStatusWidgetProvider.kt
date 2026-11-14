@@ -129,6 +129,17 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
             }
         }
 
+        private fun isCurrentTimePastTarget(targetTimeStr: String): Boolean {
+            return try {
+                val fmt = SimpleDateFormat("h:mm a", Locale.ENGLISH)
+                val target = fmt.parse(targetTimeStr) ?: return false
+                val nowTimeOnly = fmt.parse(fmt.format(Date())) ?: return false
+                nowTimeOnly.after(target)
+            } catch (_: Exception) {
+                false
+            }
+        }
+
         fun updateAppWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
@@ -175,9 +186,15 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
             } else if (isCheckedInToday) {
                 val lateLabel = if (isLate) "(Late)" else "(On-Time ✓)"
                 val targetNineHours = calculateNineHourTarget(checkInTime ?: "")
+                val isOvertime = isCurrentTimePastTarget(targetNineHours)
+                val subtitleText = if (isOvertime) {
+                    "Overtime Active • 9h Target ($targetNineHours) Done ✓"
+                } else {
+                    "Workday: In Progress • 9h Target $targetNineHours"
+                }
                 views.setTextViewText(R.id.widget_punch_icon, "🟢")
                 views.setTextViewText(R.id.widget_punch_title, "Check-In: $checkInTime $lateLabel")
-                views.setTextViewText(R.id.widget_punch_subtitle, "Workday: In Progress • 9h Target $targetNineHours")
+                views.setTextViewText(R.id.widget_punch_subtitle, subtitleText)
                 views.setInt(R.id.widget_attendance_container, "setBackgroundResource", R.drawable.widget_punch_success)
             } else {
                 views.setTextViewText(R.id.widget_punch_icon, "⏳")

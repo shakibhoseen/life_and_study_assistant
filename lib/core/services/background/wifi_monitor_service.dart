@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,7 +25,7 @@ class WifiMonitorService {
   bool _isMonitoring = false;
   bool _wasConnectedToOffice = false;
   Timer? _disconnectionDebounceTimer;
-  static const Duration disconnectionGracePeriod = Duration(seconds: 15);
+  static const Duration disconnectionGracePeriod = Duration(minutes: 2);
 
   final StreamController<OfficeConnectionState> _officeStateController =
       StreamController<OfficeConnectionState>.broadcast();
@@ -33,6 +34,8 @@ class WifiMonitorService {
 
   OfficeConnectionState _currentState = OfficeConnectionState.unknown;
   OfficeConnectionState get currentState => _currentState;
+  bool get isOfficeConnected =>
+      _wasConnectedToOffice && _currentState == OfficeConnectionState.connected;
 
   String? _currentSsid;
   String? get currentSsid => _currentSsid;
@@ -157,6 +160,19 @@ class WifiMonitorService {
           _wasConnectedToOffice = true;
           await _onOfficeWifiConnected(ssid ?? configuredSsid);
         }
+      } else if (_wasConnectedToOffice &&
+          isWifi &&
+          (ssid == null || ssid.isEmpty)) {
+        // Hardware Wi-Fi is still connected, but Android hid SSID string (common in background or screen off).
+        // Since user was ALREADY connected to office Wi-Fi, they are still on the same office network!
+        // Cancel any pending timer and preserve connected state so overtime is never broken.
+        if (_disconnectionDebounceTimer != null &&
+            _disconnectionDebounceTimer!.isActive) {
+          _disconnectionDebounceTimer!.cancel();
+          _disconnectionDebounceTimer = null;
+        }
+        _currentState = OfficeConnectionState.connected;
+        _officeStateController.add(OfficeConnectionState.connected);
       } else {
         _handleOfficeDisconnection();
       }
@@ -399,12 +415,63 @@ class WifiMonitorService {
       return;
     }
 
-    // Office timing: 9:00 AM to 6:00 PM.
-    // Before 6:00 PM (18:00), do NOT auto check-out to prevent premature checkout during temporary drops.
+    // Double check hardware Wi-Fi state: If still connected to Wi-Fi hardware, verify before disconnect!
+    if (_isWifiHardwareConnected) {
+      debugPrint('WifiMonitor: Hardware Wi-Fi is still connected. Verifying before checkout...');
+      String? ssid;
+      try {
+        ssid = await _networkInfo.getWifiName();
+      } catch (_) {}
+      if (ssid != null && ssid.isNotEmpty && ssid != '<unknown ssid>') {
+        final configuredSsid = prefs.getString(NotificationConstants.prefOfficeWifiSsid) ??
+            'ZaviSoft, Secreat Star, SecretStar';
+        if (isOfficeNetwork(ssid, configuredSsid)) {
+          debugPrint('WifiMonitor: Re-verified connected to office ($ssid). Aborting checkout.');
+          _wasConnectedToOffice = true;
+          _currentState = OfficeConnectionState.connected;
+          return;
+        }
+      }
+    }
+
+    // Check physical distance to office
+    double distance = 0.0;
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.always || perm == LocationPermission.whileInUse) {
+        final pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 5),
+          ),
+        );
+        final officeLat = prefs.getDouble(NotificationConstants.prefOfficeLatitude) ?? 23.7925;
+        final officeLng = prefs.getDouble(NotificationConstants.prefOfficeLongitude) ?? 90.4078;
+        distance = Geolocator.distanceBetween(
+          pos.latitude,
+          pos.longitude,
+          officeLat,
+          officeLng,
+        );
+        debugPrint('WifiMonitor: Disconnection distance to office: ${distance.toStringAsFixed(1)}m');
+      }
+    } catch (_) {}
+
+    // CRITICAL OVERTIME & IN-OFFICE SAFETY RULE:
+    // If user is physically inside or right next to office (< 100 meters):
+    // DO NOT AUTO CHECK-OUT! User is still in the building (working overtime, Wi-Fi glitched, etc.)
+    if (distance > 0 && distance < 100.0) {
+      debugPrint('WifiMonitor: Disconnected, but user is still at desk/office (${distance.toStringAsFixed(1)}m). Suppressing auto checkout for overtime.');
+      await NotificationService.instance.showOfficeCheckOutReminder();
+      return;
+    }
+
+    // Before 6:00 PM (18:00), do NOT auto check-out without asking
     if (now.hour < 18) {
       debugPrint(
-        'Disconnected from Office Wi-Fi before 6:00 PM (${now.hour}:${now.minute}). Suppressing auto check-out.',
+        'Disconnected from Office Wi-Fi before 6:00 PM (${now.hour}:${now.minute}). Triggering reminder instead of auto check-out.',
       );
+      await NotificationService.instance.showOfficeCheckOutReminder(isEarly: true);
       return;
     }
 
@@ -412,7 +479,7 @@ class WifiMonitorService {
         prefs.getBool(NotificationConstants.prefAutoCheckOutEnabled) ?? true;
 
     if (isAutoCheckOutEnabled) {
-      debugPrint('Workday ended (6 PM+) and Wi-Fi disconnected. Performing Auto Check-Out...');
+      debugPrint('Wi-Fi disconnected and user left office building. Performing Auto Check-Out...');
       final result = await PacklyAttendanceService.instance.checkOut();
       if (result.success) {
         final timeStr =

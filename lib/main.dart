@@ -50,8 +50,8 @@ void main() async {
   // 2.2 Schedule Office Downtime Micro-Study Nudges (1:15 PM Lunch & 4:30 PM Tea Break)
   await NotificationService.instance.scheduleOfficeDowntimeFlashcards();
 
-  // 2.3 Schedule Evening 5:55 PM - 6:15 PM Departure Watchdogs (Exact Alarms)
-  await NotificationService.instance.scheduleEveningOfficeWatchdogs();
+  // 2.3 Cancel Static Evening Alarms so Overtime work is never interrupted
+  await NotificationService.instance.cancelEveningOfficeWatchdogs();
 
   // 2.4 Schedule Daily 12:25 PM Lunch Serving Sentinel Trigger
   await NotificationService.instance.scheduleDailyLunchTrackingTrigger();
