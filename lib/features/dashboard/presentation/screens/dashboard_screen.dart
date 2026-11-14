@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/widgets/premium_glass_card.dart';
 import '../../../../core/widgets/premium_ui_kit.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/widgets/animated_premium_background.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -126,7 +127,7 @@ class DashboardScreen extends ConsumerWidget {
                   : (streak > 0
                         ? Colors.orange.shade50
                         : const Color(0xFFF1F5F9)),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: FluentRadius.controlBorder,
               border: Border.all(
                 color: isDark
                     ? (streak > 0 ? Colors.orangeAccent : Colors.white24)
@@ -169,7 +170,7 @@ class DashboardScreen extends ConsumerWidget {
                   : (hasGeminiKey
                         ? Colors.green.shade50
                         : Colors.amber.shade50),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: FluentRadius.controlBorder,
               border: Border.all(
                 color: hasGeminiKey
                     ? (isDark ? Colors.greenAccent : Colors.green.shade200)
@@ -638,11 +639,11 @@ class DashboardScreen extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     return PremiumGlassCard(
-      borderRadius: 12.0,
+      borderRadius: FluentRadius.control,
       blurSigma: 6.0,
       padding: EdgeInsets.zero,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: FluentRadius.controlBorder,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -695,33 +696,27 @@ class DashboardScreen extends ConsumerWidget {
         context,
         MaterialPageRoute(builder: (_) => const MistakeNotebookScreen()),
       ),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: FluentRadius.cardBorder,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.indigo.shade800, Colors.deepPurple.shade900],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.indigo.withValues(alpha: 0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          borderRadius: FluentRadius.cardBorder,
+          boxShadow: FluentElevation.card(Theme.of(context).brightness),
         ),
         child: Column(
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(FluentSpacing.s),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   child: const Icon(
                     Icons.menu_book_rounded,
@@ -830,66 +825,74 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildSpacedRepetitionCard(BuildContext context, int dueCount) {
+    final scheme = Theme.of(context).colorScheme;
+
+    void openHub() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SpacedRepetitionScreen()),
+      );
+    }
+
     return PremiumGlassCard(
-      borderRadius: 16.0,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(FluentSpacing.m),
+      // Fluent list pattern: the whole card is the target, so the trailing
+      // button no longer has to be large enough to be the only one.
+      onTap: openHub,
       child: Row(
         children: [
           const PremiumIconBadge(
             icon: Icons.psychology,
-            size: 44,
-            iconSize: 22,
             color: Colors.purpleAccent,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: FluentSpacing.m),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Text(
-                      'Spaced Repetition',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                    Flexible(
+                      child: Text(
+                        'Spaced Repetition',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.bodyStrong.copyWith(
+                          color: scheme.onSurface,
+                        ),
                       ),
                     ),
                     if (dueCount > 0) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.s),
                       PremiumTag(
                         label: '$dueCount Due',
-                        color: Colors.redAccent,
+                        color: scheme.error,
                       ),
                     ],
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: FluentSpacing.xxs),
                 Text(
                   dueCount > 0
                       ? '$dueCount rules due before forgetting curve drops'
                       : 'Review rules & 5s office flashcards',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.white70,
-                  ),
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  // Was a hardcoded Colors.white70, which on this card's
+                  // white surface in light mode was all but invisible.
+                  style: FluentType.caption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.65),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
           PremiumButton(
-            label: 'Open Hub',
+            label: 'Open',
             icon: Icons.open_in_new,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const SpacedRepetitionScreen(),
-                ),
-              );
-            },
+            compact: true,
+            onPressed: openHub,
           ),
         ],
       ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'fluent_tokens.dart';
+
 class AppTheme {
   AppTheme._();
 
@@ -55,14 +57,14 @@ class AppTheme {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: borderLight, width: 1),
+          borderRadius: FluentRadius.cardBorder,
+          side: const BorderSide(color: borderLight, width: FluentStroke.width),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: cardLight,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: cardLight,
@@ -93,6 +95,24 @@ class AppTheme {
           primaryLight.withValues(alpha: 0.08),
         ),
       ),
+      textTheme: const TextTheme(
+        bodyLarge: FluentType.body,
+        bodyMedium: FluentType.body,
+        bodySmall: FluentType.caption,
+        titleLarge: FluentType.subtitle,
+        titleMedium: TextStyle(
+          fontSize: 16,
+          height: 1.45,
+          fontWeight: FontWeight.w600,
+        ),
+        titleSmall: FluentType.bodyStrong,
+        labelLarge: FluentType.bodyStrong,
+        labelMedium: FluentType.caption,
+        labelSmall: FluentType.caption,
+      ).apply(
+        bodyColor: const Color(0xFF0F172A),
+        displayColor: const Color(0xFF0F172A),
+      ),
       listTileTheme: const ListTileThemeData(
         textColor: Color(0xFF0F172A),
         iconColor: Color(0xFF0F172A),
@@ -105,15 +125,15 @@ class AppTheme {
         filled: true,
         fillColor: bgLight,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: FluentRadius.controlBorder,
           borderSide: const BorderSide(color: borderLight),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: FluentRadius.controlBorder,
           borderSide: const BorderSide(color: borderLight),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: FluentRadius.controlBorder,
           borderSide: const BorderSide(color: primaryLight, width: 1.5),
         ),
       ),
@@ -122,7 +142,7 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: FluentRadius.controlBorder,
           ),
         ),
       ),
@@ -283,20 +303,23 @@ class AppTheme {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: border, width: 1),
+          borderRadius: FluentRadius.cardBorder,
+          side: BorderSide(color: border, width: FluentStroke.width),
         ),
       ),
+      // Windows 11 type ramp, compressed one step for a phone: Caption 12,
+      // Body 14, BodyStrong 14/w600, Subtitle 20/w600. Fluent leans on
+      // weight rather than size for emphasis, so the titles stay small.
       textTheme: TextTheme(
-        bodyLarge: TextStyle(color: text),
-        bodyMedium: TextStyle(color: text),
-        bodySmall: TextStyle(color: textMuted),
-        titleLarge: TextStyle(color: text, fontWeight: FontWeight.bold),
-        titleMedium: TextStyle(color: text, fontWeight: FontWeight.w600),
-        titleSmall: TextStyle(color: textMuted),
-        labelLarge: TextStyle(color: text, fontWeight: FontWeight.w600),
-        labelMedium: TextStyle(color: textMuted),
-        labelSmall: TextStyle(color: textMuted),
+        bodyLarge: FluentType.body.copyWith(color: text),
+        bodyMedium: FluentType.body.copyWith(color: text),
+        bodySmall: FluentType.caption.copyWith(color: textMuted),
+        titleLarge: FluentType.subtitle.copyWith(color: text),
+        titleMedium: FluentType.bodyStrong.copyWith(fontSize: 16, color: text),
+        titleSmall: FluentType.bodyStrong.copyWith(color: textMuted),
+        labelLarge: FluentType.bodyStrong.copyWith(color: text),
+        labelMedium: FluentType.caption.copyWith(color: textMuted),
+        labelSmall: FluentType.caption.copyWith(color: textMuted),
       ),
       tabBarTheme: TabBarThemeData(
         labelColor: primary,
@@ -349,7 +372,9 @@ class AppTheme {
           fontWeight: FontWeight.bold,
         ),
         side: BorderSide(color: border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(
+          borderRadius: FluentRadius.controlBorder,
+        ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: cardBg,
@@ -359,21 +384,21 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: cardBg,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: inputFill,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: FluentRadius.controlBorder,
           borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: FluentRadius.controlBorder,
           borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: FluentRadius.controlBorder,
           borderSide: BorderSide(color: primary, width: 1.5),
         ),
       ),
@@ -384,7 +409,7 @@ class AppTheme {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: FluentRadius.controlBorder,
           ),
         ),
       ),

@@ -2,12 +2,15 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../theme/fluent_tokens.dart';
 import '../theme/ui_style_provider.dart';
 
-/// A premium glass-morphism / acrylic card inspired by Microsoft Fluent UI.
+/// A Fluent card: a solid layer on top of the window backdrop, defined by a
+/// 1px stroke and an 8px radius rather than by a shadow.
 ///
-/// Renders a blurred, translucent surface with a soft border glow.
-/// Drop it anywhere a [Card] is used for an instant premium look.
+/// Only [AppUiStyle.acrylic] frosts it. Classic and Mica both render a solid
+/// surface, because in Windows 11 it is the *window* that is tinted, not the
+/// content sitting on it.
 ///
 /// Usage:
 /// ```dart
@@ -19,71 +22,75 @@ class PremiumGlassCard extends ConsumerWidget {
   const PremiumGlassCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
-    this.borderRadius = 20.0,
+    this.padding = const EdgeInsets.all(FluentSpacing.l),
+    this.borderRadius = FluentRadius.card,
     this.blurSigma = 10.0,
-    this.opacity = 0.08,
-    this.borderOpacity = 0.18,
     this.margin,
     this.height,
     this.width,
+    this.onTap,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final double borderRadius;
 
-  /// How strong the backdrop blur is. Keep ≤ 12 for performance.
+  /// How strong the backdrop blur is, in Acrylic only. Keep ≤ 12.
   final double blurSigma;
-
-  /// Opacity of the glass surface fill (0.0 – 1.0).
-  /// Higher = more opaque, less see-through glass. 0.12 is a good frosted look.
-  final double opacity;
-
-  /// Opacity of the glass border ring.
-  final double borderOpacity;
 
   final EdgeInsetsGeometry? margin;
   final double? height;
   final double? width;
 
+  /// When set the whole card becomes the hit target, with a Fluent press
+  /// ripple clipped to the card's radius.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final style = ref.watch(appUiStyleProvider);
-    final colorScheme = Theme.of(context).colorScheme;
-    final primary = colorScheme.primary;
-    final surface = colorScheme.surface;
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final scheme = theme.colorScheme;
+    final radius = BorderRadius.circular(borderRadius);
 
-    // Classic and Mica both want a solid, fully opaque card: Mica tints the
-    // window *behind* the content, it does not make the content itself
-    // see-through. Only Acrylic frosts the card.
-    if (!style.usesAcrylic) {
-      final theme = Theme.of(context);
-      final cardColor = theme.cardTheme.color ?? theme.cardColor;
-      final borderColor = style == AppUiStyle.mica
-          ? primary.withValues(alpha: 0.22)
-          : theme.dividerColor;
+    // Acrylic is the only style that lets the backdrop through. Elsewhere the
+    // card is a solid layer — Fluent's "Layer on Mica", not frosted glass.
+    final surfaceColor = style.usesAcrylic
+        ? scheme.surface.withValues(alpha: 0.72)
+        : (theme.cardTheme.color ?? theme.cardColor);
 
-      return RepaintBoundary(
-        child: Container(
-          height: height,
-          width: width,
-          margin: margin,
-          padding: padding,
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: borderColor, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: child,
+    Widget content = Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: radius,
+        border: Border.all(
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
         ),
+      ),
+      child: child,
+    );
+
+    if (onTap != null) {
+      content = Stack(
+        children: [
+          content,
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(borderRadius: radius, onTap: onTap),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (style.usesAcrylic) {
+      content = BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+        child: content,
       );
     }
 
@@ -92,62 +99,25 @@ class PremiumGlassCard extends ConsumerWidget {
         height: height,
         width: width,
         margin: margin,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              decoration: BoxDecoration(
-                // Frosted glass: surface tint + a touch of primary for the
-                // "coloured glass" look Microsoft uses in Mica/Acrylic
-                color: surface.withValues(alpha: 0.62),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    surface.withValues(alpha: 0.70),
-                    primary.withValues(alpha: 0.08),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(borderRadius),
-                border: Border.all(
-                  color: primary.withValues(alpha: borderOpacity + 0.08),
-                  width: 1.0,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: primary.withValues(alpha: 0.12),
-                    blurRadius: 24,
-                    spreadRadius: -2,
-                    offset: const Offset(0, 6),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              padding: padding,
-              child: child,
-            ),
-          ),
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          boxShadow: FluentElevation.card(brightness),
         ),
+        child: ClipRRect(borderRadius: radius, child: content),
       ),
     );
   }
 }
 
-/// A premium icon badge — circular, glassy, with a subtle glow.
-///
-/// Perfect for the dashboard feature icons, navigation items, etc.
+/// A Fluent icon backplate: a rounded *square*, not a circle, filled with the
+/// accent at low opacity. Windows 11 uses this shape for list and nav icons;
+/// the previous circular badge with an outer glow was not a Fluent idiom.
 class PremiumIconBadge extends StatelessWidget {
   const PremiumIconBadge({
     super.key,
     required this.icon,
-    this.size = 48,
-    this.iconSize = 22,
+    this.size = 40,
+    this.iconSize = 20,
     this.color,
   });
 
@@ -158,22 +128,16 @@ class PremiumIconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? Theme.of(context).colorScheme.primary;
-    return RepaintBoundary(
-      child: Container(
-        width: size,
-        height: size,
+    final theme = Theme.of(context);
+    final c = color ?? theme.colorScheme.primary;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: c.withValues(alpha: 0.14),
-          border: Border.all(color: c.withValues(alpha: 0.28), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: c.withValues(alpha: 0.22),
-              blurRadius: 12,
-              spreadRadius: 0,
-            ),
-          ],
+          color: FluentLayer.subtle(c, theme.brightness),
+          borderRadius: FluentRadius.controlBorder,
         ),
         child: Icon(icon, size: iconSize, color: c),
       ),
@@ -181,7 +145,9 @@ class PremiumIconBadge extends StatelessWidget {
   }
 }
 
-/// A premium gradient button — Microsoft-style accent button with a soft glow.
+/// A Fluent accent button: flat accent fill, 4px radius, no gradient and no
+/// glow. The press state darkens the fill instead of scaling the button,
+/// which is how WinUI's AccentButton behaves.
 class PremiumButton extends StatefulWidget {
   const PremiumButton({
     super.key,
@@ -189,6 +155,7 @@ class PremiumButton extends StatefulWidget {
     required this.onPressed,
     this.icon,
     this.width,
+    this.compact = false,
   });
 
   final String label;
@@ -196,85 +163,66 @@ class PremiumButton extends StatefulWidget {
   final IconData? icon;
   final double? width;
 
+  /// Trailing actions inside a dense card. Keeps the button from eating the
+  /// row's width and squeezing the text beside it.
+  final bool compact;
+
   @override
   State<PremiumButton> createState() => _PremiumButtonState();
 }
 
-class _PremiumButtonState extends State<PremiumButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 120),
-      lowerBound: 0.95,
-      upperBound: 1.0,
-      value: 1.0,
-    );
-    _scaleAnim = _controller;
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onTapDown(_) => _controller.reverse();
-  void _onTapUp(_) => _controller.forward();
-  void _onTapCancel() => _controller.forward();
+class _PremiumButtonState extends State<PremiumButton> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final secondary = Theme.of(context).colorScheme.secondary;
+    final scheme = Theme.of(context).colorScheme;
+    final fill = _pressed
+        ? Color.alphaBlend(Colors.black.withValues(alpha: 0.16), scheme.primary)
+        : scheme.primary;
 
-    return GestureDetector(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
-      onTap: widget.onPressed,
-      child: AnimatedBuilder(
-        animation: _scaleAnim,
-        builder: (_, child) =>
-            Transform.scale(scale: _scaleAnim.value, child: child),
-        child: Container(
+    final labelStyle = FluentType.bodyStrong.copyWith(
+      color: scheme.onPrimary,
+      fontSize: widget.compact ? 13 : 14,
+    );
+
+    return Semantics(
+      button: true,
+      label: widget.label,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onPressed,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
           width: widget.width,
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.compact ? FluentSpacing.m : FluentSpacing.l,
+            vertical: widget.compact ? 7 : FluentSpacing.s,
+          ),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [primary, secondary],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: primary.withValues(alpha: 0.38),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            color: fill,
+            borderRadius: FluentRadius.controlBorder,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (widget.icon != null) ...[
-                Icon(widget.icon, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
+                Icon(
+                  widget.icon,
+                  color: scheme.onPrimary,
+                  size: widget.compact ? 14 : 16,
+                ),
+                const SizedBox(width: FluentSpacing.xs + 2),
               ],
-              Text(
-                widget.label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  letterSpacing: 0.3,
+              Flexible(
+                child: Text(
+                  widget.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: labelStyle,
                 ),
               ),
             ],

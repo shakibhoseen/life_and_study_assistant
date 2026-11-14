@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// Animated section header with an accent glow line and icon.
+import '../theme/fluent_tokens.dart';
+
+/// A Fluent section header: accent selection bar, icon, title.
 ///
-/// Usage:
-/// ```dart
-/// PremiumSectionHeader(icon: Icons.star, label: 'Today's Focus')
-/// ```
+/// The bar is the same 3px rounded accent mark Windows 11 puts beside the
+/// selected item in a NavigationView — reused here as a section marker. It no
+/// longer glows; in Fluent the accent carries the emphasis on its own.
 class PremiumSectionHeader extends StatelessWidget {
   const PremiumSectionHeader({
     super.key,
@@ -22,48 +23,50 @@ class PremiumSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final onSurface = theme.colorScheme.onSurface;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.xs,
+        vertical: FluentSpacing.xxs,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Accent glow bar
           Container(
-            width: 3.5,
-            height: subtitle != null ? 36 : 22,
+            width: 3,
+            height: subtitle != null ? 32 : 20,
             decoration: BoxDecoration(
               color: primary,
-              borderRadius: BorderRadius.circular(2),
-              boxShadow: [
-                BoxShadow(
-                  color: primary.withValues(alpha: 0.5),
-                  blurRadius: 8,
-                  spreadRadius: 0,
-                ),
-              ],
+              borderRadius: BorderRadius.circular(1.5),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: FluentSpacing.m),
           Icon(icon, size: 18, color: primary),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.1,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.bodyStrong.copyWith(
+                    fontSize: 15,
+                    color: onSurface,
                   ),
                 ),
                 if (subtitle != null)
                   Text(
                     subtitle!,
-                    style: textTheme.bodySmall?.copyWith(height: 1.3),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      color: onSurface.withValues(alpha: 0.65),
+                    ),
                   ),
               ],
             ),
@@ -76,15 +79,13 @@ class PremiumSectionHeader extends StatelessWidget {
   }
 }
 
-/// A premium shimmer placeholder — shown while content loads.
-///
-/// Adapts to dark/light theme automatically.
+/// A shimmer placeholder shown while content loads.
 class PremiumShimmer extends StatefulWidget {
   const PremiumShimmer({
     super.key,
     this.width = double.infinity,
     this.height = 60,
-    this.borderRadius = 12,
+    this.borderRadius = FluentRadius.control,
   });
 
   final double width;
@@ -121,10 +122,12 @@ class _PremiumShimmerState extends State<PremiumShimmer>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor =
-        isDark ? const Color(0xFF2A2A3A) : const Color(0xFFE8ECF0);
-    final highlightColor =
-        isDark ? const Color(0xFF3A3A50) : const Color(0xFFF5F5F8);
+    final baseColor = isDark
+        ? const Color(0xFF2A2A3A)
+        : const Color(0xFFE8ECF0);
+    final highlightColor = isDark
+        ? const Color(0xFF3A3A50)
+        : const Color(0xFFF5F5F8);
 
     return AnimatedBuilder(
       animation: _animation,
@@ -146,14 +149,10 @@ class _PremiumShimmerState extends State<PremiumShimmer>
   }
 }
 
-/// A premium tag/chip – accent-colored with glow.
+/// A Fluent badge — a 4px-radius tinted backplate, not a pill. Used for
+/// counts and short status words.
 class PremiumTag extends StatelessWidget {
-  const PremiumTag({
-    super.key,
-    required this.label,
-    this.icon,
-    this.color,
-  });
+  const PremiumTag({super.key, required this.label, this.icon, this.color});
 
   final String label;
   final IconData? icon;
@@ -161,27 +160,34 @@ class PremiumTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? Theme.of(context).colorScheme.secondary;
+    final theme = Theme.of(context);
+    final c = color ?? theme.colorScheme.primary;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.s,
+        vertical: 2,
+      ),
       decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.withValues(alpha: 0.3), width: 1),
+        color: FluentLayer.subtle(c, theme.brightness),
+        borderRadius: FluentRadius.controlBorder,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
             Icon(icon, size: 12, color: c),
-            const SizedBox(width: 4),
+            const SizedBox(width: FluentSpacing.xs),
           ],
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11.5,
-              color: c,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.caption.copyWith(
+                color: c,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -190,7 +196,7 @@ class PremiumTag extends StatelessWidget {
   }
 }
 
-/// A premium stats tile — icon, number, label stacked.
+/// A stat tile — icon backplate, value, label.
 class PremiumStatTile extends StatelessWidget {
   const PremiumStatTile({
     super.key,
@@ -207,32 +213,35 @@ class PremiumStatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? Theme.of(context).colorScheme.primary;
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final c = color ?? theme.colorScheme.primary;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(FluentSpacing.s),
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: c.withValues(alpha: 0.12),
+            color: FluentLayer.subtle(c, theme.brightness),
+            borderRadius: FluentRadius.controlBorder,
           ),
           child: Icon(icon, color: c, size: 20),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: FluentSpacing.xs + 2),
         Text(
           value,
-          style: textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: c,
-            fontSize: 20,
-          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: FluentType.subtitle.copyWith(fontSize: 18, color: c),
         ),
         Text(
           label,
-          style: textTheme.bodySmall,
           textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: FluentType.caption.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+          ),
         ),
       ],
     );
