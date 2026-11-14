@@ -54,6 +54,10 @@ class NotificationConstants {
   static const int eveningDepartureAlarm615 = 1024;
   static const int mealNotificationId = 2001;
   static const int lunchReminderNotificationId = 2002;
+  static const int lunchReceivedNotificationId = 2003;
+  static const int lunchServedNotificationId = 2004;
+  static const int lunchTrackingAlarm1230 = 2010;
+  static const int lunchServingSentinelServiceId = 258;
   static const int studyPlanNotificationId = 3001;
   static const int flashcardNotificationId = 4001;
   static const int officeDowntimeFlashcardLunch = 4010;
@@ -181,6 +185,10 @@ class NotificationConstants {
   static const String prefLunchLastKnownTomorrowBooked = 'lunch_tomorrow_booked';
   static const String prefLunchLastKnownTodayBooked = 'lunch_today_booked';
   static const String prefLunchLastSyncTime = 'lunch_last_sync_time';
+  static const String prefLunchServingTrackingEnabled = 'lunch_serving_tracking_enabled';
+  static const String prefLastNotifiedLunchStatus = 'last_notified_lunch_status';
+  static const String prefLastNotifiedLunchStatusDate = 'last_notified_lunch_status_date';
+  static const String prefSimulatedServingStatus = 'simulated_serving_status';
 
   /// Whether a busy or failing model may be swapped for another one.
   ///

@@ -95,6 +95,70 @@ void main() {
       final dNonExistent = cal.findDay('2026-12-01');
       expect(dNonExistent, isNull);
     });
+
+    test('SteadfastServingStatus and SteadfastServingStep parsing & state checks', () {
+      final jsonServing = {
+        'booked': true,
+        'meal': 'Lunch',
+        'status': 'upcoming',
+        'label': 'Upcoming',
+        'message': 'Your meal is on its way to the canteen.',
+        'updated_at': '12:25 PM',
+        'steps': [
+          {'status': 'cooking', 'label': 'Cooking', 'done': true, 'current': false, 'at': null},
+          {'status': 'upcoming', 'label': 'Upcoming', 'done': true, 'current': true, 'at': '12:25 PM'},
+          {'status': 'received', 'label': 'Received', 'done': false, 'current': false, 'at': null},
+          {'status': 'served', 'label': 'Served', 'done': false, 'current': false, 'at': null},
+        ],
+      };
+
+      final serving = SteadfastServingStatus.fromJson(jsonServing);
+      expect(serving.booked, isTrue);
+      expect(serving.status, equals('upcoming'));
+      expect(serving.isUpcoming, isTrue);
+      expect(serving.isReceived, isFalse);
+      expect(serving.isServed, isFalse);
+      expect(serving.bengaliStatusLabel, contains('রওনা হয়েছে'));
+      expect(serving.steps.length, equals(4));
+
+      final jsonReceived = {
+        'booked': true,
+        'meal': 'Lunch',
+        'status': 'received',
+        'label': 'Received',
+        'message': 'Food car arrived at office.',
+        'updated_at': '1:05 PM',
+        'steps': [
+          {'status': 'cooking', 'label': 'Cooking', 'done': true, 'current': false},
+          {'status': 'upcoming', 'label': 'Upcoming', 'done': true, 'current': false},
+          {'status': 'received', 'label': 'Received', 'done': true, 'current': true},
+          {'status': 'served', 'label': 'Served', 'done': false, 'current': false},
+        ],
+      };
+      final recv = SteadfastServingStatus.fromJson(jsonReceived);
+      expect(recv.isReceived, isTrue);
+      expect(recv.isServed, isFalse);
+      expect(recv.bengaliStatusLabel, contains('অফিসে এসে পৌঁছেছে'));
+
+      final jsonServed = {
+        'booked': true,
+        'meal': 'Lunch',
+        'status': 'served',
+        'label': 'Served',
+        'message': 'Lunch is ready to eat.',
+        'updated_at': '1:18 PM',
+        'steps': [
+          {'status': 'cooking', 'label': 'Cooking', 'done': true, 'current': false},
+          {'status': 'upcoming', 'label': 'Upcoming', 'done': true, 'current': false},
+          {'status': 'received', 'label': 'Received', 'done': true, 'current': false},
+          {'status': 'served', 'label': 'Served', 'done': true, 'current': true},
+        ],
+      };
+      final srv = SteadfastServingStatus.fromJson(jsonServed);
+      expect(srv.isReceived, isTrue);
+      expect(srv.isServed, isTrue);
+      expect(srv.bengaliStatusLabel, contains('পরিবেশন শুরু'));
+    });
   });
 
   group('SteadfastLunchService Simulation Tests', () {
@@ -131,6 +195,18 @@ void main() {
       );
       expect(res2.success, isTrue);
       expect(res2.isBooked, isFalse);
+    });
+
+    test('getServingStatus in simulation mode returns mock status', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(NotificationConstants.prefPacklySimulationMode, true);
+      await prefs.setString(NotificationConstants.prefSimulatedServingStatus, 'received');
+
+      final status = await SteadfastLunchService.instance.getServingStatus();
+      expect(status, isNotNull);
+      expect(status!.status, equals('received'));
+      expect(status.isReceived, isTrue);
+      expect(status.isServed, isFalse);
     });
   });
 }

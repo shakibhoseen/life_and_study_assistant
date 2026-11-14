@@ -30,6 +30,7 @@ import '../providers/settings_provider.dart';
 import '../widgets/gemini_usage_monitor_card.dart';
 import '../widgets/ai_cache_card.dart';
 import '../widgets/study_data_cleanup_card.dart';
+import '../../../../core/services/background/lunch_sentinel_service.dart';
 import 'attendance_test_lab_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -73,6 +74,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool? _lunchTodayBooked;
   bool? _lunchTomorrowBooked;
   bool _lunchAutoReminderEnabled = true;
+  bool _lunchServingTrackingEnabled = true;
 
   @override
   void initState() {
@@ -100,6 +102,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           'shakibhossen100@gmail.com';
       _lunchAutoReminderEnabled =
           prefs.getBool(NotificationConstants.prefLunchAutoReminderEnabled) ?? true;
+      _lunchServingTrackingEnabled =
+          prefs.getBool(NotificationConstants.prefLunchServingTrackingEnabled) ?? true;
       _lunchTodayBooked =
           prefs.getBool(NotificationConstants.prefLunchLastKnownTodayBooked);
       _lunchTomorrowBooked =
@@ -2925,6 +2929,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   val,
                 );
                 setState(() => _lunchAutoReminderEnabled = val);
+              },
+            ),
+            SwitchListTile(
+              activeThumbColor: Colors.teal,
+              title: const Text(
+                'রিয়েল-টাইম লাঞ্চ ট্র্যাকিং নোটিফিকেশন',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              subtitle: const Text(
+                'দুপুর ১২:৩০–১:৪০ PM সময়ে লাঞ্চের গাড়ি অফিসে পৌঁছালে (Received 🏢) এবং খাবার পরিবেশন শুরু হলে (Served 🍽️) সাথে সাথে নোটিফিকেশন দেবে। Served হওয়ার সাথে সাথে স্বয়ংক্রিয়ভাবে বন্ধ হয়ে ব্যাটারি সেইভ করবে।',
+                style: TextStyle(fontSize: 11),
+              ),
+              value: _lunchServingTrackingEnabled,
+              onChanged: (val) async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool(
+                  NotificationConstants.prefLunchServingTrackingEnabled,
+                  val,
+                );
+                setState(() => _lunchServingTrackingEnabled = val);
+                if (val) {
+                  await NotificationService.instance.scheduleDailyLunchTrackingTrigger();
+                  await LunchSentinelService.instance.checkAndTriggerLunchSentinelIfNeeded();
+                } else {
+                  await NotificationService.instance.cancelDailyLunchTrackingTrigger();
+                  await LunchSentinelService.instance.stopLunchSentinel();
+                }
               },
             ),
           ],

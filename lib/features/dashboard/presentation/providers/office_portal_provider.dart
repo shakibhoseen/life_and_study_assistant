@@ -15,6 +15,7 @@ class LunchState {
   final bool isLoading;
   final bool isToggling;
   final SteadfastMealCalendar? calendar;
+  final SteadfastServingStatus? servingStatus;
   final bool? todayBooked;
   final bool? tomorrowBooked;
   final String? lastSyncTime;
@@ -25,6 +26,7 @@ class LunchState {
     this.isLoading = false,
     this.isToggling = false,
     this.calendar,
+    this.servingStatus,
     this.todayBooked,
     this.tomorrowBooked,
     this.lastSyncTime,
@@ -36,6 +38,7 @@ class LunchState {
     bool? isLoading,
     bool? isToggling,
     SteadfastMealCalendar? calendar,
+    SteadfastServingStatus? servingStatus,
     bool? todayBooked,
     bool? tomorrowBooked,
     String? lastSyncTime,
@@ -46,6 +49,7 @@ class LunchState {
       isLoading: isLoading ?? this.isLoading,
       isToggling: isToggling ?? this.isToggling,
       calendar: calendar ?? this.calendar,
+      servingStatus: servingStatus ?? this.servingStatus,
       todayBooked: todayBooked ?? this.todayBooked,
       tomorrowBooked: tomorrowBooked ?? this.tomorrowBooked,
       lastSyncTime: lastSyncTime ?? this.lastSyncTime,
@@ -116,9 +120,17 @@ class LunchNotifier extends Notifier<LunchState> {
       final nowIso = DateTime.now().toIso8601String();
       await prefs.setString(NotificationConstants.prefLunchLastSyncTime, nowIso);
 
+      SteadfastServingStatus? serving;
+      try {
+        serving = await SteadfastLunchService.instance.getServingStatus(
+          forceRefresh: forceRefresh,
+        );
+      } catch (_) {}
+
       state = state.copyWith(
         isLoading: false,
         calendar: calendar,
+        servingStatus: serving ?? state.servingStatus,
         todayBooked: todayMeal?.booked ?? state.todayBooked,
         tomorrowBooked: tomorrowMeal?.booked ?? state.tomorrowBooked,
         lastSyncTime: nowIso,

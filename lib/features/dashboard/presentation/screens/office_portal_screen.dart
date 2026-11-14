@@ -363,6 +363,8 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
               ),
             ],
           ),
+          if (state.todayBooked == true && state.servingStatus != null)
+            _buildLiveServingTracker(state.servingStatus!, isDark),
           const SizedBox(height: 12),
 
           // 3. Quick 1-Click Toggle Tomorrow's Lunch Button
@@ -418,6 +420,121 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
 
           // 4. Monthly Interactive Calendar
           _buildMonthlyCalendarCard(state, cal, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveServingTracker(SteadfastServingStatus serving, bool isDark) {
+    final steps = [
+      (key: 'cooking', label: 'Cooking', icon: Icons.outdoor_grill_rounded),
+      (key: 'upcoming', label: 'On Way 🚗', icon: Icons.local_shipping_rounded),
+      (key: 'received', label: 'Arrived 🏢', icon: Icons.inventory_2_rounded),
+      (key: 'served', label: 'Served 🍽️', icon: Icons.restaurant_rounded),
+    ];
+
+    int currentIdx = 0;
+    if (serving.isServed) {
+      currentIdx = 3;
+    } else if (serving.isReceived) {
+      currentIdx = 2;
+    } else if (serving.isUpcoming) {
+      currentIdx = 1;
+    } else {
+      currentIdx = 0;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.teal.shade900.withValues(alpha: 0.25) : const Color(0xFFF0FDFA),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? Colors.teal.withValues(alpha: 0.3) : const Color(0xFFCCFBF1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.lunch_dining_rounded, size: 16, color: Colors.teal),
+                  const SizedBox(width: 6),
+                  Text(
+                    'আজকের লাঞ্চ ট্র্যাকার: ${serving.bengaliStatusLabel}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ],
+              ),
+              if (serving.updatedAt != null && serving.updatedAt!.isNotEmpty)
+                Text(
+                  serving.updatedAt!,
+                  style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: List.generate(steps.length, (i) {
+              final step = steps[i];
+              final isDone = i <= currentIdx;
+              final isCurrent = i == currentIdx;
+
+              return Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isCurrent
+                            ? Colors.teal
+                            : (isDone
+                                ? Colors.teal.withValues(alpha: 0.3)
+                                : (isDark ? Colors.white10 : Colors.black12)),
+                        border: isCurrent ? Border.all(color: Colors.white, width: 2) : null,
+                      ),
+                      child: Icon(
+                        isDone ? Icons.check : step.icon,
+                        size: 14,
+                        color: isCurrent || isDone
+                            ? Colors.white
+                            : (isDark ? Colors.white38 : Colors.black38),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      step.label,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                        color: isCurrent ? Colors.teal : (isDark ? Colors.white70 : Colors.black87),
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
+          if (serving.message.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              serving.message,
+              style: TextStyle(
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+                color: isDark ? Colors.tealAccent.shade100 : Colors.teal.shade900,
+              ),
+            ),
+          ],
         ],
       ),
     );

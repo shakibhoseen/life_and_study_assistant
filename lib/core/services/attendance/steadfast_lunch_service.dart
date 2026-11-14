@@ -126,6 +126,110 @@ class SteadfastToggleResult {
   });
 }
 
+class SteadfastServingStep {
+  final String status;
+  final String label;
+  final bool done;
+  final bool current;
+  final String? at;
+
+  const SteadfastServingStep({
+    required this.status,
+    required this.label,
+    required this.done,
+    required this.current,
+    this.at,
+  });
+
+  factory SteadfastServingStep.fromJson(Map<String, dynamic> json) {
+    return SteadfastServingStep(
+      status: json['status']?.toString() ?? '',
+      label: json['label']?.toString() ?? '',
+      done: json['done'] == true,
+      current: json['current'] == true,
+      at: json['at']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'status': status,
+        'label': label,
+        'done': done,
+        'current': current,
+        'at': at,
+      };
+}
+
+class SteadfastServingStatus {
+  final bool booked;
+  final String meal;
+  final String status; // 'cooking', 'upcoming', 'received', 'served'
+  final String label;
+  final String message;
+  final String? updatedAt;
+  final List<SteadfastServingStep> steps;
+
+  const SteadfastServingStatus({
+    required this.booked,
+    required this.meal,
+    required this.status,
+    required this.label,
+    required this.message,
+    this.updatedAt,
+    this.steps = const [],
+  });
+
+  bool get isUpcoming => status == 'upcoming';
+  bool get isReceived =>
+      status == 'received' || steps.any((s) => s.status == 'received' && s.done);
+  bool get isServed =>
+      status == 'served' || steps.any((s) => s.status == 'served' && s.done);
+
+  /// User friendly Bengali status label
+  String get bengaliStatusLabel {
+    switch (status.toLowerCase()) {
+      case 'cooking':
+        return 'রান্না চলছে';
+      case 'upcoming':
+        return 'গাড়ি অফিসের পথে রওনা হয়েছে 🚗';
+      case 'received':
+        return 'গাড়ি অফিসে এসে পৌঁছেছে 🏢📦';
+      case 'served':
+        return 'খাবার পরিবেশন শুরু হয়েছে 🍽️';
+      default:
+        return label.isNotEmpty ? label : 'অজ্ঞাত';
+    }
+  }
+
+  factory SteadfastServingStatus.fromJson(Map<String, dynamic> json) {
+    final rawSteps = json['steps'] as List<dynamic>?;
+    final parsedSteps = rawSteps
+            ?.map((s) => SteadfastServingStep.fromJson(s as Map<String, dynamic>))
+            .toList() ??
+        [];
+
+    return SteadfastServingStatus(
+      booked: json['booked'] == true,
+      meal: json['meal']?.toString() ?? 'Lunch',
+      status: json['status']?.toString() ?? '',
+      label: json['label']?.toString() ?? '',
+      message: json['message']?.toString() ?? '',
+      updatedAt: json['updated_at']?.toString(),
+      steps: parsedSteps,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'booked': booked,
+        'meal': meal,
+        'status': status,
+        'label': label,
+        'message': message,
+        'updated_at': updatedAt,
+        'steps': steps.map((s) => s.toJson()).toList(),
+      };
+}
+
 class SteadfastLunchService {
   SteadfastLunchService._internal();
   static final SteadfastLunchService instance = SteadfastLunchService._internal();
@@ -584,5 +688,74 @@ class SteadfastLunchService {
         isBooked: !book,
       );
     }
+  }
+
+  /// Fetches real-time meal serving status (cooking -> upcoming -> received -> served)
+  Future<SteadfastServingStatus?> getServingStatus({bool forceRefresh = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final isSim = prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
+
+    if (isSim) {
+      final simStatus = prefs.getString(NotificationConstants.prefSimulatedServingStatus) ?? 'upcoming';
+      final isRecv = (simStatus == 'received' || simStatus == 'served');
+      final isSrv = (simStatus == 'served');
+      return SteadfastServingStatus(
+        booked: true,
+        meal: 'Lunch (Simulation)',
+        status: simStatus,
+        label: simStatus.substring(0, 1).toUpperCase() + simStatus.substring(1),
+        message: simStatus == 'upcoming'
+            ? 'Your meal is on its way to the canteen.'
+            : (simStatus == 'received'
+                ? 'Your meal has been received at the canteen.'
+                : 'Lunch is being served now in the cafeteria.'),
+        updatedAt: '12:55 PM',
+        steps: [
+          const SteadfastServingStep(status: 'cooking', label: 'Cooking', done: true, current: false),
+          SteadfastServingStep(status: 'upcoming', label: 'Upcoming', done: true, current: simStatus == 'upcoming', at: '12:25 PM'),
+          SteadfastServingStep(status: 'received', label: 'Received', done: isRecv, current: simStatus == 'received', at: isRecv ? '1:05 PM' : null),
+          SteadfastServingStep(status: 'served', label: 'Served', done: isSrv, current: isSrv, at: isSrv ? '1:18 PM' : null),
+        ],
+      );
+    }
+
+    final loggedIn = await login(forceRefresh: forceRefresh);
+    if (!loggedIn) return null;
+
+    try {
+      final client = http.Client();
+      try {
+        final uri = Uri.parse('$baseUrl/dashboard');
+        final reqHeaders = <String, String>{
+          'Accept': 'application/json',
+          'X-Inertia': 'true',
+        };
+        if (_inertiaVersion != null) {
+          reqHeaders['X-Inertia-Version'] = _inertiaVersion!;
+        }
+        final resp = await client.get(
+          uri,
+          headers: _buildHeaders(reqHeaders),
+        );
+        _extractCookies(resp);
+
+        if (resp.statusCode == 200) {
+          final decoded = jsonDecode(resp.body);
+          if (decoded is Map &&
+              decoded['props'] is Map &&
+              decoded['props']['serving'] is Map) {
+            final serving = SteadfastServingStatus.fromJson(
+              decoded['props']['serving'] as Map<String, dynamic>,
+            );
+            return serving;
+          }
+        }
+      } finally {
+        client.close();
+      }
+    } catch (e) {
+      debugPrint('SteadfastLunch: getServingStatus error: $e');
+    }
+    return null;
   }
 }

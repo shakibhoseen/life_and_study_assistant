@@ -7,6 +7,7 @@ import 'core/services/ai/gemini_ai_service.dart';
 import 'core/database/database_provider.dart';
 import 'core/services/ai/gemini_result_cache.dart';
 import 'core/services/export/auto_backup_service.dart';
+import 'core/services/background/lunch_sentinel_service.dart';
 import 'core/services/background/office_sentinel_service.dart';
 import 'core/services/background/wifi_monitor_service.dart';
 import 'core/services/background/workmanager_service.dart';
@@ -49,6 +50,11 @@ void main() async {
 
   // 2.3 Schedule Evening 5:55 PM - 6:15 PM Departure Watchdogs (Exact Alarms)
   await NotificationService.instance.scheduleEveningOfficeWatchdogs();
+
+  // 2.4 Schedule Daily 12:25 PM Lunch Serving Sentinel Trigger
+  await NotificationService.instance.scheduleDailyLunchTrackingTrigger();
+  await LunchSentinelService.instance.init();
+  await LunchSentinelService.instance.checkAndTriggerLunchSentinelIfNeeded();
 
   // 3. Initialize High-Precision Office Sentinel (Active only until Check-In/Out)
   await OfficeSentinelService.instance.init();

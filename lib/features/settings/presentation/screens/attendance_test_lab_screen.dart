@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/config/notification_constants.dart';
 import '../../../../core/services/attendance/packly_attendance_service.dart';
 import '../../../../core/services/attendance/steadfast_lunch_service.dart';
+import '../../../../core/services/background/lunch_sentinel_service.dart';
 import '../../../../core/services/background/office_sentinel_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
 import '../../../dashboard/presentation/providers/office_portal_provider.dart';
@@ -431,6 +432,79 @@ class _AttendanceTestLabScreenState extends ConsumerState<AttendanceTestLabScree
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(res.message)),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: Colors.teal,
+                    ),
+                    icon: const Icon(Icons.local_shipping, size: 16),
+                    label: const Text('Test: Car Arrived (Received)'),
+                    onPressed: () async {
+                      await NotificationService.instance.showLunchReceivedNotification(
+                        time: '1:05 PM',
+                        message: 'খাবার গাড়ি থেকে অফিসে রিসিভ করা হয়েছে। কিছুক্ষণের মধ্যে পরিবেশন শুরু হবে।',
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('📦 Test: Lunch Received alert fired!')),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: Colors.green,
+                    ),
+                    icon: const Icon(Icons.restaurant, size: 16),
+                    label: const Text('Test: Lunch Served'),
+                    onPressed: () async {
+                      await NotificationService.instance.showLunchServedNotification(
+                        time: '1:18 PM',
+                        message: 'ক্যান্টিনে খাবার পরিবেশন শুরু হয়েছে। আপনার লাঞ্চ গ্রহণ করতে পারেন।',
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('🍽️ Test: Lunch Served alert fired!')),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                    icon: const Icon(Icons.play_circle_outline, size: 16),
+                    label: const Text('Live Lunch Status Check'),
+                    onPressed: () async {
+                      final status = await SteadfastLunchService.instance.getServingStatus();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: Colors.teal.shade800,
+                            content: Text(status != null
+                                ? '🍱 Live Status: ${status.status} (${status.label})\n${status.message}'
+                                : '⚠️ Could not fetch lunch serving status right now.'),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                    icon: const Icon(Icons.radar, size: 16),
+                    label: const Text('Start Lunch Sentinel (Foreground)'),
+                    onPressed: () async {
+                      final started = await LunchSentinelService.instance.startLunchSentinel();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(started
+                                ? '🍱 Lunch Sentinel started in background!'
+                                : '⚠️ Could not start Lunch Sentinel (Disabled or already served).'),
+                          ),
                         );
                       }
                     },

@@ -862,6 +862,64 @@ class NotificationService {
     debugPrint('Evening departure watchdogs cancelled.');
   }
 
+  /// Schedules daily 12:25 PM lunch status sentinel trigger
+  Future<void> scheduleDailyLunchTrackingTrigger() async {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      12,
+      25,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.sentinelChannelId,
+      NotificationConstants.sentinelChannelName,
+      channelDescription: NotificationConstants.sentinelChannelDesc,
+      importance: Importance.low,
+      priority: Priority.low,
+      playSound: false,
+      enableVibration: false,
+      channelShowBadge: false,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: false,
+        presentBadge: false,
+        presentSound: false,
+      ),
+    );
+
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id: NotificationConstants.lunchTrackingAlarm1230,
+        title: '🍱 Steadfast Lunch Tracker Active',
+        body: 'Checking meal dispatch progress...',
+        scheduledDate: scheduledDate,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint('Daily lunch tracking trigger scheduled for $scheduledDate');
+    } catch (e) {
+      debugPrint('Error scheduling daily lunch tracking trigger: $e');
+    }
+  }
+
+  /// Cancels scheduled daily lunch tracking trigger
+  Future<void> cancelDailyLunchTrackingTrigger() async {
+    await _notificationsPlugin.cancel(id: NotificationConstants.lunchTrackingAlarm1230);
+    debugPrint('Daily lunch tracking trigger cancelled.');
+  }
+
   /// Schedules micro-flashcard study nudges during office break periods (1:15 PM lunch and 4:30 PM tea break)
   /// Non-intrusive (no sound, soft priority) so work is never disturbed while BCS revision continues.
   Future<void> scheduleOfficeDowntimeFlashcards() async {
@@ -1030,6 +1088,80 @@ class NotificationService {
       id: NotificationConstants.lunchReminderNotificationId,
       title: title,
       body: body,
+      notificationDetails: details,
+    );
+  }
+
+  /// High-priority notification when the lunch car arrives at the office / canteen
+  Future<void> showLunchReceivedNotification({
+    String? time,
+    String? message,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.mealChannelId,
+      NotificationConstants.mealChannelName,
+      channelDescription: NotificationConstants.mealChannelDesc,
+      importance: Importance.max,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.reminder,
+      visibility: NotificationVisibility.public,
+      enableVibration: true,
+      playSound: true,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    final timeSuffix = time != null && time.isNotEmpty ? ' ($time)' : '';
+    await _notificationsPlugin.show(
+      id: NotificationConstants.lunchReceivedNotificationId,
+      title: '📦 লাঞ্চের গাড়ি অফিসে পৌঁছেছে!$timeSuffix',
+      body: message != null && message.isNotEmpty
+          ? message
+          : 'খাবার ক্যান্টিনে রিসিভ করা হয়েছে। কিছুক্ষণের মধ্যেই পরিবেশন শুরু হবে।',
+      notificationDetails: details,
+    );
+  }
+
+  /// High-priority notification when lunch is served and ready in cafeteria
+  Future<void> showLunchServedNotification({
+    String? time,
+    String? message,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      NotificationConstants.mealChannelId,
+      NotificationConstants.mealChannelName,
+      channelDescription: NotificationConstants.mealChannelDesc,
+      importance: Importance.max,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.reminder,
+      visibility: NotificationVisibility.public,
+      enableVibration: true,
+      playSound: true,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    final timeSuffix = time != null && time.isNotEmpty ? ' ($time)' : '';
+    await _notificationsPlugin.show(
+      id: NotificationConstants.lunchServedNotificationId,
+      title: '🍽️ লাঞ্চ পরিবেশন শুরু হয়েছে!$timeSuffix',
+      body: message != null && message.isNotEmpty
+          ? message
+          : 'ক্যান্টিনে খাবার পরিবেশন শুরু হয়েছে। আপনার লাঞ্চ গ্রহণ করতে পারেন।',
       notificationDetails: details,
     );
   }
