@@ -10,6 +10,13 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.example.life_and_study_assistant/system_settings"
 
+    // Explicitly reference raw notification sounds so R8 and resource shrinker never strip them
+    private val soundResources = intArrayOf(
+        R.raw.meal_bell,
+        R.raw.office_chime,
+        R.raw.urgent_siren
+    )
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
