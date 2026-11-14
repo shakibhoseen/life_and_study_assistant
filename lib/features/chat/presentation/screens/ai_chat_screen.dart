@@ -16,6 +16,7 @@ import '../../../../core/services/ai/gemini_ai_service.dart';
 import '../../../../core/services/ai/models/chat_verification_result.dart';
 import '../../../../core/services/ai/models/verification_result.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../domain/chat_verifiability.dart';
 import '../../domain/models/chat_action.dart';
 import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
@@ -143,7 +144,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         ),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.controlBorder),
       ),
     );
   }
@@ -165,7 +166,6 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final chatMessagesAsync = ref.watch(chatMessagesStreamProvider);
     final chatState = ref.watch(chatNotifierProvider);
     final sessions = ref.watch(chatSessionsStreamProvider).value ?? [];
@@ -187,10 +187,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       appBar: AppBar(
         titleSpacing: 0,
         title: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: FluentRadius.controlBorder,
           onTap: () => _showSessionsSheet(context),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.s,
+              vertical: FluentSpacing.xs,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -205,23 +208,23 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                           Flexible(
                             child: Text(
                               titleText,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                              style: FluentType.bodyStrong.copyWith(
                                 fontSize: 15,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
                           ),
-                          const SizedBox(width: 2),
+                          const SizedBox(width: FluentSpacing.xxs),
                           const Icon(Icons.arrow_drop_down, size: 20),
                         ],
                       ),
                       Text(
                         subtitleText,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                        style: FluentType.caption.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface
+                              .withValues(alpha: 0.65),
                         ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
@@ -266,51 +269,66 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               }
             },
             itemBuilder: (ctx) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'rename',
                 child: Row(
                   children: [
-                    Icon(Icons.edit_outlined, size: 18, color: Colors.indigo),
-                    SizedBox(width: 8),
-                    Text('Rename Thread'),
+                    Icon(
+                      Icons.edit_outlined,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: FluentSpacing.s),
+                    Text('Rename Thread', style: FluentType.body),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'context',
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 18, color: Colors.indigo),
-                    SizedBox(width: 8),
-                    Text('View Current Context'),
+                    Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: FluentSpacing.s),
+                    Text('View Current Context', style: FluentType.body),
                   ],
                 ),
               ),
               const PopupMenuDivider(),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'clear',
                 child: Row(
                   children: [
-                    Icon(
+                    // Amber warns: this clears the thread.
+                    const Icon(
                       Icons.cleaning_services_outlined,
                       size: 18,
-                      color: Colors.orange,
+                      color: Color(0xFFF59E0B),
                     ),
-                    SizedBox(width: 8),
-                    Text('Clear Thread Messages'),
+                    const SizedBox(width: FluentSpacing.s),
+                    Text('Clear Thread Messages', style: FluentType.body),
                   ],
                 ),
               ),
               if (sessions.length > 1)
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                      SizedBox(width: 8),
+                      Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(width: FluentSpacing.s),
                       Text(
                         'Delete Thread',
-                        style: TextStyle(color: Colors.red),
+                        style: FluentType.body.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ],
                   ),
@@ -329,136 +347,137 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           Column(
             children: [
               // 1. Dedicated Topic Thread Indicator (if active)
-          if (currentSession != null &&
-              currentSession.subject != null &&
-              currentSession.subject!.isNotEmpty &&
-              currentSession.subject != 'General')
-            _buildTopicBanner(currentSession),
+              if (currentSession != null &&
+                  currentSession.subject != null &&
+                  currentSession.subject!.isNotEmpty &&
+                  currentSession.subject != 'General')
+                _buildTopicBanner(currentSession),
 
-          // 2. Quick suggestion prompt chips
-          _buildQuickPromptsBar(),
+              // 2. Quick suggestion prompt chips
+              _buildQuickPromptsBar(),
 
-          const Divider(height: 1),
+              const Divider(height: 1),
 
-          // 3. Chat messages list
-          Expanded(
-            child: chatMessagesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-              data: (messages) {
-                if (messages.isEmpty) {
-                  return _buildEmptyState(currentSession);
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  // Once the reply starts streaming it has its own bubble in
-                  // `messages`, so the thinking indicator would be a duplicate.
-                  itemCount:
-                      messages.length +
-                      (chatState.isSending && !chatState.isStreaming ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == messages.length &&
-                        chatState.isSending &&
-                        !chatState.isStreaming) {
-                      return _buildThinkingIndicator(messages);
+              // 3. Chat messages list
+              Expanded(
+                child: chatMessagesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) => Center(child: Text('Error: $err')),
+                  data: (messages) {
+                    if (messages.isEmpty) {
+                      return _buildEmptyState(currentSession);
                     }
 
-                    final message = messages[index];
-                    final isUser = message.role == 'user';
-                    if (isUser) return _buildUserBubble(message);
-
-                    // A verifier needs the question this answers, and the turn
-                    // before it when the question is a follow-up.
-                    final question = index > 0 ? messages[index - 1] : null;
-                    final earlierUser = index > 2 ? messages[index - 3] : null;
-                    final earlierAnswer = index > 1
-                        ? messages[index - 2]
-                        : null;
-                    final isLast = index == messages.length - 1;
-
-                    return _buildModelBubble(
-                      message,
-                      question: question?.role == 'user'
-                          ? question!.textContent
-                          : '',
-                      priorContext: ChatVerifiability.buildPriorContext(
-                        earlierUser: earlierUser?.role == 'user'
-                            ? earlierUser!.textContent
-                            : null,
-                        earlierAnswer: earlierAnswer?.role == 'model'
-                            ? earlierAnswer!.textContent
-                            : null,
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: FluentSpacing.l,
+                        vertical: FluentSpacing.m,
                       ),
-                      isStreaming: isLast && chatState.isStreaming,
+                      // Once the reply starts streaming it has its own bubble in
+                      // `messages`, so the thinking indicator would be a duplicate.
+                      itemCount:
+                          messages.length +
+                          (chatState.isSending && !chatState.isStreaming
+                              ? 1
+                              : 0),
+                      itemBuilder: (context, index) {
+                        if (index == messages.length &&
+                            chatState.isSending &&
+                            !chatState.isStreaming) {
+                          return _buildThinkingIndicator(messages);
+                        }
+
+                        final message = messages[index];
+                        final isUser = message.role == 'user';
+                        if (isUser) return _buildUserBubble(message);
+
+                        // A verifier needs the question this answers, and the turn
+                        // before it when the question is a follow-up.
+                        final question = index > 0 ? messages[index - 1] : null;
+                        final earlierUser = index > 2
+                            ? messages[index - 3]
+                            : null;
+                        final earlierAnswer = index > 1
+                            ? messages[index - 2]
+                            : null;
+                        final isLast = index == messages.length - 1;
+
+                        return _buildModelBubble(
+                          message,
+                          question: question?.role == 'user'
+                              ? question!.textContent
+                              : '',
+                          priorContext: ChatVerifiability.buildPriorContext(
+                            earlierUser: earlierUser?.role == 'user'
+                                ? earlierUser!.textContent
+                                : null,
+                            earlierAnswer: earlierAnswer?.role == 'model'
+                                ? earlierAnswer!.textContent
+                                : null,
+                          ),
+                          isStreaming: isLast && chatState.isStreaming,
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
-          ),
+                ),
+              ),
 
-          // 4. Bottom text input bar
-          _buildInputBar(chatState.isSending),
-        ],
-      ),
+              // 4. Bottom text input bar
+              _buildInputBar(chatState.isSending),
+            ],
+          ),
         ],
       ),
     );
   }
 
   Widget _buildTopicBanner(ChatSession session) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.l,
+        vertical: FluentSpacing.s,
+      ),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.indigo.withValues(alpha: 0.25)
-            : Colors.indigo.shade50,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark
-                ? Colors.indigo.withValues(alpha: 0.4)
-                : Colors.indigo.shade100,
-          ),
-        ),
+        color: FluentLayer.subtle(scheme.primary, theme.brightness),
+        border: Border(bottom: FluentStroke.side(theme.brightness)),
       ),
       child: Row(
         children: [
           Icon(
             _getSubjectIcon(session.subject),
             size: 16,
-            color: isDark ? Colors.indigo.shade200 : Colors.indigo.shade800,
+            color: scheme.primary,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
           Expanded(
             child: Text(
               'Dedicated Thread: ${session.subject} • ${session.topic ?? session.title}',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.indigo.shade900,
-              ),
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: FluentSpacing.s),
           InkWell(
             onTap: () => _showSessionsSheet(context),
+            borderRadius: FluentRadius.controlBorder,
             child: Text(
               'Switch Thread',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isDark
-                    ? const Color(0xFF93C5FD)
-                    : Colors.indigo.shade700,
-                decoration: TextDecoration.underline,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: scheme.primary,
               ),
             ),
           ),
@@ -468,34 +487,34 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   }
 
   Widget _buildQuickPromptsBar() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
       height: 48,
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      color: isDark
-          ? const Color(0xFF0F172A)
-          : Colors.indigo.shade50.withValues(alpha: 0.3),
+      padding: const EdgeInsets.symmetric(vertical: FluentSpacing.xs),
+      color: scheme.surface,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: FluentSpacing.m),
         itemCount: _quickPrompts.length,
-        separatorBuilder: (ctx, i) => const SizedBox(width: 8),
+        separatorBuilder: (ctx, i) => const SizedBox(width: FluentSpacing.s),
         itemBuilder: (context, index) {
           final prompt = _quickPrompts[index];
           return ActionChip(
             label: Text(
               prompt,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isDark
-                    ? const Color(0xFFF1F5F9)
-                    : Colors.indigo.shade900,
-              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.caption.copyWith(color: scheme.onSurface),
             ),
-            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            backgroundColor: theme.cardTheme.color ?? theme.cardColor,
             side: BorderSide(
-              color: isDark ? const Color(0xFF334155) : Colors.indigo.shade100,
+              color: FluentStroke.card(theme.brightness),
+              width: FluentStroke.width,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: FluentRadius.controlBorder,
             ),
             onPressed: () => _handleSend(prompt),
           );
@@ -505,7 +524,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   }
 
   Widget _buildEmptyState(ChatSession? session) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final isTopicSession =
         session != null &&
         session.subject != null &&
@@ -514,90 +534,80 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(FluentSpacing.xxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(FluentSpacing.xl),
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.indigo.withValues(alpha: 0.25)
-                    : Colors.indigo.shade50,
-                shape: BoxShape.circle,
+                // A Fluent icon plate is a rounded square, not a circle.
+                color: FluentLayer.subtle(scheme.primary, theme.brightness),
+                borderRadius: FluentRadius.controlBorder,
               ),
               child: Icon(
                 _getSubjectIcon(session?.subject),
                 size: 48,
-                color: isDark ? Colors.indigo.shade200 : Colors.indigo.shade700,
+                color: scheme.primary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
             Text(
               isTopicSession
                   ? session.title
                   : 'আপনার ব্যক্তিগত AI মেন্টর ও পার্টনার',
-              style: TextStyle(
+              style: FluentType.subtitle.copyWith(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                color: scheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             Text(
               isTopicSession
                   ? 'এই থ্রেডের সমস্ত আলোচনা ও মেমরি সম্পূর্ণ এই টপিকের জন্যই সংরক্ষিত থাকবে। যেকোনো নিয়ম, শর্টকাট বা বিগত বছরের প্রশ্ন জানতে পারেন।'
                   : 'ফুল-টাইম অফিস ও ক্লান্তির সাথে সামঞ্জস্য রেখে BCS ও চাকরির পরীক্ষার সেরা প্রস্তুতি নিন।\nযেকোনো কঠিন টপিক বুঝে নিতে পারেন বা রিভিশন ড্রিল তৈরি করতে বলুন।',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white70 : Colors.black54,
+              style: FluentType.body.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: FluentSpacing.xl),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: FluentSpacing.s,
+              runSpacing: FluentSpacing.s,
               alignment: WrapAlignment.center,
               children: isTopicSession
                   ? [
                       _buildStarterCard(
                         '📖 মূল নিয়ম ও সহজ ট্রিকস বলো',
                         session.subject ?? 'Core Rules',
-                        isDark,
                       ),
                       _buildStarterCard(
                         '⚠️ কমন ফাঁদ ও ভুল হওয়ার জায়গা',
                         'Exam Traps',
-                        isDark,
                       ),
                       _buildStarterCard(
                         '📝 বিগত বছরের ৫টি গুরুত্বপূর্ণ MCQ',
                         'Past Questions',
-                        isDark,
                       ),
                     ]
                   : [
                       _buildStarterCard(
                         '📖 সমাস বা ব্যাকরণ বুঝাও',
                         'বাংলা ব্যাকরণ',
-                        isDark,
                       ),
                       _buildStarterCard(
                         '😴 ৫ মিনিটের কুইক ড্রিল',
                         'ক্লান্তি ম্যানেজমেন্ট',
-                        isDark,
                       ),
                       _buildStarterCard(
                         '📅 LiveMCQ রিভিশন ট্রিকস',
                         'পরীক্ষা প্রস্তুতি',
-                        isDark,
                       ),
                       _buildStarterCard(
                         '📸 প্রশ্ন ব্যাংক স্ক্যান করে কুইজ',
                         'বইয়ের পাতা থেকে এক্সাম',
-                        isDark,
                         onTap: () => QuestionBankScannerModal.show(context),
                       ),
                     ],
@@ -610,21 +620,28 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
   Widget _buildStarterCard(
     String title,
-    String subtitle,
-    bool isDark, {
+    String subtitle, {
     VoidCallback? onTap,
   }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return InkWell(
       onTap: onTap ?? () => _handleSend(title),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: FluentRadius.cardBorder,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: FluentSpacing.m,
+          vertical: FluentSpacing.s,
+        ),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
+          color: theme.cardTheme.color ?? theme.cardColor,
+          borderRadius: FluentRadius.cardBorder,
           border: Border.all(
-            color: isDark ? const Color(0xFF334155) : Colors.grey.shade300,
+            color: FluentStroke.card(theme.brightness),
+            width: FluentStroke.width,
           ),
+          boxShadow: FluentElevation.card(theme.brightness),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -632,17 +649,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           children: [
             Text(
               title,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
-              ),
+              style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
             ),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? const Color(0xFF94A3B8) : Colors.grey,
+              style: FluentType.caption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
           ],
@@ -693,32 +705,30 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     String priorContext = '',
     bool isStreaming = false,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
     final actions = ChatAction.decodeList(message.suggestedAction);
 
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14, right: 36),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: FluentSpacing.m, right: 36),
+        padding: const EdgeInsets.all(FluentSpacing.m),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF111827) : Colors.white,
+          color: theme.cardTheme.color ?? theme.cardColor,
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(4),
-            topRight: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
-            bottomRight: Radius.circular(16),
+            topLeft: Radius.circular(FluentRadius.control),
+            topRight: Radius.circular(FluentRadius.card),
+            bottomLeft: Radius.circular(FluentRadius.card),
+            bottomRight: Radius.circular(FluentRadius.card),
           ),
           border: Border.all(
-            color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
+            color: FluentStroke.card(brightness),
+            width: FluentStroke.width,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: FluentElevation.card(brightness),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -726,78 +736,69 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             Row(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: FluentRadius.controlBorder,
                   child: Image.asset(
                     'assets/branding/playstore_icon_512.png',
                     width: 20,
                     height: 20,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.school,
-                      size: 18,
-                      color: Colors.indigo,
-                    ),
+                    errorBuilder: (context, error, stackTrace) =>
+                        Icon(Icons.school, size: 18, color: scheme.primary),
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Expanded(
+                const SizedBox(width: FluentSpacing.s),
+                Expanded(
                   child: Text(
                     'AI Companion',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: Colors.indigo,
-                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.primary,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Flexible(
                   child: Text(
                     _formatDateTime(message.timestamp),
-                    style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.5),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 InkWell(
                   onTap: () => _copyMessageText(message.textContent),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: FluentRadius.controlBorder,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2.5,
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xxs,
                     ),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1E293B)
-                          : const Color(0xFFEEF2FF),
-                      borderRadius: BorderRadius.circular(6),
+                      color: FluentLayer.subtle(scheme.primary, brightness),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.copy_rounded,
-                          size: 11,
-                          color: isDark
-                              ? const Color(0xFF94A3B8)
-                              : Colors.indigo.shade600,
+                          size: 12,
+                          color: scheme.primary,
                         ),
-                        const SizedBox(width: 3),
+                        const SizedBox(width: FluentSpacing.xs),
                         Flexible(
                           child: Text(
                             'Copy',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? const Color(0xFF94A3B8)
-                                  : Colors.indigo.shade600,
-                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.primary,
+                            ),
                           ),
                         ),
                       ],
@@ -806,57 +807,39 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             MarkdownBody(
               data: BengaliMathSanitizer.sanitize(message.textContent),
               selectable: true,
               styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
                   .copyWith(
-                    p: TextStyle(
-                      fontSize: 14.5,
-                      height: 1.55,
-                      color: isDark
-                          ? const Color(0xFFF1F5F9)
-                          : const Color(0xFF1E293B),
-                    ),
-                    h1: TextStyle(
+                    p: FluentType.body.copyWith(color: scheme.onSurface),
+                    h1: FluentType.subtitle.copyWith(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      height: 1.5,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      color: scheme.onSurface,
                     ),
-                    h2: TextStyle(
+                    h2: FluentType.subtitle.copyWith(
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      height: 1.45,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      color: scheme.onSurface,
                     ),
-                    h3: TextStyle(
+                    h3: FluentType.bodyStrong.copyWith(
                       fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      height: 1.4,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      color: scheme.onSurface,
                     ),
-                    listBullet: TextStyle(
-                      fontSize: 14,
-                      color: isDark
-                          ? const Color(0xFF94A3B8)
-                          : const Color(0xFF64748B),
+                    listBullet: FluentType.body.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
-                    strong: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    strong: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
                     ),
-                    code: TextStyle(
-                      backgroundColor: isDark
-                          ? const Color(0xFF1E293B)
-                          : Colors.grey.shade100,
-                      fontSize: 12.5,
+                    code: FluentType.caption.copyWith(
+                      backgroundColor: scheme.onSurface.withValues(alpha: 0.06),
                       fontFamily: 'monospace',
+                      color: scheme.onSurface,
                     ),
                   ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
             Row(
               mainAxisAlignment: isStreaming
                   ? MainAxisAlignment.spaceBetween
@@ -865,41 +848,38 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 if (isStreaming)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.indigo.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
+                      color: FluentLayer.subtle(scheme.primary, brightness),
+                      borderRadius: FluentRadius.controlBorder,
                       border: Border.all(
-                        color: Colors.indigo.withValues(alpha: 0.25),
-                        width: 0.5,
+                        color: FluentStroke.card(brightness),
+                        width: FluentStroke.width,
                       ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const SizedBox(
+                        SizedBox(
                           width: 8,
                           height: 8,
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
-                            color: Colors.indigo,
+                            color: scheme.primary,
                           ),
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: FluentSpacing.xs),
                         Flexible(
                           child: Text(
                             'AI সরাসরি লিখছে (Streaming)...',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? Colors.indigo.shade200
-                                  : Colors.indigo.shade800,
-                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.primary,
+                            ),
                           ),
                         ),
                       ],
@@ -907,21 +887,18 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   ),
                 InkWell(
                   onTap: () => _copyMessageText(message.textContent),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: FluentRadius.controlBorder,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
+                      horizontal: FluentSpacing.m,
+                      vertical: FluentSpacing.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1E293B)
-                          : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(8),
+                      color: scheme.onSurface.withValues(alpha: 0.05),
+                      borderRadius: FluentRadius.controlBorder,
                       border: Border.all(
-                        color: isDark
-                            ? const Color(0xFF334155)
-                            : const Color(0xFFCBD5E1),
+                        color: FluentStroke.card(brightness),
+                        width: FluentStroke.width,
                       ),
                     ),
                     child: Row(
@@ -930,23 +907,18 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                         Icon(
                           Icons.copy_rounded,
                           size: 13,
-                          color: isDark
-                              ? const Color(0xFFCBD5E1)
-                              : const Color(0xFF475569),
+                          color: scheme.onSurface.withValues(alpha: 0.65),
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: FluentSpacing.xs),
                         Flexible(
                           child: Text(
                             'Copy Response',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? const Color(0xFFF1F5F9)
-                                  : const Color(0xFF334155),
-                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurface,
+                            ),
                           ),
                         ),
                       ],
@@ -959,27 +931,21 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               message.textContent,
               isStreaming: isStreaming,
             )) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               _buildVerifyBlock(message, question, priorContext, isDark),
             ],
             if (actions.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Divider(
-                height: 1,
-                color: isDark
-                    ? const Color(0xFF334155)
-                    : const Color(0xFFE2E8F0),
-              ),
-              const SizedBox(height: 8),
+              const SizedBox(height: FluentSpacing.m),
+              Divider(height: 1, color: FluentStroke.divider(brightness)),
+              const SizedBox(height: FluentSpacing.s),
               Text(
                 '⚡ Suggested Actions:',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? const Color(0xFF94A3B8) : Colors.black54,
+                style: FluentType.caption.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface.withValues(alpha: 0.65),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: FluentSpacing.s),
               ...actions.map((act) => _buildActionCard(act, message, isDark)),
             ],
           ],
@@ -994,6 +960,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     String priorContext,
     bool isDark,
   ) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
     final result = _verifications[message.id];
     final busy = _verifying.contains(message.id);
 
@@ -1005,8 +974,14 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           children: [
             TextButton.icon(
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: FluentSpacing.s,
+                  vertical: FluentSpacing.xxs,
+                ),
                 visualDensity: VisualDensity.compact,
+                shape: RoundedRectangleBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                ),
               ),
               onPressed: busy
                   ? null
@@ -1020,21 +995,18 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   : const Icon(Icons.fact_check_outlined, size: 14),
               label: Text(
                 busy ? 'যাচাই চলছে…' : 'উত্তর যাচাই করুন',
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: FluentType.caption.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
             if (_verifyFailed.contains(message.id))
               Padding(
-                padding: const EdgeInsets.only(left: 8, top: 2),
+                padding: const EdgeInsets.only(
+                  left: FluentSpacing.s,
+                  top: FluentSpacing.xxs,
+                ),
                 child: Text(
                   'যাচাই করা গেল না।',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.redAccent.shade200,
-                  ),
+                  style: FluentType.caption.copyWith(color: scheme.error),
                 ),
               ),
           ],
@@ -1043,12 +1015,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
+        color: scheme.onSurface.withValues(alpha: 0.04),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
@@ -1059,44 +1032,42 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               Icon(
                 Icons.fact_check_outlined,
                 size: 14,
-                color: isDark ? Colors.white60 : Colors.black54,
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   // Bengali digits, like the rest of the app.
                   '${BengaliMathSanitizer.toBengaliDigits('${result.claimsFound}')}টি দাবির মধ্যে '
                   '${BengaliMathSanitizer.toBengaliDigits('${result.claimsEvaluated}')}টি দেখা হয়েছে · '
                   '${BengaliMathSanitizer.toBengaliDigits('${result.verifiableCount}')}টি স্বাধীনভাবে যাচাই করা গেছে',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white70 : Colors.black87,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
             ],
           ),
           if (result.isPartial) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               result.extractionNote.isNotEmpty
                   ? result.extractionNote
                   : 'সব দাবি যাচাই করা যায়নি।',
-              style: TextStyle(
-                fontSize: 10.5,
-                color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+              // Amber warns: not every claim could be checked.
+              style: FluentType.caption.copyWith(
+                color: const Color(0xFFF59E0B),
               ),
             ),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           ...result.claims.map((c) => _buildClaimRow(c, isDark)),
-          const SizedBox(height: 4),
+          const SizedBox(height: FluentSpacing.xs),
           Text(
             'External sources not checked',
-            style: TextStyle(
-              fontSize: 10,
-              color: isDark ? Colors.white38 : Colors.black38,
+            style: FluentType.caption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -1105,37 +1076,39 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   }
 
   Widget _buildClaimRow(VerifiedClaim claim, bool isDark) {
+    final scheme = Theme.of(context).colorScheme;
+
     // Grey, not amber, for "not verified": amber reads as a warning about the
     // claim, when the only thing being reported is that the app could not
     // check it. Only red warns, and only green claims a check was made.
     final (color, icon, status) = switch (claim.verdict) {
       VerificationVerdict.supported => (
-        Colors.green,
+        const Color(0xFF10B981),
         Icons.check_circle_outline,
         'যাচাই হয়েছে',
       ),
       VerificationVerdict.likelyIncorrect => (
-        Colors.redAccent,
+        scheme.error,
         Icons.error_outline,
         'সম্ভবত ভুল',
       ),
       VerificationVerdict.inconclusive => (
-        isDark ? Colors.white38 : Colors.black38,
+        scheme.onSurface.withValues(alpha: 0.5),
         Icons.remove_circle_outline,
         'যাচাই করা যায়নি',
       ),
     };
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: FluentSpacing.m),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: FluentSpacing.xxs),
             child: Icon(icon, size: 14, color: color),
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: FluentSpacing.s),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1144,54 +1117,46 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   '“${claim.text}”',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.4,
+                  style: FluentType.caption.copyWith(
                     fontStyle: FontStyle.italic,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: scheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: FluentSpacing.xs),
                 Wrap(
-                  spacing: 6,
-                  runSpacing: 3,
+                  spacing: FluentSpacing.s,
+                  runSpacing: FluentSpacing.xs,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       status,
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
                         color: color,
                       ),
                     ),
                     Text(
                       '${claim.kind.label} · ${claim.evidence.label}',
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        color: isDark ? Colors.white38 : Colors.black45,
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: FluentSpacing.xxs),
                 Text(
                   claim.reasoning,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    height: 1.45,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                  style: FluentType.caption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
                 if (claim.downgraded) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: FluentSpacing.xxs),
                   Text(
                     'মডেল এটিকে সঠিক বলেছিল, কিন্তু যাচাই করার মতো উৎস নেই।',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      height: 1.4,
+                    style: FluentType.caption.copyWith(
                       fontStyle: FontStyle.italic,
-                      color: isDark ? Colors.white38 : Colors.black45,
+                      color: scheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -1204,26 +1169,29 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   }
 
   Widget _buildActionCard(ChatAction action, ChatMessage message, bool isDark) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
     final isDone = action.isExecuted;
     final isRoutinePlan = action.type == ChatActionType.routinePlan;
     final isStudyTask = action.type == ChatActionType.studyTask;
 
+    // Green marks a completed action; otherwise the accent marks what to act on.
+    const successColor = Color(0xFF10B981);
+    final accent = isDone ? successColor : scheme.primary;
+
     return Container(
-      margin: const EdgeInsets.only(top: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      margin: const EdgeInsets.only(top: FluentSpacing.s),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.m,
+        vertical: FluentSpacing.s,
+      ),
       decoration: BoxDecoration(
-        color: isDone
-            ? (isDark
-                  ? Colors.green.withValues(alpha: 0.2)
-                  : Colors.green.shade50)
-            : (isDark
-                  ? Colors.indigo.withValues(alpha: 0.2)
-                  : Colors.indigo.shade50),
-        borderRadius: BorderRadius.circular(8),
+        color: FluentLayer.subtle(accent, brightness),
+        borderRadius: FluentRadius.controlBorder,
         border: Border.all(
-          color: isDone
-              ? (isDark ? Colors.green.shade800 : Colors.green.shade200)
-              : (isDark ? Colors.indigo.shade800 : Colors.indigo.shade200),
+          color: accent.withValues(alpha: 0.4),
+          width: FluentStroke.width,
         ),
       ),
       child: Row(
@@ -1241,27 +1209,20 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                                         ? Icons.calendar_month
                                         : Icons.auto_awesome)))),
             size: 16,
-            color: isDone
-                ? (isDark ? Colors.green.shade400 : Colors.green)
-                : (isDark ? Colors.indigo.shade300 : Colors.indigo),
+            color: accent,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   action.title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDone
-                        ? (isDark
-                              ? Colors.green.shade300
-                              : Colors.green.shade900)
-                        : (isDark
-                              ? Colors.indigo.shade200
-                              : Colors.indigo.shade900),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
                   ),
                 ),
                 Text(
@@ -1278,11 +1239,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                                               : 'Subject: ${action.subject}')))),
                   maxLines: action.type == ChatActionType.addFlashcard ? 2 : 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    color: isDark
-                        ? const Color(0xFF94A3B8)
-                        : Colors.grey.shade700,
+                  style: FluentType.caption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
               ],
@@ -1291,16 +1249,17 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: isDone
-                  ? (isDark ? Colors.green.shade900 : Colors.green.shade100)
-                  : Colors.indigo,
-              foregroundColor: isDone
-                  ? (isDark ? Colors.green.shade100 : Colors.green.shade900)
-                  : Colors.white,
+                  ? FluentLayer.subtle(successColor, brightness)
+                  : scheme.primary,
+              foregroundColor: isDone ? successColor : scheme.onPrimary,
               elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.xs,
+              ),
               visualDensity: VisualDensity.compact,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: FluentRadius.controlBorder,
               ),
             ),
             onPressed: isDone
@@ -1416,7 +1375,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                                           : (isStudyTask
                                                 ? 'কুইজ শুরু'
                                                 : 'টপিকে যোগ'))))),
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.caption.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -1502,21 +1463,22 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   }
 
   Widget _buildInputBar(bool isSending) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
-        12,
-        8,
-        12,
-        MediaQuery.of(context).viewInsets.bottom > 0 ? 8 : 16,
+        FluentSpacing.m,
+        FluentSpacing.s,
+        FluentSpacing.m,
+        MediaQuery.of(context).viewInsets.bottom > 0
+            ? FluentSpacing.s
+            : FluentSpacing.l,
       ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111827) : Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
-          ),
-        ),
+        color: scheme.surface,
+        border: Border(top: FluentStroke.side(brightness)),
       ),
       child: Row(
         children: [
@@ -1528,36 +1490,48 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               maxLines: 4,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _handleSend(),
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
+              style: FluentType.body.copyWith(color: scheme.onSurface),
               decoration: InputDecoration(
                 hintText: _isRecording
                     ? '🎙 শুনছি… ${_recordedSeconds}s / ${_maxRecordSeconds}s'
                     : (_isTranscribing
                           ? 'লেখা হচ্ছে…'
                           : 'Ask Gemini anything (BCS, routine, doubts)...'),
-                hintStyle: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? Colors.white54 : Colors.grey.shade500,
+                hintStyle: FluentType.body.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.5),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+                  horizontal: FluentSpacing.m,
+                  vertical: FluentSpacing.s,
                 ),
                 filled: true,
-                fillColor: isDark
-                    ? const Color(0xFF1E293B)
-                    : Colors.grey.shade100,
+                fillColor: scheme.onSurface.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
+                  // A Fluent input is a 4px control, not a pill.
+                  borderRadius: FluentRadius.controlBorder,
+                  borderSide: BorderSide(
+                    color: FluentStroke.card(brightness),
+                    width: FluentStroke.width,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                  borderSide: BorderSide(
+                    color: FluentStroke.card(brightness),
+                    width: FluentStroke.width,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                  borderSide: BorderSide(
+                    color: scheme.primary,
+                    width: FluentStroke.width,
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: FluentSpacing.xs),
           IconButton(
             tooltip: 'প্রশ্ন ব্যাংক স্ক্যান করে এক্সাম',
             onPressed: isSending
@@ -1566,7 +1540,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             icon: Icon(
               Icons.document_scanner_outlined,
               size: 22,
-              color: isDark ? Colors.indigo.shade200 : const Color(0xFF4F46E5),
+              color: scheme.primary,
             ),
           ),
           IconButton(
@@ -1581,28 +1555,32 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 : Icon(
                     _isRecording ? Icons.stop_circle : Icons.mic_none,
                     size: 24,
+                    // Red while recording: a live, stoppable state.
                     color: _isRecording
-                        ? Colors.redAccent
-                        : (isDark ? Colors.white60 : Colors.grey.shade600),
+                        ? scheme.error
+                        : scheme.onSurface.withValues(alpha: 0.65),
                   ),
           ),
-          const SizedBox(width: 2),
-          CircleAvatar(
-            backgroundColor: isSending
-                ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)
-                : Colors.indigo,
-            radius: 20,
+          const SizedBox(width: FluentSpacing.xxs),
+          // A Fluent send control is a 4px rounded square, not a circle.
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: isSending
+                  ? scheme.onSurface.withValues(alpha: 0.12)
+                  : scheme.primary,
+              borderRadius: FluentRadius.controlBorder,
+            ),
             child: IconButton(
               icon: isSending
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.send, size: 18, color: Colors.white),
+                  // Sits on the saturated accent fill.
+                  : Icon(Icons.send, size: 18, color: scheme.onPrimary),
               onPressed: isSending ? null : () => _handleSend(),
             ),
           ),
@@ -1619,12 +1597,16 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
       ),
       builder: (ctx) {
         return Consumer(
           builder: (context, ref, _) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final theme = Theme.of(context);
+            final scheme = theme.colorScheme;
+            final brightness = theme.brightness;
             final sessionsAsync = ref.watch(chatSessionsStreamProvider);
             final activeSessionId = ref
                 .watch(chatNotifierProvider)
@@ -1635,7 +1617,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.of(context).size.height * 0.75,
                 ),
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: const EdgeInsets.fromLTRB(
+                  FluentSpacing.l,
+                  FluentSpacing.l,
+                  FluentSpacing.l,
+                  FluentSpacing.s,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1643,44 +1630,36 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                     // Header
                     Row(
                       children: [
-                        Icon(
-                          Icons.forum,
-                          color: isDark
-                              ? const Color(0xFF818CF8)
-                              : Colors.indigo,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 8),
+                        Icon(Icons.forum, color: scheme.primary, size: 20),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: Text(
                             'Study Threads & Sessions',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? Colors.white
-                                  : const Color(0xFF0F172A),
-                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            style: FluentType.subtitle.copyWith(
+                              fontSize: 17,
+                              color: scheme.onSurface,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.indigo,
-                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            backgroundColor: scheme.primary,
+                            foregroundColor: scheme.onPrimary,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
+                              horizontal: FluentSpacing.m,
+                              vertical: FluentSpacing.xs,
                             ),
                             visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: FluentRadius.controlBorder,
+                            ),
                           ),
                           icon: const Icon(Icons.add, size: 15),
-                          label: const Text(
-                            'New Thread',
-                            style: TextStyle(fontSize: 12),
-                          ),
+                          label: Text('New Thread', style: FluentType.caption),
                           onPressed: () {
                             Navigator.pop(ctx);
                             _showNewSessionDialog(context);
@@ -1688,19 +1667,16 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
                     Text(
                       'Each thread maintains separate, focused memory for that subject or topic.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: isDark ? const Color(0xFF94A3B8) : Colors.grey,
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.65),
                       ),
                     ),
                     Divider(
-                      height: 20,
-                      color: isDark
-                          ? const Color(0xFF334155)
-                          : const Color(0xFFE2E8F0),
+                      height: FluentSpacing.xl,
+                      color: FluentStroke.divider(brightness),
                     ),
 
                     // List of Sessions
@@ -1714,10 +1690,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                             return Center(
                               child: Text(
                                 'No threads found. Create one!',
-                                style: TextStyle(
-                                  color: isDark
-                                      ? Colors.white70
-                                      : Colors.black54,
+                                style: FluentType.body.copyWith(
+                                  color: scheme.onSurface.withValues(
+                                    alpha: 0.65,
+                                  ),
                                 ),
                               ),
                             );
@@ -1730,68 +1706,66 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                               final isActive = session.id == activeSessionId;
 
                               return Card(
-                                elevation: isActive ? 1.5 : 0.5,
-                                margin: const EdgeInsets.only(bottom: 8),
+                                elevation: 0,
+                                margin: const EdgeInsets.only(
+                                  bottom: FluentSpacing.s,
+                                ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: FluentRadius.cardBorder,
                                   side: BorderSide(
                                     color: isActive
-                                        ? Colors.indigo.shade400
-                                        : (isDark
-                                              ? const Color(0xFF334155)
-                                              : Colors.grey.shade200),
-                                    width: isActive ? 1.5 : 1,
+                                        ? scheme.primary.withValues(alpha: 0.55)
+                                        : FluentStroke.card(brightness),
+                                    width: FluentStroke.width,
                                   ),
                                 ),
                                 color: isActive
-                                    ? (isDark
-                                          ? Colors.indigo.withValues(alpha: 0.3)
-                                          : Colors.indigo.shade50.withValues(
-                                              alpha: 0.5,
-                                            ))
-                                    : (isDark
-                                          ? const Color(0xFF1E293B)
-                                          : Colors.white),
+                                    ? FluentLayer.subtle(
+                                        scheme.primary,
+                                        brightness,
+                                      )
+                                    : (theme.cardTheme.color ??
+                                          theme.cardColor),
                                 child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: isActive
-                                        ? Colors.indigo
-                                        : (isDark
-                                              ? const Color(0xFF0F172A)
-                                              : Colors.grey.shade100),
+                                  // A Fluent icon plate: rounded square, not a circle.
+                                  leading: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: isActive
+                                          ? scheme.primary
+                                          : FluentLayer.subtle(
+                                              scheme.primary,
+                                              brightness,
+                                            ),
+                                      borderRadius: FluentRadius.controlBorder,
+                                    ),
                                     child: Icon(
                                       _getSubjectIcon(session.subject),
                                       color: isActive
-                                          ? Colors.white
-                                          : (isDark
-                                                ? Colors.indigo.shade300
-                                                : Colors.indigo.shade800),
+                                          ? scheme.onPrimary
+                                          : scheme.primary,
                                       size: 20,
                                     ),
                                   ),
                                   title: Text(
                                     session.title,
-                                    style: TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: isActive
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
-                                      color: isActive
-                                          ? (isDark
-                                                ? Colors.indigo.shade200
-                                                : Colors.indigo.shade900)
-                                          : (isDark
-                                                ? Colors.white
-                                                : Colors.black87),
-                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style:
+                                        (isActive
+                                                ? FluentType.bodyStrong
+                                                : FluentType.body)
+                                            .copyWith(color: scheme.onSurface),
                                   ),
                                   subtitle: Text(
                                     '${session.subject ?? "General"} • ${_formatDateTime(session.updatedAt)}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isDark
-                                          ? const Color(0xFF94A3B8)
-                                          : Colors.grey.shade600,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: FluentType.caption.copyWith(
+                                      color: scheme.onSurface.withValues(
+                                        alpha: 0.65,
+                                      ),
                                     ),
                                   ),
                                   trailing: Row(
@@ -1800,21 +1774,20 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                                       if (isActive)
                                         Container(
                                           padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
+                                            horizontal: FluentSpacing.s,
+                                            vertical: FluentSpacing.xxs,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.indigo,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
+                                            color: scheme.primary,
+                                            borderRadius:
+                                                FluentRadius.controlBorder,
                                           ),
-                                          child: const Text(
+                                          child: Text(
                                             'Active',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
+                                            style: FluentType.caption.copyWith(
+                                              // On a saturated accent fill.
+                                              color: scheme.onPrimary,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ),
@@ -1844,18 +1817,22 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                                             }
                                           },
                                           itemBuilder: (c) => [
-                                            const PopupMenuItem(
+                                            PopupMenuItem(
                                               value: 'rename',
-                                              child: Text('Rename'),
+                                              child: Text(
+                                                'Rename',
+                                                style: FluentType.body,
+                                              ),
                                             ),
                                             if (sessions.length > 1)
-                                              const PopupMenuItem(
+                                              PopupMenuItem(
                                                 value: 'delete',
                                                 child: Text(
                                                   'Delete',
-                                                  style: TextStyle(
-                                                    color: Colors.red,
-                                                  ),
+                                                  style: FluentType.body
+                                                      .copyWith(
+                                                        color: scheme.error,
+                                                      ),
                                                 ),
                                               ),
                                           ],
@@ -1894,7 +1871,11 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Create New Study Thread'),
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
+        title: Text(
+          'Create New Study Thread',
+          style: FluentType.subtitle.copyWith(fontSize: 18),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1906,7 +1887,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: topicController,
                 decoration: const InputDecoration(
@@ -1914,7 +1895,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: titleController,
                 decoration: const InputDecoration(
@@ -1977,7 +1958,11 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rename Thread'),
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
+        title: Text(
+          'Rename Thread',
+          style: FluentType.subtitle.copyWith(fontSize: 18),
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -2017,9 +2002,14 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete "${session.title}"?'),
-        content: const Text(
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
+        title: Text(
+          'Delete "${session.title}"?',
+          style: FluentType.subtitle.copyWith(fontSize: 18),
+        ),
+        content: Text(
           'This will permanently delete this thread and all its messages from your local device.',
+          style: FluentType.body,
         ),
         actions: [
           TextButton(
@@ -2028,7 +2018,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Delete',
+              style: FluentType.bodyStrong.copyWith(
+                color: Theme.of(ctx).colorScheme.error,
+              ),
+            ),
           ),
         ],
       ),
@@ -2058,16 +2053,17 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
+        title: Row(
           children: [
-            Icon(Icons.psychology, color: Colors.indigo),
-            SizedBox(width: 8),
+            Icon(Icons.psychology, color: Theme.of(ctx).colorScheme.primary),
+            const SizedBox(width: FluentSpacing.s),
             Flexible(
               child: Text(
                 'Active Gemini Context',
-                style: TextStyle(fontSize: 16),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: FluentType.subtitle.copyWith(fontSize: 17),
               ),
             ),
           ],
@@ -2081,80 +2077,83 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 'Available context. Gemini is sent only the parts a given '
                 'question actually needs — plus anything urgent (an exam '
                 'within 3 days, or high fatigue).',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(ctx).brightness == Brightness.dark
-                      ? Colors.white70
-                      : Colors.black54,
+                style: FluentType.caption.copyWith(
+                  color: Theme.of(ctx).colorScheme.onSurface
+                      .withValues(alpha: 0.65),
                 ),
               ),
-              const Divider(height: 20),
+              Divider(
+                height: FluentSpacing.xl,
+                color: FluentStroke.divider(Theme.of(ctx).brightness),
+              ),
               if (activeSession != null) ...[
                 Text(
                   '💬 Active Thread: ${activeSession.title}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Colors.indigo,
+                  style: FluentType.bodyStrong.copyWith(
+                    color: Theme.of(ctx).colorScheme.primary,
                   ),
                 ),
                 if (activeSession.subject != null)
                   Text(
                     'Subject: ${activeSession.subject} | Topic: ${activeSession.topic ?? "General"}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(ctx).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black87,
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(ctx).colorScheme.onSurface,
                     ),
                   ),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
               ],
               Text(
                 '⚡ Energy: ${todayLog?.energyLevel.name ?? "Moderate"} | Fatigue: ${todayLog?.officeFatigueScore ?? 5}/10',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                style: FluentType.bodyStrong.copyWith(
+                  color: Theme.of(ctx).colorScheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               Text(
                 '🎯 Weak Topics (${weakTopics.length}):',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                style: FluentType.bodyStrong.copyWith(
+                  color: Theme.of(ctx).colorScheme.onSurface,
                 ),
               ),
               if (weakTopics.isEmpty)
-                const Text(
+                Text(
                   'None yet',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: FluentType.caption.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurface
+                        .withValues(alpha: 0.5),
+                  ),
                 )
               else
                 ...weakTopics.map(
                   (t) => Text(
                     '• [${t.subject}] ${t.topicName} (${t.proficiencyLevel.name})',
-                    style: const TextStyle(fontSize: 12),
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(ctx).colorScheme.onSurface,
+                    ),
                   ),
                 ),
               const SizedBox(height: 10),
               Text(
                 '📅 Upcoming Exams (${exams.length}):',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                style: FluentType.bodyStrong.copyWith(
+                  color: Theme.of(ctx).colorScheme.onSurface,
                 ),
               ),
               if (exams.isEmpty)
-                const Text(
+                Text(
                   'No exams scheduled',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: FluentType.caption.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurface
+                        .withValues(alpha: 0.5),
+                  ),
                 )
               else
                 ...exams.map(
                   (e) => Text(
                     '• ${e.title} (${e.examDate.toIso8601String().substring(0, 10)})',
-                    style: const TextStyle(fontSize: 12),
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(ctx).colorScheme.onSurface,
+                    ),
                   ),
                 ),
             ],
@@ -2175,9 +2174,14 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clear Thread Messages?'),
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
+        title: Text(
+          'Clear Thread Messages?',
+          style: FluentType.subtitle.copyWith(fontSize: 18),
+        ),
         content: Text(
           'This will delete messages in "${currentSession?.title ?? "this thread"}" from your local device.',
+          style: FluentType.body,
         ),
         actions: [
           TextButton(
@@ -2186,7 +2190,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Clear',
+              style: FluentType.bodyStrong.copyWith(
+                color: Theme.of(ctx).colorScheme.error,
+              ),
+            ),
           ),
         ],
       ),

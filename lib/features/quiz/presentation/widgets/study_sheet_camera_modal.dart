@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../../../core/services/ai/ai_media_limits.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,6 +19,13 @@ import '../../../topics/presentation/providers/topics_provider.dart';
 import 'quiz_drill_modal.dart';
 import '../../../../core/services/media/photo_capture_service.dart';
 import '../../../../core/widgets/ai_key_missing_notice.dart';
+
+/// The one status colour this sheet means something by, with a light-mode and
+/// a dark-mode value that reads on either surface.
+Color _badColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFF87171)
+    : const Color(0xFFB91C1C);
 
 class StudySheetCameraModal extends ConsumerStatefulWidget {
   const StudySheetCameraModal({super.key});
@@ -70,23 +78,28 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
       children: [
         Row(
           children: [
-            Icon(Icons.tune, size: 14, color: Colors.grey.shade500),
-            const SizedBox(width: 5),
+            Icon(
+              Icons.tune,
+              size: 14,
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
+            ),
+            const SizedBox(width: FluentSpacing.xs),
             Flexible(
               child: Text(
                 'ছবির ধরন',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade600,
+                style: FluentType.caption.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.65),
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: FluentSpacing.s),
         Wrap(
           spacing: 8,
           runSpacing: 6,
@@ -100,18 +113,20 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
               }),
               label: Text(
                 '${d.label} · ~${d.approxTokens}',
-                style: TextStyle(
-                  fontSize: 11.5,
+                style: FluentType.caption.copyWith(
                   fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             );
           }).toList(),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: FluentSpacing.s),
         Text(
           _detail.hint,
-          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+          style: FluentType.caption.copyWith(
+            color: Theme.of(context).colorScheme.onSurface
+                .withValues(alpha: 0.65),
+          ),
         ),
       ],
     );
@@ -234,7 +249,7 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
           content: Row(
             children: [
               const Icon(Icons.check_circle, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   '$savedCount tricky rules added to Spaced Repetition (Day 1 Review)!',
@@ -266,11 +281,11 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFBE123C),
+          backgroundColor: _badColour(context),
           content: Row(
             children: [
               const Icon(Icons.bookmark_added, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   '"${result.title}" added to Weak Topics spotlight!',
@@ -300,7 +315,7 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final backgroundColor = Theme.of(context).colorScheme.surface;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.90,
@@ -312,49 +327,57 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
         children: [
           // Drag handle
           Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 6),
+            margin: const EdgeInsets.only(
+              top: FluentSpacing.m,
+              bottom: FluentSpacing.s,
+            ),
             width: 44,
             height: 4.5,
             decoration: BoxDecoration(
-              color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(4),
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
+              borderRadius: FluentRadius.controlBorder,
             ),
           ),
 
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.xl,
+              vertical: FluentSpacing.s,
+            ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(FluentSpacing.s),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.shade50.withValues(
-                      alpha: isDark ? 0.15 : 1,
+                    color: FluentLayer.subtle(
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).brightness,
                     ),
-                    shape: BoxShape.circle,
+                    borderRadius: FluentRadius.controlBorder,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.camera_alt,
-                    color: Color(0xFF6366F1),
+                    color: Theme.of(context).colorScheme.primary,
                     size: 22,
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Expanded(
+                const SizedBox(width: FluentSpacing.m),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Snap Study Sheet to Drill',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: FluentType.subtitle.copyWith(fontSize: 17),
                       ),
                       Text(
                         'Camera / OCR converts book page to 5-MCQ AI Drill',
-                        style: TextStyle(fontSize: 11.5, color: Colors.grey),
+                        style: FluentType.caption.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface
+                              .withValues(alpha: 0.65),
+                        ),
                       ),
                     ],
                   ),
@@ -371,7 +394,7 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
           // Main Scrollable Body
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(FluentSpacing.l),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -387,33 +410,31 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                         if (mounted) setState(() => _errorMessage = null);
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: FluentSpacing.m),
                   ] else if (_errorMessage != null) ...[
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(FluentSpacing.m),
                       decoration: BoxDecoration(
-                        color: Colors.red.shade50.withValues(
-                          alpha: isDark ? 0.2 : 1,
+                        color: FluentLayer.subtle(
+                          _badColour(context),
+                          Theme.of(context).brightness,
                         ),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red.shade300),
+                        borderRadius: FluentRadius.cardBorder,
+                        border: Border.all(color: _badColour(context)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.error_outline,
-                            color: Colors.red,
+                            color: _badColour(context),
                             size: 20,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: FluentSpacing.s),
                           Expanded(
                             child: Text(
                               _errorMessage!,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: isDark
-                                    ? Colors.red.shade200
-                                    : Colors.red.shade900,
+                              style: FluentType.caption.copyWith(
+                                color: _badColour(context),
                               ),
                             ),
                           ),
@@ -430,12 +451,12 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                           icon: const Icon(Icons.refresh, size: 17),
                           label: const Text(
                             'আবার চেষ্টা করুন',
-                            style: TextStyle(fontSize: 12.5),
+                            style: FluentType.caption,
                           ),
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
+                    const SizedBox(height: FluentSpacing.m),
                   ],
 
                   // If no image is chosen yet
@@ -444,41 +465,40 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                   ] else ...[
                     // Image selected & Preview
                     _buildImagePreview(isDark),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: FluentSpacing.l),
 
                     // Subject Selector
                     if (_result == null && !_isAnalyzing) ...[
                       _buildSubjectSelector(isDark),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: FluentSpacing.l),
                       // Also here, not just before picking: the whole point is
                       // being able to try the same page cheaper or sharper
                       // without hunting for the photo again.
                       _buildDetailSelector(),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: FluentSpacing.l),
                       ElevatedButton.icon(
                         onPressed: _analyzeImage,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1E3A8A),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: FluentSpacing.l,
+                          ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: FluentRadius.controlBorder,
                           ),
                         ),
                         icon: const Icon(Icons.auto_awesome, size: 20),
                         label: const Text(
                           'Analyze Page & Generate Drill ⚡',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: FluentType.bodyStrong,
                         ),
                       ),
                     ],
 
                     // Loading State
                     if (_isAnalyzing) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: FluentSpacing.l),
                       AiProgressPipelineWidget(
                         type: AiTaskType.image,
                         isCompact: false,
@@ -491,7 +511,7 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                         estimatedTokens: StudySheetOcrService.instance
                             .estimateTokensFor(_detail),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: FluentSpacing.l),
                     ],
 
                     // Results Extracted
@@ -510,12 +530,13 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
 
   Widget _buildImagePickerPrompt(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(FluentSpacing.xxl),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0),
+          color: FluentStroke.card(Theme.of(context).brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
@@ -523,22 +544,26 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
           Icon(
             Icons.document_scanner_outlined,
             size: 54,
-            color: const Color(0xFF6366F1).withValues(alpha: 0.85),
+            color: Theme.of(context).colorScheme.primary
+                .withValues(alpha: 0.85),
           ),
-          const SizedBox(height: 12),
-          const Text(
+          const SizedBox(height: FluentSpacing.m),
+          Text(
             'Snap or Upload Any Study Page',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: FluentType.subtitle.copyWith(fontSize: 16),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: FluentSpacing.s),
           Text(
             'Capture textbook rules, coaching lecture sheets, or grammar charts to test yourself immediately with AI.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12.5, color: Colors.grey.shade500),
+            style: FluentType.caption.copyWith(
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: FluentSpacing.l),
           _buildDetailSelector(),
-          const SizedBox(height: 16),
+          const SizedBox(height: FluentSpacing.l),
           Row(
             children: [
               Expanded(
@@ -547,9 +572,11 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E3A8A),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: FluentSpacing.m,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   icon: const Icon(Icons.camera_alt, size: 18),
@@ -559,14 +586,16 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: FluentSpacing.m),
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _pickImage(ImageSource.gallery),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: FluentSpacing.m,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   icon: const Icon(Icons.photo_library, size: 18),
@@ -622,19 +651,20 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
     return Stack(
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: FluentRadius.cardBorder,
           child: Container(
             height: 180,
             width: double.infinity,
-            color: isDark ? const Color(0xFF1F2937) : Colors.grey.shade200,
+            color: Theme.of(context).colorScheme.onSurface
+                .withValues(alpha: 0.06),
             // contain, not cover: a page turned on its side must stay
             // whole in the preview rather than having its edges cut off.
             child: Image.file(_selectedImage!, fit: BoxFit.contain),
           ),
         ),
         Positioned(
-          top: 8,
-          right: 8,
+          top: FluentSpacing.s,
+          right: FluentSpacing.s,
           child: Row(
             children: [
               // A book shot sideways needs the whole page turned, not the
@@ -653,7 +683,7 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                   padding: EdgeInsets.zero,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: FluentSpacing.s),
               CircleAvatar(
                 radius: 16,
                 backgroundColor: Colors.black.withValues(alpha: 0.65),
@@ -668,7 +698,7 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                   padding: EdgeInsets.zero,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: FluentSpacing.s),
               CircleAvatar(
                 radius: 16,
                 backgroundColor: Colors.black.withValues(alpha: 0.65),
@@ -683,7 +713,7 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                   padding: EdgeInsets.zero,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: FluentSpacing.s),
               CircleAvatar(
                 radius: 16,
                 backgroundColor: Colors.black.withValues(alpha: 0.65),
@@ -707,12 +737,16 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
 
   Widget _buildSubjectSelector(bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.l,
+        vertical: FluentSpacing.xs,
+      ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(12),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0),
+          color: FluentStroke.card(Theme.of(context).brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: DropdownButtonHideUnderline(
@@ -725,10 +759,7 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
               value: sub,
               child: Text(
                 'Subject: $sub',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: FluentType.body.copyWith(fontWeight: FontWeight.w500),
               ),
             );
           }).toList(),
@@ -750,12 +781,16 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
       children: [
         // Extracted Topic Badge & Title
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(FluentSpacing.l),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
-            borderRadius: BorderRadius.circular(14),
+            color: FluentLayer.subtle(
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).brightness,
+            ),
+            borderRadius: FluentRadius.cardBorder,
             border: Border.all(
-              color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.primary
+                  .withValues(alpha: 0.3),
             ),
           ),
           child: Column(
@@ -766,21 +801,20 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                   Flexible(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xs,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF6366F1),
-                        borderRadius: BorderRadius.circular(6),
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                       child: Text(
                         result.subject,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: FluentType.caption.copyWith(
                           color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -791,51 +825,45 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                     color: Color(0xFF10B981),
                     size: 16,
                   ),
-                  const SizedBox(width: 4),
-                  const Text(
+                  const SizedBox(width: FluentSpacing.xs),
+                  Text(
                     'Extracted via Gemini Vision',
-                    style: TextStyle(
-                      fontSize: 11,
+                    style: FluentType.caption.copyWith(
                       color: Color(0xFF10B981),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: FluentSpacing.s),
               Text(
                 result.title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: FluentType.subtitle.copyWith(fontSize: 16),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: FluentSpacing.s),
               Text(
                 result.summary,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.35,
-                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                style: FluentType.caption.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.65),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: FluentSpacing.l),
 
         // Key Rules & High Yield Points
         if (result.keyRules.isNotEmpty ||
             result.highYieldPoints.isNotEmpty) ...[
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(FluentSpacing.l),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(14),
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: FluentRadius.cardBorder,
               border: Border.all(
-                color: isDark
-                    ? const Color(0xFF374151)
-                    : const Color(0xFFE2E8F0),
+                color: FluentStroke.card(Theme.of(context).brightness),
+                width: FluentStroke.width,
               ),
             ),
             child: Column(
@@ -848,34 +876,26 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                       size: 18,
                       color: Color(0xFF6366F1),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: FluentSpacing.s),
                     Flexible(
                       child: Text(
                         'High-Yield Rules & Mnemonics (${result.keyRules.length})',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: FluentType.bodyStrong,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: FluentSpacing.s),
                 ...result.keyRules.take(3).map((rule) {
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.only(bottom: FluentSpacing.s),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('📌 ', style: TextStyle(fontSize: 12)),
-                        Expanded(
-                          child: Text(
-                            rule,
-                            style: const TextStyle(fontSize: 12, height: 1.3),
-                          ),
-                        ),
+                        const Text('📌 ', style: FluentType.caption),
+                        Expanded(child: Text(rule, style: FluentType.caption)),
                       ],
                     ),
                   );
@@ -883,7 +903,7 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: FluentSpacing.l),
         ],
 
         // 3 Action Buttons
@@ -893,18 +913,18 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF10B981), // Emerald green
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.symmetric(vertical: FluentSpacing.l),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: FluentRadius.controlBorder,
             ),
           ),
           icon: const Icon(Icons.bolt, size: 22),
           label: Text(
             '⚡ Start ${result.questions.length}-MCQ Drill Now',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            style: FluentType.bodyStrong,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: FluentSpacing.m),
 
         // 2. Save Rules to Spaced Repetition (Ebbinghaus)
         OutlinedButton.icon(
@@ -912,13 +932,16 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
               ? null
               : () => _saveRulesToSpacedRepetition(result),
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF6366F1),
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            foregroundColor: Theme.of(context).colorScheme.primary,
+            padding: const EdgeInsets.symmetric(vertical: FluentSpacing.m),
             side: BorderSide(
-              color: _rulesSaved ? Colors.grey : const Color(0xFF6366F1),
+              color: _rulesSaved
+                  ? Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.65)
+                  : Theme.of(context).colorScheme.primary,
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: FluentRadius.controlBorder,
             ),
           ),
           icon: Icon(_rulesSaved ? Icons.check : Icons.alarm_add, size: 18),
@@ -926,10 +949,10 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
             _rulesSaved
                 ? 'Rules Saved to Spaced Repetition ✓'
                 : '🧠 Save Rules to Spaced Repetition (Day 1)',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            style: FluentType.bodyStrong,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: FluentSpacing.s),
 
         // 3. Add to Weak Topics Spotlight
         TextButton.icon(
@@ -939,16 +962,21 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                 ? Icons.bookmark_added
                 : Icons.bookmark_add_outlined,
             size: 17,
-            color: _topicAddedToWeak ? Colors.grey : const Color(0xFFBE123C),
+            color: _topicAddedToWeak
+                ? Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.65)
+                : _badColour(context),
           ),
           label: Text(
             _topicAddedToWeak
                 ? 'Added to Weak Topics ✓'
                 : '➕ Add Topic to Priority Focus',
-            style: TextStyle(
-              fontSize: 12.5,
+            style: FluentType.caption.copyWith(
               fontWeight: FontWeight.w600,
-              color: _topicAddedToWeak ? Colors.grey : const Color(0xFFBE123C),
+              color: _topicAddedToWeak
+                  ? Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.65)
+                  : _badColour(context),
             ),
           ),
         ),

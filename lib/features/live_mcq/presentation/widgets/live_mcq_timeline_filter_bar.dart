@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
 import '../providers/exam_schedule_provider.dart';
 
 class LiveMcqTimelineFilterBar extends StatelessWidget {
@@ -28,14 +29,23 @@ class LiveMcqTimelineFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final secondary = scheme.onSurface.withValues(alpha: 0.65);
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      padding: const EdgeInsets.fromLTRB(
+        FluentSpacing.l,
+        FluentSpacing.s,
+        FluentSpacing.l,
+        FluentSpacing.s,
+      ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111827) : Colors.white,
+        color: scheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
+            color: FluentStroke.card(brightness),
+            width: FluentStroke.width,
           ),
         ),
       ),
@@ -45,37 +55,33 @@ class LiveMcqTimelineFilterBar extends StatelessWidget {
           Container(
             height: 38,
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
+              color: scheme.onSurface.withValues(
+                alpha: brightness == Brightness.dark ? 0.08 : 0.04,
+              ),
+              borderRadius: FluentRadius.controlBorder,
+              border: Border.all(
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
+              ),
             ),
             child: TextField(
               controller: searchController,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
+              style: FluentType.body.copyWith(color: scheme.onSurface),
               decoration: InputDecoration(
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 9,
+                  horizontal: FluentSpacing.m,
+                  vertical: FluentSpacing.s,
                 ),
                 hintText: 'Search by topic, subject or routine...',
-                hintStyle: TextStyle(
-                  fontSize: 12.5,
-                  color: isDark ? Colors.white54 : Colors.grey.shade500,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  size: 18,
-                  color: isDark ? Colors.white54 : Colors.grey,
-                ),
+                hintStyle: FluentType.caption.copyWith(color: secondary),
+                prefixIcon: Icon(Icons.search, size: 18, color: secondary),
                 suffixIcon: searchController.text.isNotEmpty
                     ? IconButton(
                         icon: Icon(
                           Icons.clear,
                           size: 16,
-                          color: isDark ? Colors.white70 : Colors.grey.shade700,
+                          color: secondary,
                         ),
                         onPressed: onSearchClear,
                       )
@@ -87,7 +93,7 @@ class LiveMcqTimelineFilterBar extends StatelessWidget {
               onChanged: onSearchChanged,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
 
           // Timeline Filter Chips Row
           SingleChildScrollView(
@@ -100,45 +106,37 @@ class LiveMcqTimelineFilterBar extends StatelessWidget {
                   count: upcomingCount,
                   icon: Icons.upcoming,
                   isSelected: currentFilter == ExamTimelineFilter.upcoming,
-                  activeColor: isDark
-                      ? const Color(0xFF3B82F6)
-                      : const Color(0xFF1E3A8A),
+                  activeColor: scheme.primary,
                   onTap: () => onFilterChanged(ExamTimelineFilter.upcoming),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 _buildTimelineChip(
                   context: context,
                   label: 'Past',
                   count: pastCount,
                   icon: Icons.history,
                   isSelected: currentFilter == ExamTimelineFilter.past,
-                  activeColor: isDark
-                      ? const Color(0xFFF43F5E)
-                      : const Color(0xFFBE123C),
+                  activeColor: scheme.primary,
                   onTap: () => onFilterChanged(ExamTimelineFilter.past),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 _buildTimelineChip(
                   context: context,
                   label: 'Completed',
                   count: completedCount,
                   icon: Icons.check_circle_outline,
                   isSelected: currentFilter == ExamTimelineFilter.completed,
-                  activeColor: isDark
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFF047857),
+                  activeColor: scheme.primary,
                   onTap: () => onFilterChanged(ExamTimelineFilter.completed),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 _buildTimelineChip(
                   context: context,
                   label: 'All',
                   count: allCount,
                   icon: Icons.list_alt,
                   isSelected: currentFilter == ExamTimelineFilter.all,
-                  activeColor: isDark
-                      ? const Color(0xFF64748B)
-                      : const Color(0xFF475569),
+                  activeColor: scheme.primary,
                   onTap: () => onFilterChanged(ExamTimelineFilter.all),
                 ),
               ],
@@ -158,23 +156,30 @@ class LiveMcqTimelineFilterBar extends StatelessWidget {
     required Color activeColor,
     required VoidCallback onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final restForeground = scheme.onSurface.withValues(alpha: 0.65);
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: FluentRadius.controlBorder,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(
+          horizontal: FluentSpacing.m,
+          vertical: FluentSpacing.xs,
+        ),
         decoration: BoxDecoration(
           color: isSelected
               ? activeColor
-              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
-          borderRadius: BorderRadius.circular(20),
+              : scheme.onSurface.withValues(
+                  alpha: brightness == Brightness.dark ? 0.08 : 0.04,
+                ),
+          borderRadius: FluentRadius.controlBorder,
           border: Border.all(
-            color: isSelected
-                ? activeColor
-                : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
-            width: isSelected ? 1.4 : 1,
+            color: isSelected ? activeColor : FluentStroke.card(brightness),
+            width: FluentStroke.width,
           ),
         ),
         child: Row(
@@ -182,47 +187,34 @@ class LiveMcqTimelineFilterBar extends StatelessWidget {
           children: [
             Icon(
               icon,
-              size: 13,
-              color: isSelected
-                  ? Colors.white
-                  : (isDark
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFF64748B)),
+              size: 14,
+              color: isSelected ? scheme.onPrimary : restForeground,
             ),
-            const SizedBox(width: 5),
+            const SizedBox(width: FluentSpacing.xs),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected
-                    ? Colors.white
-                    : (isDark
-                          ? const Color(0xFFE2E8F0)
-                          : const Color(0xFF334155)),
+              style: FluentType.caption.copyWith(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? scheme.onPrimary : scheme.onSurface,
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: FluentSpacing.xs),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.xs,
+                vertical: FluentSpacing.xxs,
+              ),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? Colors.white.withValues(alpha: 0.25)
-                    : (isDark
-                          ? const Color(0xFF0F172A)
-                          : const Color(0xFFE2E8F0)),
-                borderRadius: BorderRadius.circular(10),
+                    ? scheme.onPrimary.withValues(alpha: 0.25)
+                    : scheme.onSurface.withValues(alpha: 0.08),
+                borderRadius: FluentRadius.controlBorder,
               ),
               child: Text(
                 '$count',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark
-                            ? const Color(0xFFCBD5E1)
-                            : const Color(0xFF475569)),
+                style: FluentType.caption.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? scheme.onPrimary : restForeground,
                 ),
               ),
             ),

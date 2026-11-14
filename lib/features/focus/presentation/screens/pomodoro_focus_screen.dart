@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/database/tables/daily_energy_logs_table.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../quiz/presentation/widgets/study_sheet_camera_modal.dart';
 import '../../../spaced_repetition/presentation/screens/spaced_repetition_screen.dart';
 
@@ -50,6 +51,10 @@ enum AmbientSound {
   final IconData icon;
   const AmbientSound(this.title, this.subtitle, this.audioUrl, this.icon);
 }
+
+/// Break / "running" green. Kept as a literal because it carries meaning —
+/// it distinguishes the break mode and the "playing" state from the accent.
+const Color _successColour = Color(0xFF10B981);
 
 class PomodoroFocusScreen extends ConsumerStatefulWidget {
   const PomodoroFocusScreen({super.key});
@@ -211,12 +216,16 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
+        title: Row(
           children: [
-            Icon(Icons.workspace_premium, color: Color(0xFFF59E0B), size: 28),
-            SizedBox(width: 10),
-            Flexible(
+            Icon(
+              Icons.workspace_premium,
+              color: Theme.of(ctx).colorScheme.primary,
+              size: 28,
+            ),
+            const SizedBox(width: FluentSpacing.s),
+            const Flexible(
               child: Text(
                 'Session Finished! 🎯',
                 maxLines: 2,
@@ -231,29 +240,31 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
           children: [
             Text(
               'Awesome work! You completed ${_selectedMode.minutes} minutes of distraction-free study.',
-              style: const TextStyle(fontSize: 14),
+              style: FluentType.body.copyWith(
+                color: Theme.of(ctx).colorScheme.onSurface,
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: FluentLayer.subtle(_successColour, Theme.of(ctx).brightness),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                  color: _successColour.withValues(alpha: 0.3),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.bolt, color: Color(0xFF10B981), size: 20),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.bolt, color: _successColour, size: 20),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       '+${_selectedMode.minutes * 2} XP logged to your Daily Heatmap Streak!',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: Color(0xFF047857),
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: _successColour,
                       ),
                     ),
                   ),
@@ -276,8 +287,12 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
               StudySheetCameraModal.show(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A8A),
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(ctx).colorScheme.primary,
+              foregroundColor: Theme.of(ctx).colorScheme.onPrimary,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: FluentRadius.controlBorder,
+              ),
             ),
             icon: const Icon(Icons.camera_alt, size: 16),
             label: const Text('Snap Book Page to Drill'),
@@ -295,7 +310,8 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final totalModeSeconds = _selectedMode.minutes * 60;
     final progress = totalModeSeconds > 0
         ? (totalModeSeconds - _remainingSeconds) / totalModeSeconds
@@ -320,7 +336,10 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: FluentSpacing.xl,
+          vertical: FluentSpacing.m,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -331,21 +350,25 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
                 children: FocusMode.values.map((mode) {
                   final isSelected = _selectedMode == mode;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.only(right: FluentSpacing.s),
                     child: ChoiceChip(
                       label: Text(
                         '${mode.minutes}m - ${mode.name.toUpperCase()}',
                       ),
                       selected: isSelected,
-                      selectedColor: const Color(0xFF1E3A8A),
-                      labelStyle: TextStyle(
+                      selectedColor: scheme.primary,
+                      showCheckmark: false,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                        side: FluentStroke.side(theme.brightness),
+                      ),
+                      labelStyle: FluentType.caption.copyWith(
                         color: isSelected
-                            ? Colors.white
-                            : (isDark ? Colors.grey.shade300 : Colors.black87),
+                            ? scheme.onPrimary
+                            : scheme.onSurface.withValues(alpha: 0.85),
                         fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        fontSize: 12,
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                       ),
                       onSelected: _isRunning ? null : (_) => _setMode(mode),
                     ),
@@ -353,15 +376,15 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
                 }).toList(),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
             Text(
               _selectedMode.description,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              textAlign: TextAlign.center,
+              style: FluentType.caption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: FluentSpacing.xxl),
 
             // Circular Countdown Dial
             Center(
@@ -377,12 +400,12 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
                       child: CircularProgressIndicator(
                         value: progress,
                         strokeWidth: 12,
-                        backgroundColor: isDark
-                            ? const Color(0xFF1F2937)
-                            : Colors.grey.shade200,
+                        backgroundColor: scheme.onSurface.withValues(
+                          alpha: 0.10,
+                        ),
                         color: _selectedMode == FocusMode.break5
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFF6366F1),
+                            ? _successColour
+                            : scheme.primary,
                         strokeCap: StrokeCap.round,
                       ),
                     ),
@@ -391,13 +414,15 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
                       children: [
                         Text(
                           _formatTime(_remainingSeconds),
-                          style: const TextStyle(
+                          // Deliberately a display size; the ramp only sets the
+                          // weight and leading so it matches the rest.
+                          style: FluentType.title.copyWith(
                             fontSize: 48,
-                            fontWeight: FontWeight.bold,
                             letterSpacing: 2,
+                            color: scheme.onSurface,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: FluentSpacing.xs),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -405,25 +430,24 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
                               width: 8,
                               height: 8,
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
+                                borderRadius: FluentRadius.controlBorder,
                                 color: _isRunning
-                                    ? const Color(0xFF10B981)
-                                    : Colors.grey,
+                                    ? _successColour
+                                    : scheme.onSurface.withValues(alpha: 0.35),
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: FluentSpacing.s),
                             Flexible(
                               child: Text(
                                 _isRunning ? 'FOCUSING' : 'PAUSED',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                                style: FluentType.caption.copyWith(
+                                  fontWeight: FontWeight.w600,
                                   letterSpacing: 1.2,
-                                  color: isDark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
+                                  color: scheme.onSurface.withValues(
+                                    alpha: 0.65,
+                                  ),
                                 ),
                               ),
                             ),
@@ -435,7 +459,7 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: FluentSpacing.xxl),
 
             // Main Controls: Play, Pause, Reset
             Row(
@@ -446,23 +470,26 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
                   icon: const Icon(Icons.refresh, size: 24),
                   tooltip: 'Reset',
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: FluentSpacing.xl),
                 SizedBox(
                   width: 72,
                   height: 72,
                   child: FloatingActionButton(
                     heroTag: 'pomodoro_play_pause',
                     onPressed: _isRunning ? _pauseTimer : _startTimer,
-                    backgroundColor: const Color(0xFF1E3A8A),
-                    foregroundColor: Colors.white,
-                    elevation: 4,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
                     child: Icon(
                       _isRunning ? Icons.pause : Icons.play_arrow,
                       size: 38,
                     ),
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: FluentSpacing.xl),
                 IconButton.filledTonal(
                   onPressed: () => _changeAmbientSound(
                     _selectedSound == AmbientSound.off
@@ -484,14 +511,11 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF1F2937)
-                    : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
+                color: scheme.surface,
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
-                  color: isDark
-                      ? const Color(0xFF374151)
-                      : const Color(0xFFE2E8F0),
+                  color: FluentStroke.card(theme.brightness),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Column(

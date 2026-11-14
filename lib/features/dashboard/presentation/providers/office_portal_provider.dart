@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -69,9 +70,15 @@ class LunchNotifier extends Notifier<LunchState> {
 
   Future<void> _loadInitialCache() async {
     final prefs = await SharedPreferences.getInstance();
-    final todayBooked = prefs.getBool(NotificationConstants.prefLunchLastKnownTodayBooked);
-    final tomorrowBooked = prefs.getBool(NotificationConstants.prefLunchLastKnownTomorrowBooked);
-    final lastSync = prefs.getString(NotificationConstants.prefLunchLastSyncTime);
+    final todayBooked = prefs.getBool(
+      NotificationConstants.prefLunchLastKnownTodayBooked,
+    );
+    final tomorrowBooked = prefs.getBool(
+      NotificationConstants.prefLunchLastKnownTomorrowBooked,
+    );
+    final lastSync = prefs.getString(
+      NotificationConstants.prefLunchLastSyncTime,
+    );
 
     state = state.copyWith(
       todayBooked: todayBooked,
@@ -114,7 +121,10 @@ class LunchNotifier extends Notifier<LunchState> {
       }
 
       final nowIso = DateTime.now().toIso8601String();
-      await prefs.setString(NotificationConstants.prefLunchLastSyncTime, nowIso);
+      await prefs.setString(
+        NotificationConstants.prefLunchLastSyncTime,
+        nowIso,
+      );
 
       state = state.copyWith(
         isLoading: false,
@@ -131,7 +141,9 @@ class LunchNotifier extends Notifier<LunchState> {
   }
 
   /// Toggles tomorrow's meal booking (ON or OFF)
-  Future<SteadfastToggleResult> toggleTomorrowMeal({bool? forceSimulate}) async {
+  Future<SteadfastToggleResult> toggleTomorrowMeal({
+    bool? forceSimulate,
+  }) async {
     state = state.copyWith(isToggling: true, errorMessage: null);
     try {
       final res = await SteadfastLunchService.instance.toggleTomorrowMeal(
@@ -246,10 +258,7 @@ class LunchNotifier extends Notifier<LunchState> {
           );
         }
 
-        state = state.copyWith(
-          isToggling: false,
-          calendar: updatedCal,
-        );
+        state = state.copyWith(isToggling: false, calendar: updatedCal);
       } else {
         state = state.copyWith(isToggling: false, errorMessage: res.message);
       }
@@ -296,7 +305,9 @@ class LunchNotifier extends Notifier<LunchState> {
   }
 }
 
-final lunchProvider = NotifierProvider<LunchNotifier, LunchState>(LunchNotifier.new);
+final lunchProvider = NotifierProvider<LunchNotifier, LunchState>(
+  LunchNotifier.new,
+);
 
 // ==========================================
 // 2. PACKLY ATTENDANCE STATE & NOTIFIER
@@ -339,8 +350,12 @@ class AttendanceState {
       isLoading: isLoading ?? this.isLoading,
       status: status ?? this.status,
       todayHoliday: todayHoliday ?? this.todayHoliday,
-      lastCheckInTime: clearCheckInTime ? null : (lastCheckInTime ?? this.lastCheckInTime),
-      lastCheckOutTime: clearCheckOutTime ? null : (lastCheckOutTime ?? this.lastCheckOutTime),
+      lastCheckInTime: clearCheckInTime
+          ? null
+          : (lastCheckInTime ?? this.lastCheckInTime),
+      lastCheckOutTime: clearCheckOutTime
+          ? null
+          : (lastCheckOutTime ?? this.lastCheckOutTime),
       isLate: isLate ?? this.isLate,
       isSimulationMode: isSimulationMode ?? this.isSimulationMode,
       bannerMode: bannerMode ?? this.bannerMode,
@@ -358,30 +373,48 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
   Future<void> _loadSavedStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final today = DateTime.now().toIso8601String().substring(0, 10);
-    final holiday = await PacklyAttendanceService.instance.getHolidayForDate(DateTime.now());
-    final bannerMode = prefs.getString(NotificationConstants.prefOfficeBannerMode) ?? 'contextual';
-    final isSim = prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
+    final holiday = await PacklyAttendanceService.instance.getHolidayForDate(
+      DateTime.now(),
+    );
+    final bannerMode =
+        prefs.getString(NotificationConstants.prefOfficeBannerMode) ??
+        'contextual';
+    final isSim =
+        prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
 
     String? inTime;
     String? outTime;
     bool isLate = false;
 
     if (isSim) {
-      final simDate = prefs.getString(NotificationConstants.prefSimulatedCheckInDate);
+      final simDate = prefs.getString(
+        NotificationConstants.prefSimulatedCheckInDate,
+      );
       if (simDate == today) {
-        inTime = prefs.getString(NotificationConstants.prefSimulatedCheckInTime);
-        outTime = prefs.getString(NotificationConstants.prefSimulatedCheckOutTime);
-        isLate = prefs.getBool(NotificationConstants.prefSimulatedCheckInIsLate) ?? false;
+        inTime = prefs.getString(
+          NotificationConstants.prefSimulatedCheckInTime,
+        );
+        outTime = prefs.getString(
+          NotificationConstants.prefSimulatedCheckOutTime,
+        );
+        isLate =
+            prefs.getBool(NotificationConstants.prefSimulatedCheckInIsLate) ??
+            false;
       }
     } else {
-      final lastCheckInDate = prefs.getString(NotificationConstants.prefLastCheckInDate);
+      final lastCheckInDate = prefs.getString(
+        NotificationConstants.prefLastCheckInDate,
+      );
       if (lastCheckInDate == today) {
         inTime = prefs.getString(NotificationConstants.prefLastCheckInTime);
-        final lastOutDate = prefs.getString(NotificationConstants.prefLastCheckOutDate);
+        final lastOutDate = prefs.getString(
+          NotificationConstants.prefLastCheckOutDate,
+        );
         outTime = (lastOutDate == today)
             ? prefs.getString(NotificationConstants.prefLastCheckOutTime)
             : null;
-        isLate = prefs.getBool(NotificationConstants.prefLastCheckInIsLate) ?? false;
+        isLate =
+            prefs.getBool(NotificationConstants.prefLastCheckInIsLate) ?? false;
       }
     }
 
@@ -404,14 +437,18 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
     state = state.copyWith(isLoading: true);
     try {
       final prefs = await SharedPreferences.getInstance();
-      final isSim = prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
-      final status = await PacklyAttendanceService.instance.getAttendanceStatus();
+      final isSim =
+          prefs.getBool(NotificationConstants.prefPacklySimulationMode) ??
+          false;
+      final status = await PacklyAttendanceService.instance
+          .getAttendanceStatus();
 
       state = state.copyWith(
         isLoading: false,
         status: status,
         isSimulationMode: isSim,
-        lastCheckInTime: status.checkInTime ?? (isSim ? state.lastCheckInTime : null),
+        lastCheckInTime:
+            status.checkInTime ?? (isSim ? state.lastCheckInTime : null),
         lastCheckOutTime: status.checkOutTime,
         clearCheckOutTime: status.checkOutTime == null,
         isLate: status.isLate,
@@ -469,4 +506,6 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
 }
 
 final officeAttendanceProvider =
-    NotifierProvider<AttendanceNotifier, AttendanceState>(AttendanceNotifier.new);
+    NotifierProvider<AttendanceNotifier, AttendanceState>(
+      AttendanceNotifier.new,
+    );

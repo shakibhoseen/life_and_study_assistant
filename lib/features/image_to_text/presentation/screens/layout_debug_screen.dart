@@ -1,6 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+
+import '../../../../core/theme/fluent_tokens.dart';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:local_ocr/local_ocr.dart';
 
@@ -13,6 +16,23 @@ import '../../../../core/services/media/segmentation/segmentation_models.dart';
 ///
 /// Visualizes original image, deskew angle, gutter coordinates, column bounding boxes,
 /// extracted column crops, and segmented questions/options.
+/// Status colours for the debug readout, each with a light-mode and a
+/// dark-mode value that reads on either surface.
+Color _okColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFF4ADE80)
+    : const Color(0xFF15803D);
+
+Color _warnColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFFCD34D)
+    : const Color(0xFFB45309);
+
+Color _badColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFF87171)
+    : const Color(0xFFB91C1C);
+
 class LayoutDebugScreen extends StatefulWidget {
   final File? initialImage;
 
@@ -50,9 +70,7 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final picked = await ImagePicker().pickImage(
-        source: source,
-      );
+      final picked = await ImagePicker().pickImage(source: source);
       if (picked == null) return;
 
       final file = File(picked.path);
@@ -66,9 +84,8 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
         _errorMessage = 'ছবি লোড করতে ব্যর্থ: $e';
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ছবি লোড করতে ব্যর্থ: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('ছবি লোড করতে ব্যর্থ: $e')));
       }
     }
   }
@@ -145,9 +162,9 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Layout Debugger 🔬 (Phase 1)',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: FluentType.subtitle.copyWith(fontSize: 16),
         ),
         actions: [
           IconButton(
@@ -165,10 +182,19 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
           controller: _tabController,
           isScrollable: true,
           tabs: const [
-            Tab(icon: Icon(Icons.layers_outlined, size: 18), text: 'Bounding Boxes & Gutter'),
+            Tab(
+              icon: Icon(Icons.layers_outlined, size: 18),
+              text: 'Bounding Boxes & Gutter',
+            ),
             Tab(icon: Icon(Icons.crop, size: 18), text: 'Column Crops'),
-            Tab(icon: Icon(Icons.quiz_outlined, size: 18), text: 'MCQ Blocks (Phase 2)'),
-            Tab(icon: Icon(Icons.rotate_90_degrees_ccw_outlined, size: 18), text: 'Deskewed'),
+            Tab(
+              icon: Icon(Icons.quiz_outlined, size: 18),
+              text: 'MCQ Blocks (Phase 2)',
+            ),
+            Tab(
+              icon: Icon(Icons.rotate_90_degrees_ccw_outlined, size: 18),
+              text: 'Deskewed',
+            ),
             Tab(icon: Icon(Icons.image_outlined, size: 18), text: 'Original'),
           ],
         ),
@@ -179,53 +205,56 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   CircularProgressIndicator(),
-                  SizedBox(height: 14),
+                  SizedBox(height: FluentSpacing.l),
                   Text('লেআউট ও গাটার বিশ্লেষণ হচ্ছে...'),
                 ],
               ),
             )
           : _analysis == null
-              ? _buildEmptyState(primaryColor)
-              : Column(
-                  children: [
-                    _buildMetricsHeader(isDark),
-                    Expanded(
-                      child: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildOverlayView(),
-                          _buildCropsView(isDark),
-                          _buildMcqBlocksView(isDark),
-                          _buildSingleImageView(_analysis!.deskewedImage),
-                          _buildSingleImageView(_analysis!.originalImage),
-                        ],
-                      ),
-                    ),
-                  ],
+          ? _buildEmptyState(primaryColor)
+          : Column(
+              children: [
+                _buildMetricsHeader(isDark),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildOverlayView(),
+                      _buildCropsView(isDark),
+                      _buildMcqBlocksView(isDark),
+                      _buildSingleImageView(_analysis!.deskewedImage),
+                      _buildSingleImageView(_analysis!.originalImage),
+                    ],
+                  ),
                 ),
+              ],
+            ),
     );
   }
 
   Widget _buildEmptyState(Color primaryColor) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(FluentSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.view_column_rounded, size: 56, color: primaryColor),
-            const SizedBox(height: 14),
-            const Text(
+            const SizedBox(height: FluentSpacing.l),
+            Text(
               'লেআউট ডিটেকশন ও বেঞ্চমার্ক',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: FluentType.subtitle.copyWith(fontSize: 18),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            const SizedBox(height: FluentSpacing.s),
+            Text(
               'গ্যালারি বা ক্যামেরা থেকে একটি ছবি বেছে নিয়ে Deskew, Gutter এবং Bounding Box ভিজ্যুয়ালাইজ করুন।',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+              style: FluentType.body.copyWith(
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.65),
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: FluentSpacing.xl),
             ElevatedButton.icon(
               onPressed: () => _pickImage(ImageSource.gallery),
               icon: const Icon(Icons.photo_library),
@@ -241,16 +270,19 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
     final a = _analysis!;
     final confPercent = (a.confidence * 100).toStringAsFixed(1);
     final confColor = a.confidence >= 0.70
-        ? Colors.green
-        : (a.confidence >= 0.50 ? Colors.amber : Colors.red);
+        ? _okColour(context)
+        : (a.confidence >= 0.50 ? _warnColour(context) : _badColour(context));
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.l,
+        vertical: FluentSpacing.m,
+      ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+        color: Theme.of(context).colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            color: FluentStroke.card(Theme.of(context).brightness),
           ),
         ),
       ),
@@ -261,14 +293,21 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
             children: [
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
+                  ),
                   decoration: BoxDecoration(
                     color: a.isDualColumn
-                        ? Colors.blue.withValues(alpha: 0.15)
-                        : Colors.purple.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
+                        ? Theme.of(context).colorScheme.primary
+                              .withValues(alpha: 0.15)
+                        : Theme.of(context).colorScheme.primary
+                              .withValues(alpha: 0.15),
+                    borderRadius: FluentRadius.cardBorder,
                     border: Border.all(
-                      color: a.isDualColumn ? Colors.blue : Colors.purple,
+                      color: a.isDualColumn
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   child: Row(
@@ -279,18 +318,21 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
                             ? Icons.view_column_rounded
                             : Icons.article_outlined,
                         size: 14,
-                        color: a.isDualColumn ? Colors.blue : Colors.purple,
+                        color: a.isDualColumn
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.primary,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: FluentSpacing.xs),
                       Flexible(
                         child: Text(
                           a.layoutType.label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: a.isDualColumn ? Colors.blue : Colors.purple,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: a.isDualColumn
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
@@ -298,33 +340,34 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               _buildPill(
-                label: 'Skew: ${a.skewAngle >= 0 ? "+" : ""}${a.skewAngle.toStringAsFixed(1)}°',
-                color: a.skewAngle.abs() > 0.5 ? Colors.orange : Colors.grey,
+                label:
+                    'Skew: ${a.skewAngle >= 0 ? "+" : ""}${a.skewAngle.toStringAsFixed(1)}°',
+                color: a.skewAngle.abs() > 0.5
+                    ? _warnColour(context)
+                    : Theme.of(context).colorScheme.onSurface
+                          .withValues(alpha: 0.65),
               ),
-              const SizedBox(width: 8),
-              _buildPill(
-                label: 'Confidence: $confPercent%',
-                color: confColor,
-              ),
+              const SizedBox(width: FluentSpacing.s),
+              _buildPill(label: 'Confidence: $confPercent%', color: confColor),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: FluentSpacing.s),
           if (_errorMessage != null) ...[
             Text(
               'ত্রুটি: $_errorMessage',
-              style: const TextStyle(fontSize: 11, color: Colors.red),
+              style: FluentType.caption.copyWith(color: _badColour(context)),
             ),
           ] else if (a.gutter != null) ...[
             Text(
               'Gutter: x = ${a.gutter!.left} .. ${a.gutter!.right} (Center: ${a.gutter!.center}px, Width: ${a.gutter!.width}px)',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+              style: FluentType.caption.copyWith(fontWeight: FontWeight.w600),
             ),
           ] else if (a.failureReason != null) ...[
             Text(
               'Fallback: ${a.failureReason}',
-              style: const TextStyle(fontSize: 11, color: Colors.orange),
+              style: FluentType.caption.copyWith(color: _warnColour(context)),
             ),
           ],
         ],
@@ -334,15 +377,21 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
 
   Widget _buildPill({required String label, required Color color}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.s,
+        vertical: FluentSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: FluentRadius.controlBorder,
         border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: color),
+        style: FluentType.caption.copyWith(
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }
@@ -359,10 +408,7 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
                 analysis: a,
                 renderedSize: Size(constraints.maxWidth, constraints.maxHeight),
               ),
-              child: Image.file(
-                a.deskewedImage,
-                fit: BoxFit.contain,
-              ),
+              child: Image.file(a.deskewedImage, fit: BoxFit.contain),
             ),
           ),
         );
@@ -377,23 +423,29 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       itemCount: crops.length,
       itemBuilder: (context, idx) {
         final crop = crops[idx];
         return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: FluentSpacing.l),
+          shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: FluentSpacing.l,
+                  vertical: FluentSpacing.s,
+                ),
                 decoration: BoxDecoration(
                   color: idx == 0
-                      ? Colors.blue.withValues(alpha: 0.15)
-                      : Colors.green.withValues(alpha: 0.15),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      ? Theme.of(context).colorScheme.primary
+                            .withValues(alpha: 0.15)
+                      : _okColour(context).withValues(alpha: 0.15),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -403,23 +455,28 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
                         'কলাম #${idx + 1} (${idx == 0 ? "বাম পাশ" : "ডান পাশ"})',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: idx == 0 ? Colors.blue : Colors.green,
+                        style: FluentType.bodyStrong.copyWith(
+                          color: idx == 0
+                              ? Theme.of(context).colorScheme.primary
+                              : _okColour(context),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Text(
                       '${(crop.lengthSync() / 1024).toStringAsFixed(1)} KB',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      style: FluentType.caption.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.65),
+                      ),
                     ),
                   ],
                 ),
               ),
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(12),
+                ),
                 child: InteractiveViewer(
                   maxScale: 3.0,
                   child: Image.file(crop, fit: BoxFit.contain),
@@ -439,7 +496,7 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(),
-            SizedBox(height: 14),
+            SizedBox(height: FluentSpacing.l),
             Text('MCQ প্রশ্ন ও অপশন সেগমেন্টেশন হচ্ছে...'),
           ],
         ),
@@ -449,23 +506,30 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
     if (_segmentationResult == null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(FluentSpacing.xxl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.quiz_outlined, size: 48, color: Colors.blueAccent),
-              const SizedBox(height: 12),
-              const Text(
-                'Phase 2: Question & Option Segmentation',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              Icon(
+                Icons.quiz_outlined,
+                size: 48,
+                color: Theme.of(context).colorScheme.primary,
               ),
-              const SizedBox(height: 6),
-              const Text(
+              const SizedBox(height: FluentSpacing.m),
+              Text(
+                'Phase 2: Question & Option Segmentation',
+                style: FluentType.subtitle.copyWith(fontSize: 16),
+              ),
+              const SizedBox(height: FluentSpacing.s),
+              Text(
                 'প্রতিটি কলাম থেকে প্রশ্ন নম্বর, প্রশ্ন টেক্সট ও অপশন ব্লক আলাদা করুন।',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.grey),
+                style: FluentType.body.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.65),
+                ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: FluentSpacing.xl),
               ElevatedButton.icon(
                 onPressed: _runSegmentation,
                 icon: const Icon(Icons.play_arrow_rounded),
@@ -479,14 +543,17 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
 
     final seg = _segmentationResult!;
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       children: [
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(FluentSpacing.m),
           decoration: BoxDecoration(
-            color: Colors.blueAccent.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            borderRadius: FluentRadius.cardBorder,
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary
+                  .withValues(alpha: 0.3),
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -496,7 +563,7 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
                   'মোট প্রশ্ন: ${seg.totalQuestions}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  style: FluentType.bodyStrong,
                 ),
               ),
               Flexible(
@@ -504,10 +571,8 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
                   'নিখুঁত ৪-অপশন: ${seg.validMcqCount}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Colors.green,
+                  style: FluentType.bodyStrong.copyWith(
+                    color: _okColour(context),
                   ),
                 ),
               ),
@@ -516,25 +581,29 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
                   'রিভিউ প্রয়োজন: ${seg.reviewCount}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: seg.reviewCount > 0 ? Colors.orange : Colors.grey,
+                  style: FluentType.bodyStrong.copyWith(
+                    color: seg.reviewCount > 0
+                        ? _warnColour(context)
+                        : Theme.of(context).colorScheme.onSurface
+                              .withValues(alpha: 0.65),
                   ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: FluentSpacing.m),
         ...seg.questions.map((q) => _buildQuestionBlockCard(q, isDark)),
         if (seg.orphanBlocks.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          const Text(
+          const SizedBox(height: FluentSpacing.l),
+          Text(
             'অসংলগ্ন / হেডার টেক্সট ব্লক (অক্ষত সংরক্ষিত):',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
+            style: FluentType.bodyStrong.copyWith(
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           ...seg.orphanBlocks.map((o) => _buildOrphanBlockCard(o, isDark)),
         ],
       ],
@@ -543,10 +612,10 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
 
   Widget _buildQuestionBlockCard(SegmentedQuestionBlock q, bool isDark) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+      shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(FluentSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -554,96 +623,120 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
               children: [
                 Flexible(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xs,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.blueAccent,
-                      borderRadius: BorderRadius.circular(6),
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                     child: Text(
-                      q.questionNumber.isNotEmpty ? 'প্রশ্ন ${q.questionNumber}' : 'নম্বরহীন',
+                      q.questionNumber.isNotEmpty
+                          ? 'প্রশ্ন ${q.questionNumber}'
+                          : 'নম্বরহীন',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: FluentType.caption.copyWith(
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Flexible(
                   child: Text(
                     'কলাম ${q.columnId + 1}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface
+                          .withValues(alpha: 0.65),
+                    ),
                   ),
                 ),
                 const Spacer(),
                 if (q.hasDiagram) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.purple.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xxs,
                     ),
-                    child: const Text(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary
+                          .withValues(alpha: 0.15),
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
+                    child: Text(
                       'চিত্র/ম্যাথ 🖼️',
-                      style: TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold),
+                      style: FluentType.caption.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: FluentSpacing.s),
                 ],
                 if (q.reviewRequired)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xxs,
                     ),
-                    child: const Text(
+                    decoration: BoxDecoration(
+                      color: _warnColour(context).withValues(alpha: 0.15),
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
+                    child: Text(
                       'রিভিউ ⚠️',
-                      style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold),
+                      style: FluentType.caption.copyWith(
+                        color: _warnColour(context),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              q.questionText,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
+            Text(q.questionText, style: FluentType.bodyStrong),
+            const SizedBox(height: FluentSpacing.s),
             ...List.generate(q.options.length, (optIdx) {
-              final marker = optIdx < q.optionMarkers.length ? q.optionMarkers[optIdx] : '';
+              final marker = optIdx < q.optionMarkers.length
+                  ? q.optionMarkers[optIdx]
+                  : '';
               return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.only(bottom: FluentSpacing.xs),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       marker.isNotEmpty ? '($marker) ' : '• ',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     Expanded(
-                      child: Text(q.options[optIdx], style: const TextStyle(fontSize: 13)),
+                      child: Text(q.options[optIdx], style: FluentType.body),
                     ),
                   ],
                 ),
               );
             }),
             if (q.reviewReasons.isNotEmpty) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: FluentSpacing.s),
               Text(
                 'কারণ: ${q.reviewReasons.join(", ")}',
-                style: const TextStyle(fontSize: 11, color: Colors.orange),
+                style: FluentType.caption.copyWith(color: _warnColour(context)),
               ),
             ],
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               'BBox: ${q.boundingBox.left}, ${q.boundingBox.top} (${q.boundingBox.width}x${q.boundingBox.height}) | Conf: ${(q.segmentationConfidence * 100).toStringAsFixed(0)}%',
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
+              style: FluentType.caption.copyWith(
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.65),
+              ),
             ),
           ],
         ),
@@ -653,14 +746,14 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
 
   Widget _buildOrphanBlockCard(SegmentedQuestionBlock o, bool isDark) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      color: isDark ? Colors.grey[850] : Colors.grey[100],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      margin: const EdgeInsets.only(bottom: FluentSpacing.s),
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+      shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(FluentSpacing.m),
         child: Text(
           o.questionText,
-          style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+          style: FluentType.caption.copyWith(fontStyle: FontStyle.italic),
         ),
       ),
     );
@@ -669,9 +762,7 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
   Widget _buildSingleImageView(File file) {
     return InteractiveViewer(
       maxScale: 4.0,
-      child: Center(
-        child: Image.file(file, fit: BoxFit.contain),
-      ),
+      child: Center(child: Image.file(file, fit: BoxFit.contain)),
     );
   }
 }
@@ -681,10 +772,7 @@ class _LayoutOverlayPainter extends CustomPainter {
   final LayoutAnalysisResult analysis;
   final Size renderedSize;
 
-  _LayoutOverlayPainter({
-    required this.analysis,
-    required this.renderedSize,
-  });
+  _LayoutOverlayPainter({required this.analysis, required this.renderedSize});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -704,14 +792,14 @@ class _LayoutOverlayPainter extends CustomPainter {
       );
 
       final gutterPaint = Paint()
-        ..color = Colors.orange.withValues(alpha: 0.35)
+        ..color = const Color(0xFFB45309).withValues(alpha: 0.35)
         ..style = PaintingStyle.fill;
 
       canvas.drawRect(gutterRect, gutterPaint);
 
       // Gutter center dashed line
       final linePaint = Paint()
-        ..color = Colors.deepOrange
+        ..color = const Color(0xFFB45309)
         ..strokeWidth = 2.0
         ..style = PaintingStyle.stroke;
 
@@ -731,7 +819,9 @@ class _LayoutOverlayPainter extends CustomPainter {
         box.height * scaleY,
       );
 
-      final boxColor = box.index == 0 ? Colors.blue : Colors.green;
+      final boxColor = box.index == 0
+          ? const Color(0xFF2563EB)
+          : const Color(0xFF15803D);
 
       final borderPaint = Paint()
         ..color = boxColor

@@ -20,6 +20,7 @@ import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/question_bank_ocr_service.dart';
 import '../../../../core/services/ai/question_text_parser.dart';
 import '../../../../core/services/voice/device_dictation_service.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
@@ -99,6 +100,7 @@ class _QuestionBankScannerModalState
   final List<File> _questionImages = [];
   File? _answerKeyImage;
   String _selectedSubject = 'Auto Detect';
+
   /// A full page of small Bengali print is what this screen is for, which is
   /// what [CaptureDetail.high] describes and what the service itself defaults
   /// to. The modal used to send `standard` over the top of that, so a page
@@ -437,7 +439,9 @@ class _QuestionBankScannerModalState
 
       for (int i = 0; i < totalPages; i++) {
         if (!mounted || !_isScanning) break;
-        if (_scanCancel?.isCancelled ?? false) throw const AiCancelledException();
+        if (_scanCancel?.isCancelled ?? false) {
+          throw const AiCancelledException();
+        }
         final currentFile = pagesToScan[i];
 
         final pageLabel = totalPages > 1 ? 'পাতা ${i + 1}/$totalPages — ' : '';
@@ -625,15 +629,15 @@ class _QuestionBankScannerModalState
     });
 
     try {
-      final res =
-          await QuestionBankOcrService.instance.extractQuestionsFromText(
-        rawText: text,
-        subjectHint: _selectedSubject,
-        forceAi: false,
-        onTokens: (spent) {
-          if (mounted) setState(() => _liveTokens = spent);
-        },
-      );
+      final res = await QuestionBankOcrService.instance
+          .extractQuestionsFromText(
+            rawText: text,
+            subjectHint: _selectedSubject,
+            forceAi: false,
+            onTokens: (spent) {
+              if (mounted) setState(() => _liveTokens = spent);
+            },
+          );
 
       final spent = QuestionBankOcrService.instance.lastCallTokens ?? 0;
 
@@ -660,11 +664,11 @@ class _QuestionBankScannerModalState
             content: Text(
               !isAppending
                   ? '${merge.added}টি প্রশ্ন প্রসেস হয়েছে'
-                      '${hasAnswers ? ' (সংযুক্ত উত্তরমালা থেকে)' : ' (উত্তর ও ব্যাখ্যা অনুপস্থিত)'}'
-                      '${spent > 0 ? ' · $spent টোকেন' : ' (অফলাইন পার্স)'}'
+                        '${hasAnswers ? ' (সংযুক্ত উত্তরমালা থেকে)' : ' (উত্তর ও ব্যাখ্যা অনুপস্থিত)'}'
+                        '${spent > 0 ? ' · $spent টোকেন' : ' (অফলাইন পার্স)'}'
                   : '${merge.added}টি নতুন প্রশ্ন যোগ হয়েছে'
-                      '${merge.duplicates > 0 ? ' (${merge.duplicates}টি ডুপ্লিকেট বাদ)' : ''}'
-                      ' · মোট ${_editableQuestions.length}টি প্রশ্ন',
+                        '${merge.duplicates > 0 ? ' (${merge.duplicates}টি ডুপ্লিকেট বাদ)' : ''}'
+                        ' · মোট ${_editableQuestions.length}টি প্রশ্ন',
             ),
           ),
         );
@@ -844,8 +848,9 @@ class _QuestionBankScannerModalState
   Future<void> _showPasteAnswerKeySheet() async {
     final textCtrl = TextEditingController();
     bool applyToUnansweredOnly = false;
-    final unsolvedCount =
-        _editableQuestions.where((q) => q.correctIndex < 0).length;
+    final unsolvedCount = _editableQuestions
+        .where((q) => q.correctIndex < 0)
+        .length;
 
     await showModalBottomSheet(
       context: context,
@@ -857,15 +862,16 @@ class _QuestionBankScannerModalState
           builder: (sheetCtx, setSheetState) {
             return Container(
               padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
+                left: FluentSpacing.l,
+                right: FluentSpacing.l,
+                top: FluentSpacing.l,
                 bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 16,
               ),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(FluentRadius.large),
+                ),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -878,14 +884,11 @@ class _QuestionBankScannerModalState
                         color: Color(0xFF4F46E5),
                         size: 20,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: FluentSpacing.s),
                       const Expanded(
                         child: Text(
                           '📋 উত্তরমালা পেস্ট করুন (Paste Answer Key)',
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: FluentType.bodyStrong,
                         ),
                       ),
                       IconButton(
@@ -894,59 +897,51 @@ class _QuestionBankScannerModalState
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.s),
                   Text(
                     'পাঠ্যবই, টেস্ট পেপারের সমাধান অংশ বা বাইরের AI Agent থেকে উত্তরমালা পেস্ট করুন। অ্যাপ স্বয়ংক্রিয়ভাবে প্রশ্নের নম্বরের সাথে অপশন মিলিয়ে দেবে।\nযেমন:\n১. খ, ২. ঘ, ৩. ক\nঅথবা:\n1. B, 2. D, 3. A',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color:
-                          isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                      height: 1.4,
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface
+                          .withValues(alpha: 0.65),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: FluentSpacing.m),
                   Stack(
                     children: [
                       TextField(
                         controller: textCtrl,
                         maxLines: 5,
                         minLines: 3,
-                        style: const TextStyle(fontSize: 12.5),
+                        style: FluentType.caption,
                         decoration: InputDecoration(
                           hintText: '১. খ, ২. ঘ, ৩. ক... অথবা B, D, A, C',
-                          hintStyle: TextStyle(
-                            fontSize: 11.5,
-                            color: isDark
-                                ? Colors.grey.shade500
-                                : Colors.grey.shade400,
+                          hintStyle: FluentType.caption.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface
+                                .withValues(alpha: 0.65),
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: FluentRadius.controlBorder,
                           ),
-                          contentPadding: const EdgeInsets.all(12),
+                          contentPadding: const EdgeInsets.all(FluentSpacing.m),
                         ),
                         onChanged: (_) => setSheetState(() {}),
                       ),
                       Positioned(
-                        top: 6,
-                        right: 6,
+                        top: FluentSpacing.s,
+                        right: FluentSpacing.s,
                         child: ElevatedButton.icon(
                           onPressed: () async {
-                            final data =
-                                await Clipboard.getData('text/plain');
+                            final data = await Clipboard.getData('text/plain');
                             if (data?.text != null && data!.text!.isNotEmpty) {
                               setSheetState(() => textCtrl.text = data.text!);
                             }
                           },
                           icon: const Icon(Icons.paste, size: 12),
-                          label: const Text(
-                            'পেস্ট',
-                            style: TextStyle(fontSize: 11),
-                          ),
+                          label: const Text('পেস্ট', style: FluentType.caption),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                              horizontal: FluentSpacing.s,
+                              vertical: FluentSpacing.xs,
                             ),
                             visualDensity: VisualDensity.compact,
                           ),
@@ -955,7 +950,7 @@ class _QuestionBankScannerModalState
                     ],
                   ),
                   if (unsolvedCount > 0) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
                     CheckboxListTile(
                       value: applyToUnansweredOnly,
                       onChanged: (val) => setSheetState(
@@ -965,16 +960,19 @@ class _QuestionBankScannerModalState
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         'শুধুমাত্র অনুত্তরিত $unsolvedCountটি প্রশ্নে ক্রমানুসারে বসান',
-                        style: const TextStyle(fontSize: 12),
+                        style: FluentType.caption,
                       ),
-                      subtitle: const Text(
+                      subtitle: Text(
                         'অন থাকলে পূর্বে উত্তর দেওয়া প্রশ্নগুলোর মান পরিবর্তন হবে না',
-                        style: TextStyle(fontSize: 10.5, color: Colors.grey),
+                        style: FluentType.caption.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface
+                              .withValues(alpha: 0.65),
+                        ),
                       ),
                       controlAffinity: ListTileControlAffinity.leading,
                     ),
                   ],
-                  const SizedBox(height: 14),
+                  const SizedBox(height: FluentSpacing.l),
                   ElevatedButton.icon(
                     onPressed: textCtrl.text.trim().isEmpty
                         ? null
@@ -1051,9 +1049,11 @@ class _QuestionBankScannerModalState
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4F46E5),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.m,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     icon: const Icon(Icons.check_circle_outline, size: 18),
@@ -1083,15 +1083,16 @@ class _QuestionBankScannerModalState
           builder: (sheetCtx, setSheetState) {
             return Container(
               padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
+                left: FluentSpacing.l,
+                right: FluentSpacing.l,
+                top: FluentSpacing.l,
                 bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 16,
               ),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(FluentRadius.large),
+                ),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1104,14 +1105,11 @@ class _QuestionBankScannerModalState
                         color: Color(0xFF4F46E5),
                         size: 20,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: FluentSpacing.s),
                       const Expanded(
                         child: Text(
                           'আরও প্রশ্ন যোগ করুন (পেস্ট)',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: FluentType.bodyStrong,
                         ),
                       ),
                       IconButton(
@@ -1120,34 +1118,33 @@ class _QuestionBankScannerModalState
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: FluentSpacing.xs),
                   Text(
                     'বর্তমান ${_editableQuestions.length}টি প্রশ্নের সাথে আরও নতুন প্রশ্ন যোগ করতে টেক্সটবুক বা AI এজেন্ট থেকে কপি করা MCQ পেস্ট করুন:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.m),
                   Stack(
                     children: [
                       TextField(
                         controller: textCtrl,
                         maxLines: 6,
                         minLines: 3,
-                        style: const TextStyle(fontSize: 12.5),
+                        style: FluentType.caption,
                         decoration: InputDecoration(
                           hintText: '১. প্রশ্ন...\nক) অপশন ১\nখ) অপশন ২...',
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: FluentRadius.controlBorder,
                           ),
-                          contentPadding: const EdgeInsets.all(10),
+                          contentPadding: const EdgeInsets.all(FluentSpacing.m),
                         ),
                         onChanged: (_) => setSheetState(() {}),
                       ),
                       Positioned(
-                        top: 6,
-                        right: 6,
+                        top: FluentSpacing.s,
+                        right: FluentSpacing.s,
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             final data = await Clipboard.getData('text/plain');
@@ -1156,16 +1153,19 @@ class _QuestionBankScannerModalState
                             }
                           },
                           icon: const Icon(Icons.paste, size: 12),
-                          label: const Text('পেস্ট', style: TextStyle(fontSize: 11)),
+                          label: const Text('পেস্ট', style: FluentType.caption),
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: FluentSpacing.s,
+                              vertical: FluentSpacing.xs,
+                            ),
                             visualDensity: VisualDensity.compact,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: FluentSpacing.m),
                   ElevatedButton.icon(
                     onPressed: textCtrl.text.trim().isEmpty
                         ? null
@@ -1180,17 +1180,16 @@ class _QuestionBankScannerModalState
                       backgroundColor: const Color(0xFF4F46E5),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.m,
+                      ),
                     ),
                     icon: const Icon(Icons.add, size: 18),
                     label: const Text(
                       'প্রশ্নে যুক্ত করুন (+ Merge)',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: FluentType.bodyStrong,
                     ),
                   ),
                 ],
@@ -1222,10 +1221,12 @@ class _QuestionBankScannerModalState
               setSheetState(() {
                 final lower = recognizedWords.toLowerCase();
                 for (int i = 0; i < q.options.length; i++) {
-                  final letterBn =
-                      i == 0 ? 'ক' : (i == 1 ? 'খ' : (i == 2 ? 'গ' : 'ঘ'));
-                  final letterEn =
-                      i == 0 ? 'a' : (i == 1 ? 'b' : (i == 2 ? 'c' : 'd'));
+                  final letterBn = i == 0
+                      ? 'ক'
+                      : (i == 1 ? 'খ' : (i == 2 ? 'গ' : 'ঘ'));
+                  final letterEn = i == 0
+                      ? 'a'
+                      : (i == 1 ? 'b' : (i == 2 ? 'c' : 'd'));
                   if (lower.contains('উত্তর $letterBn') ||
                       lower.contains('উত্তর $letterEn') ||
                       lower.contains('অপশন $letterBn') ||
@@ -1242,15 +1243,16 @@ class _QuestionBankScannerModalState
 
             return Container(
               padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
+                left: FluentSpacing.l,
+                right: FluentSpacing.l,
+                top: FluentSpacing.l,
                 bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 16,
               ),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(FluentRadius.large),
+                ),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1259,14 +1261,11 @@ class _QuestionBankScannerModalState
                   Row(
                     children: [
                       const Icon(Icons.mic, color: Color(0xFF4F46E5), size: 20),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Text(
                           'প্রশ্ন #${qIndex + 1} - ভয়েস ইনপুট',
-                          style: const TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: FluentType.bodyStrong,
                         ),
                       ),
                       IconButton(
@@ -1284,17 +1283,16 @@ class _QuestionBankScannerModalState
                     q.questionText,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.m),
                   const Text(
                     'সঠিক অপশনটি সিলেক্ট করুন বা মুখে বলুন:',
-                    style: TextStyle(fontSize: 11.5),
+                    style: FluentType.caption,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.s),
                   Wrap(
                     spacing: 8,
                     children: List.generate(q.options.length, (optIdx) {
@@ -1307,30 +1305,29 @@ class _QuestionBankScannerModalState
                           '$prefix. ${q.options[optIdx]}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11),
+                          style: FluentType.caption,
                         ),
                         selected: isSelected,
                         selectedColor: Colors.green.shade100,
-                        onSelected: (_) => setSheetState(
-                          () => selectedOptIndex = optIdx,
-                        ),
+                        onSelected: (_) =>
+                            setSheetState(() => selectedOptIndex = optIdx),
                       );
                     }),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.m),
                   TextField(
                     controller: explanationCtrl,
                     maxLines: 3,
-                    style: const TextStyle(fontSize: 12),
+                    style: FluentType.caption,
                     decoration: InputDecoration(
                       labelText: 'ব্যাখ্যা (মুখে বলুন বা লিখুন)',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
-                      contentPadding: const EdgeInsets.all(10),
+                      contentPadding: const EdgeInsets.all(FluentSpacing.m),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: FluentSpacing.m),
                   Row(
                     children: [
                       Expanded(
@@ -1340,13 +1337,16 @@ class _QuestionBankScannerModalState
                               await DeviceDictationService.instance.stop();
                               setSheetState(() => isListening = false);
                             } else {
-                              final ready =
-                                  await DeviceDictationService.instance.init();
+                              final ready = await DeviceDictationService
+                                  .instance
+                                  .init();
                               if (!ready) {
                                 if (sheetCtx.mounted) {
                                   ScaffoldMessenger.of(sheetCtx).showSnackBar(
                                     const SnackBar(
-                                      content: Text('মাইক্রোফোন চালু করা যায়নি।'),
+                                      content: Text(
+                                        'মাইক্রোফোন চালু করা যায়নি।',
+                                      ),
                                     ),
                                   );
                                 }
@@ -1365,11 +1365,13 @@ class _QuestionBankScannerModalState
                                 : const Color(0xFF4F46E5),
                           ),
                           label: Text(
-                            isListening ? 'রেকর্ডিং বন্ধ করুন' : '🎙️ মুখে বলুন',
+                            isListening
+                                ? 'রেকর্ডিং বন্ধ করুন'
+                                : '🎙️ মুখে বলুন',
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: selectedOptIndex < 0
@@ -1427,8 +1429,9 @@ class _QuestionBankScannerModalState
         setState(() {
           _editableQuestions[qIndex] = q.copyWith(
             correctIndex: res.trueCorrectIndex >= 0 ? res.trueCorrectIndex : 0,
-            explanation:
-                res.explanation.isNotEmpty ? res.explanation : q.explanation,
+            explanation: res.explanation.isNotEmpty
+                ? res.explanation
+                : q.explanation,
             answerSource: AnswerSource.solved,
           );
           _verifications[qIndex] = res;
@@ -1469,7 +1472,9 @@ class _QuestionBankScannerModalState
 
     if (unsolved.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('সব প্রশ্নের উত্তর ইতোমধ্যে সেট করা আছে!')),
+        const SnackBar(
+          content: Text('সব প্রশ্নের উত্তর ইতোমধ্যে সেট করা আছে!'),
+        ),
       );
       return;
     }
@@ -1492,9 +1497,12 @@ class _QuestionBankScannerModalState
         if (res != null && mounted) {
           setState(() {
             _editableQuestions[qIndex] = q.copyWith(
-              correctIndex: res.trueCorrectIndex >= 0 ? res.trueCorrectIndex : 0,
-              explanation:
-                  res.explanation.isNotEmpty ? res.explanation : q.explanation,
+              correctIndex: res.trueCorrectIndex >= 0
+                  ? res.trueCorrectIndex
+                  : 0,
+              explanation: res.explanation.isNotEmpty
+                  ? res.explanation
+                  : q.explanation,
               answerSource: AnswerSource.solved,
             );
             _verifications[qIndex] = res;
@@ -1548,13 +1556,13 @@ class _QuestionBankScannerModalState
               title: Row(
                 children: [
                   const Icon(Icons.edit_note, color: Color(0xFF6366F1)),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   Flexible(
                     child: Text(
                       'প্রশ্ন #${qIndex + 1} সম্পাদনা',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 16),
+                      style: FluentType.subtitle.copyWith(fontSize: 16),
                     ),
                   ),
                 ],
@@ -1575,19 +1583,20 @@ class _QuestionBankScannerModalState
                           isDense: true,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      const Text(
+                      const SizedBox(height: FluentSpacing.m),
+                      Text(
                         'অপশনসমূহ (সঠিক অপশনটি সিলেক্ট করুন):',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: FluentSpacing.s),
                       ...List.generate(optionCtrls.length, (optIdx) {
                         final isSelected = selectedCorrectIndex == optIdx;
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.only(
+                            bottom: FluentSpacing.s,
+                          ),
                           child: Row(
                             children: [
                               IconButton(
@@ -1596,8 +1605,9 @@ class _QuestionBankScannerModalState
                                       ? Icons.check_circle
                                       : Icons.radio_button_unchecked,
                                   color: isSelected
-                                      ? Colors.green
-                                      : Colors.grey,
+                                      ? const Color(0xFF16A34A)
+                                      : Theme.of(context).colorScheme.onSurface
+                                            .withValues(alpha: 0.45),
                                 ),
                                 tooltip: 'সঠিক উত্তর হিসেবে চিহ্নিত করুন',
                                 onPressed: () {
@@ -1620,7 +1630,7 @@ class _QuestionBankScannerModalState
                           ),
                         );
                       }),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: FluentSpacing.s),
                       TextField(
                         controller: explanationCtrl,
                         maxLines: 2,
@@ -1667,22 +1677,23 @@ class _QuestionBankScannerModalState
   void _startExamNow() {
     if (_editableQuestions.isEmpty) return;
 
-    final unsolvedIdx =
-        _editableQuestions.indexWhere((q) => q.correctIndex < 0);
+    final unsolvedIdx = _editableQuestions.indexWhere(
+      (q) => q.correctIndex < 0,
+    );
     if (unsolvedIdx >= 0) {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
               Icon(Icons.warning_amber_rounded, color: Colors.amber),
-              SizedBox(width: 8),
+              SizedBox(width: FluentSpacing.s),
               Flexible(
                 child: Text(
                   'উত্তরবিহীন প্রশ্ন রয়েছে',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 16),
+                  style: FluentType.subtitle.copyWith(fontSize: 16),
                 ),
               ),
             ],
@@ -1690,7 +1701,7 @@ class _QuestionBankScannerModalState
           content: Text(
             'প্রশ্ন #${unsolvedIdx + 1} সহ কিছু প্রশ্নের কোনো সঠিক উত্তর নির্বাচন করা হয়নি।\n\n'
             'পরীক্ষা শুরু করার আগে দয়া করে অপশনে ট্যাপ করে উত্তর সেট করুন, উত্তরমালা পেস্ট করুন, অথবা "AI সমাধান" বাটনে চাপ দিন।',
-            style: const TextStyle(fontSize: 13),
+            style: FluentType.body,
           ),
           actions: [
             TextButton(
@@ -1870,7 +1881,7 @@ class _QuestionBankScannerModalState
             content: Row(
               children: [
                 const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     widget.existingExamId != null
@@ -1906,28 +1917,37 @@ class _QuestionBankScannerModalState
       height: MediaQuery.of(context).size.height * 0.92,
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
       ),
       child: Column(
         children: [
           // Drag handle
           Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 6),
+            margin: const EdgeInsets.only(
+              top: FluentSpacing.m,
+              bottom: FluentSpacing.s,
+            ),
             width: 44,
             height: 4.5,
             decoration: BoxDecoration(
-              color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(4),
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
+              borderRadius: FluentRadius.controlBorder,
             ),
           ),
 
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.xl,
+              vertical: FluentSpacing.s,
+            ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(FluentSpacing.s),
                   decoration: BoxDecoration(
                     color: Colors.indigo.shade50.withValues(
                       alpha: isDark ? 0.15 : 1,
@@ -1940,7 +1960,7 @@ class _QuestionBankScannerModalState
                     size: 22,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1949,10 +1969,7 @@ class _QuestionBankScannerModalState
                         widget.existingExamId != null
                             ? 'টেস্ট পেপার প্রশ্নমালা ও AI ফ্যাক্ট-চেক'
                             : 'প্রশ্ন ব্যাংক স্ক্যানার ও কুইজ তৈরি',
-                        style: const TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: FluentType.bodyStrong,
                       ),
                       // Only while there is nothing to review yet. It
                       // explains what to do with an empty screen; once
@@ -1965,9 +1982,9 @@ class _QuestionBankScannerModalState
                           widget.existingExamId != null
                               ? 'প্রশ্নসমূহ সম্পাদনা করুন ও AI দিয়ে সঠিক উত্তর যাচাই করুন'
                               : 'বই বা প্রশ্ন ব্যাংকের পাতার ছবি দিয়ে পরীক্ষা দিন',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: isDark ? Colors.white60 : Colors.grey.shade600,
+                          style: FluentType.caption.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface
+                                .withValues(alpha: 0.65),
                           ),
                         ),
                     ],
@@ -2001,7 +2018,7 @@ class _QuestionBankScannerModalState
   // ========================================================
   Widget _buildInputState(bool isDark) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -2010,7 +2027,7 @@ class _QuestionBankScannerModalState
           if (_errorMessage != null &&
               AiKeyMissingNotice.looksLikeKeyProblem(_errorMessage!))
             Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.only(bottom: FluentSpacing.l),
               child: AiKeyMissingNotice(
                 message: _errorMessage!,
                 onRetry: () {
@@ -2020,21 +2037,21 @@ class _QuestionBankScannerModalState
             )
           else if (_errorMessage != null)
             Container(
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: FluentSpacing.l),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
                 color: Colors.red.shade50.withValues(alpha: isDark ? 0.15 : 1),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(color: Colors.red.shade300),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 12.5),
+                      style: FluentType.caption.copyWith(color: Colors.red),
                     ),
                   ),
                 ],
@@ -2044,13 +2061,13 @@ class _QuestionBankScannerModalState
           // Mode Switcher: 📷 বইয়ের পাতা স্ক্যান vs 📋 টেক্সট পেস্ট (বাইরের AI / চ্যাট)
           _buildInputModeSelector(isDark),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.l),
 
           if (_inputMode == ScannerInputMode.imageOcr) ...[
             // 1. Question Pages Section
             _buildQuestionPagesSection(isDark),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
 
             // 2. Answer Key Card (Optional)
             _buildImageCard(
@@ -2065,18 +2082,18 @@ class _QuestionBankScannerModalState
             _buildTextPasteSection(isDark),
           ],
 
-          const SizedBox(height: 16),
+          const SizedBox(height: FluentSpacing.l),
 
           // Subject hint selector
           Text(
             'বিষয় নির্বাচন (ঐচ্ছিক)',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+            style: FluentType.caption.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           Wrap(
             spacing: 8,
             runSpacing: 6,
@@ -2087,8 +2104,7 @@ class _QuestionBankScannerModalState
                 onSelected: (_) => setState(() => _selectedSubject = subj),
                 label: Text(
                   subj,
-                  style: TextStyle(
-                    fontSize: 11,
+                  style: FluentType.caption.copyWith(
                     fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
@@ -2097,18 +2113,18 @@ class _QuestionBankScannerModalState
           ),
 
           if (_inputMode == ScannerInputMode.imageOcr) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
 
             // Resolution detail
             Text(
               'ছবির কোয়ালিটি',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             Wrap(
               spacing: 8,
               runSpacing: 6,
@@ -2122,16 +2138,17 @@ class _QuestionBankScannerModalState
                   },
                   label: Text(
                     '${d.label} · ~${d.approxTokens}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: selected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 );
               }).toList(),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
             _ScanToggle(
               value: _trustPrintedAnswersOnly,
               onChanged: (v) {
@@ -2180,7 +2197,7 @@ class _QuestionBankScannerModalState
             ),
           ],
 
-          const SizedBox(height: 24),
+          const SizedBox(height: FluentSpacing.xxl),
 
           // Action Button
           if (_inputMode == ScannerInputMode.imageOcr)
@@ -2189,20 +2206,19 @@ class _QuestionBankScannerModalState
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4F46E5),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: FluentSpacing.l),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
-                disabledBackgroundColor: isDark
-                    ? Colors.grey.shade800
-                    : Colors.grey.shade300,
+                disabledBackgroundColor: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.65),
               ),
               icon: const Icon(Icons.auto_awesome, size: 20),
               label: Text(
                 _questionImages.length > 1
                     ? '⚡ ${_questionImages.length}টি পাতা স্ক্যান করুন (Extract MCQs)'
                     : '⚡ প্রশ্ন ব্যাংক স্ক্যান করুন (Extract MCQs)',
-                style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                style: FluentType.bodyStrong,
               ),
             )
           else
@@ -2213,20 +2229,19 @@ class _QuestionBankScannerModalState
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4F46E5),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: FluentSpacing.l),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
-                disabledBackgroundColor: isDark
-                    ? Colors.grey.shade800
-                    : Colors.grey.shade300,
+                disabledBackgroundColor: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.65),
               ),
               icon: const Icon(Icons.auto_awesome, size: 20),
               label: Text(
                 _editableQuestions.isNotEmpty
                     ? '⚡ বিদ্যমান প্রশ্নে যোগ করুন (+${_editableQuestions.length}টি বর্তমান)'
                     : '⚡ টেক্সট থেকে কুইজ তৈরি করুন (Extract MCQs)',
-                style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                style: FluentType.bodyStrong,
               ),
             ),
         ],
@@ -2236,23 +2251,27 @@ class _QuestionBankScannerModalState
 
   Widget _buildInputModeSelector(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(FluentSpacing.xs),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(12),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+        borderRadius: FluentRadius.controlBorder,
       ),
       child: Row(
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _inputMode = ScannerInputMode.imageOcr),
+              onTap: () =>
+                  setState(() => _inputMode = ScannerInputMode.imageOcr),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                padding: const EdgeInsets.symmetric(
+                  vertical: FluentSpacing.s,
+                  horizontal: FluentSpacing.xs,
+                ),
                 decoration: BoxDecoration(
                   color: _inputMode == ScannerInputMode.imageOcr
                       ? const Color(0xFF4F46E5)
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -2263,22 +2282,23 @@ class _QuestionBankScannerModalState
                       size: 15,
                       color: _inputMode == ScannerInputMode.imageOcr
                           ? Colors.white
-                          : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                          : (Theme.of(context).colorScheme.onSurface
+                                .withValues(alpha: 0.65)),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: FluentSpacing.xs),
                     Flexible(
                       child: Text(
                         'পাতার ছবি স্ক্যান',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: FluentType.caption.copyWith(
                           fontWeight: _inputMode == ScannerInputMode.imageOcr
                               ? FontWeight.bold
                               : FontWeight.normal,
                           color: _inputMode == ScannerInputMode.imageOcr
                               ? Colors.white
-                              : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                              : (Theme.of(context).colorScheme.onSurface
+                                    .withValues(alpha: 0.65)),
                         ),
                       ),
                     ),
@@ -2289,14 +2309,18 @@ class _QuestionBankScannerModalState
           ),
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _inputMode = ScannerInputMode.textPaste),
+              onTap: () =>
+                  setState(() => _inputMode = ScannerInputMode.textPaste),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                padding: const EdgeInsets.symmetric(
+                  vertical: FluentSpacing.s,
+                  horizontal: FluentSpacing.xs,
+                ),
                 decoration: BoxDecoration(
                   color: _inputMode == ScannerInputMode.textPaste
                       ? const Color(0xFF4F46E5)
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -2307,22 +2331,23 @@ class _QuestionBankScannerModalState
                       size: 15,
                       color: _inputMode == ScannerInputMode.textPaste
                           ? Colors.white
-                          : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                          : (Theme.of(context).colorScheme.onSurface
+                                .withValues(alpha: 0.65)),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: FluentSpacing.xs),
                     Flexible(
                       child: Text(
                         'টেক্সট পেস্ট (AI/নোট)',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: FluentType.caption.copyWith(
                           fontWeight: _inputMode == ScannerInputMode.textPaste
                               ? FontWeight.bold
                               : FontWeight.normal,
                           color: _inputMode == ScannerInputMode.textPaste
                               ? Colors.white
-                              : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                              : (Theme.of(context).colorScheme.onSurface
+                                    .withValues(alpha: 0.65)),
                         ),
                       ),
                     ),
@@ -2337,13 +2362,13 @@ class _QuestionBankScannerModalState
   }
 
   Widget _buildTextPasteSection(bool isDark) {
-    final borderColor = isDark ? const Color(0xFF374151) : Colors.grey.shade300;
+    final borderColor = FluentStroke.card(Theme.of(context).brightness);
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(color: borderColor),
       ),
       child: Column(
@@ -2356,69 +2381,63 @@ class _QuestionBankScannerModalState
                 size: 18,
                 color: Color(0xFF4F46E5),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               const Expanded(
                 child: Text(
                   'বাইরের Agent / চ্যাট থেকে কপি করা টেক্সট',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: FluentType.bodyStrong,
                 ),
               ),
               if (_pastedTextController.text.isNotEmpty)
                 IconButton(
-                  icon: const Icon(
-                    Icons.clear,
-                    size: 18,
-                    color: Colors.red,
-                  ),
+                  icon: const Icon(Icons.clear, size: 18, color: Colors.red),
                   tooltip: 'মুছুন',
-                  onPressed: () => setState(() => _pastedTextController.clear()),
+                  onPressed: () =>
+                      setState(() => _pastedTextController.clear()),
                 ),
             ],
           ),
           Text(
             'ChatGPT, Claude বা নোট থেকে MCQ প্রশ্ন পেস্ট করুন (স্বয়ংক্রিয়ভাবে প্রশ্ন, অপশন ও উত্তর সাজিয়ে নেবে)',
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white60 : Colors.grey.shade600,
+            style: FluentType.caption.copyWith(
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: FluentSpacing.m),
           Stack(
             children: [
               TextField(
                 controller: _pastedTextController,
                 maxLines: 8,
                 minLines: 5,
-                style: const TextStyle(fontSize: 12.5, height: 1.45),
+                style: FluentType.caption,
                 decoration: InputDecoration(
                   hintText: 'এখানে টেক্সট পেস্ট করুন...\n\nযেমন:\n১. বাংলাদেশের প্রথম রাষ্ট্রপতি কে ছিলেন?\nক) বঙ্গবন্ধু শেখ মুজিবুর রহমান\nখ) সৈয়দ নজরুল ইসলাম\nগ) তাজউদ্দীন আহমদ\nঘ) খন্দকার মোশতাক আহমদ\nউত্তর: ক\nব্যাখ্যা: বঙ্গবন্ধু শেখ মুজিবুর রহমান ছিলেন...',
-                  hintStyle: TextStyle(
-                    fontSize: 11.5,
-                    color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+                  hintStyle: FluentType.caption.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.65),
                   ),
                   filled: true,
                   fillColor: isDark ? const Color(0xFF111827) : Colors.white,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                     borderSide: BorderSide(color: borderColor),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                     borderSide: const BorderSide(
                       color: Color(0xFF4F46E5),
                       width: 1.5,
                     ),
                   ),
-                  contentPadding: const EdgeInsets.all(12),
+                  contentPadding: const EdgeInsets.all(FluentSpacing.m),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
               Positioned(
-                bottom: 8,
-                right: 8,
+                bottom: FluentSpacing.s,
+                right: FluentSpacing.s,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -2443,14 +2462,20 @@ class _QuestionBankScannerModalState
                         });
                       },
                       icon: const Icon(Icons.lightbulb_outline, size: 14),
-                      label: const Text('নমুনা ফরম্যাট', style: TextStyle(fontSize: 11)),
+                      label: const Text(
+                        'নমুনা ফরম্যাট',
+                        style: FluentType.caption,
+                      ),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: FluentSpacing.s,
+                          vertical: FluentSpacing.xs,
+                        ),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: FluentSpacing.xs),
                     ElevatedButton.icon(
                       onPressed: () async {
                         final data = await Clipboard.getData('text/plain');
@@ -2461,11 +2486,17 @@ class _QuestionBankScannerModalState
                         }
                       },
                       icon: const Icon(Icons.paste, size: 13),
-                      label: const Text('ক্লিপবোর্ড থেকে পেস্ট', style: TextStyle(fontSize: 11)),
+                      label: const Text(
+                        'ক্লিপবোর্ড থেকে পেস্ট',
+                        style: FluentType.caption,
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4F46E5),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: FluentSpacing.m,
+                          vertical: FluentSpacing.s,
+                        ),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
@@ -2476,14 +2507,17 @@ class _QuestionBankScannerModalState
             ],
           ),
           if (_pastedTextController.text.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.s,
+              ),
               decoration: BoxDecoration(
                 color: _hasAnswerMarkersInPastedText()
                     ? Colors.green.withValues(alpha: 0.1)
                     : const Color(0xFF4F46E5).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: FluentRadius.controlBorder,
                 border: Border.all(
                   color: _hasAnswerMarkersInPastedText()
                       ? Colors.green.withValues(alpha: 0.3)
@@ -2501,21 +2535,20 @@ class _QuestionBankScannerModalState
                         ? Colors.green
                         : const Color(0xFF4F46E5),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       _hasAnswerMarkersInPastedText()
                           ? 'উত্তরমালা পাওয়া গেছে (তাৎক্ষণিক পার্স হবে)'
                           : 'উত্তর ও ব্যাখ্যা অনুপস্থিত (রিভিউ স্ক্রিনে উত্তরমালা পেস্ট, ভয়েস বা AI দিয়ে সহজে সমাধান করতে পারবেন)',
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: FluentType.caption.copyWith(
                         color: _hasAnswerMarkersInPastedText()
                             ? (isDark
-                                ? Colors.green.shade300
-                                : Colors.green.shade800)
+                                  ? Colors.green.shade300
+                                  : Colors.green.shade800)
                             : (isDark
-                                ? const Color(0xFF818CF8)
-                                : const Color(0xFF4338CA)),
+                                  ? const Color(0xFF818CF8)
+                                  : const Color(0xFF4338CA)),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -2530,13 +2563,13 @@ class _QuestionBankScannerModalState
   }
 
   Widget _buildQuestionPagesSection(bool isDark) {
-    final borderColor = isDark ? const Color(0xFF374151) : Colors.grey.shade300;
+    final borderColor = FluentStroke.card(Theme.of(context).brightness);
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(color: borderColor),
       ),
       child: Column(
@@ -2544,19 +2577,12 @@ class _QuestionBankScannerModalState
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.menu_book,
-                size: 18,
-                color: Color(0xFF4F46E5),
-              ),
-              const SizedBox(width: 8),
+              const Icon(Icons.menu_book, size: 18, color: Color(0xFF4F46E5)),
+              const SizedBox(width: FluentSpacing.s),
               const Expanded(
                 child: Text(
                   '১. প্রশ্ন পাতার ছবি (আবশ্যক)',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: FluentType.bodyStrong,
                 ),
               ),
               if (_questionImages.isNotEmpty)
@@ -2579,39 +2605,32 @@ class _QuestionBankScannerModalState
             _questionImages.isEmpty
                 ? 'বইয়ের যে পাতায় MCQ প্রশ্নগুলো ছাপা আছে (একাধিক পাতাও যোগ করতে পারেন)'
                 : 'মোট ${_questionImages.length}টি প্রশ্ন পাতা যুক্ত হয়েছে',
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white60 : Colors.grey.shade600,
+            style: FluentType.caption.copyWith(
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
           if (_questionImages.isEmpty)
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _pickImage(
-                      ImageSource.camera,
-                      isAnswerKey: false,
-                    ),
+                    onPressed: () =>
+                        _pickImage(ImageSource.camera, isAnswerKey: false),
                     icon: const Icon(Icons.camera_alt, size: 16),
-                    label: const Text(
-                      'ক্যামেরা',
-                      style: TextStyle(fontSize: 12),
-                    ),
+                    label: const Text('ক্যামেরা', style: FluentType.caption),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _pickImage(
-                      ImageSource.gallery,
-                      isAnswerKey: false,
-                    ),
+                    onPressed: () =>
+                        _pickImage(ImageSource.gallery, isAnswerKey: false),
                     icon: const Icon(Icons.photo_library, size: 16),
                     label: const Text(
                       'গ্যালারি (একাধিক)',
-                      style: TextStyle(fontSize: 12),
+                      style: FluentType.caption,
                     ),
                   ),
                 ),
@@ -2623,22 +2642,23 @@ class _QuestionBankScannerModalState
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _questionImages.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) =>
+                    const SizedBox(width: FluentSpacing.s),
                 itemBuilder: (context, index) {
                   final imgFile = _questionImages[index];
                   return Container(
                     width: 100,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: isDark ? Colors.black26 : Colors.grey.shade200,
+                      borderRadius: FluentRadius.cardBorder,
+                      color: Theme.of(context).colorScheme.onSurface
+                          .withValues(alpha: 0.06),
                       border: Border.all(
-                        color: isDark
-                            ? Colors.grey.shade700
-                            : Colors.grey.shade300,
+                        color: FluentStroke.card(Theme.of(context).brightness),
+                        width: FluentStroke.width,
                       ),
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(9),
+                      borderRadius: FluentRadius.cardBorder,
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
@@ -2648,34 +2668,34 @@ class _QuestionBankScannerModalState
                             fit: BoxFit.cover,
                           ),
                           Positioned(
-                            top: 4,
-                            left: 4,
+                            top: FluentSpacing.xs,
+                            left: FluentSpacing.xs,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
+                                horizontal: FluentSpacing.s,
+                                vertical: FluentSpacing.xxs,
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.black87,
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius: FluentRadius.controlBorder,
                               ),
                               child: Text(
                                 'পাতা ${index + 1}',
-                                style: const TextStyle(
+                                style: FluentType.caption.copyWith(
                                   color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
                           ),
                           Positioned(
-                            top: 2,
-                            right: 2,
+                            top: FluentSpacing.xxs,
+                            right: FluentSpacing.xxs,
                             child: CircleAvatar(
                               radius: 12,
-                              backgroundColor:
-                                  Colors.black.withValues(alpha: 0.65),
+                              backgroundColor: Colors.black.withValues(
+                                alpha: 0.65,
+                              ),
                               child: IconButton(
                                 tooltip: 'পাতা মুছুন',
                                 icon: const Icon(
@@ -2693,15 +2713,16 @@ class _QuestionBankScannerModalState
                             ),
                           ),
                           Positioned(
-                            bottom: 4,
-                            right: 4,
+                            bottom: FluentSpacing.xs,
+                            right: FluentSpacing.xs,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 CircleAvatar(
                                   radius: 12,
-                                  backgroundColor:
-                                      Colors.black.withValues(alpha: 0.65),
+                                  backgroundColor: Colors.black.withValues(
+                                    alpha: 0.65,
+                                  ),
                                   child: IconButton(
                                     tooltip: 'সোজা করুন',
                                     icon: const Icon(
@@ -2716,11 +2737,12 @@ class _QuestionBankScannerModalState
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: FluentSpacing.xs),
                                 CircleAvatar(
                                   radius: 12,
-                                  backgroundColor:
-                                      Colors.black.withValues(alpha: 0.65),
+                                  backgroundColor: Colors.black.withValues(
+                                    alpha: 0.65,
+                                  ),
                                   child: IconButton(
                                     tooltip: 'কাটুন',
                                     icon: const Icon(
@@ -2745,33 +2767,29 @@ class _QuestionBankScannerModalState
                 },
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _pickImage(
-                      ImageSource.camera,
-                      isAnswerKey: false,
-                    ),
+                    onPressed: () =>
+                        _pickImage(ImageSource.camera, isAnswerKey: false),
                     icon: const Icon(Icons.add_a_photo, size: 14),
                     label: const Text(
                       '+ ক্যামেরা পাতা',
-                      style: TextStyle(fontSize: 11),
+                      style: FluentType.caption,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _pickImage(
-                      ImageSource.gallery,
-                      isAnswerKey: false,
-                    ),
+                    onPressed: () =>
+                        _pickImage(ImageSource.gallery, isAnswerKey: false),
                     icon: const Icon(Icons.add_photo_alternate, size: 14),
                     label: const Text(
                       '+ গ্যালারি পাতা',
-                      style: TextStyle(fontSize: 11),
+                      style: FluentType.caption,
                     ),
                   ),
                 ),
@@ -2790,13 +2808,13 @@ class _QuestionBankScannerModalState
     required bool isAnswerKey,
     required bool isDark,
   }) {
-    final borderColor = isDark ? const Color(0xFF374151) : Colors.grey.shade300;
+    final borderColor = FluentStroke.card(Theme.of(context).brightness);
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(color: borderColor),
       ),
       child: Column(
@@ -2811,16 +2829,8 @@ class _QuestionBankScannerModalState
                     ? Colors.amber.shade600
                     : const Color(0xFF4F46E5),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              const SizedBox(width: FluentSpacing.s),
+              Expanded(child: Text(title, style: FluentType.bodyStrong)),
               if (imageFile != null)
                 IconButton(
                   icon: const Icon(
@@ -2841,15 +2851,15 @@ class _QuestionBankScannerModalState
           ),
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white60 : Colors.grey.shade600,
+            style: FluentType.caption.copyWith(
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
           if (imageFile != null)
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: FluentRadius.cardBorder,
               child: Stack(
                 children: [
                   // contain, not cover: a page turned on its side must
@@ -2857,7 +2867,8 @@ class _QuestionBankScannerModalState
                   Container(
                     height: 120,
                     width: double.infinity,
-                    color: isDark ? Colors.black26 : Colors.grey.shade200,
+                    color: Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.06),
                     child: Image.file(
                       imageFile,
                       key: ValueKey(imageFile.path),
@@ -2865,20 +2876,20 @@ class _QuestionBankScannerModalState
                     ),
                   ),
                   Positioned(
-                    bottom: 6,
-                    right: 6,
+                    bottom: FluentSpacing.s,
+                    right: FluentSpacing.s,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xs,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.black87,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
-                      child: const Text(
+                      child: Text(
                         'ছবি যুক্ত হয়েছে ✓',
-                        style: TextStyle(color: Colors.white, fontSize: 10.5),
+                        style: FluentType.caption.copyWith(color: Colors.white),
                       ),
                     ),
                   ),
@@ -2886,8 +2897,8 @@ class _QuestionBankScannerModalState
                   // a narrower part of the same photo, so the trim reopens
                   // rather than sending the user back to the camera.
                   Positioned(
-                    top: 6,
-                    right: 6,
+                    top: FluentSpacing.s,
+                    right: FluentSpacing.s,
                     child: Row(
                       children: [
                         // A book shot sideways needs the whole page turned,
@@ -2906,7 +2917,7 @@ class _QuestionBankScannerModalState
                             onPressed: () => _rotate(isAnswerKey: isAnswerKey),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: FluentSpacing.s),
                         CircleAvatar(
                           radius: 15,
                           backgroundColor: Colors.black.withValues(alpha: 0.65),
@@ -2937,13 +2948,10 @@ class _QuestionBankScannerModalState
                       isAnswerKey: isAnswerKey,
                     ),
                     icon: const Icon(Icons.camera_alt, size: 16),
-                    label: const Text(
-                      'ক্যামেরা',
-                      style: TextStyle(fontSize: 12),
-                    ),
+                    label: const Text('ক্যামেরা', style: FluentType.caption),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _pickImage(
@@ -2951,10 +2959,7 @@ class _QuestionBankScannerModalState
                       isAnswerKey: isAnswerKey,
                     ),
                     icon: const Icon(Icons.photo_library, size: 16),
-                    label: const Text(
-                      'গ্যালারি',
-                      style: TextStyle(fontSize: 12),
-                    ),
+                    label: const Text('গ্যালারি', style: FluentType.caption),
                   ),
                 ),
               ],
@@ -2973,11 +2978,14 @@ class _QuestionBankScannerModalState
       children: [
         if (_inputMode == ScannerInputMode.textPaste)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.l,
+              vertical: FluentSpacing.s,
+            ),
+            margin: const EdgeInsets.only(bottom: FluentSpacing.m),
             decoration: BoxDecoration(
               color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: FluentRadius.controlBorder,
               border: Border.all(
                 color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
               ),
@@ -2993,7 +3001,7 @@ class _QuestionBankScannerModalState
                     color: Color(0xFF4F46E5),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Flexible(
                   child: Text(
                     _hasAnswerMarkersInPastedText()
@@ -3001,9 +3009,7 @@ class _QuestionBankScannerModalState
                         : 'AI প্রশ্নগুলো সমাধান করছে ও সঠিক উত্তর বের করছে...',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.bodyStrong.copyWith(
                       color: Color(0xFF4F46E5),
                     ),
                   ),
@@ -3013,11 +3019,14 @@ class _QuestionBankScannerModalState
           )
         else if (_totalScanningPages > 1)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.l,
+              vertical: FluentSpacing.s,
+            ),
+            margin: const EdgeInsets.only(bottom: FluentSpacing.m),
             decoration: BoxDecoration(
               color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: FluentRadius.controlBorder,
               border: Border.all(
                 color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
               ),
@@ -3033,15 +3042,13 @@ class _QuestionBankScannerModalState
                     color: Color(0xFF4F46E5),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Flexible(
                   child: Text(
                     'পাতা $_currentScanningPageIndex / $_totalScanningPages স্ক্যান হচ্ছে...',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.bodyStrong.copyWith(
                       color: Color(0xFF4F46E5),
                     ),
                   ),
@@ -3117,13 +3124,12 @@ class _QuestionBankScannerModalState
       if (count == 0 && !alwaysShow) return const SizedBox.shrink();
       final selected = _filter == filter;
       return Padding(
-        padding: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.only(right: FluentSpacing.s),
         child: ChoiceChip(
           label: Text(
             '$label ($count)',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
+            style: FluentType.caption.copyWith(
+              fontWeight: FontWeight.w600,
               color: selected ? null : colour,
             ),
           ),
@@ -3132,9 +3138,8 @@ class _QuestionBankScannerModalState
           visualDensity: VisualDensity.compact,
           // Tapping a count takes the reader to the questions it counted,
           // which is the only reason to show a count on a screen like this.
-          onSelected: (_) => setState(
-            () => _filter = selected ? ReviewFilter.all : filter,
-          ),
+          onSelected: (_) =>
+              setState(() => _filter = selected ? ReviewFilter.all : filter),
         ),
       );
     }
@@ -3147,7 +3152,7 @@ class _QuestionBankScannerModalState
             ReviewFilter.all,
             'সব',
             tally.total,
-            isDark ? Colors.white70 : Colors.black87,
+            Theme.of(context).colorScheme.onSurface,
             alwaysShow: true,
           ),
           chip(
@@ -3216,17 +3221,18 @@ class _QuestionBankScannerModalState
         Icon(
           Icons.search_off,
           size: 36,
-          color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+          color: Theme.of(context).colorScheme.onSurface
+              .withValues(alpha: 0.65),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: FluentSpacing.s),
         Text(
           _searchQuery.isNotEmpty
               ? '"$_searchQuery" সম্পর্কিত কোনো প্রশ্ন পাওয়া যায়নি'
               : 'এই ছাঁকনিতে কোনো প্রশ্ন নেই',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 12,
-            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+          style: FluentType.caption.copyWith(
+            color: Theme.of(context).colorScheme.onSurface
+                .withValues(alpha: 0.65),
           ),
         ),
       ],
@@ -3248,477 +3254,448 @@ class _QuestionBankScannerModalState
     int verifiedCount,
     int unsolvedCount,
   ) {
-        // Summary & Editable Title
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
-            border: Border(
-              bottom: BorderSide(
-                color: isDark
-                    ? const Color(0xFF334155)
-                    : const Color(0xFFCBD5E1),
+    // Summary & Editable Title
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.l,
+        vertical: FluentSpacing.m,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // A model test is usually spread over several pages, so adding
+          // the next one is offered right where the first one lands.
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _pagesScanned > 1
+                      ? 'পাতা $_pagesScanned · মোট ${_editableQuestions.length}টি প্রশ্ন'
+                      : '${_editableQuestions.length}টি প্রশ্ন',
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _isScanning ? null : _addAnotherPage,
+                icon: const Icon(Icons.add_a_photo_outlined, size: 16),
+                label: const Text('আরেক পাতা', style: FluentType.caption),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              const SizedBox(width: FluentSpacing.xs),
+              TextButton.icon(
+                onPressed: _isScanning ? null : _showAddMoreTextSheet,
+                icon: const Icon(Icons.note_add_outlined, size: 16),
+                label: const Text('+ আরও পেস্ট', style: FluentType.caption),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: FluentSpacing.s),
+          Row(
+            children: [
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4F46E5),
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
+                  child: Text(
+                    _result?.subject ?? 'General',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: FluentSpacing.s),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade700,
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
+                  child: Text(
+                    '${BengaliMathSanitizer.toBengaliDigits('${_editableQuestions.length}')}টি প্রশ্ন',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (widget.existingExamId == null)
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                  ),
+                  onPressed: () => setState(() {
+                    _result = null;
+                    _verifications.clear();
+                  }),
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('আবার তুলুন', style: FluentType.caption),
+                ),
+            ],
+          ),
+          const SizedBox(height: FluentSpacing.s),
+          TextField(
+            controller: _titleController,
+            decoration: InputDecoration(
+              isDense: true,
+              labelText: 'পরীক্ষার শিরোনাম (টপিক)',
+              labelStyle: FluentType.caption,
+              border: OutlineInputBorder(
+                borderRadius: FluentRadius.controlBorder,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.s,
               ),
             ),
+            style: FluentType.bodyStrong,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // A model test is usually spread over several pages, so adding
-              // the next one is offered right where the first one lands.
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _pagesScanned > 1
-                          ? 'পাতা $_pagesScanned · মোট ${_editableQuestions.length}টি প্রশ্ন'
-                          : '${_editableQuestions.length}টি প্রশ্ন',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _isScanning ? null : _addAnotherPage,
-                    icon: const Icon(Icons.add_a_photo_outlined, size: 16),
-                    label: const Text(
-                      'আরেক পাতা',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  TextButton.icon(
-                    onPressed: _isScanning ? null : _showAddMoreTextSheet,
-                    icon: const Icon(Icons.note_add_outlined, size: 16),
-                    label: const Text(
-                      '+ আরও পেস্ট',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4F46E5),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _result?.subject ?? 'General',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade700,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '${BengaliMathSanitizer.toBengaliDigits('${_editableQuestions.length}')}টি প্রশ্ন',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  if (widget.existingExamId == null)
-                    TextButton.icon(
-                      style: TextButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                      ),
-                      onPressed: () => setState(() {
-                        _result = null;
-                        _verifications.clear();
-                      }),
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text(
-                        'আবার তুলুন',
-                        style: TextStyle(fontSize: 11),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  isDense: true,
-                  labelText: 'পরীক্ষার শিরোনাম (টপিক)',
-                  labelStyle: const TextStyle(fontSize: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                ),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
 
-              // AI Verification Action Bar
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _isVerifyingAll ? null : _verifyAllQuestions,
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        foregroundColor: isDark
-                            ? const Color(0xFFA5B4FC)
-                            : const Color(0xFF4F46E5),
-                        side: BorderSide(
-                          color: isDark
-                              ? const Color(0xFF6366F1)
-                              : const Color(0xFF4F46E5),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      icon: _isVerifyingAll
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF4F46E5),
-                              ),
-                            )
-                          : const Icon(Icons.fact_check_outlined, size: 16),
-                      label: Text(
-                        _isVerifyingAll
-                            ? 'সব প্রশ্ন AI যাচাই করছে...'
-                            : '⚡ সব প্রশ্ন AI দিয়ে যাচাই করুন',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+          // AI Verification Action Bar
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _isVerifyingAll ? null : _verifyAllQuestions,
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.m,
+                      vertical: FluentSpacing.s,
                     ),
-                  ),
-                  if (_verifications.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    if (warningCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.amber.shade600),
-                        ),
-                        child: Text(
-                          '⚠️ $warningCountটি অসঙ্গতি!',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.amber.shade900,
-                          ),
-                        ),
-                      ),
-                    if (warningCount > 0 && verifiedCount > 0)
-                      const SizedBox(width: 4),
-                    if (verifiedCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.green.shade400),
-                        ),
-                        child: Text(
-                          '✓ $verifiedCountটি সঠিক',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade900,
-                          ),
-                        ),
-                      ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 5,
-                      ),
-                      foregroundColor: isDark
-                          ? const Color(0xFFA5B4FC)
+                    foregroundColor: isDark
+                        ? const Color(0xFFA5B4FC)
+                        : const Color(0xFF4F46E5),
+                    side: BorderSide(
+                      color: isDark
+                          ? const Color(0xFF6366F1)
                           : const Color(0xFF4F46E5),
-                      side: BorderSide(
-                        color: isDark
-                            ? const Color(0xFF6366F1)
-                            : const Color(0xFF4F46E5),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
                     ),
-                    icon: const Icon(Icons.copy_rounded, size: 13),
-                    label: const Text(
-                      'সব কপি',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onPressed: _copyAllQuestionsToClipboard,
-                  ),
-                  const SizedBox(width: 6),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 5,
-                      ),
-                      backgroundColor: const Color(0xFF6366F1),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    icon: const Icon(Icons.auto_fix_high_rounded, size: 13),
-                    label: const Text(
-                      'AI ফিক্স',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onPressed: _showBatchFixSheet,
-                  ),
-                  const SizedBox(width: 6),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 5,
-                      ),
-                      foregroundColor: isDark
-                          ? const Color(0xFFA5B4FC)
-                          : const Color(0xFF4F46E5),
-                      side: BorderSide(
-                        color: isDark
-                            ? const Color(0xFF6366F1)
-                            : const Color(0xFF4F46E5),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    icon: const Icon(Icons.paste_rounded, size: 13),
-                    label: const Text(
-                      'উত্তরমালা',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onPressed: _showPasteAnswerKeySheet,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SizedBox(
-                      height: 32,
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (val) =>
-                            setState(() => _searchQuery = val.trim()),
-                        style: const TextStyle(fontSize: 11.5),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          hintText: 'প্রশ্ন খুঁজুন...',
-                          hintStyle: TextStyle(
-                            fontSize: 11,
-                            color: isDark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade500,
-                          ),
-                          prefixIcon: const Icon(Icons.search, size: 15),
-                          prefixIconConstraints: const BoxConstraints(
-                            minWidth: 26,
-                          ),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 14),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 24,
-                                  ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                )
-                              : null,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
-                ],
-              ),
-              if (_editableQuestions.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _buildTallyStrip(tally, warningCount, verifiedCount, isDark),
-              ],
-              if (unsolvedCount > 0) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade50.withValues(
-                      alpha: isDark ? 0.15 : 1,
+                  icon: _isVerifyingAll
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF4F46E5),
+                          ),
+                        )
+                      : const Icon(Icons.fact_check_outlined, size: 16),
+                  label: Text(
+                    _isVerifyingAll
+                        ? 'সব প্রশ্ন AI যাচাই করছে...'
+                        : '⚡ সব প্রশ্ন AI দিয়ে যাচাই করুন',
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber.shade600),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 16,
-                            color: Colors.amber.shade800,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              '$unsolvedCountটি প্রশ্নের কোনো উত্তর বা ব্যাখ্যা নেই!',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? Colors.amber.shade200
-                                    : Colors.amber.shade900,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'নিচে অপশনে ট্যাপ করে নিজে উত্তর দিন, পাঠ্যবই/অন্য এজেন্ট থেকে উত্তরমালা পেস্ট করুন, অথবা অ্যাপের AI দিয়ে সমাধান নিন:',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          color: isDark
-                              ? Colors.grey.shade300
-                              : Colors.grey.shade800,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4F46E5),
-                              foregroundColor: Colors.white,
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                            ),
-                            icon: const Icon(Icons.paste_rounded, size: 13),
-                            label: const Text(
-                              '📋 উত্তরমালা পেস্ট করুন',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                            onPressed: _showPasteAnswerKeySheet,
-                          ),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              foregroundColor: isDark
-                                  ? const Color(0xFFA5B4FC)
-                                  : const Color(0xFF4F46E5),
-                            ),
-                            icon: const Icon(Icons.auto_awesome, size: 13),
-                            label: const Text(
-                              '⚡ অ্যাপের AI দিয়ে সব সমাধান',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                            onPressed: _solveAllUnsolvedWithAi,
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
                 ),
+              ),
+              if (_verifications.isNotEmpty) ...[
+                const SizedBox(width: FluentSpacing.s),
+                if (warningCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade100,
+                      borderRadius: FluentRadius.controlBorder,
+                      border: Border.all(color: Colors.amber.shade600),
+                    ),
+                    child: Text(
+                      '⚠️ $warningCountটি অসঙ্গতি!',
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                if (warningCount > 0 && verifiedCount > 0)
+                  const SizedBox(width: FluentSpacing.xs),
+                if (verifiedCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: FluentRadius.controlBorder,
+                      border: Border.all(color: Colors.green.shade400),
+                    ),
+                    child: Text(
+                      '✓ $verifiedCountটি সঠিক',
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green.shade900,
+                      ),
+                    ),
+                  ),
               ],
             ],
           ),
-        );
+          const SizedBox(height: FluentSpacing.s),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
+                  ),
+                  foregroundColor: isDark
+                      ? const Color(0xFFA5B4FC)
+                      : const Color(0xFF4F46E5),
+                  side: BorderSide(
+                    color: isDark
+                        ? const Color(0xFF6366F1)
+                        : const Color(0xFF4F46E5),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
+                ),
+                icon: const Icon(Icons.copy_rounded, size: 13),
+                label: Text(
+                  'সব কপি',
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: _copyAllQuestionsToClipboard,
+              ),
+              const SizedBox(width: FluentSpacing.s),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
+                  ),
+                  backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
+                ),
+                icon: const Icon(Icons.auto_fix_high_rounded, size: 13),
+                label: Text(
+                  'AI ফিক্স',
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: _showBatchFixSheet,
+              ),
+              const SizedBox(width: FluentSpacing.s),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
+                  ),
+                  foregroundColor: isDark
+                      ? const Color(0xFFA5B4FC)
+                      : const Color(0xFF4F46E5),
+                  side: BorderSide(
+                    color: isDark
+                        ? const Color(0xFF6366F1)
+                        : const Color(0xFF4F46E5),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
+                ),
+                icon: const Icon(Icons.paste_rounded, size: 13),
+                label: Text(
+                  'উত্তরমালা',
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: _showPasteAnswerKeySheet,
+              ),
+              const SizedBox(width: FluentSpacing.s),
+              Expanded(
+                child: SizedBox(
+                  height: 32,
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) =>
+                        setState(() => _searchQuery = val.trim()),
+                    style: FluentType.caption,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: 'প্রশ্ন খুঁজুন...',
+                      hintStyle: FluentType.caption.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.65),
+                      ),
+                      prefixIcon: const Icon(Icons.search, size: 15),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 26),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 14),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 24),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.s,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_editableQuestions.isNotEmpty) ...[
+            const SizedBox(height: FluentSpacing.s),
+            _buildTallyStrip(tally, warningCount, verifiedCount, isDark),
+          ],
+          if (unsolvedCount > 0) ...[
+            const SizedBox(height: FluentSpacing.s),
+            Container(
+              padding: const EdgeInsets.all(FluentSpacing.m),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50.withValues(
+                  alpha: isDark ? 0.15 : 1,
+                ),
+                borderRadius: FluentRadius.cardBorder,
+                border: Border.all(color: Colors.amber.shade600),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Colors.amber.shade800,
+                      ),
+                      const SizedBox(width: FluentSpacing.s),
+                      Expanded(
+                        child: Text(
+                          '$unsolvedCountটি প্রশ্নের কোনো উত্তর বা ব্যাখ্যা নেই!',
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? Colors.amber.shade200
+                                : Colors.amber.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: FluentSpacing.xs),
+                  Text(
+                    'নিচে অপশনে ট্যাপ করে নিজে উত্তর দিন, পাঠ্যবই/অন্য এজেন্ট থেকে উত্তরমালা পেস্ট করুন, অথবা অ্যাপের AI দিয়ে সমাধান নিন:',
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface
+                          .withValues(alpha: 0.65),
+                    ),
+                  ),
+                  const SizedBox(height: FluentSpacing.s),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4F46E5),
+                          foregroundColor: Colors.white,
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: FluentSpacing.s,
+                            vertical: FluentSpacing.xs,
+                          ),
+                        ),
+                        icon: const Icon(Icons.paste_rounded, size: 13),
+                        label: const Text(
+                          '📋 উত্তরমালা পেস্ট করুন',
+                          style: FluentType.caption,
+                        ),
+                        onPressed: _showPasteAnswerKeySheet,
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: FluentSpacing.s,
+                            vertical: FluentSpacing.xs,
+                          ),
+                          foregroundColor: isDark
+                              ? const Color(0xFFA5B4FC)
+                              : const Color(0xFF4F46E5),
+                        ),
+                        icon: const Icon(Icons.auto_awesome, size: 13),
+                        label: const Text(
+                          '⚡ অ্যাপের AI দিয়ে সব সমাধান',
+                          style: FluentType.caption,
+                        ),
+                        onPressed: _solveAllUnsolvedWithAi,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _buildResultReviewState(bool isDark) {
@@ -3739,7 +3716,10 @@ class _QuestionBankScannerModalState
         if (_crossCheckUnavailable && !_crossCheckNoticeRead)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.l,
+              vertical: FluentSpacing.s,
+            ),
             color: Colors.orange.withValues(alpha: isDark ? 0.22 : 0.14),
             child: Row(
               children: [
@@ -3748,12 +3728,11 @@ class _QuestionBankScannerModalState
                   size: 15,
                   color: Colors.orange.shade900,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     'উত্তরগুলো দ্বিতীয়বার মিলিয়ে দেখা যায়নি — নিজে একবার দেখে নিন',
-                    style: TextStyle(
-                      fontSize: 11.5,
+                    style: FluentType.caption.copyWith(
                       fontWeight: FontWeight.w600,
                       color: isDark
                           ? Colors.orange.shade200
@@ -3762,11 +3741,10 @@ class _QuestionBankScannerModalState
                   ),
                 ),
                 InkWell(
-                  onTap: () =>
-                      setState(() => _crossCheckNoticeRead = true),
-                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => setState(() => _crossCheckNoticeRead = true),
+                  borderRadius: FluentRadius.controlBorder,
                   child: Padding(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(FluentSpacing.xs),
                     child: Icon(
                       Icons.close,
                       size: 16,
@@ -3814,7 +3792,7 @@ class _QuestionBankScannerModalState
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.only(bottom: FluentSpacing.l),
               // One more than the questions: the header is the first item, so
               // it scrolls away instead of holding two thirds of the screen.
               itemCount: filteredIndices.length + 1,
@@ -3831,7 +3809,9 @@ class _QuestionBankScannerModalState
                 final qIndex = filteredIndices[idx - 1];
                 final q = _editableQuestions[qIndex];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FluentSpacing.l,
+                  ),
                   child: _buildQuestionCard(qIndex, q, isDark),
                 );
               },
@@ -3841,12 +3821,13 @@ class _QuestionBankScannerModalState
 
         // Bottom Action Buttons
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(FluentSpacing.l),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF111827) : Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             border: Border(
               top: BorderSide(
-                color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
+                color: FluentStroke.card(Theme.of(context).brightness),
+                width: FluentStroke.width,
               ),
             ),
           ),
@@ -3861,9 +3842,11 @@ class _QuestionBankScannerModalState
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF10B981),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.m,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     icon: const Icon(Icons.bolt, size: 20),
@@ -3874,23 +3857,22 @@ class _QuestionBankScannerModalState
                     label: const Text(
                       'পরীক্ষা দিন',
                       maxLines: 1,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13.5,
-                      ),
+                      style: FluentType.bodyStrong,
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   flex: 2,
                   child: OutlinedButton.icon(
                     onPressed: _savedToRoutine ? null : _saveToRoutine,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF4F46E5),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.m,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     icon: Icon(
@@ -3907,9 +3889,8 @@ class _QuestionBankScannerModalState
                           : (widget.existingExamId != null
                                 ? '💾 আপডেট করুন'
                                 : '💾 সেভ করুন'),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -3949,7 +3930,6 @@ class _QuestionBankScannerModalState
   }
 }
 
-
 /// One setting in the scanner, as a plain row.
 ///
 /// Not a SwitchListTile: a ListTile paints onto the nearest Material ancestor,
@@ -3973,7 +3953,7 @@ class _ScanToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: FluentSpacing.xxs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3983,24 +3963,22 @@ class _ScanToggle extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 12.5,
+                  style: FluentType.caption.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: FluentSpacing.xxs),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    height: 1.3,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                  style: FluentType.caption.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.65),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
           Switch(
             value: value,
             onChanged: onChanged,

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/calendar/calendar_sync_service.dart';
@@ -14,6 +15,8 @@ import '../../../quiz/presentation/widgets/question_bank_scanner_modal.dart';
 import '../../../quiz/presentation/widgets/quiz_batch_correction_sheet.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
 import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
+import '../../../../core/widgets/premium_ui_kit.dart';
 
 class MultiTrackExamCountdownCard extends ConsumerStatefulWidget {
   final List<ExamSchedule> exams;
@@ -135,7 +138,12 @@ class _MultiTrackExamCountdownCardState
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
+    final onSurface = scheme.onSurface;
+    final onSurfaceMuted = onSurface.withValues(alpha: 0.65);
     final tracks = _extractUniqueTracks();
     final filtered = _getFilteredExams();
 
@@ -150,45 +158,41 @@ class _MultiTrackExamCountdownCardState
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: theme.cardTheme.color ?? theme.cardColor,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-          width: 1.2,
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: FluentElevation.card(brightness),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Header with Live Pulse indicator & Hub link
           Padding(
-            padding: const EdgeInsets.only(left: 16, right: 12, top: 14),
+            padding: const EdgeInsets.only(
+              left: FluentSpacing.l,
+              right: FluentSpacing.m,
+              top: FluentSpacing.m,
+            ),
             child: Row(
               children: [
                 Container(
-                  width: 9,
-                  height: 9,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEF4444), // Live red indicator
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: scheme.error, // Live indicator
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Expanded(
+                const SizedBox(width: FluentSpacing.s),
+                Expanded(
                   child: Text(
                     'Multi-Track Exam Timeline',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      letterSpacing: 0.2,
-                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.bodyStrong.copyWith(color: onSurface),
                   ),
                 ),
                 TextButton.icon(
@@ -199,10 +203,10 @@ class _MultiTrackExamCountdownCardState
                     );
                   },
                   icon: const Icon(Icons.arrow_forward, size: 14),
-                  label: const Text('View All', style: TextStyle(fontSize: 12)),
+                  label: Text('View All', style: FluentType.caption),
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    foregroundColor: const Color(0xFF6366F1),
+                    foregroundColor: scheme.primary,
                   ),
                 ),
               ],
@@ -212,17 +216,20 @@ class _MultiTrackExamCountdownCardState
           // 2. Track Filter Chips (Horizontally Scrollable)
           if (tracks.length > 2) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: FluentSpacing.m),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: tracks.map((track) {
                     final isSelected = _selectedTrack == track;
                     final trackColor = track == 'All'
-                        ? const Color(0xFF6366F1)
+                        ? scheme.primary
                         : _getTrackColor(track);
                     return Padding(
-                      padding: const EdgeInsets.only(right: 6, bottom: 8),
+                      padding: const EdgeInsets.only(
+                        right: FluentSpacing.xs + 2,
+                        bottom: FluentSpacing.s,
+                      ),
                       child: FilterChip(
                         selected: isSelected,
                         showCheckmark: false,
@@ -237,27 +244,31 @@ class _MultiTrackExamCountdownCardState
                           track == 'All'
                               ? 'All Tracks (${widget.exams.length})'
                               : track,
-                          style: TextStyle(
-                            fontSize: 11.5,
+                          style: FluentType.caption.copyWith(
                             fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.w500,
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                             color: isSelected
                                 ? Colors.white
-                                : (isDark
-                                      ? Colors.grey.shade300
-                                      : Colors.grey.shade800),
+                                : onSurface.withValues(alpha: 0.85),
                           ),
                         ),
-                        backgroundColor: isDark
-                            ? const Color(0xFF1E293B)
-                            : const Color(0xFFF1F5F9),
+                        backgroundColor: FluentLayer.subtle(
+                          onSurface,
+                          brightness,
+                        ),
                         selectedColor: trackColor,
                         side: BorderSide(
-                          color: isSelected ? trackColor : Colors.transparent,
+                          color: isSelected
+                              ? trackColor
+                              : FluentStroke.card(brightness),
+                          width: FluentStroke.width,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
+                          horizontal: FluentSpacing.xs,
                           vertical: 0,
                         ),
                         visualDensity: VisualDensity.compact,
@@ -278,7 +289,7 @@ class _MultiTrackExamCountdownCardState
 
           // 3. Hero Exam Card with Live Countdown
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(FluentSpacing.l),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -288,17 +299,15 @@ class _MultiTrackExamCountdownCardState
                     Flexible(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3.5,
+                          horizontal: FluentSpacing.s,
+                          vertical: FluentSpacing.xxs,
                         ),
                         decoration: BoxDecoration(
-                          color: _getTrackColor(heroExam.trackName)
-                              .withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _getTrackColor(heroExam.trackName)
-                                .withValues(alpha: 0.4),
+                          color: FluentLayer.subtle(
+                            _getTrackColor(heroExam.trackName),
+                            brightness,
                           ),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -308,14 +317,13 @@ class _MultiTrackExamCountdownCardState
                               size: 13,
                               color: _getTrackColor(heroExam.trackName),
                             ),
-                            const SizedBox(width: 5),
+                            const SizedBox(width: FluentSpacing.xs),
                             Flexible(
                               child: Text(
                                 heroExam.trackName,
-                                style: TextStyle(
+                                style: FluentType.caption.copyWith(
                                   color: _getTrackColor(heroExam.trackName),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -325,7 +333,7 @@ class _MultiTrackExamCountdownCardState
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: FluentSpacing.xs + 2),
                     InkWell(
                       onTap: () {
                         Clipboard.setData(
@@ -341,62 +349,55 @@ class _MultiTrackExamCountdownCardState
                           ),
                         );
                       },
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: FluentRadius.controlBorder,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3.5,
+                          horizontal: FluentSpacing.xs + 2,
+                          vertical: FluentSpacing.xxs,
                         ),
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF334155)
-                              : const Color(0xFFE2E8F0),
-                          borderRadius: BorderRadius.circular(6),
+                          color: FluentLayer.subtle(scheme.primary, brightness),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                         child: Text(
                           'E-${heroExam.id}',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? const Color(0xFFA5B4FC)
-                                : const Color(0xFF4F46E5),
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.primary,
                           ),
                         ),
                       ),
                     ),
                     const Spacer(),
-                    _buildStatusBadge(difference, targetTime),
+                    Flexible(child: _buildStatusBadge(difference, targetTime)),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.s),
 
                 // Exam Title
                 Text(
                   heroExam.title,
-                  style: const TextStyle(
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.bodyStrong.copyWith(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.2,
+                    color: onSurface,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: FluentSpacing.xs),
 
                 // Topics Covered
                 Text(
                   heroExam.topicsCovered,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                  ),
+                  style: FluentType.caption.copyWith(color: onSurfaceMuted),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: FluentSpacing.m),
 
                 // 4. Live Countdown Display
                 _buildLiveCountdownBoxes(difference, targetTime, isDark),
-                const SizedBox(height: 14),
+                const SizedBox(height: FluentSpacing.m),
 
                 // 5. Quick Actions Row (Practice Drill, AI Cheat Sheet, Add to Calendar, Test Paper Menu)
                 () {
@@ -434,21 +435,22 @@ class _MultiTrackExamCountdownCardState
                             isCustomMcq
                                 ? 'MCQ প্র্যাকটিস (${customQuestions.length})'
                                 : 'Drill Topic',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isCustomMcq
-                                ? const Color(0xFF4F46E5)
-                                : const Color(0xFF1E3A8A),
-                            foregroundColor: Colors.white,
+                            backgroundColor: scheme.primary,
+                            foregroundColor: scheme.onPrimary,
+                            elevation: 0,
                             visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: FluentSpacing.s,
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: FluentRadius.controlBorder,
                             ),
                           ),
                           onPressed: () {
@@ -464,40 +466,40 @@ class _MultiTrackExamCountdownCardState
                           },
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: FluentSpacing.s),
 
                       // B. AI Cheat Sheet Modal
                       Expanded(
                         flex: 4,
                         child: OutlinedButton.icon(
-                          icon: const Icon(
-                            Icons.auto_awesome,
-                            size: 15,
-                            color: Color(0xFF10B981),
-                          ),
-                          label: const Text(
+                          icon: const Icon(Icons.auto_awesome, size: 15),
+                          label: Text(
                             'AI Summary',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
                             visualDensity: VisualDensity.compact,
-                            side: const BorderSide(color: Color(0xFF10B981)),
-                            foregroundColor: isDark
-                                ? Colors.white
-                                : const Color(0xFF047857),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            side: BorderSide(
+                              color: FluentStroke.card(brightness),
+                              width: FluentStroke.width,
+                            ),
+                            foregroundColor: onSurface,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: FluentSpacing.s,
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: FluentRadius.controlBorder,
                             ),
                           ),
                           onPressed: () =>
                               _showAiCheatSheetModal(context, heroExam),
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.xs + 2),
 
                       // C. Calendar Sync Button
                       IconButton(
@@ -545,53 +547,59 @@ class _MultiTrackExamCountdownCardState
                               }
                             },
                             itemBuilder: (ctx) => [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'ai_fix',
                                 child: Row(
                                   children: [
                                     Icon(
                                       Icons.auto_fix_high_rounded,
-                                      color: Color(0xFF6366F1),
+                                      color: scheme.primary,
                                       size: 18,
                                     ),
-                                    SizedBox(width: 8),
+                                    const SizedBox(width: FluentSpacing.s),
                                     Text(
                                       'AI ফিক্স (ব্যাচ সংশোধন)',
-                                      style: TextStyle(fontSize: 12.5),
+                                      style: FluentType.body.copyWith(
+                                        color: onSurface,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'copy_questions',
                                 child: Row(
                                   children: [
                                     Icon(
                                       Icons.copy_rounded,
-                                      color: Color(0xFF10B981),
+                                      color: scheme.primary,
                                       size: 18,
                                     ),
-                                    SizedBox(width: 8),
+                                    const SizedBox(width: FluentSpacing.s),
                                     Text(
                                       'প্রশ্নসমূহ কপি করুন',
-                                      style: TextStyle(fontSize: 12.5),
+                                      style: FluentType.body.copyWith(
+                                        color: onSurface,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'edit_scanner',
                                 child: Row(
                                   children: [
                                     Icon(
                                       Icons.edit_note_rounded,
-                                      color: Color(0xFFF59E0B),
+                                      color: scheme.primary,
                                       size: 18,
                                     ),
-                                    SizedBox(width: 8),
+                                    const SizedBox(width: FluentSpacing.s),
                                     Text(
                                       'প্রশ্ন সম্পাদনা ও টেস্ট পেপার',
-                                      style: TextStyle(fontSize: 12.5),
+                                      style: FluentType.body.copyWith(
+                                        color: onSurface,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -610,14 +618,21 @@ class _MultiTrackExamCountdownCardState
           // 6. Compact Timeline of Other Upcoming Exams in this Track
           if (otherUpcoming.isNotEmpty) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.l,
+                vertical: FluentSpacing.s,
+              ),
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF060B18)
-                    : const Color(0xFFF8FAFC),
+                color: onSurface.withValues(alpha: isDark ? 0.04 : 0.03),
+                border: Border(
+                  top: BorderSide(
+                    color: FluentStroke.divider(brightness),
+                    width: FluentStroke.width,
+                  ),
+                ),
                 borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(FluentRadius.card),
+                  bottomRight: Radius.circular(FluentRadius.card),
                 ),
               ),
               child: Column(
@@ -625,15 +640,14 @@ class _MultiTrackExamCountdownCardState
                 children: [
                   Text(
                     'Following Next in Timeline (${otherUpcoming.length})',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade600,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: onSurfaceMuted,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.xs + 2),
                   ...otherUpcoming.map((item) {
                     final itemTarget = _parseExamTarget(item);
                     final isToday =
@@ -651,7 +665,9 @@ class _MultiTrackExamCountdownCardState
                               : '${itemTarget.day}/${itemTarget.month}');
 
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.xs,
+                      ),
                       child: Row(
                         children: [
                           Icon(
@@ -659,29 +675,32 @@ class _MultiTrackExamCountdownCardState
                             size: 13,
                             color: _getTrackColor(item.trackName),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: FluentSpacing.xs + 2),
                           Expanded(
+                            flex: 3,
                             child: Text(
                               '${item.trackName}: ${item.title}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w500,
+                              style: FluentType.caption.copyWith(
+                                color: onSurface,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$dayLabel • ${item.examTime}',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              color: isToday
-                                  ? const Color(0xFFEF4444)
-                                  : Colors.grey,
-                              fontWeight: isToday
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                          const SizedBox(width: FluentSpacing.s),
+                          Flexible(
+                            flex: 2,
+                            child: Text(
+                              '$dayLabel • ${item.examTime}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.end,
+                              style: FluentType.caption.copyWith(
+                                color: isToday ? scheme.error : onSurfaceMuted,
+                                fontWeight: isToday
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
                             ),
                           ),
                         ],
@@ -699,29 +718,39 @@ class _MultiTrackExamCountdownCardState
 
   /// Live Ticker Box Display (Hours : Mins : Secs)
   Widget _buildLiveCountdownBoxes(Duration diff, DateTime target, bool isDark) {
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final onSurfaceMuted = theme.colorScheme.onSurface.withValues(alpha: 0.65);
+    const liveGreen = Color(0xFF10B981);
+
     if (diff.isNegative) {
       final hoursPassed = (-diff.inHours);
       if (hoursPassed < 3) {
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF10B981).withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF10B981)),
+          padding: const EdgeInsets.symmetric(
+            vertical: FluentSpacing.s,
+            horizontal: FluentSpacing.m,
           ),
-          child: const Row(
+          decoration: BoxDecoration(
+            color: FluentLayer.subtle(liveGreen, brightness),
+            borderRadius: FluentRadius.controlBorder,
+            border: Border.all(
+              color: liveGreen.withValues(alpha: 0.4),
+              width: FluentStroke.width,
+            ),
+          ),
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.mic, color: Color(0xFF10B981), size: 18),
-              SizedBox(width: 8),
+              const Icon(Icons.mic, color: liveGreen, size: 18),
+              const SizedBox(width: FluentSpacing.s),
               Flexible(
                 child: Text(
                   'Exam is Live! Open LiveMCQ & Speak Mistakes 🎙️',
-                  style: TextStyle(
-                    color: Color(0xFF10B981),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12.5,
+                  style: FluentType.caption.copyWith(
+                    color: liveGreen,
+                    fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -733,11 +762,12 @@ class _MultiTrackExamCountdownCardState
       }
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: FluentSpacing.s),
         alignment: Alignment.center,
-        child: const Text(
+        child: Text(
           'Exam concluded. Log your mistake notes for review.',
-          style: TextStyle(color: Colors.grey, fontSize: 11.5),
+          textAlign: TextAlign.center,
+          style: FluentType.caption.copyWith(color: onSurfaceMuted),
         ),
       );
     }
@@ -764,104 +794,82 @@ class _MultiTrackExamCountdownCardState
   }
 
   Widget _buildTimeBlock(String value, String label, bool isDark) {
-    return Container(
-      width: 58,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final onSurface = theme.colorScheme.onSurface;
+
+    // Flexible, not a fixed width: at 1.5x text on a 320px screen four blocks
+    // plus their separators no longer fit the row.
+    return Flexible(
+      child: Container(
+        width: 58,
+        padding: const EdgeInsets.symmetric(
+          vertical: FluentSpacing.s,
+          horizontal: FluentSpacing.xxs,
         ),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.0,
-            ),
+        decoration: BoxDecoration(
+          color: FluentLayer.subtle(onSurface, brightness),
+          borderRadius: FluentRadius.controlBorder,
+          border: Border.all(
+            color: FluentStroke.card(brightness),
+            width: FluentStroke.width,
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 8.5,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.subtitle.copyWith(
+                fontSize: 18,
+                color: onSurface,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: FluentSpacing.xxs),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.caption.copyWith(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: onSurface.withValues(alpha: 0.65),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildColon(bool isDark) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+      padding: const EdgeInsets.symmetric(horizontal: FluentSpacing.xs),
       child: Text(
         ':',
-        style: TextStyle(
+        style: FluentType.subtitle.copyWith(
           fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: isDark ? Colors.grey : Colors.black54,
+          color: onSurface.withValues(alpha: 0.65),
         ),
       ),
     );
   }
 
   Widget _buildStatusBadge(Duration diff, DateTime target) {
+    final scheme = Theme.of(context).colorScheme;
+
     if (diff.isNegative) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: const Color(0xFF10B981).withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: const Text(
-          'ACTIVE',
-          style: TextStyle(
-            color: Color(0xFF10B981),
-            fontWeight: FontWeight.bold,
-            fontSize: 10.5,
-          ),
-        ),
-      );
+      return const PremiumTag(label: 'ACTIVE', color: Color(0xFF10B981));
     }
 
     if (diff.inHours < 1) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEF4444).withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: const Color(0xFFEF4444)),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.local_fire_department,
-              size: 12,
-              color: Color(0xFFEF4444),
-            ),
-            SizedBox(width: 3),
-            Flexible(
-              child: Text(
-                'STARTS SOON',
-                style: TextStyle(
-                  color: Color(0xFFEF4444),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10.5,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+      return PremiumTag(
+        label: 'STARTS SOON',
+        icon: Icons.local_fire_department,
+        color: scheme.error,
       );
     }
 
@@ -870,38 +878,10 @@ class _MultiTrackExamCountdownCardState
         target.month == _now.month &&
         target.day == _now.day;
     if (isToday) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: const Text(
-          'TODAY',
-          style: TextStyle(
-            color: Color(0xFFF59E0B),
-            fontWeight: FontWeight.bold,
-            fontSize: 10.5,
-          ),
-        ),
-      );
+      return const PremiumTag(label: 'TODAY', color: Color(0xFFF59E0B));
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xFF6366F1).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        'in ${diff.inDays + 1}d',
-        style: const TextStyle(
-          color: Color(0xFF6366F1),
-          fontWeight: FontWeight.bold,
-          fontSize: 10.5,
-        ),
-      ),
-    );
+    return PremiumTag(label: 'in ${diff.inDays + 1}d', color: scheme.primary);
   }
 
   void _copyExamQuestionsToClipboard(
@@ -1001,16 +981,26 @@ class _AiCheatSheetBottomSheetState extends State<_AiCheatSheetBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final onSurface = scheme.onSurface;
 
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.75,
       ),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(FluentSpacing.xl),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: theme.cardTheme.color ?? theme.cardColor,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
+        border: Border(
+          top: BorderSide(
+            color: FluentStroke.card(theme.brightness),
+            width: FluentStroke.width,
+          ),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1022,45 +1012,38 @@ class _AiCheatSheetBottomSheetState extends State<_AiCheatSheetBottomSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade400,
-                borderRadius: BorderRadius.circular(4),
+                color: onSurface.withValues(alpha: 0.25),
+                borderRadius: FluentRadius.controlBorder,
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.m),
 
           // Header
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: Color(0xFF10B981),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
+              const PremiumIconBadge(icon: Icons.auto_awesome),
+              const SizedBox(width: FluentSpacing.m),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'AI High-Yield Cheat Sheet',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.bodyStrong.copyWith(
                         fontSize: 16,
+                        color: onSurface,
                       ),
                     ),
                     Text(
                       widget.exam.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: FluentType.caption.copyWith(
+                        color: onSurface.withValues(alpha: 0.65),
+                      ),
                     ),
                   ],
                 ),
@@ -1071,12 +1054,15 @@ class _AiCheatSheetBottomSheetState extends State<_AiCheatSheetBottomSheet> {
               ),
             ],
           ),
-          const Divider(height: 20),
+          Divider(
+            height: FluentSpacing.xl,
+            color: FluentStroke.divider(theme.brightness),
+          ),
 
           // Content
           if (_isLoading) ...[
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
+              padding: EdgeInsets.symmetric(vertical: FluentSpacing.m),
               child: AiProgressPipelineWidget(
                 type: AiTaskType.text,
                 customStatus: 'চিট শিট তৈরি হচ্ছে…',
@@ -1087,7 +1073,7 @@ class _AiCheatSheetBottomSheetState extends State<_AiCheatSheetBottomSheet> {
               child: SingleChildScrollView(
                 child: Text(
                   _content ?? 'No content available.',
-                  style: const TextStyle(fontSize: 13.5, height: 1.55),
+                  style: FluentType.body.copyWith(color: onSurface),
                 ),
               ),
             ),

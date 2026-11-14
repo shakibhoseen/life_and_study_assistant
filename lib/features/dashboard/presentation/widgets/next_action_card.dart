@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_ui_kit.dart';
 import '../../domain/next_study_action.dart';
 
 /// The one thing to start now, at the top of the dashboard.
@@ -31,47 +33,51 @@ class NextActionCard extends StatelessWidget {
   /// reason to start; a streak of zero is a reproach, so it stays quiet.
   final int streakDays;
 
-  ({IconData icon, Color colour}) get _look => switch (action.kind) {
-    StudyActionKind.dueReviews => (
-      icon: Icons.history_toggle_off,
-      colour: const Color(0xFF6366F1),
-    ),
-    StudyActionKind.unfinishedTask => (
-      icon: Icons.bolt,
-      colour: const Color(0xFF0EA5E9),
-    ),
-    StudyActionKind.mistakeDrill => (
-      icon: Icons.error_outline,
-      colour: const Color(0xFFF59E0B),
-    ),
-    StudyActionKind.weakTopic => (
-      icon: Icons.track_changes,
-      colour: const Color(0xFF14B8A6),
-    ),
-    StudyActionKind.allClear => (
-      icon: Icons.check_circle_outline,
-      colour: const Color(0xFF10B981),
-    ),
-  };
+  /// One accent: the card is the thing you act on, so it carries the theme
+  /// accent. Colour beyond that is kept for status — amber for the backlog of
+  /// mistakes, green for the all-clear.
+  ({IconData icon, Color colour}) _look(ColorScheme scheme) =>
+      switch (action.kind) {
+        StudyActionKind.dueReviews => (
+          icon: Icons.history_toggle_off,
+          colour: scheme.primary,
+        ),
+        StudyActionKind.unfinishedTask => (
+          icon: Icons.bolt,
+          colour: scheme.primary,
+        ),
+        StudyActionKind.mistakeDrill => (
+          icon: Icons.error_outline,
+          colour: const Color(0xFFF59E0B),
+        ),
+        StudyActionKind.weakTopic => (
+          icon: Icons.track_changes,
+          colour: scheme.primary,
+        ),
+        StudyActionKind.allClear => (
+          icon: Icons.check_circle_outline,
+          colour: const Color(0xFF10B981),
+        ),
+      };
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final look = _look;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+    final look = _look(scheme);
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            look.colour.withValues(alpha: isDark ? 0.26 : 0.12),
-            look.colour.withValues(alpha: isDark ? 0.10 : 0.04),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: FluentLayer.subtle(look.colour, brightness),
+        borderRadius: FluentRadius.cardBorder,
+        border: Border.all(
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: look.colour.withValues(alpha: 0.45)),
+        boxShadow: FluentElevation.card(brightness),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,73 +85,56 @@ class NextActionCard extends StatelessWidget {
           Row(
             children: [
               Icon(look.icon, size: 18, color: look.colour),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   action.isAllClear ? 'আজকের কাজ শেষ' : 'এখন এটা করুন',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.3,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
                     color: look.colour,
                   ),
                 ),
               ),
-              if (action.minutes > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: look.colour.withValues(alpha: isDark ? 0.3 : 0.16),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '~${action.minutes} মিনিট',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : look.colour,
-                    ),
+              if (action.minutes > 0) ...[
+                const SizedBox(width: FluentSpacing.s),
+                Flexible(
+                  child: PremiumTag(
+                    label: '~${action.minutes} মিনিট',
+                    color: look.colour,
                   ),
                 ),
+              ],
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           Text(
             action.title,
-            style: TextStyle(
+            style: FluentType.bodyStrong.copyWith(
               fontSize: 15,
-              fontWeight: FontWeight.bold,
-              height: 1.3,
-              color: isDark ? Colors.white : Colors.black87,
+              color: onSurface,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: FluentSpacing.xs),
           Text(
             action.why,
-            style: TextStyle(
-              fontSize: 11.5,
-              height: 1.35,
-              color: isDark ? Colors.white70 : Colors.black54,
+            style: FluentType.caption.copyWith(
+              color: onSurface.withValues(alpha: 0.65),
             ),
           ),
           if (streakDays > 0 && !action.isAllClear) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.xs + 2),
             Row(
               children: [
-                const Text('🔥', style: TextStyle(fontSize: 12)),
-                const SizedBox(width: 5),
+                const Text('🔥', style: FluentType.caption),
+                const SizedBox(width: FluentSpacing.xs),
                 Expanded(
                   child: Text(
                     '$streakDays দিনের ধারা — আজ কিছু না করলে ভাঙবে',
-                    style: TextStyle(
-                      fontSize: 11,
+                    style: FluentType.caption.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? Colors.orange.shade200
-                          : Colors.orange.shade800,
+                      color: const Color(0xFFF59E0B),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -155,19 +144,28 @@ class NextActionCard extends StatelessWidget {
             ),
           ],
           if (onStart != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: onStart,
                 style: FilledButton.styleFrom(
                   backgroundColor: look.colour,
-                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  foregroundColor: scheme.onPrimary,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: FluentSpacing.m,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                 ),
                 icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                label: const Text(
+                label: Text(
                   'শুরু করুন',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.bodyStrong,
                 ),
               ),
             ),

@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
 import '../../../live_mcq/presentation/providers/exam_schedule_provider.dart';
 
 /// Tracks exams dismissed from the accountability card during the current app session.
 final dismissedAccountabilityExamsProvider =
     NotifierProvider<DismissedExamsNotifier, Set<int>>(() {
-  return DismissedExamsNotifier();
-});
+      return DismissedExamsNotifier();
+    });
 
 class DismissedExamsNotifier extends Notifier<Set<int>> {
   @override
@@ -61,7 +63,13 @@ class ExamAccountabilityCard extends ConsumerWidget {
         pendingExams.sort((a, b) => b.examDate.compareTo(a.examDate));
         final exam = pendingExams.first;
 
-        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final brightness = theme.brightness;
+        final onSurface = scheme.onSurface;
+        final onSurfaceMuted = onSurface.withValues(alpha: 0.65);
+        // Amber: this card is a prompt about something outstanding.
+        const amber = Color(0xFFF59E0B);
         final examDateOnly = DateTime(
           exam.examDate.year,
           exam.examDate.month,
@@ -70,68 +78,51 @@ class ExamAccountabilityCard extends ConsumerWidget {
         final isToday = examDateOnly.difference(todayStart).inDays == 0;
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 14),
+          margin: const EdgeInsets.only(bottom: FluentSpacing.m),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isDark
-                  ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
-                  : [const Color(0xFFFFFBEB), const Color(0xFFFEF3C7)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
+            color: FluentLayer.subtle(amber, brightness),
+            borderRadius: FluentRadius.cardBorder,
             border: Border.all(
-              color: isDark
-                  ? const Color(0xFFF59E0B).withValues(alpha: 0.6)
-                  : const Color(0xFFF59E0B),
-              width: 1.5,
+              color: amber.withValues(alpha: 0.4),
+              width: FluentStroke.width,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.15 : 0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            boxShadow: FluentElevation.card(brightness),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(FluentSpacing.l),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header badge row
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.live_help_rounded,
-                        size: 18,
-                        color: Color(0xFFD97706),
-                      ),
+                    const PremiumIconBadge(
+                      icon: Icons.live_help_rounded,
+                      size: 32,
+                      iconSize: 18,
+                      color: amber,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isToday ? 'আজকের পরীক্ষা কি দিয়েছেন?' : 'পরীক্ষা সম্পন্ন হয়েছে?',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                            isToday
+                                ? 'আজকের পরীক্ষা কি দিয়েছেন?'
+                                : 'পরীক্ষা সম্পন্ন হয়েছে?',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: FluentType.bodyStrong.copyWith(
+                              color: onSurface,
                             ),
                           ),
                           Text(
                             '${exam.trackName} • ${exam.examTime}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? Colors.white60 : Colors.black54,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: FluentType.caption.copyWith(
+                              color: onSurfaceMuted,
                             ),
                           ),
                         ],
@@ -139,7 +130,7 @@ class ExamAccountabilityCard extends ConsumerWidget {
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, size: 18),
-                      color: isDark ? Colors.white54 : Colors.black45,
+                      color: onSurfaceMuted,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       tooltip: 'পরে জানাব',
@@ -151,30 +142,28 @@ class ExamAccountabilityCard extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.s),
 
                 // Exam Title
                 Text(
                   exam.title,
-                  style: TextStyle(
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.bodyStrong.copyWith(
                     fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                    color: onSurface,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: FluentSpacing.xs),
 
                 // Topic summary
                 Text(
                   'সিলেবাস: ${exam.topicsCovered}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.white70 : const Color(0xFF475569),
-                  ),
+                  style: FluentType.caption.copyWith(color: onSurfaceMuted),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: FluentSpacing.m),
 
                 // Action buttons
                 Row(
@@ -182,37 +171,40 @@ class ExamAccountabilityCard extends ConsumerWidget {
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          backgroundColor: scheme.primary,
+                          foregroundColor: scheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: FluentSpacing.s,
+                          ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: FluentRadius.controlBorder,
                           ),
                           elevation: 0,
                         ),
                         icon: const Icon(Icons.check_circle_outline, size: 16),
-                        label: const Text(
+                        label: Text(
                           'হ্যাঁ, স্কোর লিখুন',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: FluentType.bodyStrong.copyWith(fontSize: 13),
                         ),
-                        onPressed: () => _showScoreEntryModal(context, ref, exam),
+                        onPressed: () =>
+                            _showScoreEntryModal(context, ref, exam),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: FluentSpacing.s),
                     OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
+                          horizontal: FluentSpacing.m,
+                          vertical: FluentSpacing.s,
                         ),
                         side: BorderSide(
-                          color: isDark ? Colors.white30 : Colors.black26,
+                          color: FluentStroke.card(brightness),
+                          width: FluentStroke.width,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                       ),
                       onPressed: () {
@@ -222,10 +214,9 @@ class ExamAccountabilityCard extends ConsumerWidget {
                       },
                       child: Text(
                         'অংশ নিইনি',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: isDark ? Colors.white70 : Colors.black87,
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.body.copyWith(color: onSurface),
                       ),
                     ),
                   ],
@@ -244,7 +235,10 @@ class ExamAccountabilityCard extends ConsumerWidget {
     ExamSchedule exam,
   ) {
     final scoreController = TextEditingController();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
 
     showModalBottomSheet(
       context: context,
@@ -256,10 +250,18 @@ class ExamAccountabilityCard extends ConsumerWidget {
             bottom: MediaQuery.of(ctx).viewInsets.bottom,
           ),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(FluentSpacing.xl),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              color: theme.cardTheme.color ?? theme.cardColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(FluentRadius.large),
+              ),
+              border: Border(
+                top: BorderSide(
+                  color: FluentStroke.card(brightness),
+                  width: FluentStroke.width,
+                ),
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -269,44 +271,44 @@ class ExamAccountabilityCard extends ConsumerWidget {
                   child: Container(
                     width: 40,
                     height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
+                    margin: const EdgeInsets.only(bottom: FluentSpacing.l),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
+                      color: onSurface.withValues(alpha: 0.25),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                 ),
                 Text(
                   'পরীক্ষার স্কোর সংরক্ষণ',
-                  style: TextStyle(
+                  style: FluentType.subtitle.copyWith(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    color: onSurface,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: FluentSpacing.xs),
                 Text(
                   exam.title,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.white70 : Colors.black87,
+                  style: FluentType.body.copyWith(
+                    color: onSurface.withValues(alpha: 0.65),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: FluentSpacing.l),
                 TextField(
                   controller: scoreController,
                   autofocus: true,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'আপনার প্রাপ্ত নম্বর (Marks)',
                     hintText: 'যেমন: 12.5 বা 45',
                     prefixIcon: const Icon(Icons.grade_outlined),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: FluentSpacing.l),
                 Row(
                   children: [
                     Expanded(
@@ -320,7 +322,9 @@ class ExamAccountabilityCard extends ConsumerWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('পরীক্ষা সম্পন্ন হিসেবে চিহ্নিত করা হয়েছে'),
+                                content: Text(
+                                  'পরীক্ষা সম্পন্ন হিসেবে চিহ্নিত করা হয়েছে',
+                                ),
                               ),
                             );
                           }
@@ -328,15 +332,18 @@ class ExamAccountabilityCard extends ConsumerWidget {
                         child: const Text('স্কোর ছাড়া সম্পন্ন করুন'),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor: scheme.primary,
+                          foregroundColor: scheme.onPrimary,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: FluentSpacing.m,
+                          ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: FluentRadius.controlBorder,
                           ),
                         ),
                         onPressed: () async {
@@ -362,7 +369,7 @@ class ExamAccountabilityCard extends ConsumerWidget {
                         },
                         child: const Text(
                           'সংরক্ষণ করুন',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: FluentType.bodyStrong,
                         ),
                       ),
                     ),

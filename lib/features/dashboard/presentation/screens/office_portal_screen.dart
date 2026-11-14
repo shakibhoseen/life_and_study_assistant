@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_ui_kit.dart';
 import '../../../../core/services/attendance/packly_attendance_service.dart';
 import '../../../../core/services/attendance/steadfast_lunch_service.dart';
 import '../../../../core/services/background/wifi_monitor_service.dart';
@@ -57,7 +59,10 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = scheme.onSurface;
     final lunchState = ref.watch(lunchProvider);
     final attendanceState = ref.watch(officeAttendanceProvider);
 
@@ -66,47 +71,36 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Office Portal (কর্মক্ষেত্র)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.bodyStrong.copyWith(
+                fontSize: 16,
+                color: onSurface,
+              ),
             ),
             Text(
               'ZaviSoft • Steadfast Catering',
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white60 : Colors.black54,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.caption.copyWith(
+                color: onSurface.withValues(alpha: 0.65),
               ),
             ),
           ],
         ),
         actions: [
           if (attendanceState.isSimulationMode)
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.amber, width: 0.8),
+            const Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: FluentSpacing.m,
+                horizontal: FluentSpacing.xs,
               ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.science, size: 12, color: Colors.amber),
-                  SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      'TEST MODE',
-                      style: TextStyle(
-                        color: Colors.amber,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+              child: PremiumTag(
+                label: 'TEST MODE',
+                icon: Icons.science,
+                color: Color(0xFFF59E0B),
               ),
             ),
           IconButton(
@@ -137,9 +131,9 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.deepOrange,
-          labelColor: isDark ? Colors.white : Colors.black87,
-          unselectedLabelColor: isDark ? Colors.white54 : Colors.black45,
+          indicatorColor: scheme.primary,
+          labelColor: onSurface,
+          unselectedLabelColor: onSurface.withValues(alpha: 0.6),
           tabs: const [
             Tab(
               icon: Icon(Icons.lunch_dining_rounded, size: 18),
@@ -166,6 +160,13 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
   // TAB 1: STEADFAST LUNCH & MEAL CALENDAR
   // ==========================================
   Widget _buildLunchTab(LunchState state, bool isDark) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+    final onSurfaceMuted = onSurface.withValues(alpha: 0.65);
+    const amber = Color(0xFFF59E0B);
+    const green = Color(0xFF10B981);
     final now = DateTime.now();
     final tomorrow = now.add(const Duration(days: 1));
     final tomorrowStr = '${tomorrow.day}/${tomorrow.month}/${tomorrow.year}';
@@ -182,34 +183,30 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
         await ref.read(lunchProvider.notifier).syncCalendar(forceRefresh: true);
       },
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         children: [
           // 1. Cutoff Policy Banner
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(FluentSpacing.m),
             decoration: BoxDecoration(
-              color: isAfterCutoffToday
-                  ? (isDark
-                      ? Colors.red.withValues(alpha: 0.15)
-                      : const Color(0xFFFEF2F2))
-                  : (isDark
-                      ? Colors.orange.withValues(alpha: 0.15)
-                      : const Color(0xFFFFF7ED)),
-              borderRadius: BorderRadius.circular(12),
+              color: FluentLayer.subtle(
+                isAfterCutoffToday ? scheme.error : amber,
+                brightness,
+              ),
+              borderRadius: FluentRadius.cardBorder,
               border: Border.all(
-                color: isAfterCutoffToday
-                    ? (isDark ? Colors.redAccent.withValues(alpha: 0.3) : const Color(0xFFFECACA))
-                    : (isDark ? Colors.orange.withValues(alpha: 0.3) : const Color(0xFFFED7AA)),
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
             ),
             child: Row(
               children: [
                 Icon(
                   isAfterCutoffToday ? Icons.lock_clock : Icons.alarm,
-                  color: isAfterCutoffToday ? Colors.redAccent : Colors.deepOrange,
+                  color: isAfterCutoffToday ? scheme.error : amber,
                   size: 22,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,20 +215,16 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                         isAfterCutoffToday
                             ? 'Cutoff Passed (লক হয়ে গেছে)'
                             : 'Daily Cutoff: 6:00 PM (কাটঅফ সতর্কতা)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12.5,
-                          color: isAfterCutoffToday ? Colors.redAccent : Colors.deepOrange,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.bodyStrong.copyWith(
+                          color: isAfterCutoffToday ? scheme.error : amber,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: FluentSpacing.xxs),
                       Text(
                         cutoffNotice,
-                        style: TextStyle(
-                          fontSize: 11,
-                          height: 1.35,
-                          color: isDark ? Colors.white70 : Colors.black87,
-                        ),
+                        style: FluentType.caption.copyWith(color: onSurface),
                       ),
                     ],
                   ),
@@ -239,60 +232,61 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.m),
 
           // 2. Today & Tomorrow Summary Cards
           Row(
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(FluentSpacing.m),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF1E293B)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    color: theme.cardTheme.color ?? theme.cardColor,
+                    borderRadius: FluentRadius.cardBorder,
                     border: Border.all(
-                      color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                      color: FluentStroke.card(brightness),
+                      width: FluentStroke.width,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    boxShadow: FluentElevation.card(brightness),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'আজকের লাঞ্চ (Today)',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: onSurfaceMuted,
+                        ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: FluentSpacing.xs + 2),
                       Row(
                         children: [
                           Icon(
                             state.todayBooked == true
                                 ? Icons.check_circle_rounded
                                 : Icons.cancel_outlined,
-                            color: state.todayBooked == true ? Colors.green : Colors.grey,
+                            color: state.todayBooked == true
+                                ? green
+                                : onSurfaceMuted,
                             size: 18,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: FluentSpacing.xs + 2),
                           Expanded(
                             child: Text(
                               state.todayBooked == true
                                   ? 'বুক আছে ✓'
-                                  : (state.todayBooked == false ? 'অফ (No Lunch)' : 'অপেক্ষমাণ'),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
+                                  : (state.todayBooked == false
+                                        ? 'অফ (No Lunch)'
+                                        : 'অপেক্ষমাণ'),
+                              style: FluentType.bodyStrong.copyWith(
                                 color: state.todayBooked == true
-                                    ? Colors.green
-                                    : (isDark ? Colors.white70 : Colors.black87),
+                                    ? green
+                                    : onSurface,
                               ),
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -302,60 +296,57 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: FluentSpacing.m),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(FluentSpacing.m),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF1E293B)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    color: theme.cardTheme.color ?? theme.cardColor,
+                    borderRadius: FluentRadius.cardBorder,
                     border: Border.all(
-                      color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                      color: FluentStroke.card(brightness),
+                      width: FluentStroke.width,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    boxShadow: FluentElevation.card(brightness),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'আগামীকাল ($tomorrowStr)',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: onSurfaceMuted,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: FluentSpacing.xs + 2),
                       Row(
                         children: [
                           Icon(
                             state.tomorrowBooked == true
                                 ? Icons.check_circle_rounded
                                 : Icons.cancel_outlined,
-                            color: state.tomorrowBooked == true ? Colors.green : Colors.orange,
+                            color: state.tomorrowBooked == true ? green : amber,
                             size: 18,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: FluentSpacing.xs + 2),
                           Expanded(
                             child: Text(
                               state.tomorrowBooked == true
                                   ? 'বুক আছে ✓'
-                                  : (state.tomorrowBooked == false ? 'বুক নেই (Off)' : 'অপেক্ষমাণ'),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
+                                  : (state.tomorrowBooked == false
+                                        ? 'বুক নেই (Off)'
+                                        : 'অপেক্ষমাণ'),
+                              style: FluentType.bodyStrong.copyWith(
                                 color: state.tomorrowBooked == true
-                                    ? Colors.green
+                                    ? green
                                     : (state.tomorrowBooked == false
-                                        ? Colors.orange
-                                        : (isDark ? Colors.white70 : Colors.black87)),
+                                          ? amber
+                                          : onSurface),
                               ),
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -367,7 +358,7 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: FluentSpacing.m),
 
           // 3. Quick 1-Click Toggle Tomorrow's Lunch Button
           SizedBox(
@@ -375,17 +366,25 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: state.tomorrowBooked == true
-                    ? Colors.redAccent.shade700
-                    : Colors.teal.shade700,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ? scheme.error
+                    : scheme.primary,
+                foregroundColor: state.tomorrowBooked == true
+                    ? scheme.onError
+                    : scheme.onPrimary,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: FluentSpacing.m),
+                shape: RoundedRectangleBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                ),
               ),
               icon: state.isToggling
                   ? const SizedBox(
                       width: 14,
                       height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : Icon(
                       state.tomorrowBooked == true
@@ -397,20 +396,26 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                 state.isToggling
                     ? 'সার্ভারে আপডেট হচ্ছে...'
                     : (state.tomorrowBooked == true
-                        ? 'Cancel Tomorrow\'s Lunch (আগামীকালের লাঞ্চ বাতিল করুন)'
-                        : 'Book Tomorrow\'s Lunch (আগামীকালের লাঞ্চ বুক করুন)'),
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ? 'Cancel Tomorrow\'s Lunch (আগামীকালের লাঞ্চ বাতিল করুন)'
+                          : 'Book Tomorrow\'s Lunch (আগামীকালের লাঞ্চ বুক করুন)'),
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: FluentType.bodyStrong.copyWith(fontSize: 13),
               ),
               onPressed: state.isToggling
                   ? null
                   : () async {
                       final messenger = ScaffoldMessenger.of(context);
-                      final res = await ref.read(lunchProvider.notifier).toggleTomorrowMeal();
+                      final res = await ref
+                          .read(lunchProvider.notifier)
+                          .toggleTomorrowMeal();
                       if (mounted) {
                         messenger.showSnackBar(
                           SnackBar(
-                            backgroundColor:
-                                res.success ? Colors.green.shade800 : Colors.red.shade800,
+                            backgroundColor: res.success
+                                ? Colors.green.shade800
+                                : Colors.red.shade800,
                             content: Text(res.message),
                           ),
                         );
@@ -418,7 +423,7 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                     },
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: FluentSpacing.xl),
 
           // 4. Monthly Interactive Calendar
           _buildMonthlyCalendarCard(state, cal, isDark),
@@ -435,15 +440,19 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
     final monthLabel = cal?.label ?? 'Current Month';
     final bookedCount = cal?.bookedCount ?? 0;
     final days = cal?.days ?? [];
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
 
     return Card(
-      elevation: 2,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -454,12 +463,18 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                 Expanded(
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_month_rounded, color: Colors.deepOrange, size: 20),
-                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        color: scheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Text(
                           monthLabel,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: FluentType.bodyStrong.copyWith(
+                            color: onSurface,
+                          ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),
@@ -467,45 +482,24 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green, width: 0.8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.check, size: 12, color: Colors.green),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          '$bookedCount Booked',
-                          style: const TextStyle(
-                            color: Colors.green,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: FluentSpacing.s),
+                Flexible(
+                  child: PremiumTag(
+                    label: '$bookedCount Booked',
+                    icon: Icons.check,
+                    color: const Color(0xFF10B981),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.xs + 2),
             Text(
               'যেসব দিনে লাঞ্চ চান তা ট্যাপ করে বুক/বাতিল করতে পারেন (৬:০০ টার কাটঅফের পূর্বে)।',
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white60 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                color: onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.m),
 
             // Weekday Headers (Bangladesh work-week: Sat -> Fri)
             Row(
@@ -519,7 +513,10 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                 _WeekdayHeader('Fri', isWeekend: true),
               ],
             ),
-            const Divider(height: 16),
+            Divider(
+              height: FluentSpacing.l,
+              color: FluentStroke.divider(brightness),
+            ),
 
             if (state.isLoading && days.isEmpty)
               const Padding(
@@ -532,15 +529,27 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                 child: Center(
                   child: Column(
                     children: [
-                      const Icon(Icons.cloud_off, size: 32, color: Colors.grey),
-                      const SizedBox(height: 8),
-                      const Text('No calendar data. Pull down or tap sync.'),
-                      const SizedBox(height: 8),
+                      Icon(
+                        Icons.cloud_off,
+                        size: 32,
+                        color: onSurface.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: FluentSpacing.s),
+                      Text(
+                        'No calendar data. Pull down or tap sync.',
+                        textAlign: TextAlign.center,
+                        style: FluentType.body.copyWith(
+                          color: onSurface.withValues(alpha: 0.65),
+                        ),
+                      ),
+                      const SizedBox(height: FluentSpacing.s),
                       TextButton.icon(
                         icon: const Icon(Icons.sync, size: 16),
                         label: const Text('Sync Calendar Now'),
                         onPressed: () {
-                          ref.read(lunchProvider.notifier).syncCalendar(forceRefresh: true);
+                          ref
+                              .read(lunchProvider.notifier)
+                              .syncCalendar(forceRefresh: true);
                         },
                       ),
                     ],
@@ -557,6 +566,11 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
 
   Widget _buildCalendarDaysGrid(List<SteadfastDayMeal> days, bool isDark) {
     if (days.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+    const green = Color(0xFF10B981);
 
     // Work out weekday offset for the 1st of month:
     // In DateTime: 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun
@@ -568,9 +582,7 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
     if (firstDate != null) {
       leadingEmptySlots = (firstDate.weekday == DateTime.saturday)
           ? 0
-          : (firstDate.weekday == DateTime.sunday
-              ? 1
-              : firstDate.weekday + 1);
+          : (firstDate.weekday == DateTime.sunday ? 1 : firstDate.weekday + 1);
     }
 
     final totalSlots = leadingEmptySlots + days.length;
@@ -581,7 +593,7 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
     return Column(
       children: List.generate(rowCount, (rowIndex) {
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
+          padding: const EdgeInsets.symmetric(vertical: FluentSpacing.xxs),
           child: Row(
             children: List.generate(7, (colIndex) {
               final slotIndex = (rowIndex * 7) + colIndex;
@@ -592,31 +604,29 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
               final dayIndex = slotIndex - leadingEmptySlots;
               final day = days[dayIndex];
               final isToday = day.date == todayStr;
-              final dayNum = DateTime.tryParse(day.date)?.day.toString() ?? '${dayIndex + 1}';
+              final dayNum =
+                  DateTime.tryParse(day.date)?.day.toString() ??
+                  '${dayIndex + 1}';
 
               return Expanded(
                 child: InkWell(
                   onTap: () => _handleDayTap(day),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: FluentRadius.controlBorder,
                   child: Container(
                     height: 52,
-                    margin: const EdgeInsets.all(2),
+                    margin: const EdgeInsets.all(FluentSpacing.xxs),
                     decoration: BoxDecoration(
                       color: day.booked
-                          ? (isDark
-                              ? Colors.green.withValues(alpha: 0.25)
-                              : const Color(0xFFDCFCE7))
-                          : (isDark
-                              ? Colors.white.withValues(alpha: 0.04)
-                              : const Color(0xFFF8FAFC)),
-                      borderRadius: BorderRadius.circular(8),
+                          ? FluentLayer.subtle(green, brightness)
+                          : FluentLayer.subtle(onSurface, brightness),
+                      borderRadius: FluentRadius.controlBorder,
                       border: Border.all(
                         color: isToday
-                            ? Colors.deepOrange
+                            ? scheme.primary
                             : (day.booked
-                                ? Colors.green.withValues(alpha: 0.5)
-                                : (isDark ? Colors.white12 : const Color(0xFFE2E8F0))),
-                        width: isToday ? 1.8 : 1,
+                                  ? green.withValues(alpha: 0.5)
+                                  : FluentStroke.card(brightness)),
+                        width: FluentStroke.width,
                       ),
                     ),
                     child: Column(
@@ -624,21 +634,28 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                       children: [
                         Text(
                           dayNum,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: isToday ? FontWeight.bold : FontWeight.w600,
-                            color: isToday
-                                ? Colors.deepOrange
-                                : (isDark ? Colors.white : Colors.black87),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: isToday ? scheme.primary : onSurface,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: FluentSpacing.xxs),
                         if (day.booked)
-                          const Icon(Icons.check_circle, size: 14, color: Colors.green)
+                          const Icon(Icons.check_circle, size: 14, color: green)
                         else if (!day.isEditable)
-                          const Icon(Icons.lock, size: 12, color: Colors.grey)
+                          Icon(
+                            Icons.lock,
+                            size: 12,
+                            color: onSurface.withValues(alpha: 0.4),
+                          )
                         else
-                          const Icon(Icons.remove, size: 12, color: Colors.black26),
+                          Icon(
+                            Icons.remove,
+                            size: 12,
+                            color: onSurface.withValues(alpha: 0.3),
+                          ),
                       ],
                     ),
                   ),
@@ -679,6 +696,7 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
         title: Text(willBook ? 'Book Lunch?' : 'Cancel Lunch?'),
         content: Text(
           willBook
@@ -692,21 +710,27 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: willBook ? Colors.teal.shade700 : Colors.redAccent.shade700,
+              backgroundColor: willBook
+                  ? Theme.of(ctx).colorScheme.primary
+                  : Theme.of(ctx).colorScheme.error,
               foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: FluentRadius.controlBorder,
+              ),
             ),
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(ctx);
-              final res = await ref.read(lunchProvider.notifier).toggleDayMeal(
-                    date: day.date,
-                    book: willBook,
-                  );
+              final res = await ref
+                  .read(lunchProvider.notifier)
+                  .toggleDayMeal(date: day.date, book: willBook);
               if (mounted) {
                 messenger.showSnackBar(
                   SnackBar(
-                    backgroundColor:
-                        res.success ? Colors.green.shade800 : Colors.red.shade800,
+                    backgroundColor: res.success
+                        ? Colors.green.shade800
+                        : Colors.red.shade800,
                     content: Text(res.message),
                   ),
                 );
@@ -719,8 +743,14 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
     );
   }
 
-  ({int hours, int minutes, bool isNineHoursCompleted, int remainingMinutes, int overtimeMinutes})?
-      _calculateWorkdayMetrics(String? checkInTime) {
+  ({
+    int hours,
+    int minutes,
+    bool isNineHoursCompleted,
+    int remainingMinutes,
+    int overtimeMinutes,
+  })?
+  _calculateWorkdayMetrics(String? checkInTime) {
     if (checkInTime == null || checkInTime.isEmpty) return null;
     try {
       final clean = checkInTime.trim().toUpperCase();
@@ -768,14 +798,25 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
   // TAB 2: PACKLY ATTENDANCE
   // ==========================================
   Widget _buildAttendanceTab(AttendanceState state, bool isDark) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+    final onSurfaceMuted = onSurface.withValues(alpha: 0.65);
+    const amber = Color(0xFFF59E0B);
+    const green = Color(0xFF10B981);
     final status = state.status;
     final isCheckedIn = status?.isCheckedIn ?? (state.lastCheckInTime != null);
-    final isCheckedOut = status?.isCheckedOut ?? (state.lastCheckOutTime != null);
-    final metrics = isCheckedIn ? _calculateWorkdayMetrics(state.lastCheckInTime) : null;
+    final isCheckedOut =
+        status?.isCheckedOut ?? (state.lastCheckOutTime != null);
+    final metrics = isCheckedIn
+        ? _calculateWorkdayMetrics(state.lastCheckInTime)
+        : null;
 
     final wifiState = ref.watch(settingsNotifierProvider).value;
     final currentSsid = WifiMonitorService.instance.currentSsid;
-    final officeSsids = wifiState?.officeWifiSsids ?? ['ZaviSoft', 'SecretStar'];
+    final officeSsids =
+        wifiState?.officeWifiSsids ?? ['ZaviSoft', 'SecretStar'];
     final isOfficeConnected =
         currentSsid != null && officeSsids.any((s) => currentSsid.contains(s));
 
@@ -785,20 +826,21 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
         await _fetchHolidays();
       },
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         children: [
           // 1. Live Attendance Status Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(FluentSpacing.l),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                colors: isOfficeConnected
-                    ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
-                    : [const Color(0xFF1E1E2E), const Color(0xFF181825)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              borderRadius: FluentRadius.cardBorder,
+              color: isOfficeConnected
+                  ? FluentLayer.subtle(scheme.primary, brightness)
+                  : (theme.cardTheme.color ?? theme.cardColor),
+              border: Border.all(
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
+              boxShadow: FluentElevation.card(brightness),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -811,19 +853,21 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                         children: [
                           Icon(
                             isOfficeConnected ? Icons.wifi : Icons.wifi_off,
-                            color: isOfficeConnected ? Colors.tealAccent : Colors.white70,
+                            color: isOfficeConnected
+                                ? scheme.primary
+                                : onSurfaceMuted,
                             size: 18,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: FluentSpacing.s),
                           Expanded(
                             child: Text(
                               isOfficeConnected
                                   ? 'Office Wi-Fi Active ($currentSsid)'
                                   : 'Away from Office Wi-Fi',
-                              style: TextStyle(
-                                color: isOfficeConnected ? Colors.tealAccent : Colors.white70,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12.5,
+                              style: FluentType.bodyStrong.copyWith(
+                                color: isOfficeConnected
+                                    ? scheme.primary
+                                    : onSurfaceMuted,
                               ),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
@@ -833,27 +877,18 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                       ),
                     ),
                     if (state.isSimulationMode) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.amberAccent, width: 0.8),
-                        ),
-                        child: const Text(
-                          'TEST MODE',
-                          style: TextStyle(
-                            color: Colors.amberAccent,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      const SizedBox(width: FluentSpacing.s),
+                      const Flexible(
+                        child: PremiumTag(
+                          label: 'TEST MODE',
+                          icon: Icons.science,
+                          color: amber,
                         ),
                       ),
                     ],
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: FluentSpacing.m),
 
                 // Check-In and Check-Out Time Row
                 Row(
@@ -862,79 +897,74 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Check-In Time',
-                            style: TextStyle(color: Colors.white60, fontSize: 11),
+                            style: FluentType.caption.copyWith(
+                              color: onSurfaceMuted,
+                            ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: FluentSpacing.xs),
                           Text(
                             state.lastCheckInTime ?? 'Not checked in',
-                            style: TextStyle(
-                              color: state.lastCheckInTime != null
-                                  ? (state.isLate ? Colors.amberAccent : Colors.tealAccent)
-                                  : Colors.white,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: FluentType.bodyStrong.copyWith(
                               fontSize: 15,
-                              fontWeight: FontWeight.bold,
+                              color: state.lastCheckInTime != null
+                                  ? (state.isLate ? amber : green)
+                                  : onSurface,
                             ),
                           ),
                           if (state.lastCheckInTime != null)
-                            Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: state.isLate
-                                    ? Colors.amber.withValues(alpha: 0.2)
-                                    : Colors.green.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(4),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: FluentSpacing.xs,
                               ),
-                              child: Text(
-                                state.isLate ? 'LATE (> 9:14 AM)' : 'ON-TIME ✓',
-                                style: TextStyle(
-                                  color: state.isLate ? Colors.amberAccent : Colors.greenAccent,
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              child: PremiumTag(
+                                label: state.isLate
+                                    ? 'LATE (> 9:14 AM)'
+                                    : 'ON-TIME ✓',
+                                color: state.isLate ? amber : green,
                               ),
                             ),
                         ],
                       ),
                     ),
-                    Container(width: 1, height: 40, color: Colors.white12),
-                    const SizedBox(width: 14),
+                    Container(
+                      width: FluentStroke.width,
+                      height: 40,
+                      color: FluentStroke.divider(brightness),
+                    ),
+                    const SizedBox(width: FluentSpacing.m),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Check-Out Time',
-                            style: TextStyle(color: Colors.white60, fontSize: 11),
-                          ),
-                          const SizedBox(height: 4),
                           Text(
-                            state.lastCheckOutTime ?? (isCheckedIn ? 'In Progress' : 'Pending'),
-                            style: TextStyle(
-                              color: state.lastCheckOutTime != null
-                                  ? Colors.greenAccent
-                                  : Colors.white70,
+                            'Check-Out Time',
+                            style: FluentType.caption.copyWith(
+                              color: onSurfaceMuted,
+                            ),
+                          ),
+                          const SizedBox(height: FluentSpacing.xs),
+                          Text(
+                            state.lastCheckOutTime ??
+                                (isCheckedIn ? 'In Progress' : 'Pending'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: FluentType.bodyStrong.copyWith(
                               fontSize: 15,
-                              fontWeight: FontWeight.bold,
+                              color: state.lastCheckOutTime != null
+                                  ? green
+                                  : onSurfaceMuted,
                             ),
                           ),
                           if (state.lastCheckOutTime != null)
-                            Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'COMPLETED ✓',
-                                style: TextStyle(
-                                  color: Colors.greenAccent,
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            const Padding(
+                              padding: EdgeInsets.only(top: FluentSpacing.xs),
+                              child: PremiumTag(
+                                label: 'COMPLETED ✓',
+                                color: green,
                               ),
                             ),
                         ],
@@ -944,18 +974,18 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                 ),
                 // 9-Hour Workday Progress Indicator
                 if (metrics != null) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: FluentSpacing.m),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.m,
+                      vertical: FluentSpacing.s,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(10),
+                      color: FluentLayer.subtle(onSurface, brightness),
+                      borderRadius: FluentRadius.controlBorder,
                       border: Border.all(
-                        color: metrics.isNineHoursCompleted
-                            ? Colors.greenAccent.withValues(alpha: 0.3)
-                            : (DateTime.now().hour < 18
-                                ? Colors.amber.withValues(alpha: 0.3)
-                                : Colors.white12),
+                        color: FluentStroke.card(brightness),
+                        width: FluentStroke.width,
                       ),
                     ),
                     child: Column(
@@ -968,18 +998,21 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                               child: Row(
                                 children: [
                                   Icon(
-                                    metrics.isNineHoursCompleted ? Icons.check_circle : Icons.timer,
+                                    metrics.isNineHoursCompleted
+                                        ? Icons.check_circle
+                                        : Icons.timer,
                                     size: 14,
-                                    color: metrics.isNineHoursCompleted ? Colors.greenAccent : Colors.amberAccent,
+                                    color: metrics.isNineHoursCompleted
+                                        ? green
+                                        : amber,
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(width: FluentSpacing.xs + 2),
                                   Expanded(
                                     child: Text(
                                       'Workday: ${metrics.hours}h ${metrics.minutes.toString().padLeft(2, '0')}m / 9h',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.bold,
+                                      style: FluentType.caption.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: onSurface,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
@@ -988,35 +1021,54 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: FluentSpacing.s),
                             if (metrics.isNineHoursCompleted)
-                              Text(
-                                metrics.overtimeMinutes > 0
-                                    ? 'OT: +${metrics.overtimeMinutes ~/ 60 > 0 ? '${metrics.overtimeMinutes ~/ 60}h ' : ''}${metrics.overtimeMinutes % 60}m 🔥'
-                                    : '9h Completed ✓',
-                                style: const TextStyle(
-                                  color: Colors.greenAccent,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                              Flexible(
+                                child: Text(
+                                  metrics.overtimeMinutes > 0
+                                      ? 'OT: +${metrics.overtimeMinutes ~/ 60 > 0 ? '${metrics.overtimeMinutes ~/ 60}h ' : ''}${metrics.overtimeMinutes % 60}m 🔥'
+                                      : '9h Completed ✓',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.end,
+                                  style: FluentType.caption.copyWith(
+                                    color: green,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               )
                             else
-                              Text(
-                                '${metrics.remainingMinutes ~/ 60 > 0 ? '${metrics.remainingMinutes ~/ 60}h ' : ''}${metrics.remainingMinutes % 60}m left',
-                                style: const TextStyle(color: Colors.amberAccent, fontSize: 11),
+                              Flexible(
+                                child: Text(
+                                  '${metrics.remainingMinutes ~/ 60 > 0 ? '${metrics.remainingMinutes ~/ 60}h ' : ''}${metrics.remainingMinutes % 60}m left',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.end,
+                                  style: FluentType.caption.copyWith(
+                                    color: amber,
+                                  ),
+                                ),
                               ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: FluentSpacing.s),
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: FluentRadius.controlBorder,
                           child: LinearProgressIndicator(
-                            value: (metrics.hours * 60 + metrics.minutes) / 540.0 > 1.0
+                            value:
+                                (metrics.hours * 60 + metrics.minutes) / 540.0 >
+                                    1.0
                                 ? 1.0
-                                : (metrics.hours * 60 + metrics.minutes) / 540.0,
-                            backgroundColor: Colors.white12,
+                                : (metrics.hours * 60 + metrics.minutes) /
+                                      540.0,
+                            backgroundColor: FluentLayer.subtle(
+                              onSurface,
+                              brightness,
+                            ),
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              metrics.isNineHoursCompleted ? Colors.greenAccent : Colors.tealAccent,
+                              metrics.isNineHoursCompleted
+                                  ? green
+                                  : scheme.primary,
                             ),
                             minHeight: 6,
                           ),
@@ -1025,7 +1077,7 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: FluentSpacing.l),
 
                 // Direct Punch Buttons (State-Aware: Supports Multiple Check-Outs & Early Warning)
                 Row(
@@ -1033,31 +1085,47 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isCheckedIn ? Colors.grey.shade800 : Colors.teal.shade600,
-                          foregroundColor: isCheckedIn ? Colors.white54 : Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          backgroundColor: isCheckedIn
+                              ? FluentLayer.subtle(onSurface, brightness)
+                              : scheme.primary,
+                          foregroundColor: isCheckedIn
+                              ? onSurfaceMuted
+                              : scheme.onPrimary,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: FluentSpacing.s,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: FluentRadius.controlBorder,
+                          ),
                         ),
                         icon: state.isLoading
                             ? const SizedBox(
                                 width: 12,
                                 height: 12,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
                               )
-                            : Icon(isCheckedIn ? Icons.check_circle : Icons.login, size: 16),
+                            : Icon(
+                                isCheckedIn ? Icons.check_circle : Icons.login,
+                                size: 16,
+                              ),
                         label: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
                             isCheckedIn ? 'Checked In ✓' : 'Check In Now',
-                            style: const TextStyle(fontSize: 12),
+                            style: FluentType.caption,
                           ),
                         ),
                         onPressed: (state.isLoading || isCheckedIn)
                             ? null
                             : () async {
                                 final messenger = ScaffoldMessenger.of(context);
-                                final res =
-                                    await ref.read(officeAttendanceProvider.notifier).checkIn();
+                                final res = await ref
+                                    .read(officeAttendanceProvider.notifier)
+                                    .checkIn();
                                 if (mounted) {
                                   messenger.showSnackBar(
                                     SnackBar(
@@ -1071,16 +1139,23 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                               },
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: !isCheckedIn
-                              ? Colors.grey.shade800
-                              : (isCheckedOut ? Colors.indigo.shade600 : Colors.redAccent.shade700),
-                          foregroundColor: !isCheckedIn ? Colors.white54 : Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ? FluentLayer.subtle(onSurface, brightness)
+                              : (isCheckedOut ? scheme.primary : scheme.error),
+                          foregroundColor: !isCheckedIn
+                              ? onSurfaceMuted
+                              : Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: FluentSpacing.s,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: FluentRadius.controlBorder,
+                          ),
                         ),
                         icon: Icon(
                           isCheckedOut ? Icons.update : Icons.logout,
@@ -1091,36 +1166,54 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                           child: Text(
                             !isCheckedIn
                                 ? 'Pending In'
-                                : (isCheckedOut ? 'Update Out' : 'Check Out Now'),
-                            style: const TextStyle(fontSize: 12),
+                                : (isCheckedOut
+                                      ? 'Update Out'
+                                      : 'Check Out Now'),
+                            style: FluentType.caption,
                           ),
                         ),
                         onPressed: (state.isLoading || !isCheckedIn)
                             ? null
                             : () async {
                                 final now = DateTime.now();
-                                final isEarly = (metrics != null && !metrics.isNineHoursCompleted) || now.hour < 18;
+                                final isEarly =
+                                    (metrics != null &&
+                                        !metrics.isNineHoursCompleted) ||
+                                    now.hour < 18;
 
                                 final confirm = await showDialog<bool>(
                                   context: context,
                                   builder: (ctx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: FluentRadius.cardBorder,
+                                    ),
                                     title: Row(
                                       children: [
                                         Icon(
                                           isEarly
                                               ? Icons.warning_amber_rounded
-                                              : (isCheckedOut ? Icons.update : Icons.logout),
+                                              : (isCheckedOut
+                                                    ? Icons.update
+                                                    : Icons.logout),
                                           color: isEarly
-                                              ? Colors.amber
-                                              : (isCheckedOut ? Colors.blue : Colors.redAccent),
+                                              ? amber
+                                              : (isCheckedOut
+                                                    ? scheme.primary
+                                                    : scheme.error),
                                         ),
-                                        const SizedBox(width: 8),
+                                        const SizedBox(width: FluentSpacing.s),
                                         Expanded(
                                           child: Text(
                                             isEarly
                                                 ? 'Early Check-Out Alert'
-                                                : (isCheckedOut ? 'Update Check-Out (OT)' : 'Confirm Check-Out?'),
-                                            style: const TextStyle(fontSize: 15),
+                                                : (isCheckedOut
+                                                      ? 'Update Check-Out (OT)'
+                                                      : 'Confirm Check-Out?'),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: FluentType.subtitle.copyWith(
+                                              fontSize: 15,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -1128,34 +1221,45 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                                     content: Text(
                                       isEarly
                                           ? 'অফিসের নির্ধারিত সময় সকাল ৯:০০ টা থেকে সন্ধ্যা ৬:০০ টা (মোট ৯ ঘণ্টা)।\n\n'
-                                            'আপনি এখন পর্যন্ত কাজ করেছেন: ${metrics?.hours ?? 0} ঘণ্টা ${metrics?.minutes ?? 0} মিনিট '
-                                            '(৯ ঘণ্টা পূর্ণ হতে আরও ${metrics?.remainingMinutes ?? 0} মিনিট বাকি)।\n\n'
-                                            'ম্যানেজমেন্টের অনুমোদন নিয়ে থাকলে "Proceed Early Out" চাপুন।'
+                                                'আপনি এখন পর্যন্ত কাজ করেছেন: ${metrics?.hours ?? 0} ঘণ্টা ${metrics?.minutes ?? 0} মিনিট '
+                                                '(৯ ঘণ্টা পূর্ণ হতে আরও ${metrics?.remainingMinutes ?? 0} মিনিট বাকি)।\n\n'
+                                                'ম্যানেজমেন্টের অনুমোদন নিয়ে থাকলে "Proceed Early Out" চাপুন।'
                                           : (isCheckedOut
-                                              ? 'আপনার পূর্ববর্তী চেক-আউট ছিল: ${state.lastCheckOutTime}।\n\n'
-                                                'এখন নতুন পাঞ্চ দিলে সিস্টেমে আপনার সর্বশেষ সময় রেকর্ড হবে এবং ওভারটাইম গণনা হবে।\n\n'
-                                                'সর্বশেষ চেক-আউট আপডেট করতে চান?'
-                                              : 'আজকের কাজের সময় সম্পন্ন হয়েছে (মোট সময়: ${metrics?.hours ?? 9} ঘণ্টা ${metrics?.minutes ?? 0} মিনিট)।\n\n'
-                                                'চেক-আউট সাবমিট করতে চান?'),
-                                      style: const TextStyle(fontSize: 13, height: 1.4),
+                                                ? 'আপনার পূর্ববর্তী চেক-আউট ছিল: ${state.lastCheckOutTime}।\n\n'
+                                                      'এখন নতুন পাঞ্চ দিলে সিস্টেমে আপনার সর্বশেষ সময় রেকর্ড হবে এবং ওভারটাইম গণনা হবে।\n\n'
+                                                      'সর্বশেষ চেক-আউট আপডেট করতে চান?'
+                                                : 'আজকের কাজের সময় সম্পন্ন হয়েছে (মোট সময়: ${metrics?.hours ?? 9} ঘণ্টা ${metrics?.minutes ?? 0} মিনিট)।\n\n'
+                                                      'চেক-আউট সাবমিট করতে চান?'),
+                                      style: FluentType.body,
                                     ),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.pop(ctx, false),
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, false),
                                         child: const Text('Cancel'),
                                       ),
                                       ElevatedButton(
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: isEarly
-                                              ? Colors.amber.shade800
-                                              : (isCheckedOut ? Colors.indigo : Colors.redAccent),
+                                              ? amber
+                                              : (isCheckedOut
+                                                    ? scheme.primary
+                                                    : scheme.error),
                                           foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                FluentRadius.controlBorder,
+                                          ),
                                         ),
-                                        onPressed: () => Navigator.pop(ctx, true),
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, true),
                                         child: Text(
                                           isEarly
                                               ? 'Proceed Early Out'
-                                              : (isCheckedOut ? 'Update Check-Out' : 'Yes, Check Out'),
+                                              : (isCheckedOut
+                                                    ? 'Update Check-Out'
+                                                    : 'Yes, Check Out'),
                                         ),
                                       ),
                                     ],
@@ -1163,7 +1267,9 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                                 );
                                 if (confirm == true) {
                                   if (!mounted) return;
-                                  final messenger = ScaffoldMessenger.of(context);
+                                  final messenger = ScaffoldMessenger.of(
+                                    context,
+                                  );
                                   final res = await ref
                                       .read(officeAttendanceProvider.notifier)
                                       .checkOut();
@@ -1186,57 +1292,65 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.m),
 
           // 2. Strict 9:15 AM Policy Card
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(FluentSpacing.m),
             decoration: BoxDecoration(
-              color: isDark ? Colors.amber.withValues(alpha: 0.12) : const Color(0xFFFFFBEB),
-              borderRadius: BorderRadius.circular(12),
+              color: FluentLayer.subtle(amber, brightness),
+              borderRadius: FluentRadius.cardBorder,
               border: Border.all(
-                color: isDark ? Colors.amber.withValues(alpha: 0.3) : const Color(0xFFFDE68A),
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
             ),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 20),
-                SizedBox(width: 8),
+                const Icon(Icons.warning_amber_rounded, color: amber, size: 20),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     'অফিস নিয়ম: ৯:১৪ AM পর্যন্ত অন-টাইম, ৯:১৫ AM বাজলেই LATE। মাসে ৩ দিন লেট হলে ১ দিনের বেতন কর্তন ও শোকজ কার্যকর হয়।',
-                    style: TextStyle(fontSize: 11.5, height: 1.35),
+                    style: FluentType.caption.copyWith(color: onSurface),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.m),
 
           // 3. Holidays List
           Card(
+            elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+              borderRadius: FluentRadius.cardBorder,
+              side: FluentStroke.side(brightness),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(FluentSpacing.l),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Row(
                           children: [
-                            Icon(Icons.celebration, color: Colors.teal, size: 18),
-                            SizedBox(width: 8),
+                            Icon(
+                              Icons.celebration,
+                              color: scheme.primary,
+                              size: 18,
+                            ),
+                            const SizedBox(width: FluentSpacing.s),
                             Flexible(
                               child: Text(
                                 'Official Company Holidays',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                style: FluentType.bodyStrong.copyWith(
+                                  color: onSurface,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1252,64 +1366,68 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                         ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.s),
                   if (_holidays.isEmpty)
-                    const Text(
+                    Text(
                       'ছুটির তালিকা লোড হচ্ছে...',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                      style: FluentType.caption.copyWith(color: onSurfaceMuted),
                     )
                   else
                     ..._holidays.take(6).map((h) {
                       final isUpcoming = h.endDate.isAfter(DateTime.now());
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: FluentSpacing.xs,
+                        ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Icon(
-                              isUpcoming ? Icons.event_available : Icons.event_busy,
+                              isUpcoming
+                                  ? Icons.event_available
+                                  : Icons.event_busy,
                               size: 16,
-                              color: isUpcoming ? Colors.teal : Colors.grey,
+                              color: isUpcoming
+                                  ? scheme.primary
+                                  : onSurfaceMuted,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: FluentSpacing.s),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     h.name,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: isUpcoming ? FontWeight.w600 : FontWeight.normal,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: FluentType.body.copyWith(
+                                      fontWeight: isUpcoming
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                      color: onSurface,
                                     ),
                                   ),
-                                  const SizedBox(height: 1),
+                                  const SizedBox(height: FluentSpacing.xxs),
                                   Text(
                                     h.formattedWithWeekday,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isUpcoming ? Colors.teal.shade700 : Colors.grey.shade600,
-                                      fontWeight: FontWeight.w500,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: FluentType.caption.copyWith(
+                                      color: isUpcoming
+                                          ? scheme.primary
+                                          : onSurfaceMuted,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
+                            const SizedBox(width: FluentSpacing.s),
+                            Flexible(
+                              child: PremiumTag(
+                                label: isUpcoming ? 'আসন্ন' : 'সমাপ্ত',
                                 color: isUpcoming
-                                    ? Colors.teal.withValues(alpha: 0.12)
-                                    : Colors.grey.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                isUpcoming ? 'আসন্ন' : 'সমাপ্ত',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: isUpcoming ? Colors.teal : Colors.grey,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                    ? scheme.primary
+                                    : onSurfaceMuted,
                               ),
                             ),
                           ],
@@ -1337,10 +1455,12 @@ class _WeekdayHeader extends StatelessWidget {
       child: Center(
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isWeekend ? Colors.redAccent : Colors.grey,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: FluentType.caption.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface
+                .withValues(alpha: isWeekend ? 0.8 : 0.6),
           ),
         ),
       ),

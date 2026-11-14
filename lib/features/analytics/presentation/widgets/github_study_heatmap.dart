@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/widgets/collapsible_card.dart';
 import '../../../dashboard/domain/dashboard_section_prefs.dart';
 
@@ -72,7 +73,8 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
     Map<String, dynamic>? details,
     int score,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final drills = details?['drills'] ?? 0;
     final questions = details?['questions'] ?? 0;
     final correct = details?['correct'] ?? 0;
@@ -81,10 +83,10 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: const Color(0xFF1A1B36),
+        backgroundColor: theme.colorScheme.inverseSurface,
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
         content: Row(
           children: [
             Container(
@@ -92,19 +94,18 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
               height: 14,
               decoration: BoxDecoration(
                 color: _getCellColor(score, isDark: isDark),
-                borderRadius: BorderRadius.circular(3),
+                borderRadius: FluentRadius.controlBorder,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: FluentSpacing.s),
             Expanded(
               child: Text(
                 score == 0
                     ? '$dateKey: No study activity logged'
                     : '$dateKey: $drills Drills • $questions Questions ($correct correct)${hasEnergy ? ' • Energy logged' : ''}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
+                style: FluentType.caption.copyWith(
+                  color: theme.colorScheme.onInverseSurface,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -121,7 +122,7 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
     return CollapsibleCard(
       title: 'Study Activity Heatmap',
       icon: Icons.grid_on,
-      iconColour: const Color(0xFF2DA44E),
+      iconColour: Theme.of(context).colorScheme.primary,
       // Nothing is counted until it is opened, so there is nothing to say
       // about the fortnight until then. The streak badge that used to sit here
       // is gone: the dashboard already shows the streak at the top of the
@@ -133,7 +134,7 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
       onToggle: _toggle,
       child: _isLoading
           ? const Padding(
-              padding: EdgeInsets.all(24),
+              padding: EdgeInsets.all(FluentSpacing.xxl),
               child: Center(child: CircularProgressIndicator()),
             )
           : _buildBody(context),
@@ -172,16 +173,19 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
             children: [
               // Weekday labels (M, W, F)
               Padding(
-                padding: const EdgeInsets.only(right: 6, top: 2),
+                padding: const EdgeInsets.only(
+                  right: FluentSpacing.s,
+                  top: FluentSpacing.xxs,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 14), // Sun
-                    _buildWeekdayLabel('Mon', isDark: isDark),
+                    _buildWeekdayLabel('Mon'),
                     const SizedBox(height: 16), // Tue
-                    _buildWeekdayLabel('Wed', isDark: isDark),
+                    _buildWeekdayLabel('Wed'),
                     const SizedBox(height: 16), // Thu
-                    _buildWeekdayLabel('Fri', isDark: isDark),
+                    _buildWeekdayLabel('Fri'),
                   ],
                 ),
               ),
@@ -216,18 +220,20 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
                         child: Container(
                           width: 12,
                           height: 12,
-                          margin: const EdgeInsets.all(2),
+                          margin: const EdgeInsets.all(FluentSpacing.xxs),
                           decoration: BoxDecoration(
                             color: _getCellColor(score, isDark: isDark),
-                            borderRadius: BorderRadius.circular(2.5),
+                            borderRadius: BorderRadius.circular(2),
                             border: Border.all(
                               color: score > 0
                                   ? (isDark
                                         ? Colors.black.withValues(alpha: 0.3)
                                         : Colors.black.withValues(alpha: 0.08))
-                                  : (isDark
-                                        ? const Color(0xFF334155)
-                                        : Colors.grey.shade300),
+                                  : FluentStroke.divider(
+                                      isDark
+                                          ? Brightness.dark
+                                          : Brightness.light,
+                                    ),
                               width: 0.5,
                             ),
                           ),
@@ -241,7 +247,7 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: FluentSpacing.m),
 
         // GitHub Legend (Less [0][1][2][3][4] More)
         Row(
@@ -250,27 +256,29 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
             Flexible(
               child: Text(
                 'Less',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isDark ? Colors.white60 : Colors.grey.shade600,
+                style: FluentType.caption.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.65),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: FluentSpacing.xs),
             _buildLegendCell(_getCellColor(0, isDark: isDark), isDark: isDark),
             _buildLegendCell(const Color(0xFF9BE9A8), isDark: isDark),
             _buildLegendCell(const Color(0xFF40C463), isDark: isDark),
             _buildLegendCell(const Color(0xFF30A14E), isDark: isDark),
             _buildLegendCell(const Color(0xFF216E39), isDark: isDark),
-            const SizedBox(width: 4),
+            const SizedBox(width: FluentSpacing.xs),
             Flexible(
               child: Text(
                 'More',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isDark ? Colors.white60 : Colors.grey.shade600,
+                style: FluentType.caption.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.65),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -282,28 +290,34 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
         // Subject Distribution Breakdown (if available)
         if (_subjectDistribution != null &&
             _subjectDistribution!.isNotEmpty) ...[
-          const Divider(height: 24),
-          const Row(
+          const Divider(height: FluentSpacing.xxl),
+          Row(
             children: [
-              Icon(Icons.donut_small, color: Colors.indigo, size: 16),
-              SizedBox(width: 6),
+              Icon(
+                Icons.donut_small,
+                color: Theme.of(context).colorScheme.primary,
+                size: 16,
+              ),
+              const SizedBox(width: FluentSpacing.s),
               Flexible(
                 child: Text(
                   'Subject Time & Focus Distribution',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  style: FluentType.bodyStrong.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
 
           // Multi-segment horizontal bar
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: FluentRadius.controlBorder,
             child: SizedBox(
-              height: 10,
+              height: FluentSpacing.s,
               child: Row(
                 children: _subjectDistribution!.map((item) {
                   final pct = (item['percentage'] as num?)?.toDouble() ?? 0.0;
@@ -316,12 +330,12 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
 
           // Subject chips with percentages
           Wrap(
-            spacing: 8,
-            runSpacing: 6,
+            spacing: FluentSpacing.s,
+            runSpacing: FluentSpacing.s,
             children: _subjectDistribution!.take(5).map((item) {
               final subject = item['subject']?.toString() ?? 'General';
               final pct = ((item['percentage'] as num?)?.toDouble() ?? 0.0)
@@ -336,15 +350,15 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
                     height: 8,
                     decoration: BoxDecoration(
                       color: color,
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: FluentSpacing.xs),
                   Text(
                     '$subject ($pct%)',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -356,15 +370,18 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
     );
   }
 
-  Widget _buildWeekdayLabel(String text, {required bool isDark}) {
+  Widget _buildWeekdayLabel(String text) {
     return SizedBox(
       height: 12,
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: 9,
-          color: isDark ? Colors.white54 : Colors.grey.shade500,
-          fontWeight: FontWeight.w500,
+        // The grid rows are 12px tall, so this label keeps its small size and
+        // a 1.0 leading — anything taller would push the rows out of line.
+        style: FluentType.caption.copyWith(
+          fontSize: 10,
+          height: 1.0,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -374,14 +391,14 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
     return Container(
       width: 10,
       height: 10,
-      margin: const EdgeInsets.symmetric(horizontal: 1.5),
+      margin: const EdgeInsets.symmetric(horizontal: FluentSpacing.xxs),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(2),
         border: Border.all(
-          color: isDark
-              ? const Color(0xFF334155)
-              : Colors.black.withValues(alpha: 0.06),
+          color: FluentStroke.card(
+            isDark ? Brightness.dark : Brightness.light,
+          ),
           width: 0.5,
         ),
       ),

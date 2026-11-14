@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/services/ai/gemini_result_cache.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 
 /// Shows what the AI result cache is holding, and lets it be emptied.
 ///
@@ -73,6 +74,11 @@ class _AiCacheCardState extends State<AiCacheCard> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
+      ),
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (sheetContext, setSheetState) {
@@ -82,15 +88,23 @@ class _AiCacheCardState extends State<AiCacheCard> {
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 8, 6),
+                      padding: const EdgeInsets.fromLTRB(
+                        FluentSpacing.l,
+                        FluentSpacing.l,
+                        FluentSpacing.s,
+                        FluentSpacing.s,
+                      ),
                       child: Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
                               'সংরক্ষিত AI উত্তর',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: FluentType.bodyStrong.copyWith(
+                                color: Theme.of(sheetContext)
+                                    .colorScheme
+                                    .onSurface,
                               ),
                             ),
                           ),
@@ -120,13 +134,20 @@ class _AiCacheCardState extends State<AiCacheCard> {
                                     : entry.label,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12.5),
+                                style: FluentType.body.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface,
+                                ),
                               ),
                               subtitle: Text(
                                 '${entry.operation} · '
                                 '${_whenever(entry.createdAt)} · '
                                 '${_size(entry.sizeBytes)}',
-                                style: const TextStyle(fontSize: 10.5),
+                                style: FluentType.caption.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.65),
+                                ),
                               ),
                               trailing: IconButton(
                                 icon: const Icon(
@@ -168,33 +189,36 @@ class _AiCacheCardState extends State<AiCacheCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final stats = _stats;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: theme.cardTheme.color ?? theme.cardColor,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF334155) : Colors.grey.shade200,
+          color: FluentStroke.card(theme.brightness),
+          width: FluentStroke.width,
         ),
+        boxShadow: FluentElevation.card(theme.brightness),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.save_outlined,
-                size: 18,
-                color: isDark ? Colors.tealAccent : Colors.teal.shade700,
-              ),
-              const SizedBox(width: 8),
-              const Expanded(
+              Icon(Icons.save_outlined, size: 18, color: scheme.primary),
+              const SizedBox(width: FluentSpacing.s),
+              Expanded(
                 child: Text(
                   'AI ক্যাশ',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.bodyStrong.copyWith(
+                    color: scheme.onSurface,
+                  ),
                 ),
               ),
               if (_busy)
@@ -205,7 +229,7 @@ class _AiCacheCardState extends State<AiCacheCard> {
                 ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: FluentSpacing.s),
           Text(
             stats == null
                 ? 'দেখা হচ্ছে…'
@@ -213,23 +237,19 @@ class _AiCacheCardState extends State<AiCacheCard> {
                 ? 'কিছু সংরক্ষিত নেই — প্রতিটি স্ক্যান নতুন করে পড়া হবে'
                 : '${stats.entries} টি উত্তর · ${_size(stats.bytes)} · '
                       '৭ দিন পর নিজেই মুছে যায়',
-            style: TextStyle(
-              fontSize: 11.5,
-              height: 1.35,
-              color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+            style: FluentType.caption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: FluentSpacing.xs),
           Text(
             'একই ছবি বা লেখা আবার দিলে সংরক্ষিত উত্তরই আসে, টোকেন খরচ ছাড়াই। '
             'একটিবার নতুন করে পড়াতে চাইলে স্ক্যানারে "আবার নতুন করে পড়ো" দিন।',
-            style: TextStyle(
-              fontSize: 10.5,
-              height: 1.35,
-              color: isDark ? Colors.white38 : Colors.grey.shade500,
+            style: FluentType.caption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
           Row(
             children: [
               Expanded(
@@ -237,28 +257,30 @@ class _AiCacheCardState extends State<AiCacheCard> {
                   onPressed: (stats == null || stats.isEmpty)
                       ? null
                       : _showEntries,
-                  icon: const Icon(Icons.list_alt, size: 16),
-                  label: const Text(
-                    'দেখুন',
-                    style: TextStyle(fontSize: 12),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
                   ),
+                  icon: const Icon(Icons.list_alt, size: 16),
+                  label: Text('দেখুন', style: FluentType.caption),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: (_busy || stats == null || stats.isEmpty)
                       ? null
                       : _clearAll,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    side: const BorderSide(color: Colors.redAccent),
+                    foregroundColor: scheme.error,
+                    side: BorderSide(color: scheme.error),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
                   ),
                   icon: const Icon(Icons.delete_sweep_outlined, size: 16),
-                  label: const Text(
-                    'সব মুছুন',
-                    style: TextStyle(fontSize: 12),
-                  ),
+                  label: Text('সব মুছুন', style: FluentType.caption),
                 ),
               ),
             ],

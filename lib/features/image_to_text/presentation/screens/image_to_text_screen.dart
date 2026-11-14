@@ -8,12 +8,26 @@ import '../../../../core/services/media/image_preprocessor_service.dart';
 import '../../../../core/services/media/local_ocr_service.dart';
 import '../../../../core/services/media/ocr_text_cleaner.dart';
 import '../../../../core/services/media/photo_capture_service.dart';
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
 import 'layout_debug_screen.dart';
 
 /// Screen for local, offline Optical Character Recognition (OCR).
 ///
 /// Supports Bengali, Math, and English text extraction with lightweight
 /// image pre-processing (Grayscale, Contrast Boost, Binarization).
+/// Status colours with a light-mode and a dark-mode value that reads on
+/// either surface.
+Color _okColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFF4ADE80)
+    : const Color(0xFF15803D);
+
+Color _errorColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFF87171)
+    : const Color(0xFFB91C1C);
+
 class ImageToTextScreen extends StatefulWidget {
   const ImageToTextScreen({super.key});
 
@@ -127,7 +141,9 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
     final imageToScan = _processedImage ?? _originalImage;
     if (imageToScan == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('অনুগ্রহ করে প্রথমে একটি ছবি নির্বাচন করুন')),
+        const SnackBar(
+          content: Text('অনুগ্রহ করে প্রথমে একটি ছবি নির্বাচন করুন'),
+        ),
       );
       return;
     }
@@ -152,8 +168,7 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
 
       if (result.isEmpty) {
         setState(() {
-          _errorMessage =
-              'ছবি থেকে কোনো লেখা শনাক্ত করা যায়নি। আলো বাড়িয়ে বা গ্রেস্কেল/কন্ট্রাস্ট ফিল্টার ব্যবহার করে আবার চেষ্টা করুন।';
+          _errorMessage = 'ছবি থেকে কোনো লেখা শনাক্ত করা যায়নি। আলো বাড়িয়ে বা গ্রেস্কেল/কন্ট্রাস্ট ফিল্টার ব্যবহার করে আবার চেষ্টা করুন।';
         });
       }
     } catch (e) {
@@ -206,14 +221,13 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'ইমেজ টু টেক্সট (অফলাইন)',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: FluentType.subtitle.copyWith(fontSize: 18),
         ),
         actions: [
           IconButton(
@@ -239,91 +253,106 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: FluentSpacing.l,
+          vertical: FluentSpacing.m,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Status & Info Header
-            _buildHeaderCard(isDark),
-            const SizedBox(height: 14),
+            _buildHeaderCard(),
+            const SizedBox(height: FluentSpacing.m),
 
             // Image Picker / Preview Section
             if (_originalImage == null)
-              _buildEmptyPickerCard(isDark, primaryColor)
+              _buildEmptyPickerCard(primaryColor)
             else
-              _buildImagePreviewCard(isDark),
+              _buildImagePreviewCard(),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
 
             // Pre-processing filter selector
             if (_originalImage != null) ...[
-              _buildFilterSelector(isDark),
-              const SizedBox(height: 14),
-              _buildLayoutSelector(isDark),
-              const SizedBox(height: 14),
-              _buildLanguageSelector(isDark),
-              const SizedBox(height: 16),
+              _buildFilterSelector(),
+              const SizedBox(height: FluentSpacing.m),
+              _buildLayoutSelector(),
+              const SizedBox(height: FluentSpacing.m),
+              _buildLanguageSelector(),
+              const SizedBox(height: FluentSpacing.l),
               _buildExtractButton(primaryColor),
-              const SizedBox(height: 18),
+              const SizedBox(height: FluentSpacing.xl),
             ],
 
             // Error display
             if (_errorMessage != null) ...[
               _buildErrorBanner(_errorMessage!),
-              const SizedBox(height: 14),
+              const SizedBox(height: FluentSpacing.m),
             ],
 
             // Extracted text display area
             if (_textController.text.isNotEmpty || _isExtractingText)
-              _buildExtractedTextCard(isDark),
+              _buildExtractedTextCard(),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: FluentSpacing.xxl),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeaderCard(bool isDark) {
+  /// The Fluent card surface: solid layer, 1px stroke, 8px radius, shadow2.
+  BoxDecoration _cardDecoration(BuildContext context) {
+    final theme = Theme.of(context);
+    return BoxDecoration(
+      color: theme.cardTheme.color ?? theme.cardColor,
+      borderRadius: FluentRadius.cardBorder,
+      border: Border.all(
+        color: FluentStroke.card(theme.brightness),
+        width: FluentStroke.width,
+      ),
+      boxShadow: FluentElevation.card(theme.brightness),
+    );
+  }
+
+  Widget _buildHeaderCard() {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final onSurface = theme.colorScheme.onSurface;
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
-        borderRadius: BorderRadius.circular(12),
+        color: FluentLayer.subtle(primary, theme.brightness),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFBFDBFE),
+          color: FluentStroke.card(theme.brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.offline_bolt_rounded,
-              color: Colors.blueAccent,
-              size: 22,
-            ),
+          PremiumIconBadge(
+            icon: Icons.offline_bolt_rounded,
+            size: 36,
+            iconSize: 20,
+            color: primary,
           ),
-          const SizedBox(width: 10),
-          const Expanded(
+          const SizedBox(width: FluentSpacing.m),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '১০০% অফলাইন • কোনো ক্লাউড AI নেই',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                  style: FluentType.bodyStrong.copyWith(color: onSurface),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: FluentSpacing.xxs),
                 Text(
                   'বাংলা, অঙ্ক ও ইংরেজি টেক্সট সরাসরি ডিভাইসেই এক্সট্র্যাক্ট হয়। গ্রেস্কেল ও কন্ট্রাস্ট ব্যবহারে অ্যাকুরেসি বাড়ে।',
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                  style: FluentType.caption.copyWith(
+                    color: onSurface.withValues(alpha: 0.65),
+                  ),
                 ),
               ],
             ),
@@ -333,46 +362,40 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
     );
   }
 
-  Widget _buildEmptyPickerCard(bool isDark, Color primaryColor) {
+  Widget _buildEmptyPickerCard(Color primaryColor) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-          width: 1.5,
-        ),
+      padding: const EdgeInsets.symmetric(
+        vertical: FluentSpacing.xxl + FluentSpacing.m,
+        horizontal: FluentSpacing.xl,
       ),
+      decoration: _cardDecoration(context),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.document_scanner_rounded,
-              size: 44,
-              color: primaryColor,
-            ),
+          PremiumIconBadge(
+            icon: Icons.document_scanner_rounded,
+            size: 72,
+            iconSize: 40,
+            color: primaryColor,
           ),
-          const SizedBox(height: 16),
-          const Text(
+          const SizedBox(height: FluentSpacing.l),
+          Text(
             'ছবি থেকে লেখা বের করুন',
-            style: TextStyle(
+            style: FluentType.bodyStrong.copyWith(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              color: onSurface,
             ),
           ),
-          const SizedBox(height: 6),
-          const Text(
+          const SizedBox(height: FluentSpacing.s),
+          Text(
             'বই, নোট বা প্রশ্নপত্রের ছবি তুলুন অথবা গ্যালারি থেকে সিলেক্ট করুন',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: FluentType.caption.copyWith(
+              color: onSurface.withValues(alpha: 0.65),
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: FluentSpacing.xl),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -381,27 +404,28 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
                 icon: const Icon(Icons.camera_alt_rounded, size: 18),
                 label: const Text('ক্যামেরা'),
                 style: ElevatedButton.styleFrom(
+                  elevation: 0,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
+                    horizontal: FluentSpacing.l,
+                    vertical: FluentSpacing.m,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: FluentSpacing.m),
               OutlinedButton.icon(
                 onPressed: () => _pickImage(ImageSource.gallery),
                 icon: const Icon(Icons.photo_library_rounded, size: 18),
                 label: const Text('গ্যালারি'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
+                    horizontal: FluentSpacing.l,
+                    vertical: FluentSpacing.m,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
               ),
@@ -412,76 +436,82 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
     );
   }
 
-  Widget _buildImagePreviewCard(bool isDark) {
+  Widget _buildImagePreviewCard() {
     final displayFile = _processedImage ?? _originalImage!;
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
 
     return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-      ),
+      decoration: _cardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.m,
+              vertical: FluentSpacing.s,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Expanded(
+                Expanded(
                   child: Row(
                     children: [
-                      Icon(Icons.image_outlined, size: 18, color: Colors.indigo),
-                      SizedBox(width: 6),
+                      Icon(
+                        Icons.image_outlined,
+                        size: 18,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: FluentSpacing.s),
                       Flexible(
                         child: Text(
                           'ছবির প্রিভিউ',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                          style: FluentType.bodyStrong.copyWith(
+                            color: onSurface,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Row(
                   children: [
                     TextButton.icon(
                       style: TextButton.styleFrom(
                         visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: FluentSpacing.s,
+                        ),
                       ),
                       onPressed: _isProcessingImage ? null : _rotateImage,
                       icon: const Icon(Icons.rotate_right_rounded, size: 16),
-                      label: const Text('ঘোরান', style: TextStyle(fontSize: 12)),
+                      label: const Text('ঘোরান', style: FluentType.caption),
                     ),
-                    const SizedBox(width: 2),
+                    const SizedBox(width: FluentSpacing.xs),
                     TextButton.icon(
                       style: TextButton.styleFrom(
                         visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: FluentSpacing.s,
+                        ),
                       ),
                       onPressed: () => _pickImage(ImageSource.camera),
                       icon: const Icon(Icons.camera_alt, size: 15),
-                      label: const Text('নতুন ছবি', style: TextStyle(fontSize: 12)),
+                      label: const Text('নতুন ছবি', style: FluentType.caption),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: FluentStroke.divider(theme.brightness)),
           ClipRRect(
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(16),
+              bottomLeft: Radius.circular(FluentRadius.card),
+              bottomRight: Radius.circular(FluentRadius.card),
             ),
             child: Stack(
               alignment: Alignment.center,
@@ -489,20 +519,17 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
                 Container(
                   constraints: const BoxConstraints(maxHeight: 260),
                   width: double.infinity,
-                  color: isDark ? Colors.black26 : const Color(0xFFF8FAFC),
-                  child: Image.file(
-                    displayFile,
-                    fit: BoxFit.contain,
-                  ),
+                  color: onSurface.withValues(alpha: 0.05),
+                  child: Image.file(displayFile, fit: BoxFit.contain),
                 ),
                 if (_isProcessingImage)
                   Container(
                     color: Colors.black45,
-                    padding: const EdgeInsets.all(16),
-                    child: const Row(
+                    padding: const EdgeInsets.all(FluentSpacing.l),
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(
+                        const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
@@ -510,15 +537,14 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
                             color: Colors.white,
                           ),
                         ),
-                        SizedBox(width: 10),
+                        const SizedBox(width: FluentSpacing.s),
                         Flexible(
                           child: Text(
                             'ফিল্টার প্রয়োগ হচ্ছে...',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
+                            style: FluentType.caption.copyWith(
                               color: Colors.white,
-                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -534,37 +560,40 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
     );
   }
 
-  Widget _buildFilterSelector(bool isDark) {
+  Widget _buildFilterSelector() {
+    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: theme.colorScheme.surface,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          color: FluentStroke.card(theme.brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.tune_rounded, size: 16, color: Colors.teal),
-              SizedBox(width: 6),
+              Icon(
+                Icons.tune_rounded,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   'ইমেজ অপ্টিমাইজেশন (ফিল্টার)',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                  style: FluentType.bodyStrong,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -574,19 +603,19 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
                   mode: ImageFilterMode.enhancedContrast,
                   icon: Icons.contrast,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 _buildFilterChip(
                   label: 'গ্রেস্কেল (সাদা-কালো)',
                   mode: ImageFilterMode.grayscale,
                   icon: Icons.filter_b_and_w_rounded,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 _buildFilterChip(
                   label: 'বাইনারাইজড (B&W)',
                   mode: ImageFilterMode.binarized,
                   icon: Icons.brightness_medium_rounded,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 _buildFilterChip(
                   label: 'মূল ছবি (Original)',
                   mode: ImageFilterMode.none,
@@ -611,8 +640,7 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
       avatar: Icon(icon, size: 14),
       label: Text(
         label,
-        style: TextStyle(
-          fontSize: 11.5,
+        style: FluentType.caption.copyWith(
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
@@ -621,51 +649,54 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
     );
   }
 
-  Widget _buildLayoutSelector(bool isDark) {
+  Widget _buildLayoutSelector() {
+    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: theme.colorScheme.surface,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          color: FluentStroke.card(theme.brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.view_column_rounded, size: 16, color: Colors.blueAccent),
-              SizedBox(width: 6),
+              Icon(
+                Icons.view_column_rounded,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   'পৃষ্ঠা লেআউট (কলাম মোড)',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                  style: FluentType.bodyStrong,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: OcrLayoutMode.values.map((layout) {
                 final isSelected = _selectedLayout == layout;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.only(right: FluentSpacing.s),
                   child: ChoiceChip(
                     label: Text(
                       layout.label,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                     selected: isSelected,
@@ -681,61 +712,67 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
               }).toList(),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: FluentSpacing.s),
           Text(
             _selectedLayout.description,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
+            style: FluentType.caption.copyWith(
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLanguageSelector(bool isDark) {
+  Widget _buildLanguageSelector() {
+    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: theme.colorScheme.surface,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          color: FluentStroke.card(theme.brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.translate_rounded, size: 16, color: Colors.purple),
-              SizedBox(width: 6),
+              Icon(
+                Icons.translate_rounded,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   'ভাষা ও টাইপ নির্বাচন',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                  style: FluentType.bodyStrong,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: OcrLanguagePreset.values.map((preset) {
                 final isSelected = _selectedLanguage == preset;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.only(right: FluentSpacing.s),
                   child: ChoiceChip(
                     label: Text(
                       preset.label,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                     selected: isSelected,
@@ -765,11 +802,11 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
             : _extractText,
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: FluentRadius.controlBorder,
           ),
-          elevation: 2,
+          elevation: 0,
         ),
         icon: _isExtractingText
             ? const SizedBox(
@@ -782,8 +819,10 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
               )
             : const Icon(Icons.text_fields_rounded, size: 20),
         label: Text(
-          _isExtractingText ? 'টেক্সট এক্সট্র্যাক্ট হচ্ছে...' : 'টেক্সট এক্সট্র্যাক্ট করুন ⚡',
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          _isExtractingText
+              ? 'টেক্সট এক্সট্র্যাক্ট হচ্ছে...'
+              : 'টেক্সট এক্সট্র্যাক্ট করুন ⚡',
+          style: FluentType.bodyStrong,
         ),
       ),
     );
@@ -791,21 +830,30 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
 
   Widget _buildErrorBanner(String message) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+        color: FluentLayer.subtle(
+          _errorColour(context),
+          Theme.of(context).brightness,
+        ),
+        borderRadius: FluentRadius.cardBorder,
+        border: Border.all(
+          color: _errorColour(context).withValues(alpha: 0.35),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 20),
-          const SizedBox(width: 8),
+          Icon(
+            Icons.error_outline_rounded,
+            color: _errorColour(context),
+            size: 20,
+          ),
+          const SizedBox(width: FluentSpacing.s),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: Colors.red, fontSize: 12),
+              style: FluentType.caption.copyWith(color: _errorColour(context)),
             ),
           ),
         ],
@@ -813,52 +861,55 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
     );
   }
 
-  Widget _buildExtractedTextCard(bool isDark) {
+  Widget _buildExtractedTextCard() {
+    final theme = Theme.of(context);
     final text = _textController.text;
     final charCount = text.length;
-    final wordCount =
-        text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
+    final wordCount = text.trim().isEmpty
+        ? 0
+        : text.trim().split(RegExp(r'\s+')).length;
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: theme.colorScheme.surface,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          color: FluentStroke.card(theme.brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.l,
+              vertical: FluentSpacing.m,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.check_circle_outline_rounded,
                         size: 18,
-                        color: Colors.green,
+                        color: _okColour(context),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.s),
                       Flexible(
                         child: Text(
                           'শনাক্তকৃত টেক্সট ($wordCount শব্দ, $charCount অক্ষর)',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
+                          style: FluentType.bodyStrong,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 if (text.isNotEmpty)
                   IconButton(
                     icon: const Icon(Icons.copy_rounded, size: 18),
@@ -870,12 +921,12 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
           ),
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(FluentSpacing.m),
             child: TextField(
               controller: _textController,
               maxLines: null,
               minLines: 5,
-              style: const TextStyle(fontSize: 14, height: 1.5),
+              style: FluentType.body,
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 hintText: 'এখানে এক্সট্র্যাক্ট করা টেক্সট প্রদর্শিত হবে...',
@@ -884,14 +935,17 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
           ),
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.m,
+              vertical: FluentSpacing.s,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 OutlinedButton.icon(
                   onPressed: _cleanExtractedText,
                   icon: const Icon(Icons.auto_fix_high_rounded, size: 14),
-                  label: const Text('সাজিয়ে নিন ✨', style: TextStyle(fontSize: 12)),
+                  label: const Text('সাজিয়ে নিন ✨', style: FluentType.caption),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                   ),
@@ -899,7 +953,7 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
                 ElevatedButton.icon(
                   onPressed: _copyToClipboard,
                   icon: const Icon(Icons.copy, size: 14),
-                  label: const Text('কপি', style: TextStyle(fontSize: 12)),
+                  label: const Text('কপি', style: FluentType.caption),
                   style: ElevatedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                   ),

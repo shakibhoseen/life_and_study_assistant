@@ -12,6 +12,7 @@ import 'package:life_and_study_assistant/features/quiz/presentation/widgets/stud
 
 import 'package:life_and_study_assistant/core/services/overlay/bubble_handoff_provider.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
 import '../providers/topics_provider.dart';
 import '../widgets/mistake_bank_and_hub_tab.dart';
 import '../widgets/topic_card.dart';
@@ -89,9 +90,11 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Weak Topics & Drill Hub',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: FluentType.subtitle.copyWith(fontSize: 18),
         ),
         actions: [
           IconButton(
@@ -123,17 +126,33 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
       ),
       floatingActionButton: isTab0
           ? FloatingActionButton.extended(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: FluentRadius.controlBorder,
+              ),
               icon: const Icon(Icons.add),
-              label: const Text('Add Weak Topic'),
+              label: Text(
+                'Add Weak Topic',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: FluentType.bodyStrong,
+              ),
               onPressed: () => _showAddTopicBottomSheet(context),
             )
           : (wrongQuestions.isNotEmpty
                 ? FloatingActionButton.extended(
-                    backgroundColor: Colors.indigo,
-                    icon: const Icon(Icons.flash_on, color: Colors.white),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    icon: const Icon(Icons.flash_on),
                     label: Text(
                       'Re-drill Mistakes (${wrongQuestions.length})',
-                      style: const TextStyle(color: Colors.white),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.bodyStrong,
                     ),
                     onPressed: () => _startMistakeBankDrill(wrongQuestions),
                   )
@@ -168,15 +187,18 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
         // Filter Chips
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: FluentSpacing.l,
+            vertical: FluentSpacing.s,
+          ),
           child: Row(
             children: [
               _buildFilterChip('All'),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               _buildFilterChip('Weak'),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               _buildFilterChip('Moderate'),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               _buildFilterChip('Strong'),
             ],
           ),
@@ -207,12 +229,18 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                       Icon(
                         Icons.checklist,
                         size: 64,
-                        color: Colors.grey.shade400,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.35),
                       ),
-                      const SizedBox(height: 12),
-                      const Text(
+                      const SizedBox(height: FluentSpacing.m),
+                      Text(
                         'No topics found',
-                        style: TextStyle(color: Colors.grey),
+                        style: FluentType.body.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.65),
+                        ),
                       ),
                     ],
                   ),
@@ -220,7 +248,12 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                padding: const EdgeInsets.fromLTRB(
+                  FluentSpacing.l,
+                  FluentSpacing.s,
+                  FluentSpacing.l,
+                  80,
+                ),
                 itemCount: filtered.length,
                 itemBuilder: (context, index) {
                   final item = filtered[index];
@@ -243,13 +276,20 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
       selected: isSelected,
       showCheckmark: true,
       checkmarkColor: scheme.primary,
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.controlBorder,
+        side: BorderSide(
+          color: isSelected
+              ? scheme.primary
+              : scheme.onSurface.withValues(alpha: 0.22),
+        ),
+      ),
       // Spelled out rather than left to the chip theme: the shared dark
       // chipTheme paints every chip on `inputFill`, which left the selected
       // one indistinguishable from the rest.
       selectedColor: scheme.primary.withValues(alpha: 0.22),
-      labelStyle: TextStyle(
-        fontSize: 12.5,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+      labelStyle: FluentType.caption.copyWith(
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
         color: isSelected ? scheme.primary : scheme.onSurface,
       ),
       side: BorderSide(
@@ -280,59 +320,70 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
           padding: EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            MediaQuery.of(context).viewInsets.bottom + 16,
+            FluentSpacing.l,
+            FluentSpacing.l,
+            FluentSpacing.l,
+            MediaQuery.of(context).viewInsets.bottom + FluentSpacing.l,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Add Weak Topic',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: FluentType.subtitle.copyWith(fontSize: 18),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: FluentSpacing.l),
               TextField(
                 controller: subjectController,
-                decoration: const InputDecoration(
+                style: FluentType.body,
+                decoration: InputDecoration(
                   labelText: 'Subject (e.g. Bangla Grammar, Math, Science)',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: topicNameController,
-                decoration: const InputDecoration(
+                style: FluentType.body,
+                decoration: InputDecoration(
                   labelText: 'Topic Name (e.g. কারক ও বিভক্তি)',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: notesController,
                 maxLines: 2,
-                decoration: const InputDecoration(
+                style: FluentType.body,
+                decoration: InputDecoration(
                   labelText: 'Notes / LiveMCQ references',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               Row(
                 children: [
-                  const Flexible(
+                  Flexible(
                     child: Text(
                       'Proficiency: ',
-                      style: TextStyle(fontSize: 13),
+                      style: FluentType.body,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -372,12 +423,18 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: FluentSpacing.m,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
                   ),
                   onPressed: () {
                     final subject = subjectController.text.trim();

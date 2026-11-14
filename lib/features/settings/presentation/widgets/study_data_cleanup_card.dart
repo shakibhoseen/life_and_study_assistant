@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/data/study_data_cleanup.dart';
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 
 /// Tidies study data that has drifted apart, after showing what it will do.
 ///
@@ -52,48 +53,61 @@ class _StudyDataCleanupCardState extends ConsumerState<StudyDataCleanupCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final summary = _summary;
 
+    // Green here is status: the cleanup finished, or there is nothing to do.
+    const successColor = Color(0xFF10B981);
+
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(vertical: FluentSpacing.s),
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(theme.brightness),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.cleaning_services_rounded, size: 18),
-                const SizedBox(width: 8),
-                const Expanded(
+                Icon(
+                  Icons.cleaning_services_rounded,
+                  size: 18,
+                  color: scheme.primary,
+                ),
+                const SizedBox(width: FluentSpacing.s),
+                Expanded(
                   child: Text(
                     'ডেটা পরিষ্কার',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    style: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               'একই বিষয় দুই নামে জমা হলে বা দুর্বল টপিক দুবার লেখা হলে '
               'পরিসংখ্যান ভাগ হয়ে যায়। কী বদলাবে আগে দেখে নিন।',
-              style: TextStyle(
-                fontSize: 11.5,
-                color: isDark ? Colors.white60 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
 
             if (_done != null)
               Text(
                 _done!,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: Colors.green.shade700,
-                  fontWeight: FontWeight.bold,
+                style: FluentType.caption.copyWith(
+                  color: successColor,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
 
@@ -101,10 +115,7 @@ class _StudyDataCleanupCardState extends ConsumerState<StudyDataCleanupCard> {
               if (summary.isEmpty)
                 Text(
                   'সব গোছানোই আছে — বদলানোর কিছু পাওয়া যায়নি।',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: Colors.green.shade700,
-                  ),
+                  style: FluentType.caption.copyWith(color: successColor),
                 )
               else ...[
                 _line('একই টপিক দুবার', summary.plan.mergeInto.length),
@@ -115,22 +126,29 @@ class _StudyDataCleanupCardState extends ConsumerState<StudyDataCleanupCard> {
                   summary.questionSubjectsToRename,
                 ),
                 _line('কার্ডের বিষয় বদলাবে', summary.cardSubjectsToRename),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 FilledButton.icon(
                   onPressed: _busy ? null : _apply,
-                  icon: const Icon(Icons.check, size: 16),
-                  label: const Text(
-                    'পরিষ্কার করুন',
-                    style: TextStyle(fontSize: 12),
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
                   ),
+                  icon: const Icon(Icons.check, size: 16),
+                  label: Text('পরিষ্কার করুন', style: FluentType.caption),
                 ),
               ],
-              const SizedBox(height: 4),
+              const SizedBox(height: FluentSpacing.xs),
             ],
 
             if (summary == null)
               OutlinedButton.icon(
                 onPressed: _busy ? null : _check,
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
+                ),
                 icon: _busy
                     ? const SizedBox(
                         width: 14,
@@ -138,10 +156,7 @@ class _StudyDataCleanupCardState extends ConsumerState<StudyDataCleanupCard> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.search, size: 16),
-                label: const Text(
-                  'কী বদলাবে দেখুন',
-                  style: TextStyle(fontSize: 12),
-                ),
+                label: Text('কী বদলাবে দেখুন', style: FluentType.caption),
               ),
           ],
         ),
@@ -152,8 +167,13 @@ class _StudyDataCleanupCardState extends ConsumerState<StudyDataCleanupCard> {
   Widget _line(String label, int count) {
     if (count == 0) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Text('• $label: $count টি', style: const TextStyle(fontSize: 12)),
+      padding: const EdgeInsets.only(bottom: FluentSpacing.xxs),
+      child: Text(
+        '• $label: $count টি',
+        style: FluentType.caption.copyWith(
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
     );
   }
 }

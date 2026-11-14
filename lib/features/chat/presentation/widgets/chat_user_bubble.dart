@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 
 class ChatUserBubble extends StatelessWidget {
   final ChatMessage message;
@@ -16,66 +17,62 @@ class ChatUserBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Align(
       alignment: Alignment.centerRight,
       child: InkWell(
         onLongPress: onCopy,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: FluentRadius.cardBorder,
         child: Container(
-          margin: const EdgeInsets.only(bottom: 12, left: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          margin: const EdgeInsets.only(bottom: FluentSpacing.m, left: 48),
+          padding: const EdgeInsets.symmetric(
+            horizontal: FluentSpacing.m,
+            vertical: FluentSpacing.s,
+          ),
           decoration: BoxDecoration(
-            color: Colors.indigo.shade600,
+            color: scheme.primary,
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(4),
-              bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(16),
+              topLeft: Radius.circular(FluentRadius.card),
+              topRight: Radius.circular(FluentRadius.control),
+              bottomLeft: Radius.circular(FluentRadius.card),
+              bottomRight: Radius.circular(FluentRadius.card),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            boxShadow: FluentElevation.card(theme.brightness),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 message.textContent,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  height: 1.3,
-                ),
+                // On a saturated accent fill, so onPrimary is correct here.
+                style: FluentType.body.copyWith(color: scheme.onPrimary),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: FluentSpacing.xs),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Flexible(
                     child: Text(
                       formattedTime,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 10,
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onPrimary.withValues(alpha: 0.75),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   InkWell(
                     onTap: onCopy,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: FluentRadius.controlBorder,
                     child: Padding(
-                      padding: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(FluentSpacing.xxs),
                       child: Icon(
                         Icons.copy_rounded,
-                        size: 12,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        size: 14,
+                        color: scheme.onPrimary.withValues(alpha: 0.8),
                       ),
                     ),
                   ),

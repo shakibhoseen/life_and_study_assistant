@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../providers/exam_schedule_provider.dart';
 
 class LiveMcqTrackFilterBar extends ConsumerWidget {
@@ -16,7 +17,10 @@ class LiveMcqTrackFilterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
     return tracksAsync.when(
       loading: () => const SizedBox(height: 48),
       error: (_, _) => const SizedBox.shrink(),
@@ -24,12 +28,13 @@ class LiveMcqTrackFilterBar extends ConsumerWidget {
         final allTracks = ['All', ...tracks];
         return Container(
           height: 48,
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: FluentSpacing.xs),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF111827) : Colors.white,
+            color: scheme.surface,
             border: Border(
               bottom: BorderSide(
-                color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
             ),
           ),
@@ -38,9 +43,12 @@ class LiveMcqTrackFilterBar extends ConsumerWidget {
               Expanded(
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FluentSpacing.l,
+                  ),
                   itemCount: allTracks.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: FluentSpacing.s),
                   itemBuilder: (context, index) {
                     final track = allTracks[index];
                     final isSelected = selectedTrack == track;
@@ -48,49 +56,51 @@ class LiveMcqTrackFilterBar extends ConsumerWidget {
 
                     return ChoiceChip(
                       showCheckmark: false,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                        side: BorderSide(
+                          color: isSelected
+                              ? (isAll ? scheme.primary : _getTrackColor(track))
+                              : FluentStroke.card(brightness),
+                          width: FluentStroke.width,
+                        ),
+                      ),
                       avatar: isAll
                           ? Icon(
                               Icons.layers,
                               size: 14,
-                              color: isSelected ? Colors.white : Colors.indigo,
+                              color: isSelected
+                                  ? scheme.onPrimary
+                                  : scheme.primary,
                             )
                           : Icon(
                               Icons.bookmark,
                               size: 14,
                               color: isSelected
                                   ? _getTrackColor(track)
-                                  : Colors.grey,
+                                  : scheme.onSurface.withValues(alpha: 0.65),
                             ),
                       selected: isSelected,
                       label: Text(
                         isAll ? 'All Programs' : track,
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: FluentType.caption.copyWith(
                           fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                           color: isSelected
                               ? (isAll
-                                    ? Colors.white
+                                    ? scheme.onPrimary
                                     : (isDark
-                                          ? Colors.white
+                                          ? scheme.onSurface
                                           : _getTrackColor(track)))
-                              : (isDark ? Colors.white70 : Colors.black87),
+                              : scheme.onSurface,
                         ),
                       ),
                       selectedColor: isAll
-                          ? Colors.indigo
+                          ? scheme.primary
                           : _getTrackBackgroundColor(track, isDark),
-                      backgroundColor: isDark
-                          ? const Color(0xFF1E293B)
-                          : Colors.grey.shade50,
-                      side: BorderSide(
-                        color: isSelected
-                            ? (isAll ? Colors.indigo : _getTrackColor(track))
-                            : (isDark
-                                  ? const Color(0xFF334155)
-                                  : Colors.grey.shade300),
-                        width: isSelected ? 1.5 : 1,
+                      backgroundColor: scheme.onSurface.withValues(
+                        alpha: isDark ? 0.08 : 0.04,
                       ),
                       onSelected: (_) {
                         ref
@@ -103,41 +113,41 @@ class LiveMcqTrackFilterBar extends ConsumerWidget {
               ),
               if (selectedTrack != 'All') ...[
                 Padding(
-                  padding: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(right: FluentSpacing.m),
                   child: Tooltip(
                     message: '“$selectedTrack” ট্র্যাকের সব পরীক্ষা মুছুন',
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: FluentRadius.controlBorder,
                       onTap: () =>
                           _confirmDeleteTrack(context, ref, selectedTrack),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 5,
+                          horizontal: FluentSpacing.s,
+                          vertical: FluentSpacing.xs,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          color: FluentLayer.subtle(scheme.error, brightness),
+                          borderRadius: FluentRadius.controlBorder,
                           border: Border.all(
-                            color: Colors.red.withValues(alpha: 0.3),
+                            color: scheme.error.withValues(alpha: 0.3),
+                            width: FluentStroke.width,
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.delete_outline,
                               size: 14,
-                              color: Colors.red,
+                              color: scheme.error,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: FluentSpacing.xs),
                             Flexible(
                               child: Text(
                                 'ট্র্যাক মুছুন',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.red.shade700,
+                                style: FluentType.caption.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.error,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -174,15 +184,22 @@ class LiveMcqTrackFilterBar extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
+        title: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
-            SizedBox(width: 8),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Theme.of(ctx).colorScheme.error,
+              size: 24,
+            ),
+            const SizedBox(width: FluentSpacing.s),
             Expanded(
               child: Text(
                 'ট্র্যাকের সব পরীক্ষা মুছবেন?',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: FluentType.bodyStrong.copyWith(
+                  fontSize: 16,
+                  color: Theme.of(ctx).colorScheme.onSurface,
+                ),
               ),
             ),
           ],
@@ -192,35 +209,48 @@ class LiveMcqTrackFilterBar extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.s,
+              ),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                color: FluentLayer.subtle(
+                  Theme.of(ctx).colorScheme.error,
+                  Theme.of(ctx).brightness,
+                ),
+                borderRadius: FluentRadius.controlBorder,
+                border: Border.all(
+                  color: Theme.of(ctx).colorScheme.error.withValues(alpha: 0.2),
+                  width: FluentStroke.width,
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.bookmark, color: Colors.red, size: 18),
-                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.bookmark,
+                    color: Theme.of(ctx).colorScheme.error,
+                    size: 18,
+                  ),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       trackName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: Colors.red,
+                      style: FluentType.bodyStrong.copyWith(
+                        color: Theme.of(ctx).colorScheme.error,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
             Text(
               'এই ট্র্যাকে মোট $countটি পরীক্ষা রয়েছে।\n\n'
               'ডিলিট করলে এই ট্র্যাকের সবগুলো পরীক্ষা একবারে মুছে যাবে। অন্য কোনো ট্র্যাক বা পরীক্ষা অক্ষত থাকবে।\n\n'
               'আপনি কি নিশ্চিতভাবে এই ট্র্যাকের সব পরীক্ষা মুছে ফেলতে চান?',
-              style: const TextStyle(fontSize: 12.5, height: 1.4),
+              style: FluentType.body.copyWith(
+                color: Theme.of(ctx).colorScheme.onSurface,
+              ),
             ),
           ],
         ),
@@ -231,8 +261,12 @@ class LiveMcqTrackFilterBar extends ConsumerWidget {
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              elevation: 0,
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+              shape: RoundedRectangleBorder(
+                borderRadius: FluentRadius.controlBorder,
+              ),
             ),
             icon: const Icon(Icons.delete_forever, size: 16),
             label: Text('হ্যাঁ, $countটি পরীক্ষা মুছুন'),

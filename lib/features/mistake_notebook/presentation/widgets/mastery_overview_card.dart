@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
+
 class MasteryOverviewCard extends StatelessWidget {
   final int total;
   final int pending;
@@ -27,25 +29,32 @@ class MasteryOverviewCard extends StatelessWidget {
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        padding: const EdgeInsets.symmetric(
+          vertical: FluentSpacing.s,
+          horizontal: FluentSpacing.xs,
+        ),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: FluentRadius.controlBorder,
         ),
         child: Column(
           children: [
             Text(
               value,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: color,
-              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.bodyStrong.copyWith(color: color),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: FluentSpacing.xxs),
             Text(
               title,
-              style: const TextStyle(fontSize: 10, color: Colors.white70),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.caption.copyWith(
+                color: Colors.white.withValues(alpha: 0.75),
+              ),
             ),
           ],
         ),
@@ -55,8 +64,9 @@ class MasteryOverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
@@ -65,14 +75,12 @@ class MasteryOverviewCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4338CA).withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: FluentRadius.cardBorder,
+        border: Border.all(
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
+        ),
+        boxShadow: FluentElevation.card(brightness),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,70 +88,76 @@ class MasteryOverviewCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(FluentSpacing.s),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+                  borderRadius: FluentRadius.controlBorder,
                 ),
                 child: const Icon(
                   Icons.verified,
-                  color: Colors.amber,
-                  size: 22,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 10),
-              const Expanded(
+              const SizedBox(width: FluentSpacing.m),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'মিস্টেক নোটবুক অ্যানালাইসিস',
-                      style: TextStyle(
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.bodyStrong.copyWith(
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
                       ),
                     ),
                     Text(
                       'ভুলগুলো চিহ্নিত করে রিভিশন দিন ও সম্পূর্ণ আয়ত্তে আনুন',
-                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.caption.copyWith(
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: FluentSpacing.s),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
+                  horizontal: FluentSpacing.s,
+                  vertical: FluentSpacing.xs,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
                 child: Text(
                   '${rate.toStringAsFixed(0)}% সলভড',
-                  style: const TextStyle(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
                     color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.m),
 
           // Stat counters
           Row(
             children: [
               _buildWhiteStatPill('মোট ভুল', '$total টি'),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               _buildWhiteStatPill(
                 'বাকি ভুল',
                 '$pending টি',
                 color: Colors.redAccent.shade100,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               _buildWhiteStatPill(
                 'আয়ত্তে এসেছে',
                 '$mastered টি',
@@ -151,11 +165,11 @@ class MasteryOverviewCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: FluentSpacing.m),
 
           // Progress Bar
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: FluentRadius.controlBorder,
             child: LinearProgressIndicator(
               value: (rate / 100).clamp(0.0, 1.0),
               minHeight: 6,
@@ -165,7 +179,7 @@ class MasteryOverviewCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.m),
 
           // Action Buttons: Nightly Review & Re-Drill
           Row(
@@ -173,37 +187,53 @@ class MasteryOverviewCard extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
+                    backgroundColor: Colors.white,
                     foregroundColor: Colors.black87,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: FluentSpacing.s,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   onPressed: onNightlyReview,
                   icon: const Icon(Icons.nightlight_round, size: 16),
-                  label: const Text(
+                  label: Text(
                     'রাতের রিভিশন 🌙',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white60),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      width: FluentStroke.width,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: FluentSpacing.s,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   onPressed: onReDrill,
                   icon: const Icon(Icons.flash_on, size: 16),
-                  label: const Text(
+                  label: Text(
                     'রি-ড্রিল কুইজ ⚡',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),

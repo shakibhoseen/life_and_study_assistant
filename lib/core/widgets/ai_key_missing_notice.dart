@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../theme/fluent_tokens.dart';
+
 import '../../features/settings/presentation/screens/settings_screen.dart';
+
+/// Amber is the warning accent, with a light-mode and a dark-mode value that
+/// reads on either surface.
+Color _warnColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFFCD34D)
+    : const Color(0xFFB45309);
 
 /// Tells the user a Gemini key is missing, and takes them where to put it.
 ///
@@ -25,16 +34,15 @@ class AiKeyMissingNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final warn = _warnColour(context);
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.amber.shade900.withValues(alpha: 0.25)
-            : Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(10),
+        color: FluentLayer.subtle(warn, Theme.of(context).brightness),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? Colors.amber.shade800 : Colors.amber.shade300,
+          color: warn.withValues(alpha: 0.35),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
@@ -42,20 +50,19 @@ class AiKeyMissingNotice extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.key_rounded, size: 18, color: Colors.amber.shade800),
-              const SizedBox(width: 8),
+              Icon(Icons.key_rounded, size: 18, color: warn),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   message,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: isDark ? Colors.amber.shade100 : Colors.brown,
+                  style: FluentType.caption.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           Align(
             alignment: Alignment.centerLeft,
             child: FilledButton.icon(
@@ -66,10 +73,14 @@ class AiKeyMissingNotice extends StatelessWidget {
                 onRetry?.call();
               },
               icon: const Icon(Icons.settings, size: 16),
-              label: const Text('সেটিংসে যান', style: TextStyle(fontSize: 12)),
+              label: Text('সেটিংসে যান', style: FluentType.caption),
               style: FilledButton.styleFrom(
                 visualDensity: VisualDensity.compact,
-                backgroundColor: Colors.amber.shade800,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                ),
               ),
             ),
           ),

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../../../core/theme/fluent_tokens.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -595,13 +597,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
             color: const Color(0xFF10B981),
             width: 2.2,
           ), // Emerald border
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: FluentElevation.flyout(Brightness.dark),
         ),
         child: Stack(
           alignment: Alignment.center,
@@ -621,31 +617,32 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                         minHeight: 20,
                       ),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 2,
+                        horizontal: FluentSpacing.xs,
+                        vertical: FluentSpacing.xxs,
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF6366F1),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                         border: Border.all(color: Colors.white, width: 1.2),
                       ),
                       child: Center(
                         child: Text(
                           _pendingCount > 9 ? '9+' : '$_pendingCount',
-                          style: const TextStyle(
+                          style: FluentType.caption.copyWith(
                             color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             height: 1.1,
                           ),
                         ),
                       ),
                     )
                   : Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(FluentSpacing.xs),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF59E0B), // Golden amber mic badge
-                        shape: BoxShape.circle,
+                        color: Color(0xFFF59E0B),
+                        borderRadius: BorderRadius.all(
+                          Radius.circular(FluentRadius.control),
+                        ),
                       ),
                       child: const Icon(
                         Icons.mic,
@@ -664,18 +661,15 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
   Widget _buildExpandedCard() {
     return Container(
       constraints: const BoxConstraints(maxWidth: 340, minWidth: 280),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A).withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF334155), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.6),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        borderRadius: FluentRadius.cardBorder,
+        border: Border.all(
+          color: const Color(0xFF334155),
+          width: FluentStroke.width,
+        ),
+        boxShadow: FluentElevation.flyout(Brightness.dark),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -684,10 +678,10 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(FluentSpacing.s),
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
+                  borderRadius: FluentRadius.controlBorder,
                 ),
                 child: const Icon(
                   Icons.mic,
@@ -695,22 +689,22 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                   size: 18,
                 ),
               ),
-              const SizedBox(width: 8),
-              const Expanded(
+              const SizedBox(width: FluentSpacing.s),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'LiveMCQ Voice Note',
-                      style: TextStyle(
+                      style: FluentType.bodyStrong.copyWith(
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
                       ),
                     ),
                     Text(
-                      'ভুল হওয়া প্রশ্ন মুখে বলুন — জেমিনি সেভ করবে',
-                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                      'ভুল হওয়া প্রশ্ন মুখে বলুন — জেমিনি সেভ করবে',
+                      style: FluentType.caption.copyWith(
+                        color: Colors.white54,
+                      ),
                     ),
                   ],
                 ),
@@ -730,7 +724,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: FluentSpacing.xs),
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.grey, size: 22),
                 tooltip: 'Minimize to Bubble',
@@ -738,7 +732,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: FluentSpacing.xs),
               IconButton(
                 icon: const Icon(
                   Icons.power_settings_new,
@@ -762,7 +756,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: FluentSpacing.m),
 
           // Here for as long as anything is waiting, whatever else the card
           // happens to be showing. It used to sit in the result card, which
@@ -772,18 +766,19 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
           if (_pendingCount > 0) ...[
             InkWell(
               onTap: _continueInApp,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: FluentRadius.controlBorder,
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
+                  horizontal: FluentSpacing.m,
+                  vertical: FluentSpacing.s,
                 ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF6366F1).withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: FluentRadius.controlBorder,
                   border: Border.all(
                     color: const Color(0xFF6366F1).withValues(alpha: 0.6),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Row(
@@ -793,23 +788,21 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                       color: Color(0xFFA5B4FC),
                       size: 16,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Text(
                         '$_pendingCount টি সেভ হয়েছে',
-                        style: const TextStyle(
+                        style: FluentType.caption.copyWith(
                           color: Colors.white,
-                          fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    const Text(
+                    Text(
                       'অ্যাপে যান',
-                      style: TextStyle(
-                        color: Color(0xFFA5B4FC),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
+                      style: FluentType.caption.copyWith(
+                        color: const Color(0xFFA5B4FC),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const Icon(
@@ -821,7 +814,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
           ],
 
           // Central Microphone Action
@@ -843,18 +836,11 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                 width: 76,
                 height: 76,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+                  borderRadius: FluentRadius.controlBorder,
                   color: _isRecording
                       ? const Color(0xFFEF4444)
                       : const Color(0xFF1E3A8A),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (_isRecording ? Colors.red : Colors.indigo)
-                          .withValues(alpha: 0.4),
-                      blurRadius: _isRecording ? 18 : 8,
-                      spreadRadius: _isRecording ? 4 : 1,
-                    ),
-                  ],
+                  boxShadow: FluentElevation.card(Brightness.dark),
                 ),
                 child: Icon(
                   (_isRecording || _isDictating) ? Icons.stop : Icons.mic,
@@ -863,41 +849,40 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
             Text(
               _isDictating
                   ? 'শুনছি…'
                   : _isRecording
                   ? 'Recording: ${_formatTimer(_recordSeconds)}'
                   : 'চেপে বলুন — ফোনই লিখে দেবে',
-              style: TextStyle(
-                color: _isRecording ? Colors.redAccent : Colors.white,
-                fontWeight: FontWeight.bold,
+              style: FluentType.bodyStrong.copyWith(
                 fontSize: 13,
+                color: _isRecording ? Colors.redAccent : Colors.white,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               _statusMessage ??
                   'e.g. "১২ নম্বর প্রশ্নে মানস সরোবরের নদী ছিল ব্রহ্মপুত্র"',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey, fontSize: 10.5),
+              style: FluentType.caption.copyWith(color: Colors.white54),
             ),
 
             // The keyboard's own mic transcribes on the device, so this is
             // immediate and does not depend on the model being free.
             if (!_isRecording) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: FluentSpacing.l),
               if (!_isTyping && _heardText.isNotEmpty && !_isDictating) ...[
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: FluentSpacing.xl),
                   child: Text(
                     _heardText,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    style: FluentType.body.copyWith(color: Colors.white),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -907,26 +892,26 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                         _typedController.clear();
                         _statusMessage = null;
                       }),
-                      child: const Text(
+                      child: Text(
                         'আবার বলুন',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                        style: FluentType.caption.copyWith(color: Colors.white54),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     TextButton(
                       onPressed: _startTyping,
-                      child: const Text(
+                      child: Text(
                         'ঠিক করুন',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                        style: FluentType.caption.copyWith(color: Colors.white54),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     FilledButton.icon(
                       onPressed: _isProcessing ? null : _parseTypedMistake,
                       icon: const Icon(Icons.send, size: 16),
-                      label: const Text(
+                      label: Text(
                         'যোগ করুন',
-                        style: TextStyle(fontSize: 12.5),
+                        style: FluentType.caption,
                       ),
                       style: FilledButton.styleFrom(
                         visualDensity: VisualDensity.compact,
@@ -942,54 +927,53 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                     size: 18,
                     color: Colors.white70,
                   ),
-                  label: const Text(
+                  label: Text(
                     'অথবা লিখুন',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                    style: FluentType.caption.copyWith(color: Colors.white70),
                   ),
                 )
               else ...[
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: FluentSpacing.xl),
                   child: TextField(
                     controller: _typedController,
                     autofocus: true,
                     maxLines: 3,
                     minLines: 2,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    style: FluentType.body.copyWith(color: Colors.white),
                     decoration: InputDecoration(
                       hintText: 'কীবোর্ডের 🎙 চেপে প্রশ্ন ও সঠিক উত্তর বলুন',
-                      hintStyle: const TextStyle(
+                      hintStyle: FluentType.caption.copyWith(
                         color: Colors.white38,
-                        fontSize: 11.5,
                       ),
                       filled: true,
                       fillColor: Colors.white10,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                         borderSide: BorderSide.none,
                       ),
                       isDense: true,
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     TextButton(
                       onPressed: _cancelTyping,
-                      child: const Text(
+                      child: Text(
                         'বাতিল',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                        style: FluentType.caption.copyWith(color: Colors.white54),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: FluentSpacing.m),
                     FilledButton.icon(
                       onPressed: _isProcessing ? null : _parseTypedMistake,
                       icon: const Icon(Icons.send, size: 16),
-                      label: const Text(
+                      label: Text(
                         'যোগ করুন',
-                        style: TextStyle(fontSize: 12.5),
+                        style: FluentType.caption,
                       ),
                       style: FilledButton.styleFrom(
                         visualDensity: VisualDensity.compact,
@@ -1003,7 +987,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
 
           // Loading / Parsing indicator
           if (_isProcessing) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
             const SizedBox(
               width: 32,
               height: 32,
@@ -1012,32 +996,32 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                 color: Color(0xFF10B981),
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
+            const SizedBox(height: FluentSpacing.m),
+            Text(
               'Gemini AI is parsing voice note...',
-              style: TextStyle(
+              style: FluentType.caption.copyWith(
                 color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 4),
-            const Text(
+            const SizedBox(height: FluentSpacing.xs),
+            Text(
               'Generating MCQ, answer and explanation',
-              style: TextStyle(color: Colors.grey, fontSize: 10),
+              style: FluentType.caption.copyWith(color: Colors.white54),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
           ],
 
           // Result Saved Card
           if (_lastResult != null) ...[
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
                 color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
                   color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Column(
@@ -1050,14 +1034,13 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                         color: Color(0xFF10B981),
                         size: 16,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.s),
                       Flexible(
                         child: Text(
                           '${_lastResult!.subject} • ${_lastResult!.topic}',
-                          style: const TextStyle(
-                            color: Color(0xFF10B981),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
+                          style: FluentType.caption.copyWith(
+                            color: const Color(0xFF10B981),
+                            fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1065,30 +1048,28 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.s),
                   Text(
                     _lastResult!.questionText,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: FluentType.caption.copyWith(
                       color: Colors.white,
-                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: FluentSpacing.xs),
                   Text(
                     'সঠিক উত্তর: ${(_lastResult!.correctIndex >= 0 && _lastResult!.correctIndex < _lastResult!.options.length) ? _lastResult!.options[_lastResult!.correctIndex] : "অজানা"}',
-                    style: const TextStyle(
-                      color: Color(0xFFF59E0B),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      color: const Color(0xFFF59E0B),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
             Row(
               children: [
                 Expanded(
@@ -1101,29 +1082,35 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.grey),
+                      side: const BorderSide(color: Colors.white24),
                       visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Record Another',
-                      style: TextStyle(fontSize: 11),
+                      style: FluentType.caption,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _toggleExpand,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF10B981),
                       foregroundColor: Colors.white,
+                      elevation: 0,
                       visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Done',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),

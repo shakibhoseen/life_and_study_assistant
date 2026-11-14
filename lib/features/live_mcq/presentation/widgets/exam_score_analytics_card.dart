@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/exam_schedule_provider.dart';
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
 
 class ExamScoreAnalyticsCard extends ConsumerWidget {
   const ExamScoreAnalyticsCard({super.key});
@@ -10,7 +12,8 @@ class ExamScoreAnalyticsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final allExamsAsync = ref.watch(allExamsStreamProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
 
     return allExamsAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -26,48 +29,42 @@ class ExamScoreAnalyticsCard extends ConsumerWidget {
 
         if (scoredExams.isEmpty) {
           return Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: FluentSpacing.l),
+            padding: const EdgeInsets.all(FluentSpacing.l),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              color: scheme.surface,
+              borderRadius: FluentRadius.cardBorder,
               border: Border.all(
-                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
+              boxShadow: FluentElevation.card(brightness),
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.insights_rounded,
-                    color: Color(0xFF6366F1),
-                    size: 24,
-                  ),
+                PremiumIconBadge(
+                  icon: Icons.insights_rounded,
+                  size: 44,
+                  iconSize: 24,
+                  color: scheme.primary,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'মডেল টেস্ট স্কোর অ্যানালিটিক্স',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF1E293B),
+                        style: FluentType.bodyStrong.copyWith(
+                          color: scheme.onSurface,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: FluentSpacing.xxs),
                       Text(
-                        'পরীক্ষা দিয়ে স্কোর লিখুন, এখানে আপনার প্রগ্রেস গ্রাফ তৈরি হবে!',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                        'পরীক্ষা দিয়ে স্কোর লিখুন, এখানে আপনার প্রগ্রেস গ্রাফ তৈরি হবে!',
+                        style: FluentType.caption.copyWith(
+                          color: scheme.onSurface
+                              .withValues(alpha: 0.65),
                         ),
                       ),
                     ],
@@ -96,21 +93,16 @@ class ExamScoreAnalyticsCard extends ConsumerWidget {
         );
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 14),
-          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.only(bottom: FluentSpacing.l),
+          padding: const EdgeInsets.all(FluentSpacing.l),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: scheme.surface,
+            borderRadius: FluentRadius.cardBorder,
             border: Border.all(
-              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              color: FluentStroke.card(brightness),
+              width: FluentStroke.width,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
+            boxShadow: FluentElevation.card(brightness),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,101 +110,101 @@ class ExamScoreAnalyticsCard extends ConsumerWidget {
               // Header
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.insights_rounded,
-                      color: Color(0xFF6366F1),
-                      size: 18,
-                    ),
+                  PremiumIconBadge(
+                    icon: Icons.insights_rounded,
+                    size: 32,
+                    iconSize: 18,
+                    color: scheme.primary,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'মডেল টেস্ট পারফরম্যান্স গ্রাফ',
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: FluentType.bodyStrong.copyWith(
+                            color: scheme.onSurface,
                           ),
                         ),
                         Text(
                           'সর্বশেষ $totalExams টি পরীক্ষার ট্রেন্ড ও স্কোর',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? Colors.white60 : Colors.black54,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: FluentType.caption.copyWith(
+                            color: scheme.onSurface
+                                .withValues(alpha: 0.65),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.trending_up_rounded,
-                          size: 14,
-                          color: Color(0xFF10B981),
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            'গড়: ${avgScore.toStringAsFixed(1)}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF10B981),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xxs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: FluentLayer.subtle(scheme.primary, brightness),
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.trending_up_rounded,
+                            size: 14,
+                            color: scheme.primary,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: FluentSpacing.xs),
+                          Flexible(
+                            child: Text(
+                              'গড়: ${avgScore.toStringAsFixed(1)}',
+                              style: FluentType.caption.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: scheme.primary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
 
               // KPI stats row
               Row(
                 children: [
                   _buildStatTile(
+                    context,
                     'সর্বশেষ স্কোর',
                     latestScore.toStringAsFixed(1),
-                    const Color(0xFF3B82F6),
-                    isDark,
+                    scheme.primary,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   _buildStatTile(
+                    context,
                     'সর্বোচ্চ স্কোর',
                     maxScore.toStringAsFixed(1),
                     const Color(0xFF10B981),
-                    isDark,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   _buildStatTile(
+                    context,
                     'মোট পরীক্ষা',
                     '$totalExams টি',
-                    const Color(0xFFF59E0B),
-                    isDark,
+                    scheme.onSurface.withValues(alpha: 0.75),
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: FluentSpacing.xl),
 
               // Visual Bar Chart
               SizedBox(
@@ -226,26 +218,25 @@ class ExamScoreAnalyticsCard extends ConsumerWidget {
 
                     return Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: FluentSpacing.xs),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             // Score text above bar
                             Text(
                               score.toStringAsFixed(score % 1 == 0 ? 0 : 1),
-                              style: TextStyle(
-                                fontSize: 9.5,
+                              style: FluentType.caption.copyWith(
+                                fontSize: 10,
                                 fontWeight: isLatest
-                                    ? FontWeight.bold
-                                    : FontWeight.w500,
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
                                 color: isLatest
-                                    ? (isDark
-                                        ? const Color(0xFF6EE7B7)
-                                        : const Color(0xFF059669))
-                                    : (isDark ? Colors.white70 : Colors.black87),
+                                    ? scheme.primary
+                                    : scheme.onSurface
+                                          .withValues(alpha: 0.75),
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: FluentSpacing.xs),
 
                             // Animated/styled vertical bar
                             Flexible(
@@ -253,36 +244,29 @@ class ExamScoreAnalyticsCard extends ConsumerWidget {
                                 heightFactor: ratio,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: isLatest
-                                          ? [
-                                              const Color(0xFF10B981),
-                                              const Color(0xFF059669),
-                                            ]
-                                          : [
-                                              const Color(0xFF6366F1),
-                                              const Color(0xFF4F46E5),
-                                            ],
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                    ),
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(5),
-                                    ),
+                                    color: isLatest
+                                        ? scheme.primary
+                                        : scheme.primary
+                                              .withValues(alpha: 0.45),
+                                    borderRadius:
+                                        const BorderRadius.vertical(
+                                          top: Radius.circular(
+                                            FluentRadius.control,
+                                          ),
+                                        ),
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: FluentSpacing.s),
 
                             // Date/Exam short label
                             Text(
                               '${e.examDate.day}/${e.examDate.month}',
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: isDark
-                                    ? Colors.white54
-                                    : Colors.black45,
+                              style: FluentType.caption.copyWith(
+                                fontSize: 10,
+                                color: scheme.onSurface
+                                    .withValues(alpha: 0.55),
                               ),
                             ),
                           ],
@@ -300,21 +284,26 @@ class ExamScoreAnalyticsCard extends ConsumerWidget {
   }
 
   Widget _buildStatTile(
+    BuildContext context,
     String label,
     String value,
     Color color,
-    bool isDark,
   ) {
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        padding: const EdgeInsets.symmetric(
+          vertical: FluentSpacing.s,
+          horizontal: FluentSpacing.m,
+        ),
         decoration: BoxDecoration(
-          color: isDark
-              ? color.withValues(alpha: 0.12)
-              : color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
+          color: FluentLayer.subtle(color, brightness),
+          borderRadius: FluentRadius.controlBorder,
           border: Border.all(
-            color: color.withValues(alpha: 0.25),
+            color: FluentStroke.card(brightness),
+            width: FluentStroke.width,
           ),
         ),
         child: Column(
@@ -322,21 +311,19 @@ class ExamScoreAnalyticsCard extends ConsumerWidget {
           children: [
             Text(
               label,
-              style: TextStyle(
-                fontSize: 10.5,
-                color: isDark ? Colors.white60 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                fontSize: 11,
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: FluentSpacing.xxs),
             Text(
               value,
-              style: TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.bodyStrong.copyWith(color: color),
             ),
           ],
         ),

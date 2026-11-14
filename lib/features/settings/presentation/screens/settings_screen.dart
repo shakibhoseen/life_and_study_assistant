@@ -17,9 +17,11 @@ import '../../../../core/services/attendance/packly_attendance_service.dart';
 import '../../../../core/services/background/wifi_monitor_service.dart';
 import '../../../../core/services/background/workmanager_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
+
 import 'package:geolocator/geolocator.dart';
 import 'package:life_and_study_assistant/features/dashboard/presentation/providers/office_portal_provider.dart';
 import 'package:life_and_study_assistant/features/dashboard/presentation/screens/office_portal_screen.dart';
+
 import '../widgets/backup_restore_card.dart';
 import '../widgets/theme_selector_card.dart';
 import '../widgets/ui_style_selector_card.dart';
@@ -31,7 +33,10 @@ import '../providers/settings_provider.dart';
 import '../widgets/gemini_usage_monitor_card.dart';
 import '../widgets/ai_cache_card.dart';
 import '../widgets/study_data_cleanup_card.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/widgets/animated_premium_background.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
+import '../../../../core/widgets/premium_ui_kit.dart';
 import 'attendance_test_lab_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -96,16 +101,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isIgnored = await Permission.ignoreBatteryOptimizations.isGranted;
     if (!mounted) return;
     setState(() {
-      _packlyEmail = prefs.getString(NotificationConstants.prefPacklyEmail) ??
+      _packlyEmail =
+          prefs.getString(NotificationConstants.prefPacklyEmail) ??
           'shakibhossen100@gmail.com';
-      _lunchEmail = prefs.getString(NotificationConstants.prefLunchEmail) ??
+      _lunchEmail =
+          prefs.getString(NotificationConstants.prefLunchEmail) ??
           'shakibhossen100@gmail.com';
       _lunchAutoReminderEnabled =
-          prefs.getBool(NotificationConstants.prefLunchAutoReminderEnabled) ?? true;
-      _lunchTodayBooked =
-          prefs.getBool(NotificationConstants.prefLunchLastKnownTodayBooked);
-      _lunchTomorrowBooked =
-          prefs.getBool(NotificationConstants.prefLunchLastKnownTomorrowBooked);
+          prefs.getBool(NotificationConstants.prefLunchAutoReminderEnabled) ??
+          true;
+      _lunchTodayBooked = prefs.getBool(
+        NotificationConstants.prefLunchLastKnownTodayBooked,
+      );
+      _lunchTomorrowBooked = prefs.getBool(
+        NotificationConstants.prefLunchLastKnownTomorrowBooked,
+      );
       _autoCheckInEnabled =
           prefs.getBool(NotificationConstants.prefAutoCheckInEnabled) ?? true;
       _autoCheckOutEnabled =
@@ -113,15 +123,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _lateWarningEnabled =
           prefs.getBool(NotificationConstants.prefLateWarningEnabled) ?? true;
       _simulationMode =
-          prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
+          prefs.getBool(NotificationConstants.prefPacklySimulationMode) ??
+          false;
       _officeDowntimeStudyEnabled =
-          prefs.getBool(NotificationConstants.prefOfficeDowntimeFlashcardEnabled) ?? true;
+          prefs.getBool(
+            NotificationConstants.prefOfficeDowntimeFlashcardEnabled,
+          ) ??
+          true;
       _officeAddress =
           prefs.getString(NotificationConstants.prefOfficeAddress) ??
-              'ZaviSoft Office, Dhaka';
+          'ZaviSoft Office, Dhaka';
       _bannerDisplayMode =
           prefs.getString(NotificationConstants.prefOfficeBannerMode) ??
-              'contextual';
+          'contextual';
       _isBatteryOptIgnored = isIgnored;
     });
   }
@@ -169,7 +183,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(
         title: const Text(
           'Automation & Settings',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: FluentType.bodyStrong,
         ),
       ),
       body: settingsAsync.when(
@@ -191,480 +205,441 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: AnimatedGradientBackground(child: SizedBox.expand()),
               ),
               const FloatingOrb(top: -30, right: -50, size: 280, opacity: 0.14),
-              const FloatingOrb(bottom: 100, left: -60, size: 240, opacity: 0.11),
+              const FloatingOrb(
+                bottom: 100,
+                left: -60,
+                size: 240,
+                opacity: 0.11,
+              ),
               ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            children: [
-              // 1. Office Wi-Fi & Schedule Configuration
-              _buildSectionHeader(
-                'Office Attendance & Schedule',
-                Icons.business_rounded,
-                Colors.blue.shade700,
-              ),
-              _buildOfficeWifiSection(settings, currentSsid),
-              const SizedBox(height: 18),
-
-              // 2. Zavisoft Packly Attendance Portal
-              _buildSectionHeader(
-                'Zavisoft Packly Attendance Portal',
-                Icons.fingerprint_rounded,
-                Colors.teal.shade700,
-              ),
-              _buildPacklyAutomationSection(),
-              const SizedBox(height: 18),
-
-              // 3. Steadfast Office Lunch / Meal Portal
-              _buildSectionHeader(
-                'Steadfast Office Lunch / Meal Portal',
-                Icons.lunch_dining_rounded,
-                Colors.deepOrange.shade700,
-              ),
-              _buildSteadfastLunchSection(),
-              const SizedBox(height: 18),
-
-              // 3. Gemini AI Configuration (Premium Credential Box)
-              _buildSectionHeader(
-                'Gemini AI Engine & Credentials',
-                Icons.auto_awesome,
-                Colors.purple.shade700,
-              ),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white12
-                        : const Color(0xFFE2E8F0),
-                  ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: FluentSpacing.m,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Model Engine Selector Dropdown
-                      Text(
-                        'AI Engine Model:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF1E293B)
-                              : const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white12
-                                : const Color(0xFFCBD5E1),
+                children: [
+                  // 1. Office Wi-Fi & Schedule Configuration
+                  _buildSectionHeader(
+                    'Office Attendance & Schedule',
+                    Icons.business_rounded,
+                  ),
+                  _buildOfficeWifiSection(settings, currentSsid),
+                  const SizedBox(height: FluentSpacing.xl),
+
+                  // 2. Zavisoft Packly Attendance Portal
+                  _buildSectionHeader(
+                    'Zavisoft Packly Attendance Portal',
+                    Icons.fingerprint_rounded,
+                  ),
+                  _buildPacklyAutomationSection(),
+                  const SizedBox(height: FluentSpacing.xl),
+
+                  // 3. Steadfast Office Lunch / Meal Portal
+                  _buildSectionHeader(
+                    'Steadfast Office Lunch / Meal Portal',
+                    Icons.lunch_dining_rounded,
+                  ),
+                  _buildSteadfastLunchSection(),
+                  const SizedBox(height: FluentSpacing.xl),
+
+                  // 3. Gemini AI Configuration (Premium Credential Box)
+                  _buildSectionHeader(
+                    'Gemini AI Engine & Credentials',
+                    Icons.auto_awesome,
+                  ),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.cardBorder,
+                      side: FluentStroke.side(Theme.of(context).brightness),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(FluentSpacing.l),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Model Engine Selector Dropdown
+                          Text(
+                            'AI Engine Model:',
+                            style: FluentType.bodyStrong.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                           ),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            isExpanded: true,
-                            dropdownColor:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF1E293B)
-                                : Colors.white,
-                            value:
-                                ([
-                                  'gemini-flash-lite-latest',
-                                  'gemini-flash-latest',
-                                  'gemini-pro-latest',
-                                ].contains(settings.geminiModel))
-                                ? settings.geminiModel
-                                : 'gemini-flash-lite-latest',
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'gemini-flash-lite-latest',
-                                child: Text(
-                                  '⚡ Gemini Flash Lite (Fastest & 100% Free - Recommended)',
+                          const SizedBox(height: FluentSpacing.s),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: FluentSpacing.m,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.onSurface
+                                  .withValues(alpha: 0.04),
+                              borderRadius: FluentRadius.controlBorder,
+                              border: Border.all(
+                                color: FluentStroke.card(
+                                  Theme.of(context).brightness,
+                                ),
+                                width: FluentStroke.width,
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                isExpanded: true,
+                                borderRadius: FluentRadius.cardBorder,
+                                style: FluentType.body.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface,
+                                ),
+                                dropdownColor: Theme.of(context)
+                                    .colorScheme
+                                    .surface,
+                                value:
+                                    ([
+                                      'gemini-flash-lite-latest',
+                                      'gemini-flash-latest',
+                                      'gemini-pro-latest',
+                                    ].contains(settings.geminiModel))
+                                    ? settings.geminiModel
+                                    : 'gemini-flash-lite-latest',
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'gemini-flash-lite-latest',
+                                    child: Text(
+                                      '⚡ Gemini Flash Lite (Fastest & 100% Free - Recommended)',
+                                    ),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'gemini-flash-latest',
+                                    child: Text(
+                                      '🚀 Gemini Flash Latest (High Intelligence)',
+                                    ),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'gemini-pro-latest',
+                                    child: Text(
+                                      '🧠 Gemini Pro Latest (Requires Google Cloud Billing)',
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (newModel) {
+                                  if (newModel != null) {
+                                    ref
+                                        .read(settingsNotifierProvider.notifier)
+                                        .updateGeminiModel(newModel);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Switched AI engine to $newModel',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: FluentSpacing.s),
+                          Text(
+                            settings.geminiModel == 'gemini-pro-latest'
+                                ? '✨ Pro Model active: Providing deepest reasoning (Requires Google Cloud billing enabled on project).'
+                                : '⚡ Flash Lite active: 100% free daily quota, ultra-fast response for LiveMCQ routines & AI mentor.',
+                            style: FluentType.caption.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface
+                                  .withValues(alpha: 0.65),
+                            ),
+                          ),
+                          const SizedBox(height: FluentSpacing.m),
+
+                          // Whether the chosen model may be swapped out. Here
+                          // rather than buried in a scanner, because it is about
+                          // the model chosen just above it.
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'ব্যস্ত থাকলে অন্য মডেল ব্যবহার করুক',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: FluentType.bodyStrong.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(height: FluentSpacing.xxs),
+                                    Text(
+                                      settings.allowModelFallback
+                                          ? 'সার্ভার ব্যস্ত হলে দুর্বল মডেলে উত্তর আসতে পারে — '
+                                                'স্ক্রিনে তা বলা থাকবে না'
+                                          : 'আপনার বাছাই করা মডেলই ব্যবহার হবে — '
+                                                'ব্যস্ত থাকলে অপেক্ষা করে আবার চেষ্টা করবে',
+                                      style: FluentType.caption.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.65),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              DropdownMenuItem(
-                                value: 'gemini-flash-latest',
-                                child: Text(
-                                  '🚀 Gemini Flash Latest (High Intelligence)',
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 'gemini-pro-latest',
-                                child: Text(
-                                  '🧠 Gemini Pro Latest (Requires Google Cloud Billing)',
-                                ),
+                              const SizedBox(width: FluentSpacing.s),
+                              Switch(
+                                value: settings.allowModelFallback,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                onChanged: (v) => ref
+                                    .read(settingsNotifierProvider.notifier)
+                                    .setAllowModelFallback(v),
                               ),
                             ],
-                            onChanged: (newModel) {
-                              if (newModel != null) {
-                                ref
-                                    .read(settingsNotifierProvider.notifier)
-                                    .updateGeminiModel(newModel);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Switched AI engine to $newModel',
+                          ),
+                          const SizedBox(height: FluentSpacing.l),
+
+                          // API Key Presentation: Either Secured Connected Box OR Input Box
+                          if (hasKey && !_isEditingApiKey)
+                            _buildConnectedKeyBox(
+                              settings.geminiApiKey,
+                              settings.geminiModel,
+                            )
+                          else
+                            _buildApiKeyInputBox(settings),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: FluentSpacing.xl),
+
+                  // Real-time Gemini API Quota & Usage Monitor
+                  const GeminiUsageMonitorCard(),
+                  const SizedBox(height: FluentSpacing.xl),
+
+                  // What the result cache is holding, and the means to empty it.
+                  const AiCacheCard(),
+                  const SizedBox(height: FluentSpacing.xl),
+
+                  // Auto-Weakness Healer & Micro Drills Control
+                  _buildSectionHeader(
+                    'Auto-Weakness Healer Engine',
+                    Icons.healing_rounded,
+                  ),
+                  WeaknessHealerToggleCard(settings: settings),
+                  const SizedBox(height: FluentSpacing.xl),
+
+                  _buildSectionHeader('ফ্ল্যাশকার্ড পুশ', Icons.style_outlined),
+                  _buildFlashcardPushCard(),
+                  const SizedBox(height: FluentSpacing.xl),
+
+                  // 4. Data Backup & Restore
+                  const BackupRestoreCard(),
+                  const StudyDataCleanupCard(),
+                  const SizedBox(height: FluentSpacing.xl),
+
+                  // Visual Comfort & Theme Mode
+                  _buildSectionHeader(
+                    'Visual Comfort & Display Theme',
+                    Icons.palette_outlined,
+                  ),
+                  const ThemeSelectorCard(),
+                  const SizedBox(height: FluentSpacing.s),
+                  const UiStyleSelectorCard(),
+                  const SizedBox(height: FluentSpacing.xl),
+
+                  // 5. Permissions & Reset
+                  _buildSectionHeader(
+                    'System & State Control',
+                    Icons.settings_suggest_rounded,
+                  ),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.cardBorder,
+                      side: FluentStroke.side(Theme.of(context).brightness),
+                    ),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: PremiumIconBadge(
+                            icon: Icons.notifications_active,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          title: const Text(
+                            'Request Notification & Location Permissions',
+                          ),
+                          subtitle: const Text(
+                            'Ensure exact alarms, heads-up banner & Wi-Fi SSID access',
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 14,
+                          ),
+                          onTap: () async {
+                            await NotificationService.instance
+                                .requestPermissions();
+                            final granted = await WifiMonitorService.instance
+                                .requestWifiLocationPermissions();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    granted
+                                        ? 'Notification & Location permissions active!'
+                                        : 'Please allow Location permission to detect Wi-Fi names.',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: PremiumIconBadge(
+                            icon: Icons.restart_alt,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          title: const Text(
+                            'Reset Today’s Check-In & Dinner Status',
+                          ),
+                          subtitle: const Text(
+                            'Allows re-triggering for today',
+                          ),
+                          onTap: () async {
+                            await ref
+                                .read(settingsNotifierProvider.notifier)
+                                .updateCheckInStatus('Pending');
+                            await ref
+                                .read(settingsNotifierProvider.notifier)
+                                .updateMealResponse('Pending');
+                            await WifiMonitorService.instance
+                                .checkCurrentWifiStatus();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Today’s status reset to Pending. Connect to Wi-Fi to test!',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: PremiumIconBadge(
+                            icon: Icons.delete_sweep_outlined,
+                            color: const Color(0xFFF59E0B),
+                          ),
+                          title: const Text('Clear All Exam Schedules'),
+                          subtitle: const Text(
+                            'Wipe sample or old routines to start fresh',
+                          ),
+                          onTap: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Clear All Exam Schedules?'),
+                                content: const Text(
+                                  'This will delete all saved LiveMCQ exam routines. You can then upload or import your own routine PDF/image.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: Text(
+                                      'Clear',
+                                      style: FluentType.body.copyWith(
+                                        color: Colors.red,
+                                      ),
                                     ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirmed == true) {
+                              await ref
+                                  .read(appDatabaseProvider)
+                                  .clearAllExams();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('All exam routines cleared.'),
                                   ),
                                 );
                               }
-                            },
+                            }
+                          },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: PremiumIconBadge(
+                            icon: Icons.folder_delete_outlined,
+                            color: const Color(0xFFF59E0B),
                           ),
+                          title: const Text('Delete Specific Program Track'),
+                          subtitle: const Text(
+                            'Remove all exams of a single track/tag without affecting others',
+                          ),
+                          onTap: () => _showDeleteTrackDialog(context),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        settings.geminiModel == 'gemini-pro-latest'
-                            ? '✨ Pro Model active: Providing deepest reasoning (Requires Google Cloud billing enabled on project).'
-                            : '⚡ Flash Lite active: 100% free daily quota, ultra-fast response for LiveMCQ routines & AI mentor.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: settings.geminiModel == 'gemini-pro-latest'
-                              ? (Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.purpleAccent
-                                    : Colors.deepPurple)
-                              : (Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.tealAccent
-                                    : Colors.teal.shade800),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Whether the chosen model may be swapped out. Here
-                      // rather than buried in a scanner, because it is about
-                      // the model chosen just above it.
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'ব্যস্ত থাকলে অন্য মডেল ব্যবহার করুক',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: PremiumIconBadge(
+                            icon: Icons.cleaning_services_outlined,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          title: const Text('Clear All Weak Topics'),
+                          subtitle: const Text('Remove all weak point entries'),
+                          onTap: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Clear All Weak Topics?'),
+                                content: const Text(
+                                  'This will delete all weak topic entries from the database.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('Cancel'),
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  settings.allowModelFallback
-                                      ? 'সার্ভার ব্যস্ত হলে দুর্বল মডেলে উত্তর আসতে পারে — '
-                                            'স্ক্রিনে তা বলা থাকবে না'
-                                      : 'আপনার বাছাই করা মডেলই ব্যবহার হবে — '
-                                            'ব্যস্ত থাকলে অপেক্ষা করে আবার চেষ্টা করবে',
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    height: 1.3,
-                                    color:
-                                        Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.grey.shade400
-                                        : Colors.grey.shade700,
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: Text(
+                                      'Clear',
+                                      style: FluentType.body.copyWith(
+                                        color: Colors.red,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Switch(
-                            value: settings.allowModelFallback,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            onChanged: (v) => ref
-                                .read(settingsNotifierProvider.notifier)
-                                .setAllowModelFallback(v),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-
-                      // API Key Presentation: Either Secured Connected Box OR Input Box
-                      if (hasKey && !_isEditingApiKey)
-                        _buildConnectedKeyBox(
-                          settings.geminiApiKey,
-                          settings.geminiModel,
-                        )
-                      else
-                        _buildApiKeyInputBox(settings),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              // Real-time Gemini API Quota & Usage Monitor
-              const GeminiUsageMonitorCard(),
-              const SizedBox(height: 18),
-
-              // What the result cache is holding, and the means to empty it.
-              const AiCacheCard(),
-              const SizedBox(height: 18),
-
-              // Auto-Weakness Healer & Micro Drills Control
-              _buildSectionHeader(
-                'Auto-Weakness Healer Engine',
-                Icons.healing_rounded,
-                const Color(0xFF10B981),
-              ),
-              WeaknessHealerToggleCard(settings: settings),
-              const SizedBox(height: 18),
-
-              _buildSectionHeader(
-                'ফ্ল্যাশকার্ড পুশ',
-                Icons.style_outlined,
-                const Color(0xFF8B5CF6),
-              ),
-              _buildFlashcardPushCard(),
-              const SizedBox(height: 18),
-
-              // 4. Data Backup & Restore
-              const BackupRestoreCard(),
-              const StudyDataCleanupCard(),
-              const SizedBox(height: 18),
-
-              // Visual Comfort & Theme Mode
-              _buildSectionHeader(
-                'Visual Comfort & Display Theme',
-                Icons.palette_outlined,
-                Colors.indigo.shade700,
-              ),
-              const ThemeSelectorCard(),
-              const SizedBox(height: 10),
-              const UiStyleSelectorCard(),
-              const SizedBox(height: 18),
-
-              // 5. Permissions & Reset
-              _buildSectionHeader(
-                'System & State Control',
-                Icons.settings_suggest_rounded,
-                Colors.blueGrey.shade700,
-              ),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white12
-                        : const Color(0xFFE2E8F0),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.blue.withValues(alpha: 0.2)
-                              : Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.notifications_active,
-                          color: Colors.blue,
-                        ),
-                      ),
-                      title: const Text(
-                        'Request Notification & Location Permissions',
-                      ),
-                      subtitle: const Text(
-                        'Ensure exact alarms, heads-up banner & Wi-Fi SSID access',
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                      onTap: () async {
-                        await NotificationService.instance.requestPermissions();
-                        final granted = await WifiMonitorService.instance
-                            .requestWifiLocationPermissions();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                granted
-                                    ? 'Notification & Location permissions active!'
-                                    : 'Please allow Location permission to detect Wi-Fi names.',
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.blueGrey.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.restart_alt,
-                          color: Colors.blueGrey,
-                        ),
-                      ),
-                      title: const Text(
-                        'Reset Today’s Check-In & Dinner Status',
-                      ),
-                      subtitle: const Text('Allows re-triggering for today'),
-                      onTap: () async {
-                        await ref
-                            .read(settingsNotifierProvider.notifier)
-                            .updateCheckInStatus('Pending');
-                        await ref
-                            .read(settingsNotifierProvider.notifier)
-                            .updateMealResponse('Pending');
-                        await WifiMonitorService.instance
-                            .checkCurrentWifiStatus();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Today’s status reset to Pending. Connect to Wi-Fi to test!',
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.delete_sweep_outlined,
-                          color: Colors.orange,
-                        ),
-                      ),
-                      title: const Text('Clear All Exam Schedules'),
-                      subtitle: const Text(
-                        'Wipe sample or old routines to start fresh',
-                      ),
-                      onTap: () async {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Clear All Exam Schedules?'),
-                            content: const Text(
-                              'This will delete all saved LiveMCQ exam routines. You can then upload or import your own routine PDF/image.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                child: const Text(
-                                  'Clear',
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (confirmed == true) {
-                          await ref.read(appDatabaseProvider).clearAllExams();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('All exam routines cleared.'),
+                                ],
                               ),
                             );
-                          }
-                        }
-                      },
+                            if (confirmed == true) {
+                              await ref
+                                  .read(appDatabaseProvider)
+                                  .clearAllWeakTopics();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('All weak topics cleared.'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ],
                     ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.folder_delete_outlined,
-                          color: Colors.amber,
-                        ),
-                      ),
-                      title: const Text('Delete Specific Program Track'),
-                      subtitle: const Text(
-                        'Remove all exams of a single track/tag without affecting others',
-                      ),
-                      onTap: () => _showDeleteTrackDialog(context),
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.cleaning_services_outlined,
-                          color: Colors.redAccent,
-                        ),
-                      ),
-                      title: const Text('Clear All Weak Topics'),
-                      subtitle: const Text('Remove all weak point entries'),
-                      onTap: () async {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Clear All Weak Topics?'),
-                            content: const Text(
-                              'This will delete all weak topic entries from the database.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                child: const Text(
-                                  'Clear',
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (confirmed == true) {
-                          await ref
-                              .read(appDatabaseProvider)
-                              .clearAllWeakTopics();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('All weak topics cleared.'),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
               ),
-              const SizedBox(height: 40),
-            ],
-          ),
             ],
           );
         },
@@ -674,27 +649,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   /// Secured Premium Credential Box (Shown when key is saved & active)
   Widget _buildConnectedKeyBox(String apiKey, String modelName) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    // Green here is status: the key is connected and verified.
+    const successColor = Color(0xFF10B981);
     final maskedKey = apiKey.length > 12
         ? '${apiKey.substring(0, 7)}••••••••••••••••${apiKey.substring(apiKey.length - 4)}'
         : '••••••••••••••••';
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: theme.cardTheme.color ?? theme.cardColor,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: const Color(0xFF10B981).withValues(alpha: 0.4),
-          width: 1.2,
+          color: successColor.withValues(alpha: 0.4),
+          width: FluentStroke.width,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF10B981).withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: FluentElevation.card(brightness),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -713,76 +686,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Flexible(
                       child: Text(
                         'Connected & Active',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: isDark
-                              ? const Color(0xFF34D399)
-                              : const Color(0xFF047857),
+                        style: FluentType.bodyStrong.copyWith(
+                          color: successColor,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.green.withValues(alpha: 0.2)
-                      : Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.green.withValues(alpha: 0.4)
-                        : Colors.green.shade200,
-                  ),
-                ),
-                child: Text(
-                  '✓ Verified',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? const Color(0xFF6EE7B7)
-                        : const Color(0xFF047857),
-                  ),
-                ),
-              ),
+              const SizedBox(width: FluentSpacing.s),
+              const PremiumTag(label: '✓ Verified', color: successColor),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
           // Masked Credential Box
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.m,
+              vertical: FluentSpacing.s,
+            ),
             decoration: BoxDecoration(
+              // A deliberately dark plate: the key reads as a secured value.
               color: const Color(0xFF0F172A),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: FluentRadius.controlBorder,
             ),
             child: Row(
               children: [
                 const Icon(
                   Icons.shield_outlined,
-                  color: Color(0xFF10B981),
+                  color: successColor,
                   size: 18,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Text(
                     _showRawKey ? apiKey : maskedKey,
-                    style: const TextStyle(
+                    // Sits on the dark secured plate above.
+                    style: FluentType.caption.copyWith(
                       fontFamily: 'monospace',
-                      color: Color(0xFFE2E8F0),
-                      fontSize: 12,
+                      color: const Color(0xFFE2E8F0),
                       letterSpacing: 1.2,
                     ),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -802,15 +753,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           Text(
             '✓ Secured in local device storage. Hidden from plain view.',
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white70 : Colors.black54,
+            style: FluentType.caption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: FluentSpacing.m),
           // Action Buttons: Ping Test, Change, and Remove
           Row(
             children: [
@@ -823,47 +773,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.speed, size: 16),
-                  label: Text(_isPinging ? 'Pinging...' : 'Test Ping'),
+                  label: Text(
+                    _isPinging ? 'Pinging...' : 'Test Ping',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption,
+                  ),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: FluentSpacing.s,
+                    ),
                     visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
                   ),
                   onPressed: _isPinging
                       ? null
                       : () => _pingTestApiKey(apiKey, modelName),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               OutlinedButton.icon(
                 icon: const Icon(Icons.edit_outlined, size: 16),
-                label: const Text('Change'),
+                label: Text('Change', style: FluentType.caption),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+                    horizontal: FluentSpacing.m,
+                    vertical: FluentSpacing.s,
                   ),
                   visualDensity: VisualDensity.compact,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                 ),
                 onPressed: () {
                   _apiKeyController.text = apiKey;
                   setState(() => _isEditingApiKey = true);
                 },
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               IconButton.outlined(
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: Colors.redAccent,
-                  size: 18,
-                ),
+                icon: Icon(Icons.delete_outline, color: scheme.error, size: 18),
                 tooltip: 'Remove Key',
                 style: IconButton.styleFrom(
                   side: BorderSide(
-                    color: isDark
-                        ? Colors.red.withValues(alpha: 0.4)
-                        : Colors.red.shade200,
+                    color: scheme.error.withValues(alpha: 0.4),
+                    width: FluentStroke.width,
                   ),
                   visualDensity: VisualDensity.compact,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                 ),
                 onPressed: () => _confirmRemoveApiKey(context),
               ),
@@ -876,15 +837,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   /// Input Credential Box (Shown when no key is set or user clicked Change)
   Widget _buildApiKeyInputBox(SettingsState settings) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: theme.cardTheme.color ?? theme.cardColor,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? Colors.white12 : Colors.grey.shade300,
+          color: FluentStroke.card(theme.brightness),
+          width: FluentStroke.width,
         ),
+        boxShadow: FluentElevation.card(theme.brightness),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -897,10 +862,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   'Enter Gemini API Key',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  style: FluentType.bodyStrong.copyWith(
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
@@ -909,19 +872,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onPressed: () {
                     setState(() => _isEditingApiKey = false);
                   },
-                  child: const Text('Cancel', style: TextStyle(fontSize: 12)),
+                  child: Text('Cancel', style: FluentType.caption),
                 ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: FluentSpacing.xs),
           Text(
             'Obtain a free key from Google AI Studio (ai.google.dev). 1,500 free calls/day.',
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white70 : Colors.black54,
+            style: FluentType.caption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: FluentSpacing.m),
           TextField(
             controller: _apiKeyController,
             obscureText: !_showRawKey,
@@ -956,7 +918,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: FluentSpacing.m),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -976,8 +938,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     : 'Save & Secure Key',
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E3A8A),
-                foregroundColor: Colors.white,
+                elevation: 0,
+                backgroundColor: scheme.primary,
+                foregroundColor: scheme.onPrimary,
+                padding: const EdgeInsets.symmetric(vertical: FluentSpacing.m),
+                shape: RoundedRectangleBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                ),
               ),
               onPressed: _isValidatingKey
                   ? null
@@ -1217,7 +1184,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Remove',
+              style: FluentType.body.copyWith(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -1241,7 +1211,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildWeekdayChips(List<int> currentOffDays) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     const days = [
       {'name': 'Sat', 'val': DateTime.saturday},
       {'name': 'Sun', 'val': DateTime.sunday},
@@ -1253,8 +1224,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ];
 
     return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: FluentSpacing.s,
+      runSpacing: FluentSpacing.s,
       children: days.map((d) {
         final val = d['val'] as int;
         final name = d['name'] as String;
@@ -1263,20 +1234,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return FilterChip(
           label: Text(
             name,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? (isDark ? Colors.teal.shade100 : Colors.teal.shade900)
-                  : (isDark ? Colors.white : Colors.black87),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: FluentType.caption.copyWith(
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              color: isSelected ? scheme.primary : scheme.onSurface,
             ),
           ),
           selected: isSelected,
-          backgroundColor: isDark ? const Color(0xFF1E293B) : null,
-          selectedColor: isDark
-              ? Colors.teal.withValues(alpha: 0.3)
-              : Colors.teal.shade100,
-          checkmarkColor: isDark ? Colors.teal.shade200 : Colors.teal.shade900,
+          shape: RoundedRectangleBorder(
+            borderRadius: FluentRadius.controlBorder,
+            side: FluentStroke.side(theme.brightness),
+          ),
+          backgroundColor: theme.cardTheme.color ?? theme.cardColor,
+          selectedColor: FluentLayer.subtle(scheme.primary, theme.brightness),
+          checkmarkColor: scheme.primary,
           onSelected: (bool selected) {
             final updated = List<int>.from(currentOffDays);
             if (selected) {
@@ -1301,44 +1273,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isSsidHidden = WifiMonitorService.instance.isSsidHiddenByAndroid;
 
     return Card(
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-        ),
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(Theme.of(context).brightness),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Recognized Office Wi-Fi Networks',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: isDark ? Colors.white : const Color(0xFF1E293B),
+              style: FluentType.bodyStrong.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               'Connect to ANY of these networks (e.g. Zavisoft or your Mac Hotspot SecretStar / Secreat Star) to trigger biometric check-in. Seamless 15s handoff prevents false check-outs when switching.',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.white70 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             // Warning Banner when Android OS is hiding SSID due to missing Location Permission
             if (isSsidHidden) ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF78350F).withValues(alpha: 0.25)
                       : const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
                     color: isDark
                         ? const Color(0xFFD97706).withValues(alpha: 0.4)
@@ -1355,13 +1324,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           color: Color(0xFFD97706),
                           size: 20,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: Text(
                             'Wi-Fi Connected, but Android OS hid network name',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12.5,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
                               color: isDark
                                   ? const Color(0xFFFDE68A)
                                   : const Color(0xFF92400E),
@@ -1370,17 +1338,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.xs),
                     Text(
                       'Modern Android (10+) requires Location Permission to read Wi-Fi SSIDs (like ZaviSoft or Secreat Star) for auto attendance check-in & check-out.',
-                      style: TextStyle(
-                        fontSize: 11.5,
+                      style: FluentType.caption.copyWith(
                         color: isDark
                             ? const Color(0xFFFEF3C7)
                             : const Color(0xFF78350F),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: FluentSpacing.s),
                     Row(
                       children: [
                         ElevatedButton.icon(
@@ -1389,11 +1356,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
-                              vertical: 8,
+                              vertical: FluentSpacing.s,
                             ),
-                            textStyle: const TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
+                            textStyle: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           icon: const Icon(Icons.security, size: 14),
@@ -1421,22 +1387,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             if (mounted) setState(() {});
                           },
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         TextButton.icon(
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
-                              vertical: 8,
+                              vertical: FluentSpacing.s,
                             ),
                             foregroundColor: isDark
                                 ? const Color(0xFFFDE68A)
                                 : const Color(0xFF92400E),
                           ),
                           icon: const Icon(Icons.refresh, size: 14),
-                          label: const Text(
-                            'Retry',
-                            style: TextStyle(fontSize: 11.5),
-                          ),
+                          label: const Text('Retry', style: FluentType.caption),
                           onPressed: () async {
                             await WifiMonitorService.instance
                                 .checkCurrentWifiStatus();
@@ -1448,12 +1411,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.s),
             ],
 
             // Real-time Connection Status Card
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: 10,
+              ),
               decoration: BoxDecoration(
                 color: isOfficeConnected
                     ? (isDark
@@ -1467,10 +1433,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ? (isDark
                           ? Colors.orange.withValues(alpha: 0.15)
                           : const Color(0xFFFFF7ED))
-                    : (isDark
-                          ? const Color(0xFF1E293B)
-                          : const Color(0xFFF1F5F9)),
-                borderRadius: BorderRadius.circular(10),
+                    : Theme.of(context).colorScheme.onSurface,
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
                   color: isOfficeConnected
                       ? (isDark
@@ -1484,7 +1448,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ? (isDark
                             ? Colors.orange.withValues(alpha: 0.4)
                             : const Color(0xFFFED7AA))
-                      : (isDark ? Colors.white12 : const Color(0xFFCBD5E1)),
+                      : Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -1508,7 +1473,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               : Colors.orange.shade800)
                         : (isDark ? Colors.blueGrey.shade200 : Colors.blueGrey),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1521,9 +1486,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               : isSsidHidden
                               ? '⚠️ Wi-Fi Connected (SSID Hidden)'
                               : '⚪ Wi-Fi Disconnected / Mobile Data',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
                             color: isOfficeConnected
                                 ? (isDark
                                       ? Colors.greenAccent
@@ -1545,10 +1509,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           maxLines: 1,
                         ),
                         if (isSsidHidden)
-                          const Text(
+                          Text(
                             'Grant location permission above to enable auto check-in',
-                            style: TextStyle(
-                              fontSize: 11,
+                            style: FluentType.caption.copyWith(
                               color: Colors.deepOrange,
                             ),
                           )
@@ -1557,27 +1520,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     'secretstar' ||
                                 currentSsid.toLowerCase().replaceAll(' ', '') ==
                                     'secreatstar'))
-                          const Text(
+                          Text(
                             '💻 Personal Mac Hotspot (Ultra-fast ethernet mode)',
-                            style: TextStyle(fontSize: 11, color: Colors.green),
+                            style: FluentType.caption.copyWith(
+                              color: Colors.green,
+                            ),
                           )
                         else if (currentSsid != null &&
                             currentSsid.toLowerCase().contains('zavisoft'))
-                          const Text(
+                          Text(
                             '🏢 Zavisoft Office Wi-Fi',
-                            style: TextStyle(fontSize: 11, color: Colors.teal),
+                            style: FluentType.caption.copyWith(
+                              color: Colors.teal,
+                            ),
                           )
                         else if (isOfficeConnected)
-                          const Text(
+                          Text(
                             '🏢 Verified Office Network',
-                            style: TextStyle(fontSize: 11, color: Colors.teal),
+                            style: FluentType.caption.copyWith(
+                              color: Colors.teal,
+                            ),
                           )
                         else if (currentSsid != null && currentSsid.isNotEmpty)
                           Text(
                             'Not yet recognized as office network',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? Colors.white60 : Colors.black54,
+                            style: FluentType.caption.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface
+                                  .withValues(alpha: 0.65),
                             ),
                           ),
                       ],
@@ -1590,16 +1559,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
-                          vertical: 4,
+                          vertical: FluentSpacing.xs,
                         ),
                         visualDensity: VisualDensity.compact,
                       ),
                       icon: const Icon(Icons.add, size: 14),
-                      label: const Text(
+                      label: Text(
                         'Add This',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       onPressed: () {
@@ -1618,18 +1586,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.m),
 
             // Active Configured Networks Chips
             Text(
               'Active Office SSIDs:',
-              style: TextStyle(
-                fontSize: 12,
+              style: FluentType.caption.copyWith(
                 fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white70 : const Color(0xFF475569),
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.xs),
             Wrap(
               spacing: 8,
               runSpacing: 6,
@@ -1671,8 +1639,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   label: Text.rich(
                     TextSpan(
                       text: ssid,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: FluentType.caption.copyWith(
                         fontWeight: isCurrent
                             ? FontWeight.bold
                             : FontWeight.w500,
@@ -1680,25 +1647,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ? (isDark
                                   ? Colors.greenAccent
                                   : Colors.green.shade900)
-                            : (isDark ? Colors.white : const Color(0xFF1E293B)),
+                            : Theme.of(context).colorScheme.onSurface,
                       ),
                       children: [
                         if (isMacHotspot)
                           TextSpan(
                             text: ' (Mac)',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isDark ? Colors.white60 : Colors.black54,
-                              fontWeight: FontWeight.normal,
+                            style: FluentType.caption.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface
+                                  .withValues(alpha: 0.65),
                             ),
                           )
                         else if (isZavisoft)
                           TextSpan(
                             text: ' (Main)',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isDark ? Colors.white60 : Colors.black54,
-                              fontWeight: FontWeight.normal,
+                            style: FluentType.caption.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface
+                                  .withValues(alpha: 0.65),
                             ),
                           ),
                       ],
@@ -1708,9 +1673,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ? (isDark
                             ? Colors.green.withValues(alpha: 0.2)
                             : const Color(0xFFDCFCE7))
-                      : (isDark
-                            ? const Color(0xFF1E293B)
-                            : const Color(0xFFF8FAFC)),
+                      : Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.04),
                   deleteIcon: const Icon(Icons.close, size: 14),
                   onDeleted: configuredList.length > 1
                       ? () {
@@ -1720,19 +1684,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         }
                       : null,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: FluentRadius.controlBorder,
                     side: BorderSide(
                       color: isCurrent
                           ? (isDark
                                 ? Colors.green.withValues(alpha: 0.5)
                                 : const Color(0xFF86EFAC))
-                          : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                          : Theme.of(context).colorScheme.onSurface
+                                .withValues(alpha: 0.12),
                     ),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.m),
 
             // Add Custom or Presets
             Row(
@@ -1745,20 +1710,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: 12,
-                        vertical: 10,
+                        vertical: FluentSpacing.s,
                       ),
                       border: OutlineInputBorder(),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E3A8A),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
-                      vertical: 10,
+                      vertical: FluentSpacing.s,
                     ),
                   ),
                   onPressed: () {
@@ -1785,7 +1750,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 !configuredList.any(
                   (s) => s.toLowerCase() == 'secretstar',
                 )) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.s),
               Wrap(
                 spacing: 6,
                 children: [
@@ -1794,7 +1759,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       avatar: const Icon(Icons.add, size: 14),
                       label: const Text(
                         'Preset: Zavisoft',
-                        style: TextStyle(fontSize: 11),
+                        style: FluentType.caption,
                       ),
                       onPressed: () {
                         ref
@@ -1809,7 +1774,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       avatar: const Icon(Icons.add, size: 14),
                       label: const Text(
                         'Preset: SecretStar (Mac Hotspot)',
-                        style: TextStyle(fontSize: 11),
+                        style: FluentType.caption,
                       ),
                       onPressed: () {
                         ref
@@ -1822,14 +1787,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
 
             // Seamless Handoff Banner Note
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.m),
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(FluentSpacing.s),
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.green.withValues(alpha: 0.15)
                     : const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: FluentRadius.controlBorder,
                 border: Border.all(
                   color: isDark
                       ? Colors.green.withValues(alpha: 0.3)
@@ -1840,16 +1805,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(Icons.bolt, color: Colors.green, size: 18),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       'স্মার্ট হ্যান্ডঅফ সক্রিয়: দরজায় "Zavisoft" পেলে চেক-ইন অ্যালার্ট আসবে। এরপর ডেস্কে বসে ম্যাকের "SecretStar" হটস্পটে সুইচ করলে ৪৫ সেকেন্ড গ্রেস পিরিয়ড থাকায় কোনো ভুল চেক-আউট হবে না।',
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: FluentType.caption.copyWith(
                         color: isDark
                             ? const Color(0xFFA7F3D0)
                             : const Color(0xFF166534),
-                        height: 1.3,
                       ),
                     ),
                   ),
@@ -1861,30 +1824,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Row(
               children: [
                 const Icon(Icons.beach_access, size: 18, color: Colors.teal),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     'Weekly Off-Days (No Office Work)',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                    style: FluentType.bodyStrong.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               'Office Wi-Fi check-in/out and dinner alerts are paused on these days. AI switches to weekend deep study mode.',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.white70 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.s),
             _buildWeekdayChips(settings.offDays),
           ],
         ),
@@ -1907,10 +1868,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlgState) => AlertDialog(
-          title: Text(
-            title,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-          ),
+          title: Text(title, style: FluentType.bodyStrong),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1923,7 +1881,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: passCtrl,
                 obscureText: obscure,
@@ -1972,23 +1930,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-        ),
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(Theme.of(context).brightness),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Portal Account Info & Edit / Ping Row
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF0FDFA),
-                borderRadius: BorderRadius.circular(12),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : const Color(0xFFF0FDFA),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
                   color: isDark ? Colors.white12 : const Color(0xFFCCFBF1),
                 ),
@@ -1999,30 +1958,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(FluentSpacing.s),
                         decoration: BoxDecoration(
                           color: Colors.teal.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
-                        child: const Icon(Icons.domain, color: Colors.teal, size: 20),
+                        child: const Icon(
+                          Icons.domain,
+                          color: Colors.teal,
+                          size: 20,
+                        ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               'ZaviSoft Packly Attendance Portal',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
+                              style: FluentType.bodyStrong,
                             ),
                             Text(
                               '$_packlyEmail • Shift: 9:00 AM – 6:00 PM',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark ? Colors.white60 : Colors.black54,
+                              style: FluentType.caption.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface
+                                    .withValues(alpha: 0.65),
                               ),
                             ),
                           ],
@@ -2030,7 +1990,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.s),
                   Wrap(
                     spacing: 8,
                     runSpacing: 6,
@@ -2038,22 +1998,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     children: [
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: FluentSpacing.xs,
+                          ),
                           visualDensity: VisualDensity.compact,
                         ),
                         icon: const Icon(Icons.edit, size: 14),
-                        label: const Text('Edit Credentials', style: TextStyle(fontSize: 11.5)),
+                        label: const Text(
+                          'Edit Credentials',
+                          style: FluentType.caption,
+                        ),
                         onPressed: () {
                           _showEditCredentialsDialog(
                             title: 'Edit Packly Attendance Credentials',
                             initialEmail: _packlyEmail,
                             prefEmailKey: NotificationConstants.prefPacklyEmail,
-                            prefPasswordKey: NotificationConstants.prefPacklyPassword,
+                            prefPasswordKey:
+                                NotificationConstants.prefPacklyPassword,
                             onSaved: () {
                               _loadPacklySettings();
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Packly credentials saved!')),
+                                  const SnackBar(
+                                    content: Text('Packly credentials saved!'),
+                                  ),
                                 );
                               }
                             },
@@ -2064,7 +2033,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.teal.shade700,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: FluentSpacing.xs,
+                          ),
                           visualDensity: VisualDensity.compact,
                         ),
                         icon: _isPacklyPinging
@@ -2079,13 +2051,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             : const Icon(Icons.sync, size: 14),
                         label: Text(
                           _isPacklyPinging ? 'Pinging...' : 'Ping / Test Login',
-                          style: const TextStyle(fontSize: 11.5),
+                          style: FluentType.caption,
                         ),
                         onPressed: _isPacklyPinging
                             ? null
                             : () async {
                                 setState(() => _isPacklyPinging = true);
-                                final res = await PacklyAttendanceService.instance.ping();
+                                final res = await PacklyAttendanceService
+                                    .instance
+                                    .ping();
                                 if (mounted) {
                                   setState(() => _isPacklyPinging = false);
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -2104,16 +2078,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             // Strict Policy & Grace Period Notice
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(FluentSpacing.s),
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.amber.withValues(alpha: 0.12)
                     : const Color(0xFFFFFBEB),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
                   color: isDark
                       ? Colors.amber.withValues(alpha: 0.3)
@@ -2124,49 +2098,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.info_outline, color: Colors.amber, size: 18),
-                  SizedBox(width: 8),
+                  SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       'অফিস নিয়ম: ৯:১৪ AM পর্যন্ত অন-টাইম, ৯:১৫ AM বাজলেই LATE হিসেবে গণ্য হবে। ৩ দিন লেট হলে ১ দিনের বেতন/ছুটি কর্তন ও শোকজ নোটিশ কার্যকর হয়।',
-                      style: TextStyle(
-                        fontSize: 11,
-                        height: 1.35,
-                      ),
+                      style: FluentType.caption,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.m),
 
             // Navigation Card to dedicated Diagnostics & Simulation Test Lab
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: FluentRadius.cardBorder,
                 side: BorderSide(
                   color: _simulationMode
                       ? Colors.amber.withValues(alpha: 0.5)
-                      : (isDark ? Colors.white12 : const Color(0xFFCBD5E1)),
+                      : Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.2),
                   width: _simulationMode ? 1.5 : 1,
                 ),
               ),
               color: _simulationMode
                   ? (isDark
-                      ? Colors.amber.withValues(alpha: 0.1)
-                      : const Color(0xFFFFFBEB))
+                        ? Colors.amber.withValues(alpha: 0.1)
+                        : const Color(0xFFFFFBEB))
                   : (isDark
-                      ? Colors.white.withValues(alpha: 0.04)
-                      : const Color(0xFFF8FAFC)),
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : const Color(0xFFF8FAFC)),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: FluentSpacing.xs,
+                ),
                 leading: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(FluentSpacing.s),
                   decoration: BoxDecoration(
                     color: _simulationMode
                         ? Colors.amber.withValues(alpha: 0.25)
-                        : (isDark ? Colors.white10 : Colors.black12),
-                    borderRadius: BorderRadius.circular(8),
+                        : Theme.of(context).colorScheme.onSurface
+                              .withValues(alpha: 0.12),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   child: Icon(
                     Icons.science_rounded,
@@ -2181,20 +2157,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         'Portal & Automation Test Lab',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: FluentType.bodyStrong,
                       ),
                     ),
                     if (_simulationMode) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: FluentSpacing.s),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: FluentSpacing.xxs,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.amber.shade900,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
-                        child: const Text(
+                        child: Text(
                           'TEST MODE ON',
-                          style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                          style: FluentType.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -2204,7 +2186,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _simulationMode
                       ? '🧪 টেস্ট মোড সচল! ডামি টেস্ট ল্যাব থেকে নোটিফিকেশন, পিং ও ফলস পাঞ্চ পরিচালনা করুন।'
                       : 'ডামি টেস্ট মোড, নোটিফিকেশন অ্যালার্ম, পিং ডায়াগনস্টিকস ও অটোমেশন ল্যাব স্ক্রিন খুলুন।',
-                  style: const TextStyle(fontSize: 11),
+                  style: FluentType.caption,
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 onTap: () async {
@@ -2218,23 +2200,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.m),
 
             // Switch 1: Auto Check-In on Office Wi-Fi
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text(
                 'Auto Check-In (Office Wi-Fi)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: FluentType.bodyStrong,
               ),
               subtitle: const Text(
                 'অফিস ওয়াই-ফাইতে ("Zavisoft" / "SecretStar") কানেক্ট হওয়া মাত্রই সকাল ৯:০০ টার আগে স্বয়ংক্রিয়ভাবে জিপিএস ও অনুমোদিত আইপি দিয়ে চেক-ইন সাবমিট হবে।',
-                style: TextStyle(fontSize: 11),
+                style: FluentType.caption,
               ),
               value: _autoCheckInEnabled,
               onChanged: (val) async {
                 final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool(NotificationConstants.prefAutoCheckInEnabled, val);
+                await prefs.setBool(
+                  NotificationConstants.prefAutoCheckInEnabled,
+                  val,
+                );
                 setState(() => _autoCheckInEnabled = val);
                 await WorkmanagerService.instance.syncWatchdogWithPrefs();
               },
@@ -2246,21 +2231,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               contentPadding: EdgeInsets.zero,
               title: const Text(
                 '9:15 AM Late Prevention Alarm',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: FluentType.bodyStrong,
               ),
               subtitle: const Text(
                 'সকাল ৮:৫০ ও ৯:১০ এ আপনি পাঞ্চ না করে থাকলে অ্যালার্মধর্মী হাই-প্রায়োরিটি নোটিফিকেশন পাঠাবে, যাতে কোনোভাবেই ৯:১৫ এর লেট পেনাল্টি না পড়ে।',
-                style: TextStyle(fontSize: 11),
+                style: FluentType.caption,
               ),
               value: _lateWarningEnabled,
               onChanged: (val) async {
                 final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool(NotificationConstants.prefLateWarningEnabled, val);
+                await prefs.setBool(
+                  NotificationConstants.prefLateWarningEnabled,
+                  val,
+                );
                 setState(() => _lateWarningEnabled = val);
                 if (val) {
-                  await NotificationService.instance.scheduleMorningOfficeWatchdogs();
+                  await NotificationService.instance
+                      .scheduleMorningOfficeWatchdogs();
                 } else {
-                  await NotificationService.instance.cancelMorningOfficeWatchdogs();
+                  await NotificationService.instance
+                      .cancelMorningOfficeWatchdogs();
                 }
                 await WorkmanagerService.instance.syncWatchdogWithPrefs();
               },
@@ -2272,21 +2262,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               contentPadding: EdgeInsets.zero,
               title: const Text(
                 'Smart Check-Out (After 6:00 PM)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: FluentType.bodyStrong,
               ),
               subtitle: const Text(
                 'সন্ধ্যা ৬:০০ টার পর অফিস ছেড়ে বের হলে (ওয়াই-ফাই বিচ্ছিন্ন হলে) অটো চেক-আউট সাবমিট করবে। সময়ের আগে ভুলবশত কোনো চেক-আউট হবে না।',
-                style: TextStyle(fontSize: 11),
+                style: FluentType.caption,
               ),
               value: _autoCheckOutEnabled,
               onChanged: (val) async {
                 final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool(NotificationConstants.prefAutoCheckOutEnabled, val);
+                await prefs.setBool(
+                  NotificationConstants.prefAutoCheckOutEnabled,
+                  val,
+                );
                 setState(() => _autoCheckOutEnabled = val);
                 if (val) {
-                  await NotificationService.instance.scheduleEveningOfficeWatchdogs();
+                  await NotificationService.instance
+                      .scheduleEveningOfficeWatchdogs();
                 } else {
-                  await NotificationService.instance.cancelEveningOfficeWatchdogs();
+                  await NotificationService.instance
+                      .cancelEveningOfficeWatchdogs();
                 }
                 await WorkmanagerService.instance.syncWatchdogWithPrefs();
               },
@@ -2298,11 +2293,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               contentPadding: EdgeInsets.zero,
               title: const Text(
                 'Office Downtime Micro-Study Nudges',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: FluentType.bodyStrong,
               ),
               subtitle: const Text(
                 'অফিসের লাঞ্চ বিরতি (১:১৫ PM) ও বিকালের চা পানের সময়ে (৪:৩০ PM) ১ মিনিটের হালকা বিসিএস রিভিশন পুশ দেবে (শব্দহীন ও কাজের ক্ষতি না করে)।',
-                style: TextStyle(fontSize: 11),
+                style: FluentType.caption,
               ),
               value: _officeDowntimeStudyEnabled,
               onChanged: (val) async {
@@ -2313,9 +2308,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 );
                 setState(() => _officeDowntimeStudyEnabled = val);
                 if (val) {
-                  await NotificationService.instance.scheduleOfficeDowntimeFlashcards();
+                  await NotificationService.instance
+                      .scheduleOfficeDowntimeFlashcards();
                 } else {
-                  await NotificationService.instance.cancelOfficeDowntimeFlashcards();
+                  await NotificationService.instance
+                      .cancelOfficeDowntimeFlashcards();
                 }
               },
             ),
@@ -2324,22 +2321,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // Study Dashboard Display Mode (User can choose to keep dashboard clean for studies)
             const Text(
               'Study Dashboard Display Mode',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: FluentType.bodyStrong,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               'আপনার ড্যাশবোর্ড যেন সম্পূর্ণ পড়াশোনার জন্য শান্ত ও নিরবচ্ছিন্ন থাকে, সেজন্য অফিস ব্যানার কখন দেখাবে তা নির্বাচন করুন:',
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white60 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             Container(
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : const Color(0xFFF8FAFC),
+                borderRadius: FluentRadius.cardBorder,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.12),
+                ),
               ),
               child: Column(
                 children: [
@@ -2370,20 +2372,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             // Kill Mode / Battery Optimization
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
                 color: _isBatteryOptIgnored
                     ? (isDark
-                        ? Colors.green.withValues(alpha: 0.15)
-                        : const Color(0xFFECFDF5))
+                          ? Colors.green.withValues(alpha: 0.15)
+                          : const Color(0xFFECFDF5))
                     : (isDark
-                        ? Colors.red.withValues(alpha: 0.15)
-                        : const Color(0xFFFEF2F2)),
-                borderRadius: BorderRadius.circular(10),
+                          ? Colors.red.withValues(alpha: 0.15)
+                          : const Color(0xFFFEF2F2)),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
                   color: _isBatteryOptIgnored
-                      ? (isDark ? Colors.green.withValues(alpha: 0.3) : const Color(0xFFA7F3D0))
-                      : (isDark ? Colors.red.withValues(alpha: 0.3) : const Color(0xFFFECACA)),
+                      ? (isDark
+                            ? Colors.green.withValues(alpha: 0.3)
+                            : const Color(0xFFA7F3D0))
+                      : (isDark
+                            ? Colors.red.withValues(alpha: 0.3)
+                            : const Color(0xFFFECACA)),
                 ),
               ),
               child: Column(
@@ -2392,49 +2398,62 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Row(
                     children: [
                       Icon(
-                        _isBatteryOptIgnored ? Icons.shield_rounded : Icons.battery_alert_rounded,
-                        color: _isBatteryOptIgnored ? Colors.green : Colors.redAccent,
+                        _isBatteryOptIgnored
+                            ? Icons.shield_rounded
+                            : Icons.battery_alert_rounded,
+                        color: _isBatteryOptIgnored
+                            ? Colors.green
+                            : Colors.redAccent,
                         size: 20,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Text(
                           _isBatteryOptIgnored
                               ? 'কিল মোড সুরক্ষা সক্রিয় (OS Always Runs App)'
                               : 'কিল মোড সমাধান: ব্যাটারি অপ্টিমাইজেশন বন্ধ করুন',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12.5,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
                             color: _isBatteryOptIgnored
-                                ? (isDark ? Colors.greenAccent : Colors.green.shade800)
-                                : (isDark ? Colors.redAccent : Colors.red.shade800),
+                                ? (isDark
+                                      ? Colors.greenAccent
+                                      : Colors.green.shade800)
+                                : (isDark
+                                      ? Colors.redAccent
+                                      : Colors.red.shade800),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.xs),
                   Text(
                     _isBatteryOptIgnored
                         ? 'অ্যাপ সোয়াইপ করে বন্ধ রাখলেও অ্যান্ড্রয়েড ওএস ব্যাকগ্রাউন্ডে ওয়াই-ফাই ডিটেকশন ও চেক-ইন অ্যালার্ট সচল রাখবে।'
                         : 'অ্যান্ড্রয়েড ওএস যাতে অ্যাপ ব্যাকগ্রাউন্ডে বন্ধ (Kill) না করে এবং সঠিক সময়ে চেক-ইন ও নোটিফিকেশন পাঠাতে পারে, সেজন্য এটি সক্রিয় করুন।',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   if (!_isBatteryOptIgnored) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: FluentSpacing.s),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.redAccent.shade700,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: FluentSpacing.s,
+                        ),
                       ),
                       icon: const Icon(Icons.bolt, size: 14),
-                      label: const Text('Allow Always in Background', style: TextStyle(fontSize: 11.5)),
+                      label: const Text(
+                        'Allow Always in Background',
+                        style: FluentType.caption,
+                      ),
                       onPressed: () async {
-                        final granted = await WifiMonitorService.instance.requestIgnoreBatteryOptimization();
+                        final granted = await WifiMonitorService.instance
+                            .requestIgnoreBatteryOptimization();
                         if (mounted) {
                           setState(() => _isBatteryOptIgnored = granted);
                         }
@@ -2444,26 +2463,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.m),
 
             // Office Location Geofence row
             Row(
               children: [
-                const Icon(Icons.location_on, color: Colors.blueAccent, size: 18),
-                const SizedBox(width: 8),
+                const Icon(
+                  Icons.location_on,
+                  color: Colors.blueAccent,
+                  size: 18,
+                ),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Office GPS Location Geofence',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       Text(
                         _officeAddress,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                        style: FluentType.caption.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface
+                              .withValues(alpha: 0.65),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -2472,10 +2497,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 TextButton.icon(
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: FluentSpacing.xs,
+                    ),
                   ),
                   icon: const Icon(Icons.my_location, size: 14),
-                  label: const Text('Calibrate', style: TextStyle(fontSize: 11)),
+                  label: const Text('Calibrate', style: FluentType.caption),
                   onPressed: () async {
                     try {
                       final pos = await Geolocator.getCurrentPosition(
@@ -2487,13 +2515,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       final addr = await PacklyAttendanceService.instance
                           .reverseGeocode(pos.latitude, pos.longitude);
                       final prefs = await SharedPreferences.getInstance();
-                      await prefs.setDouble(NotificationConstants.prefOfficeLatitude, pos.latitude);
-                      await prefs.setDouble(NotificationConstants.prefOfficeLongitude, pos.longitude);
-                      await prefs.setString(NotificationConstants.prefOfficeAddress, addr);
+                      await prefs.setDouble(
+                        NotificationConstants.prefOfficeLatitude,
+                        pos.latitude,
+                      );
+                      await prefs.setDouble(
+                        NotificationConstants.prefOfficeLongitude,
+                        pos.longitude,
+                      );
+                      await prefs.setString(
+                        NotificationConstants.prefOfficeAddress,
+                        addr,
+                      );
                       if (mounted) {
                         setState(() => _officeAddress = addr);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Office location updated: $addr')),
+                          SnackBar(
+                            content: Text('Office location updated: $addr'),
+                          ),
                         );
                       }
                     } catch (e) {
@@ -2523,25 +2562,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final tomorrowStr = '${tomorrow.day}/${tomorrow.month}/${tomorrow.year}';
 
     return Card(
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-        ),
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(Theme.of(context).brightness),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Account Info & Edit / Ping Row
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.05)
                     : const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
                   color: isDark ? Colors.white12 : const Color(0xFFFFEDD5),
                 ),
@@ -2552,10 +2590,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(FluentSpacing.s),
                         decoration: BoxDecoration(
                           color: Colors.deepOrange.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                         child: const Icon(
                           Icons.lunch_dining_rounded,
@@ -2563,23 +2601,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           size: 20,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               'Steadfast Courier Lunch Portal',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
+                              style: FluentType.bodyStrong,
                             ),
                             Text(
                               '$_lunchEmail • Cutoff: Daily 6:00 PM',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark ? Colors.white60 : Colors.black54,
+                              style: FluentType.caption.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface
+                                    .withValues(alpha: 0.65),
                               ),
                             ),
                           ],
@@ -2587,7 +2622,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.s),
                   Wrap(
                     spacing: 8,
                     runSpacing: 6,
@@ -2597,14 +2632,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
-                            vertical: 4,
+                            vertical: FluentSpacing.xs,
                           ),
                           visualDensity: VisualDensity.compact,
                         ),
                         icon: const Icon(Icons.edit, size: 14),
                         label: const Text(
                           'Edit Credentials',
-                          style: TextStyle(fontSize: 11.5),
+                          style: FluentType.caption,
                         ),
                         onPressed: () {
                           _showEditCredentialsDialog(
@@ -2632,7 +2667,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
-                            vertical: 4,
+                            vertical: FluentSpacing.xs,
                           ),
                           visualDensity: VisualDensity.compact,
                         ),
@@ -2647,14 +2682,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               )
                             : const Icon(Icons.sync, size: 14),
                         label: Text(
-                          lunchState.isLoading ? 'Checking...' : 'Ping / Check Status',
-                          style: const TextStyle(fontSize: 11.5),
+                          lunchState.isLoading
+                              ? 'Checking...'
+                              : 'Ping / Check Status',
+                          style: FluentType.caption,
                         ),
                         onPressed: lunchState.isLoading
                             ? null
                             : () async {
-                                final res =
-                                    await ref.read(lunchProvider.notifier).ping();
+                                final res = await ref
+                                    .read(lunchProvider.notifier)
+                                    .ping();
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -2672,16 +2710,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             // Strict Cutoff Rule Notice
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(FluentSpacing.s),
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.orange.withValues(alpha: 0.12)
                     : const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
                   color: isDark
                       ? Colors.orange.withValues(alpha: 0.3)
@@ -2692,44 +2730,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.info_outline, color: Colors.deepOrange, size: 18),
-                  SizedBox(width: 8),
+                  SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       'লাঞ্চ নিয়ম: আগামীকালের লাঞ্চ পেতে হলে আজ সন্ধ্যা ৬:০০ টার মধ্যে বুক করতে হবে। ৬:০০ টা বেজে গেলে ক্যালেন্ডার স্বয়ংক্রিয়ভাবে লক হয়ে যায় এবং আর বুকিং সম্ভব হয় না।',
-                      style: TextStyle(fontSize: 11, height: 1.35),
+                      style: FluentType.caption,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.m),
 
             // Live Meal Status Tiles (Today & Tomorrow)
             Row(
               children: [
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(FluentSpacing.m),
                     decoration: BoxDecoration(
                       color: isDark
                           ? Colors.white.withValues(alpha: 0.04)
                           : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: FluentRadius.cardBorder,
                       border: Border.all(
-                        color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                        color: Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.12),
                       ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'আজকের লাঞ্চ (Today)',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: FluentSpacing.xs),
                         Row(
                           children: [
                             Icon(
@@ -2741,20 +2779,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   ? Colors.green
                                   : Colors.grey,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: FluentSpacing.xs),
                             Expanded(
                               child: Text(
                                 todayBooked == true
                                     ? 'বুক করা আছে ✓'
                                     : (todayBooked == false
-                                        ? 'বুক নেই (Off)'
-                                        : 'সিঙ্ক করুন'),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                                          ? 'বুক নেই (Off)'
+                                          : 'সিঙ্ক করুন'),
+                                style: FluentType.caption.copyWith(
+                                  fontWeight: FontWeight.w600,
                                   color: todayBooked == true
                                       ? Colors.green
-                                      : (isDark ? Colors.white70 : Colors.black87),
+                                      : Theme.of(context).colorScheme.onSurface,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
@@ -2766,17 +2803,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(FluentSpacing.m),
                     decoration: BoxDecoration(
                       color: isDark
                           ? Colors.white.withValues(alpha: 0.04)
                           : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: FluentRadius.cardBorder,
                       border: Border.all(
-                        color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                        color: Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.12),
                       ),
                     ),
                     child: Column(
@@ -2784,14 +2822,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         Text(
                           'আগামীকাল ($tomorrowStr)',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: FluentSpacing.xs),
                         Row(
                           children: [
                             Icon(
@@ -2803,24 +2840,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   ? Colors.green
                                   : Colors.orange,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: FluentSpacing.xs),
                             Expanded(
                               child: Text(
                                 tomorrowBooked == true
                                     ? 'বুক করা আছে ✓'
                                     : (tomorrowBooked == false
-                                        ? 'বুক নেই (Off)'
-                                        : 'সিঙ্ক করুন'),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                                          ? 'বুক নেই (Off)'
+                                          : 'সিঙ্ক করুন'),
+                                style: FluentType.caption.copyWith(
+                                  fontWeight: FontWeight.w600,
                                   color: tomorrowBooked == true
                                       ? Colors.green
                                       : (tomorrowBooked == false
-                                          ? Colors.orange
-                                          : (isDark
-                                              ? Colors.white70
-                                              : Colors.black87)),
+                                            ? Colors.orange
+                                            : Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
@@ -2834,7 +2870,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             // Toggle Tomorrow's Lunch Quick Action Button
             SizedBox(
@@ -2845,9 +2881,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ? Colors.redAccent.shade700
                       : Colors.teal.shade700,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: FluentSpacing.s,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.cardBorder,
                   ),
                 ),
                 icon: lunchState.isToggling
@@ -2871,11 +2909,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     lunchState.isToggling
                         ? 'Updating Server...'
                         : (tomorrowBooked == true
-                            ? 'Cancel Tomorrow\'s Lunch (লাঞ্চ বাতিল করুন)'
-                            : 'Book Tomorrow\'s Lunch (আগামীকালের লাঞ্চ বুক করুন)'),
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
+                              ? 'Cancel Tomorrow\'s Lunch (লাঞ্চ বাতিল করুন)'
+                              : 'Book Tomorrow\'s Lunch (আগামীকালের লাঞ্চ বুক করুন)'),
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -2898,20 +2935,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       },
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.s),
 
             // Button to Open Full Interactive Calendar & Office Portal
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: isDark ? Colors.white : Colors.black87,
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
                   side: BorderSide(
-                    color: isDark ? Colors.white24 : Colors.grey.shade400,
+                    color: Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.5),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: FluentSpacing.s,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.cardBorder,
                   ),
                 ),
                 icon: const Icon(
@@ -2919,11 +2959,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   size: 16,
                   color: Colors.deepOrange,
                 ),
-                label: const FittedBox(
+                label: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
                     'Open Meal Calendar & Office Portal ➔',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 onPressed: () {
@@ -2943,11 +2985,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               contentPadding: EdgeInsets.zero,
               title: const Text(
                 '5:00 PM Daily Lunch Cutoff Alarm',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: FluentType.bodyStrong,
               ),
               subtitle: const Text(
                 'প্রতিদিন বিকেল ৫:০০ টায় (৬:০০ টার কাটঅফের ১ ঘণ্টা আগে) আগামীকালের লাঞ্চ বুক করা না থাকলে নোটিফিকেশন পাঠাবে এবং নোটিফিকেশনে বুক করার বাটন দেবে।',
-                style: TextStyle(fontSize: 11),
+                style: FluentType.caption,
               ),
               value: _lunchAutoReminderEnabled,
               onChanged: (val) async {
@@ -2975,41 +3017,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return InkWell(
       onTap: () async {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(NotificationConstants.prefOfficeBannerMode, value);
+        await prefs.setString(
+          NotificationConstants.prefOfficeBannerMode,
+          value,
+        );
         setState(() => _bannerDisplayMode = value);
       },
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: FluentRadius.controlBorder,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: FluentSpacing.m,
+          vertical: 10,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected ? Colors.teal : (isDark ? Colors.white38 : Colors.black38),
+              color: isSelected
+                  ? Colors.teal
+                  : Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.5),
               size: 18,
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: FluentSpacing.s),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                       color: isSelected
                           ? (isDark ? Colors.tealAccent : Colors.teal.shade800)
                           : null,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: FluentSpacing.xxs),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface
+                          .withValues(alpha: 0.65),
                     ),
                   ),
                 ],
@@ -3034,9 +3084,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: FluentRadius.cardBorder,
         side: BorderSide(
-          color: isDark ? const Color(0xFF334155) : Colors.grey.shade300,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
         ),
       ),
       child: Padding(
@@ -3049,15 +3099,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               value: _flashcardPushEnabled,
               title: const Text(
                 'নিয়ম করে ফ্ল্যাশকার্ড পাঠাও',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: FluentType.bodyStrong,
               ),
               subtitle: Text(
                 'রিভিশনের সময় হয়ে আসা কার্ড আগে যায়, তারপর বাছাই করা ডেক। '
                 'নিচের সময়সীমার বাইরে কিছু পাঠানো হয় না।',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  height: 1.4,
-                  color: isDark ? Colors.white60 : Colors.black54,
+                style: FluentType.caption.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.65),
                 ),
               ),
               onChanged: (v) async {
@@ -3093,22 +3142,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     'অ্যাপ না খুললেও প্রায় '
                     '${(_flashcardQueuedCount / _flashcardSlotsPerDay).toStringAsFixed(1)} '
                     'দিন চলবে',
-                    style: TextStyle(
-                      fontSize: 11.5,
+                    style: FluentType.caption.copyWith(
                       color: _flashcardQueuedCount < _flashcardSlotsPerDay
                           ? Colors.orange.shade800
                           : Colors.green.shade700,
                     ),
                   ),
                 ),
-              const SizedBox(height: 4),
+              const SizedBox(height: FluentSpacing.xs),
               Wrap(
                 spacing: 7,
                 runSpacing: 7,
                 children: options.entries.map((e) {
                   final selected = _flashcardPushMinutes == e.key;
                   return ChoiceChip(
-                    label: Text(e.value, style: const TextStyle(fontSize: 12)),
+                    label: Text(e.value, style: FluentType.caption),
                     selected: selected,
                     onSelected: (_) async {
                       final prefs = await SharedPreferences.getInstance();
@@ -3125,16 +3173,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               Text(
                 'কখন থেকে কখন পর্যন্ত পাঠানো হবে',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white70 : Colors.black87,
+                style: FluentType.caption.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: FluentSpacing.xs),
               Row(
                 children: [
                   Expanded(
@@ -3145,7 +3192,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onPicked: (h) => _saveFlashcardWindow(startHour: h),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: _buildHourPicker(
                       label: 'শেষ',
@@ -3156,7 +3203,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.s),
               Align(
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
@@ -3179,14 +3226,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   icon: const Icon(Icons.play_circle_outline, size: 17),
                   label: const Text(
                     '১ মিনিট পরপর পাঠিয়ে দেখুন',
-                    style: TextStyle(fontSize: 12.5),
+                    style: FluentType.caption,
                   ),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: FluentSpacing.s),
               Text(
                 // Said plainly, because a queue that runs out looks like a
                 // broken feature otherwise.
@@ -3194,10 +3241,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 'অ্যাপ আবার খুললে স্বাভাবিক তালিকা ফিরে আসে।\n'
                 'একবারে ${NotificationConstants.flashcardSeriesMaxCount}টি কার্ড সময় ধরে সাজানো থাকে; '
                 'অ্যাপ খুললেই তালিকাটি আবার ভরে যায়।',
-                style: TextStyle(
-                  fontSize: 11,
-                  height: 1.4,
-                  color: isDark ? Colors.white38 : Colors.black45,
+                style: FluentType.caption.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.65),
                 ),
               ),
             ],
@@ -3223,21 +3269,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         if (picked != null) onPicked(picked.hour);
       },
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 11),
+        padding: const EdgeInsets.symmetric(vertical: FluentSpacing.m),
       ),
       child: Column(
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 10.5,
-              color: isDark ? Colors.white54 : Colors.black45,
+            style: FluentType.caption.copyWith(
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(height: 1),
+          const SizedBox(height: 0),
           Text(
             TimeOfDay(hour: hour, minute: 0).format(context),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            style: FluentType.bodyStrong,
           ),
         ],
       ),
@@ -3271,37 +3317,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         .refreshFlashcardSchedule(force: true);
   }
 
-  Widget _buildSectionHeader(String title, IconData icon, Color color) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  /// Every section used to carry its own accent colour. In Fluent the accent
+  /// marks the thing you act on, so they all share one now.
+  Widget _buildSectionHeader(String title, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: isDark ? 0.25 : 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, size: 16, color: color),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: isDark
-                    ? const Color(0xFF93C5FD)
-                    : const Color(0xFF334155),
-              ),
-            ),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.only(bottom: FluentSpacing.s),
+      child: PremiumSectionHeader(icon: icon, label: title),
     );
   }
 
@@ -3327,30 +3348,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: FluentSpacing.l),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: FluentSpacing.xl),
                 child: Text(
                   'Select Program Track to Delete',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: FluentType.subtitle.copyWith(fontSize: 16),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: FluentSpacing.s),
               ...trackCounts.entries.map((entry) {
                 return ListTile(
                   leading: const Icon(Icons.bookmark, color: Colors.indigo),
-                  title: Text(
-                    entry.key,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+                  title: Text(entry.key, style: FluentType.bodyStrong),
                   subtitle: Text('${entry.value} exams scheduled'),
                   trailing: const Icon(Icons.delete_outline, color: Colors.red),
                   onTap: () async {

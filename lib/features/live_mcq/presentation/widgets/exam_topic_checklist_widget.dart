@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../focus/presentation/screens/pomodoro_focus_screen.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 
 /// An interactive checklist widget that parses an exam's `topicsCovered` text
 /// into discrete, checkable study targets with progress tracking.
@@ -100,27 +101,28 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
   Widget build(BuildContext context) {
     if (_topics.isEmpty) return const SizedBox.shrink();
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
     final total = _topics.length;
     final completed = _checkedTopics.length;
     final progress = total > 0 ? completed / total : 0.0;
     final isAllDone = completed == total && total > 0;
 
     return Container(
-      margin: const EdgeInsets.only(top: 8, bottom: 4),
+      margin: const EdgeInsets.only(
+        top: FluentSpacing.s,
+        bottom: FluentSpacing.xs,
+      ),
       decoration: BoxDecoration(
-        color: isDark
-            ? (isAllDone
-                ? const Color(0xFF064E3B).withValues(alpha: 0.25)
-                : const Color(0xFF1E293B).withValues(alpha: 0.6))
-            : (isAllDone
-                ? const Color(0xFFECFDF5)
-                : const Color(0xFFF8FAFC)),
-        borderRadius: BorderRadius.circular(10),
+        color: isAllDone
+            ? FluentLayer.subtle(const Color(0xFF10B981), brightness)
+            : scheme.onSurface.withValues(alpha: 0.04),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
           color: isAllDone
-              ? (isDark ? const Color(0xFF059669) : const Color(0xFF6EE7B7))
-              : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              ? const Color(0xFF10B981).withValues(alpha: 0.35)
+              : FluentStroke.card(brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
@@ -128,7 +130,10 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
         children: [
           // Header / Summary row (Tap to expand/collapse, with eye button for full text)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.s,
+              vertical: FluentSpacing.s,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -138,11 +143,11 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                         _isExpanded = !_isExpanded;
                       });
                     },
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: FluentRadius.controlBorder,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 4,
+                        horizontal: FluentSpacing.xs,
+                        vertical: FluentSpacing.xs,
                       ),
                       child: Row(
                         children: [
@@ -153,11 +158,9 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                             size: 16,
                             color: isAllDone
                                 ? const Color(0xFF10B981)
-                                : (isDark
-                                    ? const Color(0xFF93C5FD)
-                                    : const Color(0xFF3B82F6)),
+                                : scheme.primary,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: FluentSpacing.s),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,41 +175,35 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                                             : 'টপিক প্রস্তুতি ($completed/$total)',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
+                                        style: FluentType.caption.copyWith(
+                                          fontWeight: FontWeight.w600,
                                           color: isAllDone
                                               ? const Color(0xFF10B981)
-                                              : (isDark
-                                                  ? Colors.white
-                                                  : const Color(0xFF1E293B)),
+                                              : scheme.onSurface,
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: FluentSpacing.s),
                                     Text(
                                       '${(progress * 100).toInt()}%',
-                                      style: TextStyle(
-                                        fontSize: 11,
+                                      style: FluentType.caption.copyWith(
                                         fontWeight: FontWeight.w600,
                                         color: isAllDone
                                             ? const Color(0xFF10B981)
-                                            : (isDark
-                                                ? Colors.white60
-                                                : Colors.black54),
+                                            : scheme.onSurface
+                                                  .withValues(alpha: 0.65),
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: FluentSpacing.xs),
                                 ClipRRect(
-                                  borderRadius: BorderRadius.circular(2),
+                                  borderRadius: FluentRadius.controlBorder,
                                   child: LinearProgressIndicator(
                                     value: progress,
-                                    minHeight: 3.5,
-                                    backgroundColor: isDark
-                                        ? Colors.grey.shade800
-                                        : Colors.grey.shade200,
+                                    minHeight: 4,
+                                    backgroundColor: scheme.onSurface
+                                        .withValues(alpha: 0.10),
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       isAllDone
                                           ? const Color(0xFF10B981)
@@ -222,7 +219,7 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: FluentSpacing.xs),
 
                 // Eye button: Toggle between full raw text and checklist
                 IconButton(
@@ -232,15 +229,13 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                         : Icons.visibility_outlined,
                     size: 19,
                     color: _showRawView && _isExpanded
-                        ? (isDark
-                            ? const Color(0xFF60A5FA)
-                            : const Color(0xFF2563EB))
-                        : (isDark ? Colors.white60 : Colors.black45),
+                        ? scheme.primary
+                        : scheme.onSurface.withValues(alpha: 0.55),
                   ),
                   tooltip: _showRawView && _isExpanded
                       ? 'চেকলিস্টে ফিরে যান'
                       : 'আগের মতো সম্পূর্ণ টপিক টেক্সট দেখুন',
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(FluentSpacing.xs),
                   constraints: const BoxConstraints(
                     minWidth: 30,
                     minHeight: 30,
@@ -264,15 +259,15 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                       _isExpanded = !_isExpanded;
                     });
                   },
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: FluentRadius.controlBorder,
                   child: Padding(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(FluentSpacing.xs),
                     child: Icon(
                       _isExpanded
                           ? Icons.keyboard_arrow_up
                           : Icons.keyboard_arrow_down,
                       size: 20,
-                      color: isDark ? Colors.white54 : Colors.black45,
+                      color: scheme.onSurface.withValues(alpha: 0.55),
                     ),
                   ),
                 ),
@@ -282,11 +277,16 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
 
           // Expanded Content: Either Raw Text or Interactive Checklist
           if (_isExpanded && !_isLoading) ...[
-            const Divider(height: 1),
+            Divider(height: 1, color: FluentStroke.divider(brightness)),
             if (_showRawView) ...[
               // Mode 1: Full original topics text (একবারে আগের মতো সম্পূর্ণ সিলেবাস)
               Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                padding: const EdgeInsets.fromLTRB(
+                  FluentSpacing.m,
+                  FluentSpacing.s,
+                  FluentSpacing.m,
+                  FluentSpacing.m,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -295,33 +295,28 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                         Icon(
                           Icons.article_outlined,
                           size: 15,
-                          color: isDark
-                              ? const Color(0xFF93C5FD)
-                              : const Color(0xFF2563EB),
+                          color: scheme.primary,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: Text(
                             'সম্পূর্ণ টপিক বিবরণ (Original Topics):',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? const Color(0xFF93C5FD)
-                                  : const Color(0xFF1E40AF),
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.primary,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: FluentSpacing.s),
                         IconButton(
                           icon: const Icon(Icons.copy, size: 14),
                           tooltip: 'টপিক কপি করুন',
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          color: isDark ? Colors.white60 : Colors.black54,
+                          color: scheme.onSurface.withValues(alpha: 0.65),
                           onPressed: () {
                             Clipboard.setData(
                               ClipboardData(text: widget.exam.topicsCovered),
@@ -334,20 +329,20 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                             );
                           },
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         TextButton.icon(
                           style: TextButton.styleFrom(
                             visualDensity: VisualDensity.compact,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
+                              horizontal: FluentSpacing.s,
+                              vertical: FluentSpacing.xxs,
                             ),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           icon: const Icon(Icons.checklist_rounded, size: 14),
-                          label: const Text(
+                          label: Text(
                             'চেকলিস্ট মোড',
-                            style: TextStyle(fontSize: 11),
+                            style: FluentType.caption,
                           ),
                           onPressed: () {
                             setState(() => _showRawView = false);
@@ -355,29 +350,23 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(FluentSpacing.m),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF0F172A).withValues(alpha: 0.5)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(8),
+                        color: scheme.surface,
+                        borderRadius: FluentRadius.cardBorder,
                         border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF334155)
-                              : const Color(0xFFCBD5E1),
+                          color: FluentStroke.card(brightness),
+                          width: FluentStroke.width,
                         ),
                       ),
                       child: SelectableText(
                         'Topics: ${widget.exam.topicsCovered}',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          height: 1.45,
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.9)
-                              : const Color(0xFF1E293B),
+                        style: FluentType.body.copyWith(
+                          fontSize: 13,
+                          color: scheme.onSurface,
                         ),
                       ),
                     ),
@@ -387,20 +376,23 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
             ] else ...[
               // Mode 2: Interactive Checklist
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: FluentSpacing.s,
+                  vertical: FluentSpacing.xs,
+                ),
                 child: Column(
                   children: [
                     ..._topics.map((t) {
                       final isChecked = _checkedTopics.contains(t);
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        padding: const EdgeInsets.symmetric(vertical: FluentSpacing.xxs),
                         child: InkWell(
                           onTap: () => _toggleTopic(t),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: FluentRadius.controlBorder,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 4,
+                              horizontal: FluentSpacing.s,
+                              vertical: FluentSpacing.xs,
                             ),
                             child: Row(
                               children: [
@@ -411,27 +403,23 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                                     value: isChecked,
                                     activeColor: const Color(0xFF10B981),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(4),
+                                      borderRadius: FluentRadius.controlBorder,
                                     ),
                                     onChanged: (_) => _toggleTopic(t),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: FluentSpacing.s),
                                 Expanded(
                                   child: Text(
                                     t,
-                                    style: TextStyle(
-                                      fontSize: 12,
+                                    style: FluentType.caption.copyWith(
                                       decoration: isChecked
                                           ? TextDecoration.lineThrough
                                           : null,
                                       color: isChecked
-                                          ? (isDark
-                                              ? Colors.white38
-                                              : Colors.black38)
-                                          : (isDark
-                                              ? Colors.white
-                                              : Colors.black87),
+                                          ? scheme.onSurface
+                                                .withValues(alpha: 0.45)
+                                          : scheme.onSurface,
                                     ),
                                   ),
                                 ),
@@ -442,9 +430,7 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                                     size: 15,
                                   ),
                                   tooltip: 'এই টপিকে ফোকাস টাইমার শুরু করুন',
-                                  color: isDark
-                                      ? const Color(0xFFA5B4FC)
-                                      : const Color(0xFF6366F1),
+                                  color: scheme.primary,
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
                                   onPressed: () {
@@ -463,9 +449,12 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                         ),
                       );
                     }),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: FluentSpacing.xxs),
                     Padding(
-                      padding: const EdgeInsets.only(right: 4, bottom: 2),
+                      padding: const EdgeInsets.only(
+                        right: FluentSpacing.xs,
+                        bottom: FluentSpacing.xxs,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -474,20 +463,20 @@ class _ExamTopicChecklistWidgetState extends State<ExamTopicChecklistWidget> {
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
+                                  horizontal: FluentSpacing.s,
+                                  vertical: FluentSpacing.xxs,
                                 ),
                               ),
                               icon: const Icon(
                                 Icons.visibility_outlined,
                                 size: 13,
                               ),
-                              label: const Text(
+                              label: Text(
                                 'একনজরে আগের মতো সম্পূর্ণ টেক্সট দেখুন',
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.end,
-                                style: TextStyle(fontSize: 11),
+                                style: FluentType.caption,
                               ),
                               onPressed: () {
                                 setState(() => _showRawView = true);

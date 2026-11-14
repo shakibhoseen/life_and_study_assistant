@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/tables/daily_energy_logs_table.dart';
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_ui_kit.dart';
 import '../../../energy_log/presentation/providers/energy_log_provider.dart';
 import '../../../study_planner/presentation/providers/adaptive_planner_provider.dart';
 
@@ -29,70 +31,66 @@ class _EnergyTrackerCardState extends ConsumerState<EnergyTrackerCard> {
       }
     });
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = scheme.onSurface;
+    // Red / amber / green, kept because here they carry status meaning.
     final Color fatigueColor = _fatigueScore >= 7
-        ? Colors.redAccent
-        : (_fatigueScore >= 4 ? Colors.amberAccent : Colors.greenAccent);
+        ? scheme.error
+        : (_fatigueScore >= 4
+              ? const Color(0xFFF59E0B)
+              : const Color(0xFF10B981));
 
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(theme.brightness),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.bolt, color: Colors.amber, size: 22),
-                const SizedBox(width: 8),
+                Icon(Icons.bolt, color: scheme.primary, size: 22),
+                const SizedBox(width: FluentSpacing.s),
                 // Takes the free space like the Spacer it replaces, but also
                 // gives it back when the title and the chip together exceed
                 // the row. Scaling down beats ellipsising a four-pixel
                 // overflow into "Post-Work Energy & Moo…".
-                const Expanded(
+                Expanded(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Post-Work Energy & Mood',
-                      style: TextStyle(
+                      style: FluentType.bodyStrong.copyWith(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        color: onSurface,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: fatigueColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Fatigue: ${_fatigueScore.toInt()}/10',
-                    style: TextStyle(
-                      color: fatigueColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+                const SizedBox(width: FluentSpacing.s),
+                Flexible(
+                  child: PremiumTag(
+                    label: 'Fatigue: ${_fatigueScore.toInt()}/10',
+                    color: fatigueColor,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
             Text(
               'How mentally drained are you feeling after today’s code/office hours?',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white70 : Colors.black54,
+              style: FluentType.body.copyWith(
+                color: onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
             // Energy selection segment
             Row(
               children: [
@@ -100,39 +98,39 @@ class _EnergyTrackerCardState extends ConsumerState<EnergyTrackerCard> {
                   level: EnergyLevel.low,
                   label: 'Exhausted',
                   icon: Icons.battery_1_bar,
-                  color: Colors.redAccent,
+                  color: scheme.error,
                   isDark: isDark,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 _buildEnergyOption(
                   level: EnergyLevel.medium,
                   label: 'Moderate',
                   icon: Icons.battery_4_bar,
-                  color: Colors.orangeAccent,
+                  color: const Color(0xFFF59E0B),
                   isDark: isDark,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 _buildEnergyOption(
                   level: EnergyLevel.high,
                   label: 'Energized',
                   icon: Icons.battery_full,
-                  color: Colors.green,
+                  color: const Color(0xFF10B981),
                   isDark: isDark,
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Flexible(
+                Flexible(
                   child: Text(
                     'Office Fatigue Slider:',
-                    style: TextStyle(fontSize: 13),
+                    style: FluentType.body.copyWith(color: onSurface),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 // "⚠️ High burnout risk" is the longest of the three and the
                 // one that matters most, so it gets the room it needs.
                 Flexible(
@@ -140,8 +138,7 @@ class _EnergyTrackerCardState extends ConsumerState<EnergyTrackerCard> {
                     _fatigueScore >= 7
                         ? '⚠️ High burnout risk'
                         : (_fatigueScore >= 4 ? 'Normal tiredness' : 'Fresh'),
-                    style: TextStyle(
-                      fontSize: 12,
+                    style: FluentType.caption.copyWith(
                       color: fatigueColor,
                       fontWeight: FontWeight.w600,
                     ),
@@ -167,19 +164,28 @@ class _EnergyTrackerCardState extends ConsumerState<EnergyTrackerCard> {
                 });
               },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  backgroundColor: scheme.primary,
+                  foregroundColor: scheme.onPrimary,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: FluentSpacing.m,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 icon: const Icon(Icons.sync, size: 18),
-                label: const Text('Log Energy & Adapt Study Plan'),
+                label: Text(
+                  'Log Energy & Adapt Study Plan',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.bodyStrong,
+                ),
                 onPressed: () async {
                   await ref
                       .read(energyLogNotifierProvider.notifier)
@@ -219,6 +225,9 @@ class _EnergyTrackerCardState extends ConsumerState<EnergyTrackerCard> {
     required Color color,
     required bool isDark,
   }) {
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final onSurface = theme.colorScheme.onSurface;
     final isSelected = _selectedEnergy == level;
 
     return Expanded(
@@ -233,39 +242,34 @@ class _EnergyTrackerCardState extends ConsumerState<EnergyTrackerCard> {
             }
           });
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: FluentRadius.controlBorder,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: FluentSpacing.s),
           decoration: BoxDecoration(
             color: isSelected
-                ? color.withValues(alpha: 0.2)
-                : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100),
-            borderRadius: BorderRadius.circular(12),
+                ? FluentLayer.subtle(color, brightness)
+                : FluentLayer.subtle(onSurface, brightness),
+            borderRadius: FluentRadius.controlBorder,
             border: Border.all(
-              color: isSelected
-                  ? color
-                  : (isDark ? Colors.white12 : Colors.grey.shade300),
-              width: isSelected ? 2 : 1,
+              color: isSelected ? color : FluentStroke.card(brightness),
+              width: FluentStroke.width,
             ),
           ),
           child: Column(
             children: [
               Icon(
                 icon,
-                color: isSelected
-                    ? color
-                    : (isDark ? Colors.white70 : Colors.grey.shade600),
+                color: isSelected ? color : onSurface.withValues(alpha: 0.65),
                 size: 20,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: FluentSpacing.xs),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected
-                      ? color
-                      : (isDark ? Colors.white : Colors.black87),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: FluentType.caption.copyWith(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected ? color : onSurface,
                 ),
               ),
             ],

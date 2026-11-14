@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
 import '../../../chat/presentation/screens/ai_chat_screen.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
 import '../../../study_planner/presentation/providers/adaptive_planner_provider.dart';
@@ -12,23 +14,32 @@ class StudyPlanCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final plannerAsync = ref.watch(adaptivePlannerProvider);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+    final onSurfaceMuted = onSurface.withValues(alpha: 0.65);
 
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: plannerAsync.when(
-          loading: () => const Center(
+          loading: () => Center(
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
+              padding: const EdgeInsets.symmetric(vertical: FluentSpacing.xxl),
               child: Column(
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 12),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: FluentSpacing.m),
                   Text(
                     'Gemini AI tailoring adaptive study plan...',
-                    style: TextStyle(fontSize: 13),
+                    textAlign: TextAlign.center,
+                    style: FluentType.body.copyWith(color: onSurfaceMuted),
                   ),
                 ],
               ),
@@ -36,15 +47,11 @@ class StudyPlanCard extends ConsumerWidget {
           ),
           error: (err, stack) => Column(
             children: [
-              const Icon(
-                Icons.error_outline,
-                color: Colors.redAccent,
-                size: 36,
-              ),
-              const SizedBox(height: 8),
+              Icon(Icons.error_outline, color: scheme.error, size: 36),
+              const SizedBox(height: FluentSpacing.s),
               Text(
                 'Could not load plan: $err',
-                style: const TextStyle(fontSize: 12),
+                style: FluentType.caption.copyWith(color: onSurfaceMuted),
               ),
               TextButton(
                 onPressed: () =>
@@ -61,37 +68,29 @@ class StudyPlanCard extends ConsumerWidget {
             final isLowEnergy =
                 plan.energyLevel.toLowerCase() == 'low' ||
                 plan.fatigueScore >= 7;
-            final isDark = Theme.of(context).brightness == Brightness.dark;
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.purple.withValues(alpha: 0.2)
-                            : Colors.purple.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.auto_awesome,
-                        color: isDark ? Colors.purpleAccent : Colors.deepPurple,
-                        size: 20,
-                      ),
+                    const PremiumIconBadge(
+                      icon: Icons.auto_awesome,
+                      size: 32,
+                      iconSize: 20,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Tonight’s Adaptive AI Routine',
-                            style: TextStyle(
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: FluentType.bodyStrong.copyWith(
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              color: onSurface,
                             ),
                           ),
                           // The plan is drawn from real weak topics and exams
@@ -100,9 +99,10 @@ class StudyPlanCard extends ConsumerWidget {
                           if (plan.isLocallyBuilt)
                             Text(
                               'ফোনেই সাজানো — AI-তে পৌঁছানো যায়নি',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                color: Colors.orange.shade700,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: FluentType.caption.copyWith(
+                                color: const Color(0xFFF59E0B),
                               ),
                             ),
                         ],
@@ -117,43 +117,37 @@ class StudyPlanCard extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: FluentSpacing.s),
                 // Motivational Quote in Card
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(FluentSpacing.m),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF1E1B4B)
-                        : Colors.deepPurple.shade50,
-                    borderRadius: BorderRadius.circular(10),
+                    color: FluentLayer.subtle(scheme.primary, brightness),
+                    borderRadius: FluentRadius.controlBorder,
                     border: Border.all(
-                      color: isDark
-                          ? const Color(0xFF3730A3)
-                          : Colors.deepPurple.shade100,
+                      color: FluentStroke.card(brightness),
+                      width: FluentStroke.width,
                     ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('💡', style: TextStyle(fontSize: 16)),
-                      const SizedBox(width: 8),
+                      const Text('💡', style: FluentType.body),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Text(
                           plan.motivationalQuote,
-                          style: TextStyle(
+                          style: FluentType.body.copyWith(
                             fontStyle: FontStyle.italic,
-                            color: isDark
-                                ? const Color(0xFFE9D5FF)
-                                : Colors.deepPurple.shade900,
-                            fontSize: 13,
+                            color: onSurface,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: FluentSpacing.m),
                 // Time allocation badges
                 Row(
                   children: [
@@ -161,68 +155,55 @@ class StudyPlanCard extends ConsumerWidget {
                       child: _buildTimeBadge(
                         icon: Icons.menu_book,
                         label: '${plan.recommendedStudyMinutes}m Study',
+                        // Amber only when the plan is flagging low energy.
                         color: isLowEnergy
-                            ? Colors.amber.shade800
-                            : (isDark ? Colors.indigoAccent : Colors.indigo),
-                        bgColor: isDark
-                            ? (isLowEnergy
-                                  ? Colors.amber.withValues(alpha: 0.15)
-                                  : Colors.indigo.withValues(alpha: 0.15))
-                            : (isLowEnergy
-                                  ? Colors.amber.shade50
-                                  : Colors.indigo.shade50),
+                            ? const Color(0xFFF59E0B)
+                            : scheme.primary,
+                        bgColor: FluentLayer.subtle(
+                          isLowEnergy
+                              ? const Color(0xFFF59E0B)
+                              : scheme.primary,
+                          brightness,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: _buildTimeBadge(
                         icon: Icons.favorite,
                         label: '${plan.recommendedFamilyMinutes}m Rest',
-                        color: isDark
-                            ? Colors.tealAccent
-                            : Colors.teal.shade800,
-                        bgColor: isDark
-                            ? Colors.teal.withValues(alpha: 0.15)
-                            : Colors.teal.shade50,
+                        color: onSurface.withValues(alpha: 0.75),
+                        bgColor: FluentLayer.subtle(onSurface, brightness),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: FluentSpacing.m),
                 Text(
                   plan.summary,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.white70 : Colors.black87,
-                  ),
+                  style: FluentType.body.copyWith(color: onSurface),
                 ),
                 if (plan.burnoutWarning != null) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.s),
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(FluentSpacing.m),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.red.withValues(alpha: 0.15)
-                          : Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                      color: FluentLayer.subtle(scheme.error, brightness),
+                      borderRadius: FluentRadius.controlBorder,
                       border: Border.all(
-                        color: isDark
-                            ? Colors.red.withValues(alpha: 0.3)
-                            : Colors.red.shade200,
+                        color: scheme.error.withValues(alpha: 0.3),
+                        width: FluentStroke.width,
                       ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.warning, color: Colors.red, size: 18),
-                        const SizedBox(width: 8),
+                        Icon(Icons.warning, color: scheme.error, size: 18),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: Text(
                             plan.burnoutWarning!,
-                            style: TextStyle(
-                              color: isDark
-                                  ? Colors.red.shade200
-                                  : Colors.red.shade900,
-                              fontSize: 12,
+                            style: FluentType.caption.copyWith(
+                              color: onSurface,
                             ),
                           ),
                         ),
@@ -230,33 +211,24 @@ class StudyPlanCard extends ConsumerWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: FluentSpacing.l),
                 Text(
                   'Micro-Commitment Tasks:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
+                  style: FluentType.bodyStrong.copyWith(color: onSurface),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: FluentSpacing.s),
                 // Tasks checklist
                 ...plan.tasks.map((task) {
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
+                    margin: const EdgeInsets.only(bottom: FluentSpacing.s),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1E293B)
-                          : (task.isCompleted
-                                ? Colors.grey.shade50
-                                : Colors.white),
-                      borderRadius: BorderRadius.circular(10),
+                      color: task.isCompleted
+                          ? FluentLayer.subtle(onSurface, brightness)
+                          : (theme.cardTheme.color ?? theme.cardColor),
+                      borderRadius: FluentRadius.controlBorder,
                       border: Border.all(
-                        color: isDark
-                            ? Colors.white12
-                            : (task.isCompleted
-                                  ? Colors.grey.shade300
-                                  : Colors.indigo.shade100),
+                        color: FluentStroke.card(brightness),
+                        width: FluentStroke.width,
                       ),
                     ),
                     child: Material(
@@ -264,18 +236,19 @@ class StudyPlanCard extends ConsumerWidget {
                       child: CheckboxListTile(
                         dense: true,
                         value: task.isCompleted,
-                        activeColor: Colors.teal,
+                        activeColor: scheme.primary,
+                        checkboxShape: RoundedRectangleBorder(
+                          borderRadius: FluentRadius.controlBorder,
+                        ),
                         title: Text(
                           task.title,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                          style: FluentType.bodyStrong.copyWith(
                             decoration: task.isCompleted
                                 ? TextDecoration.lineThrough
                                 : null,
                             color: task.isCompleted
-                                ? Colors.grey
-                                : (isDark ? Colors.white : Colors.black87),
+                                ? onSurfaceMuted
+                                : onSurface,
                           ),
                         ),
                         subtitle: Column(
@@ -283,49 +256,39 @@ class StudyPlanCard extends ConsumerWidget {
                           children: [
                             Text(
                               task.actionablePrompt,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: task.isCompleted
-                                    ? Colors.grey
-                                    : (isDark
-                                          ? Colors.white70
-                                          : Colors.black54),
+                              style: FluentType.caption.copyWith(
+                                color: onSurfaceMuted,
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: FluentSpacing.xs + 2),
                             Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
+                              spacing: FluentSpacing.xs + 2,
+                              runSpacing: FluentSpacing.xs,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
+                                    horizontal: FluentSpacing.s,
+                                    vertical: FluentSpacing.xxs,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: isDark
-                                        ? Colors.white12
-                                        : Colors.grey.shade200,
-                                    borderRadius: BorderRadius.circular(6),
+                                    color: FluentLayer.subtle(
+                                      onSurface,
+                                      brightness,
+                                    ),
+                                    borderRadius: FluentRadius.controlBorder,
                                   ),
                                   child: Text(
                                     task.subject,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.black87,
+                                    style: FluentType.caption.copyWith(
+                                      color: onSurface,
                                     ),
                                   ),
                                 ),
                                 Text(
                                   '⏱ ${task.estimatedMinutes}m',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark
-                                        ? Colors.white60
-                                        : Colors.black54,
+                                  style: FluentType.caption.copyWith(
+                                    color: onSurfaceMuted,
                                   ),
                                 ),
                                 InkWell(
@@ -338,14 +301,15 @@ class StudyPlanCard extends ConsumerWidget {
                                   ),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
-                                      vertical: 2.5,
+                                      horizontal: FluentSpacing.s,
+                                      vertical: FluentSpacing.xxs,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: isDark
-                                          ? const Color(0xFF312E81)
-                                          : Colors.indigo.shade50,
-                                      borderRadius: BorderRadius.circular(6),
+                                      color: FluentLayer.subtle(
+                                        scheme.primary,
+                                        brightness,
+                                      ),
+                                      borderRadius: FluentRadius.controlBorder,
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -353,19 +317,14 @@ class StudyPlanCard extends ConsumerWidget {
                                         Icon(
                                           Icons.timer,
                                           size: 12,
-                                          color: isDark
-                                              ? const Color(0xFFA5B4FC)
-                                              : Colors.indigo.shade800,
+                                          color: scheme.primary,
                                         ),
-                                        const SizedBox(width: 3),
+                                        const SizedBox(width: FluentSpacing.xs),
                                         Text(
                                           'Focus',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark
-                                                ? const Color(0xFFA5B4FC)
-                                                : Colors.indigo.shade800,
+                                          style: FluentType.caption.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: scheme.primary,
                                           ),
                                         ),
                                       ],
@@ -387,14 +346,15 @@ class StudyPlanCard extends ConsumerWidget {
                                   ),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
-                                      vertical: 2.5,
+                                      horizontal: FluentSpacing.s,
+                                      vertical: FluentSpacing.xxs,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: isDark
-                                          ? const Color(0xFF2E1065)
-                                          : Colors.purple.shade50,
-                                      borderRadius: BorderRadius.circular(6),
+                                      color: FluentLayer.subtle(
+                                        onSurface,
+                                        brightness,
+                                      ),
+                                      borderRadius: FluentRadius.controlBorder,
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -402,19 +362,18 @@ class StudyPlanCard extends ConsumerWidget {
                                         Icon(
                                           Icons.psychology,
                                           size: 12,
-                                          color: isDark
-                                              ? const Color(0xFFD8B4FE)
-                                              : Colors.deepPurple.shade800,
+                                          color: onSurface.withValues(
+                                            alpha: 0.75,
+                                          ),
                                         ),
-                                        const SizedBox(width: 3),
+                                        const SizedBox(width: FluentSpacing.xs),
                                         Text(
                                           'Quiz',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark
-                                                ? const Color(0xFFD8B4FE)
-                                                : Colors.deepPurple.shade800,
+                                          style: FluentType.caption.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: onSurface.withValues(
+                                              alpha: 0.75,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -434,42 +393,41 @@ class StudyPlanCard extends ConsumerWidget {
                     ),
                   );
                 }),
-                const SizedBox(height: 12),
+                const SizedBox(height: FluentSpacing.m),
                 // Family & Wellbeing advice box
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(FluentSpacing.m),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.green.shade200),
+                    color: FluentLayer.subtle(onSurface, brightness),
+                    borderRadius: FluentRadius.controlBorder,
+                    border: Border.all(
+                      color: FluentStroke.card(brightness),
+                      width: FluentStroke.width,
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.nightlife,
-                        color: Colors.green,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
+                      Icon(Icons.nightlife, color: scheme.primary, size: 20),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Guilt-Free Recharge Advice',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                                color: Colors.green,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: FluentType.caption.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: onSurface,
                               ),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: FluentSpacing.xxs),
                             Text(
                               plan.familyAndWellbeingAdvice,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green.shade900,
+                              style: FluentType.caption.copyWith(
+                                color: onSurfaceMuted,
                               ),
                             ),
                           ],
@@ -478,17 +436,28 @@ class StudyPlanCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: FluentSpacing.m),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.psychology, size: 18),
-                    label: const Text('Discuss & Clarify with AI Mentor'),
+                    label: Text(
+                      'Discuss & Clarify with AI Mentor',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.bodyStrong,
+                    ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.deepPurple,
-                      side: BorderSide(color: Colors.deepPurple.shade200),
+                      foregroundColor: scheme.primary,
+                      side: BorderSide(
+                        color: FluentStroke.card(brightness),
+                        width: FluentStroke.width,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.m,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     onPressed: () {
@@ -514,22 +483,24 @@ class StudyPlanCard extends ConsumerWidget {
     required Color bgColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.s,
+        vertical: FluentSpacing.xs + 2,
+      ),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: FluentRadius.controlBorder,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
+          const SizedBox(width: FluentSpacing.xs),
           Expanded(
             child: Text(
               label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
                 color: color,
               ),
               overflow: TextOverflow.ellipsis,

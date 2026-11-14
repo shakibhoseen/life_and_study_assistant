@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../domain/today_progress.dart';
 
 /// A line saying how much of today is done, under the thing that says what to
@@ -22,9 +23,13 @@ class TodayProgressStrip extends StatelessWidget {
     // Nothing to report is not worth a row of zeroes.
     if (progress.isUntouched) return const SizedBox.shrink();
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
     final done = progress.allTasksDone;
-    final colour = done ? const Color(0xFF10B981) : const Color(0xFF6366F1);
+    // Green only when it carries the "finished" status; otherwise the accent.
+    final colour = done ? const Color(0xFF10B981) : scheme.primary;
 
     final parts = <String>[
       if (progress.hasPlan)
@@ -37,11 +42,17 @@ class TodayProgressStrip extends StatelessWidget {
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.m,
+        vertical: FluentSpacing.s,
+      ),
       decoration: BoxDecoration(
-        color: colour.withValues(alpha: isDark ? 0.14 : 0.07),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colour.withValues(alpha: 0.3)),
+        color: FluentLayer.subtle(colour, brightness),
+        borderRadius: FluentRadius.cardBorder,
+        border: Border.all(
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,40 +64,38 @@ class TodayProgressStrip extends StatelessWidget {
                 size: 15,
                 color: colour,
               ),
-              const SizedBox(width: 7),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   parts.join(' · '),
-                  style: TextStyle(
-                    fontSize: 11.5,
+                  style: FluentType.caption.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: onSurface,
                   ),
                 ),
               ),
             ],
           ),
           if (progress.hasPlan) ...[
-            const SizedBox(height: 7),
+            const SizedBox(height: FluentSpacing.s),
             ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: FluentRadius.controlBorder,
               child: LinearProgressIndicator(
                 value: progress.taskFraction,
-                minHeight: 5,
+                minHeight: 4,
                 backgroundColor: colour.withValues(alpha: 0.18),
                 valueColor: AlwaysStoppedAnimation(colour),
               ),
             ),
           ],
           if (progress.routineMinutesTarget > 0) ...[
-            const SizedBox(height: 5),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               // Said plainly, because nothing in this app measures time and a
               // figure that looks measured would be read as measured.
               'মিনিটের হিসাব রুটিনে বরাদ্দ অনুযায়ী — ঘড়ি ধরে মাপা নয়',
-              style: TextStyle(
-                fontSize: 9.5,
-                color: isDark ? Colors.white38 : Colors.black38,
+              style: FluentType.caption.copyWith(
+                color: onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],

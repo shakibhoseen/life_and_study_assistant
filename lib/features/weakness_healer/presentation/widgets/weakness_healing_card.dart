@@ -3,11 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/tables/weak_topics_table.dart';
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
+import '../../../../core/widgets/premium_ui_kit.dart';
 import '../../../quiz/presentation/providers/drill_history_provider.dart';
 import '../../../settings/presentation/providers/settings_provider.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
 import '../../domain/models/weakness_healing_model.dart';
 import 'weakness_healing_drill_modal.dart';
+
+/// Green is the *status* colour in this card — it is a health meter — so it
+/// stays, while the decorative gradient and the coloured glow go.
+const Color _healthColor = Color(0xFF10B981);
 
 class WeaknessHealingCard extends ConsumerStatefulWidget {
   const WeaknessHealingCard({super.key});
@@ -63,115 +70,85 @@ class _WeaknessHealingCardState extends ConsumerState<WeaknessHealingCard> {
           focusTopicLower.contains(m.topic.toLowerCase());
     }).toList();
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final secondaryText = scheme.onSurface.withValues(alpha: 0.65);
 
     return Card(
-      elevation: 2.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
+      ),
       child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: isDark
-                ? [const Color(0xFF064E3B), const Color(0xFF0F172A)]
-                : [const Color(0xFFECFDF5), Colors.white],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(
-            color: const Color(0xFF10B981)
-                .withValues(alpha: isDark ? 0.3 : 0.25),
-          ),
-        ),
+        padding: const EdgeInsets.all(FluentSpacing.l),
+        decoration: BoxDecoration(borderRadius: FluentRadius.cardBorder),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Top Row: Healer Badge, Health % Pill, Toggle Menu
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.healing_rounded,
-                    color: Color(0xFF10B981),
-                    size: 20,
-                  ),
+                const PremiumIconBadge(
+                  icon: Icons.healing_rounded,
+                  size: 36,
+                  iconSize: 20,
+                  color: _healthColor,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
                           Flexible(
                             child: Text(
                               'অটো-উইকনেস হিলিং',
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14.5,
+                              style: FluentType.bodyStrong.copyWith(
+                                color: scheme.onSurface,
                               ),
                             ),
                           ),
-                          SizedBox(width: 6),
-                          Text(
-                            '৩মিনিট ড্রিল',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF10B981),
+                          const SizedBox(width: FluentSpacing.s),
+                          // Flexible, not a bare Text: this label used to
+                          // demand its full width beside the title.
+                          Flexible(
+                            child: Text(
+                              '৩মিনিট ড্রিল',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: FluentType.caption.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: _healthColor,
+                              ),
                             ),
                           ),
                         ],
                       ),
                       Text(
                         '${summary.healedCount}/${summary.totalTopics}টি টপিক স্ট্রং জোনে হিল হয়েছে',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white70 : Colors.black54,
+                        style: FluentType.caption.copyWith(
+                          color: secondaryText,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    '${summary.healthPercentage.toStringAsFixed(0)}% Health',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF10B981),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
+                const SizedBox(width: FluentSpacing.xs),
                 SizedBox(
                   width: 24,
                   height: 24,
                   child: PopupMenuButton<String>(
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    icon: Icon(
-                      Icons.more_vert,
-                      size: 18,
-                      color: isDark ? Colors.white70 : Colors.black54,
+                    icon: Icon(Icons.more_vert, size: 18, color: secondaryText),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.cardBorder,
                     ),
                     tooltip: 'হিলিং কন্ট্রোল',
                     onSelected: (val) {
@@ -199,7 +176,7 @@ class _WeaknessHealingCardState extends ConsumerState<WeaknessHealingCard> {
                               size: 16,
                               color: Colors.amber,
                             ),
-                            SizedBox(width: 8),
+                            SizedBox(width: FluentSpacing.s),
                             Text('হিলিং ইঞ্জিন সাময়িক বন্ধ রাখুন'),
                           ],
                         ),
@@ -209,120 +186,88 @@ class _WeaknessHealingCardState extends ConsumerState<WeaknessHealingCard> {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
 
-            // Health Progress Bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: (summary.healthPercentage / 100).clamp(0.0, 1.0),
-                minHeight: 5,
-                backgroundColor: isDark ? Colors.white12 : Colors.grey.shade300,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0xFF10B981),
+            // Health Progress Bar, with the health figure beside it. The
+            // percentage pill used to sit in the header row, where it and the
+            // title fought over the same width.
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: FluentRadius.controlBorder,
+                    child: LinearProgressIndicator(
+                      value: (summary.healthPercentage / 100).clamp(0.0, 1.0),
+                      minHeight: 5,
+                      backgroundColor: scheme.onSurface.withValues(alpha: 0.10),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        _healthColor,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: FluentSpacing.s),
+                PremiumTag(
+                  label:
+                      '${summary.healthPercentage.toStringAsFixed(0)}% Health',
+                  color: _healthColor,
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             // Target Weak Topic Spotlight Box
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                color: scheme.onSurface.withValues(alpha: 0.04),
+                borderRadius: FluentRadius.controlBorder,
                 border: Border.all(
-                  color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                  color: FluentStroke.card(brightness),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  // A Wrap, not a Row with a Spacer: the three badges
+                  // together are wider than the card at 320px / 1.5x text,
+                  // and none of them could shrink.
+                  Wrap(
+                    spacing: FluentSpacing.s,
+                    runSpacing: FluentSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.indigo.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            focusTopic.subject,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.indigo,
-                            ),
-                          ),
+                      PremiumTag(
+                        label: focusTopic.subject,
+                        color: scheme.primary,
+                      ),
+                      PremiumTag(
+                        label: _getLevelBadgeText(focusTopic.proficiencyLevel),
+                        color: _getLevelBadgeColor(
+                          focusTopic.proficiencyLevel,
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getLevelBadgeColor(
-                            focusTopic.proficiencyLevel,
-                          ).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          _getLevelBadgeText(focusTopic.proficiencyLevel),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: _getLevelBadgeColor(
-                              focusTopic.proficiencyLevel,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
                       if (matchingMistakes.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '${matchingMistakes.length}টি ভুল সংরক্ষিত',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.redAccent,
-                            ),
-                          ),
+                        PremiumTag(
+                          label: '${matchingMistakes.length}টি ভুল সংরক্ষিত',
+                          color: Colors.redAccent,
                         ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.s),
                   Text(
                     '🎯 আজকের ফোকাস: ${focusTopic.topicName}',
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
                     ),
                   ),
                   if (focusTopic.notes != null &&
                       focusTopic.notes!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
+                    const SizedBox(height: FluentSpacing.xxs),
                     Text(
                       focusTopic.notes!,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.white60 : Colors.black54,
-                      ),
+                      style: FluentType.caption.copyWith(color: secondaryText),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -330,7 +275,7 @@ class _WeaknessHealingCardState extends ConsumerState<WeaknessHealingCard> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             // Action Buttons: Start 3-Min Drill & Switch Topic
             Row(
@@ -338,11 +283,14 @@ class _WeaknessHealingCardState extends ConsumerState<WeaknessHealingCard> {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
+                      backgroundColor: _healthColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.s,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                       visualDensity: VisualDensity.compact,
                     ),
@@ -354,32 +302,38 @@ class _WeaknessHealingCardState extends ConsumerState<WeaknessHealingCard> {
                       );
                     },
                     icon: const Icon(Icons.flash_on, size: 16),
-                    label: const Text(
+                    label: Text(
                       '৩ মিনিটের হিলিং ড্রিল 🩺',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ),
                 if (weakTopics.length > 1) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 10,
+                        horizontal: FluentSpacing.m,
+                        vertical: FluentSpacing.s,
                       ),
                       visualDensity: VisualDensity.compact,
+                      side: BorderSide(color: FluentStroke.card(brightness)),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     onPressed: () => _showTopicPickerBottomSheet(weakTopics),
-                    child: const Text(
+                    child: Text(
                       'অন্য টপিক',
-                      style: TextStyle(fontSize: 11.5),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -395,7 +349,9 @@ class _WeaknessHealingCardState extends ConsumerState<WeaknessHealingCard> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
       ),
       builder: (ctx) {
         return SafeArea(
@@ -403,11 +359,16 @@ class _WeaknessHealingCardState extends ConsumerState<WeaknessHealingCard> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(18, 16, 18, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  FluentSpacing.l,
+                  FluentSpacing.l,
+                  FluentSpacing.l,
+                  FluentSpacing.s,
+                ),
                 child: Text(
                   'হিলিং ড্রিলের জন্য টপিক বেছে নিন',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: FluentType.subtitle.copyWith(fontSize: 16),
                 ),
               ),
               const Divider(height: 1),
@@ -424,17 +385,26 @@ class _WeaknessHealingCardState extends ConsumerState<WeaknessHealingCard> {
                       ),
                       title: Text(
                         t.topicName,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.bodyStrong,
                       ),
                       subtitle: Text(
                         t.subject,
-                        style: const TextStyle(fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.caption.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.65),
+                        ),
                       ),
                       trailing: Text(
                         _getLevelBadgeText(t.proficiencyLevel),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
                           color: _getLevelBadgeColor(t.proficiencyLevel),
                         ),
                       ),

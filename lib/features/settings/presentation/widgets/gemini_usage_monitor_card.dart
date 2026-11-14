@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/services/ai/gemini_usage_tracker.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 
 class GeminiUsageMonitorCard extends StatefulWidget {
   const GeminiUsageMonitorCard({super.key});
@@ -44,12 +45,17 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
           lastStatus: 'Healthy',
         );
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
     final isQuotaExceeded = stats.lastStatus == 'QuotaExceeded';
     final isError = stats.lastStatus == 'Error';
+    // Status colour, which Fluent keeps: error, warning, success.
     final statusColor = isQuotaExceeded || isError
-        ? Colors.redAccent
-        : (stats.usagePercent > 0.7 ? Colors.amber : Colors.green);
+        ? scheme.error
+        : (stats.usagePercent > 0.7
+              ? const Color(0xFFF59E0B)
+              : const Color(0xFF10B981));
 
     final statusText = isQuotaExceeded
         ? 'Quota limit reached (local fallback active)'
@@ -58,39 +64,42 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
         : 'Healthy — ${stats.dailyRequestLimit} req/day budget';
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.speed,
-                  color: isDark ? Colors.indigo.shade200 : Colors.indigo,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
+                Icon(Icons.speed, color: scheme.primary, size: 20),
+                const SizedBox(width: FluentSpacing.s),
+                Expanded(
                   child: Text(
                     'Gemini API Quota & Usage',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
                   ),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: isDark ? 0.25 : 0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    color: FluentLayer.subtle(statusColor, brightness),
+                    borderRadius: FluentRadius.controlBorder,
                     border: Border.all(
                       color: statusColor.withValues(alpha: 0.5),
+                      width: FluentStroke.width,
                     ),
                   ),
                   child: Row(
@@ -104,13 +113,12 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.xs),
                       Text(
                         isQuotaExceeded ? 'Exceeded' : 'Active',
-                        style: TextStyle(
+                        style: FluentType.caption.copyWith(
                           color: statusColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -118,27 +126,26 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
             Text(
               statusText,
-              style: TextStyle(
-                fontSize: 12,
+              style: FluentType.caption.copyWith(
                 color: statusColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
             // Progress Bar
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: FluentRadius.controlBorder,
               child: LinearProgressIndicator(
                 value: stats.usagePercent,
                 minHeight: 8,
-                backgroundColor: isDark ? Colors.white12 : Colors.grey.shade200,
+                backgroundColor: FluentStroke.card(brightness),
                 color: statusColor,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -150,18 +157,18 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
                         Flexible(
                           child: Text(
                             '${stats.todayRequests} / ${stats.dailyRequestLimit} calls today',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.white70 : Colors.black87,
-                            ),
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            style: FluentType.caption.copyWith(
+                              color: scheme.onSurface,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: FluentSpacing.xs),
                         Icon(
                           Icons.edit_outlined,
-                          size: 13,
-                          color: isDark ? Colors.white38 : Colors.black38,
+                          size: 14,
+                          color: scheme.onSurface.withValues(alpha: 0.5),
                         ),
                       ],
                     ),
@@ -169,15 +176,19 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
                 ),
                 Text(
                   '${stats.remainingRequests} left',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white60 : Colors.grey.shade700,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
               ],
             ),
-            const Divider(height: 24),
+            Divider(
+              height: FluentSpacing.xxl,
+              color: FluentStroke.divider(brightness),
+            ),
             Row(
               children: [
                 Expanded(
@@ -185,21 +196,21 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
                     label: 'Tokens Used Today',
                     value: '${stats.todayTokens}',
                     icon: Icons.token,
-                    isDark: isDark,
+                    context: context,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: _buildMetricTile(
                     label: 'Avg Tokens / Call',
                     value: '${stats.averageTokensPerRequest}',
                     icon: Icons.straighten,
-                    isDark: isDark,
+                    context: context,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             Row(
               children: [
                 Expanded(
@@ -207,50 +218,42 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
                     label: 'Provider Actual Tokens',
                     value: '${stats.todayActualTotalTokens}',
                     icon: Icons.verified_outlined,
-                    isDark: isDark,
+                    context: context,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: _buildMetricTile(
                     label: 'Cache Hits (Zero Cost)',
                     value: '${stats.todayCacheHits} hits',
                     icon: Icons.offline_bolt_outlined,
-                    isDark: isDark,
+                    context: context,
                   ),
                 ),
               ],
             ),
-            _buildBreakdown(stats, isDark),
-            const SizedBox(height: 12),
+            _buildBreakdown(stats, context),
+            const SizedBox(height: FluentSpacing.m),
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.blue.withValues(alpha: 0.15)
-                    : Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(10),
+                color: FluentLayer.subtle(scheme.primary, brightness),
+                borderRadius: FluentRadius.controlBorder,
                 border: Border.all(
-                  color: isDark
-                      ? Colors.blue.withValues(alpha: 0.3)
-                      : Colors.blue.shade100,
+                  color: FluentStroke.card(brightness),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.shield_outlined,
-                    color: isDark ? Colors.lightBlueAccent : Colors.blue,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
+                  Icon(Icons.shield_outlined, color: scheme.primary, size: 18),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       'Free-tier limits are set per project, so check yours in Google AI Studio and tap the counter above to match it. The breakdown shows where today\'s tokens actually went.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.65),
                       ),
                     ),
                   ),
@@ -268,62 +271,62 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
   /// This is the point of recording an operation label per call: it is what
   /// answers questions like "is the context router pulling tools too often?"
   /// or "how much is thread summarising costing me?".
-  Widget _buildBreakdown(GeminiUsageStats stats, bool isDark) {
+  Widget _buildBreakdown(GeminiUsageStats stats, BuildContext context) {
     final rows = stats.operationsByCost;
     if (rows.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 14),
+        const SizedBox(height: FluentSpacing.l),
         Text(
           'Today by operation',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white60 : Colors.black54,
+          style: FluentType.caption.copyWith(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface.withValues(alpha: 0.65),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: FluentSpacing.s),
         ...rows.map((entry) {
           final share = stats.todayTokens == 0
               ? 0.0
               : entry.value.tokens / stats.todayTokens;
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
+            padding: const EdgeInsets.symmetric(vertical: FluentSpacing.xxs),
             child: Row(
               children: [
                 Expanded(
                   flex: 4,
                   child: Text(
                     entry.key,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(color: scheme.onSurface),
                   ),
                 ),
                 Expanded(
                   flex: 3,
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: FluentRadius.controlBorder,
                     child: LinearProgressIndicator(
                       value: share,
-                      minHeight: 5,
-                      backgroundColor: isDark
-                          ? Colors.white12
-                          : Colors.grey.shade200,
-                      color: isDark ? Colors.indigo.shade200 : Colors.indigo,
+                      minHeight: 6,
+                      backgroundColor: FluentStroke.card(brightness),
+                      color: scheme.primary,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Text(
                   '${entry.value.requests}× · ${entry.value.tokens}',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isDark ? Colors.white54 : Colors.black54,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
               ],
@@ -344,12 +347,12 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Google sets free-tier limits per project. Enter the requests/day '
               'your AI Studio project actually allows.',
-              style: TextStyle(fontSize: 12),
+              style: FluentType.caption,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
@@ -389,15 +392,22 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
     required String label,
     required String value,
     required IconData icon,
-    required bool isDark,
+    required BuildContext context,
   }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.m,
+        vertical: FluentSpacing.s,
+      ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
+        color: scheme.onSurface.withValues(alpha: 0.04),
+        borderRadius: FluentRadius.controlBorder,
         border: Border.all(
-          color: isDark ? Colors.white12 : Colors.grey.shade200,
+          color: FluentStroke.card(theme.brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
@@ -408,30 +418,27 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
               Icon(
                 icon,
                 size: 14,
-                color: isDark ? Colors.blueGrey.shade200 : Colors.blueGrey,
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: FluentSpacing.xs),
               Expanded(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                  style: FluentType.caption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: FluentSpacing.xs),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
           ),
         ],
       ),

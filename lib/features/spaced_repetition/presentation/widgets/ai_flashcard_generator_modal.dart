@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/ai_flashcard_service.dart';
 import '../providers/spaced_repetition_provider.dart';
@@ -322,11 +323,14 @@ class _AiFlashcardGeneratorModalState
             content: Row(
               children: [
                 const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     '$countটি ফ্ল্যাশ কার্ড স্পেসড রিপিটেশন ট্র্যাকে যুক্ত হয়েছে! ⚡',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: FluentType.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -354,13 +358,25 @@ class _AiFlashcardGeneratorModalState
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: FluentRadius.cardBorder,
+          side: FluentStroke.side(Theme.of(ctx).brightness),
+        ),
+        title: Row(
           children: [
-            Icon(Icons.edit, size: 18, color: Color(0xFF6366F1)),
-            SizedBox(width: 8),
+            Icon(
+              Icons.edit,
+              size: 18,
+              color: Theme.of(ctx).colorScheme.primary,
+            ),
+            const SizedBox(width: FluentSpacing.s),
             Flexible(
               child: Text(
                 'ফ্ল্যাশ কার্ড সম্পাদনা',
+                style: FluentType.subtitle.copyWith(
+                  color: Theme.of(ctx).colorScheme.onSurface,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -378,7 +394,7 @@ class _AiFlashcardGeneratorModalState
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: topicCtrl,
                 decoration: const InputDecoration(
@@ -386,7 +402,7 @@ class _AiFlashcardGeneratorModalState
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: frontCtrl,
                 decoration: const InputDecoration(
@@ -394,7 +410,7 @@ class _AiFlashcardGeneratorModalState
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: backCtrl,
                 maxLines: 3,
@@ -433,6 +449,8 @@ class _AiFlashcardGeneratorModalState
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final brightness = Theme.of(context).brightness;
+    final scheme = Theme.of(context).colorScheme;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -440,21 +458,23 @@ class _AiFlashcardGeneratorModalState
         maxHeight: MediaQuery.of(context).size.height * 0.88,
       ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+        color: scheme.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
+        border: Border(
+          top: BorderSide(
+            color: FluentStroke.card(brightness),
+            width: FluentStroke.width,
           ),
-        ],
+        ),
+        boxShadow: FluentElevation.flyout(brightness),
       ),
       padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 12,
-        bottom: bottomInset + 16,
+        left: FluentSpacing.l,
+        right: FluentSpacing.l,
+        top: FluentSpacing.m,
+        bottom: bottomInset + FluentSpacing.l,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -465,10 +485,10 @@ class _AiFlashcardGeneratorModalState
             child: Container(
               width: 38,
               height: 4,
-              margin: const EdgeInsets.only(bottom: 12),
+              margin: const EdgeInsets.only(bottom: FluentSpacing.m),
               decoration: BoxDecoration(
-                color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+                color: scheme.onSurface.withValues(alpha: 0.2),
+                borderRadius: FluentRadius.controlBorder,
               ),
             ),
           ),
@@ -477,32 +497,37 @@ class _AiFlashcardGeneratorModalState
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(7),
+                padding: const EdgeInsets.all(FluentSpacing.s),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
+                  color: FluentLayer.subtle(scheme.primary, brightness),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.auto_awesome,
-                  color: Color(0xFF6366F1),
+                  color: scheme.primary,
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 10),
-              const Expanded(
+              const SizedBox(width: FluentSpacing.m),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'AI ফ্ল্যাশ কার্ড ও সূত্র জেনারেটর',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                      style: FluentType.bodyStrong.copyWith(
+                        color: scheme.onSurface,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       'বইয়ের ছবি, প্রম্পট বা বাহ্যিক AI থেকে সরাসরি ফ্ল্যাশ কার্ড বানান',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.65),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -514,18 +539,16 @@ class _AiFlashcardGeneratorModalState
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
 
           // Content Switch: Generator Tabs vs Generated Cards Preview
           if (_generatedCards == null) ...[
             // Tab Bar
             TabBar(
               controller: _tabController,
-              labelColor: const Color(0xFF6366F1),
-              unselectedLabelColor: isDark
-                  ? Colors.grey.shade400
-                  : Colors.grey.shade600,
-              indicatorColor: const Color(0xFF6366F1),
+              labelColor: scheme.primary,
+              unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.65),
+              indicatorColor: scheme.primary,
               tabs: const [
                 Tab(
                   icon: Icon(Icons.chat_bubble_outline, size: 18),
@@ -541,7 +564,7 @@ class _AiFlashcardGeneratorModalState
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             Expanded(
               child: _isLoading
@@ -569,7 +592,7 @@ class _AiFlashcardGeneratorModalState
     // anything is happening. The pipeline counts the seconds, names the
     // stage, and gives the user a way out.
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: FluentSpacing.l),
       child: AiProgressPipelineWidget(
         type: _loadingTaskType,
         customStatus: _loadingStatus,
@@ -581,6 +604,8 @@ class _AiFlashcardGeneratorModalState
   void _cancelLoading() => _cancellation?.cancel();
 
   Widget _buildPromptTab(bool isDark) {
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -591,33 +616,53 @@ class _AiFlashcardGeneratorModalState
             decoration: InputDecoration(
               hintText:
                   'যেমন: বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য ও পরিমিতির সূত্র...',
-              hintStyle: const TextStyle(fontSize: 13),
+              hintStyle: FluentType.body.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.5),
+              ),
               filled: true,
-              fillColor: isDark
-                  ? const Color(0xFF1E293B)
-                  : const Color(0xFFF8FAFC),
+              fillColor: scheme.surfaceContainerHighest,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: FluentRadius.controlBorder,
+                borderSide: FluentStroke.side(brightness),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: FluentRadius.controlBorder,
+                borderSide: FluentStroke.side(brightness),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: FluentRadius.controlBorder,
                 borderSide: BorderSide(
-                  color: isDark ? Colors.white12 : Colors.grey.shade300,
+                  color: scheme.primary,
+                  width: FluentStroke.width,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
 
-          const Text(
+          Text(
             'দ্রুত সিলেক্ট করার জন্য টপিক:',
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+            style: FluentType.caption.copyWith(
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface,
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: FluentSpacing.s),
           Wrap(
-            spacing: 6,
-            runSpacing: 4,
+            spacing: FluentSpacing.s,
+            runSpacing: FluentSpacing.xs,
             children: _quickPromptChips.map((chipText) {
               return ActionChip(
                 visualDensity: VisualDensity.compact,
-                label: Text(chipText, style: const TextStyle(fontSize: 11)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                  side: FluentStroke.side(brightness),
+                ),
+                backgroundColor: scheme.surfaceContainerHighest,
+                label: Text(
+                  chipText,
+                  style: FluentType.caption.copyWith(color: scheme.onSurface),
+                ),
                 onPressed: () {
                   _promptController.text = chipText;
                   _generateFromPrompt();
@@ -625,21 +670,24 @@ class _AiFlashcardGeneratorModalState
               );
             }).toList(),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: FluentSpacing.l),
 
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6366F1),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              backgroundColor: scheme.primary,
+              foregroundColor: scheme.onPrimary,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: FluentSpacing.m),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: FluentRadius.controlBorder,
               ),
             ),
             icon: const Icon(Icons.bolt_rounded, size: 18),
             label: const Text(
               'ফ্ল্যাশ কার্ড তৈরি করুন ⚡',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: FluentType.bodyStrong,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             onPressed: _generateFromPrompt,
           ),
@@ -649,12 +697,13 @@ class _AiFlashcardGeneratorModalState
   }
 
   Widget _buildImageTab(bool isDark) {
+    final scheme = Theme.of(context).colorScheme;
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(FluentSpacing.l),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(12),
@@ -680,29 +729,31 @@ class _AiFlashcardGeneratorModalState
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.m),
                   Text(
                     'নির্বাচিত ছবি: ${_selectedImage!.path.split("/").last}',
                     style: const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.m),
                 ] else ...[
                   const Icon(
                     Icons.menu_book_rounded,
                     size: 44,
                     color: Color(0xFF6366F1),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: FluentSpacing.s),
                   const Text(
                     'বইয়ের সূত্র বা নিয়মের পেজ স্ক্যান করুন',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: FluentType.bodyStrong,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: FluentSpacing.xs),
                   const Text(
                     'খায়রুলস বেসিক ম্যাথ, এমপিথ্রি বা হ্যান্ডনোটের ছবি দিন',
                     style: TextStyle(fontSize: 11, color: Colors.grey),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: FluentSpacing.l),
                 ],
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -712,7 +763,7 @@ class _AiFlashcardGeneratorModalState
                       label: const Text('ক্যামেরা'),
                       onPressed: () => _pickImage(ImageSource.camera),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: FluentSpacing.m),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.photo_library, size: 16),
                       label: const Text('গ্যালারি'),
@@ -723,21 +774,24 @@ class _AiFlashcardGeneratorModalState
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.l),
 
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6366F1),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              backgroundColor: scheme.primary,
+              foregroundColor: scheme.onPrimary,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: FluentSpacing.m),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: FluentRadius.controlBorder,
               ),
             ),
             icon: const Icon(Icons.document_scanner, size: 18),
             label: const Text(
               'সূত্র ও নিয়ম স্ক্যান করুন 🔍',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: FluentType.bodyStrong,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             onPressed: _selectedImage == null ? null : _generateFromImage,
           ),
@@ -747,6 +801,8 @@ class _AiFlashcardGeneratorModalState
   }
 
   Widget _buildPasteTab(bool isDark) {
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -754,8 +810,8 @@ class _AiFlashcardGeneratorModalState
           // Any format works, but one of them is free, so it is offered up
           // front rather than left for the user to discover.
           Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(10),
+            margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+            padding: const EdgeInsets.all(FluentSpacing.m),
             decoration: BoxDecoration(
               color: isDark
                   ? const Color(0xFF14532D).withValues(alpha: 0.35)
@@ -778,7 +834,7 @@ class _AiFlashcardGeneratorModalState
                         : Colors.green.shade900,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: FluentSpacing.s),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
@@ -803,7 +859,7 @@ class _AiFlashcardGeneratorModalState
                     ),
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: FluentSpacing.xs),
                     ),
                   ),
                 ),
@@ -820,34 +876,46 @@ class _AiFlashcardGeneratorModalState
                   'বর্গক্ষেত্রের কর্ণের দৈর্ঘ্য: d = √2a\n'
                   'বর্গক্ষেত্রের ক্ষেত্রফল: A = a² = d²/2\n'
                   'বৃত্তের পরিধি: 2πr',
-              hintStyle: const TextStyle(fontSize: 12),
+              hintStyle: FluentType.body.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.5),
+              ),
               filled: true,
-              fillColor: isDark
-                  ? const Color(0xFF1E293B)
-                  : const Color(0xFFF8FAFC),
+              fillColor: scheme.surfaceContainerHighest,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: FluentRadius.controlBorder,
+                borderSide: FluentStroke.side(brightness),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: FluentRadius.controlBorder,
+                borderSide: FluentStroke.side(brightness),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: FluentRadius.controlBorder,
                 borderSide: BorderSide(
-                  color: isDark ? Colors.white12 : Colors.grey.shade300,
+                  color: scheme.primary,
+                  width: FluentStroke.width,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: FluentSpacing.m),
 
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6366F1),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              backgroundColor: scheme.primary,
+              foregroundColor: scheme.onPrimary,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: FluentSpacing.m),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: FluentRadius.controlBorder,
               ),
             ),
             icon: const Icon(Icons.auto_awesome, size: 18),
             label: const Text(
               'ফ্ল্যাশ কার্ডে রূপান্তর করুন 🪄',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: FluentType.bodyStrong,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             onPressed: _generateFromPaste,
           ),
@@ -857,6 +925,7 @@ class _AiFlashcardGeneratorModalState
   }
 
   Widget _buildCardsPreview(bool isDark) {
+    final scheme = Theme.of(context).colorScheme;
     final cards = _generatedCards!;
     final selectedCount = cards.where((c) => c.isSelected).length;
 
@@ -913,7 +982,7 @@ class _AiFlashcardGeneratorModalState
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: FluentSpacing.s),
 
         Expanded(
           child: ListView.builder(
@@ -922,7 +991,7 @@ class _AiFlashcardGeneratorModalState
               final card = cards[index];
 
               return Container(
-                margin: const EdgeInsets.only(bottom: 8),
+                margin: const EdgeInsets.only(bottom: FluentSpacing.s),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF1E293B) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -934,7 +1003,7 @@ class _AiFlashcardGeneratorModalState
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(FluentSpacing.m),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -948,7 +1017,7 @@ class _AiFlashcardGeneratorModalState
                           });
                         },
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: FluentSpacing.xs),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -988,7 +1057,7 @@ class _AiFlashcardGeneratorModalState
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: FluentSpacing.s),
 
                             // How directly the exam asks for this, and why it
                             // was picked. Shown because the user is choosing
@@ -1028,7 +1097,7 @@ class _AiFlashcardGeneratorModalState
                                   ),
                                 ),
                                 if ((card.why ?? '').isNotEmpty) ...[
-                                  const SizedBox(width: 7),
+                                  const SizedBox(width: FluentSpacing.s),
                                   Expanded(
                                     child: Text(
                                       card.why!,
@@ -1044,7 +1113,7 @@ class _AiFlashcardGeneratorModalState
                                 ],
                               ],
                             ),
-                            const SizedBox(height: 7),
+                            const SizedBox(height: FluentSpacing.s),
 
                             // Front (Question / Concept)
                             Text(
@@ -1054,12 +1123,12 @@ class _AiFlashcardGeneratorModalState
                                 fontSize: 13,
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: FluentSpacing.s),
 
                             // Back (Formula / Rule)
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(FluentSpacing.s),
                               decoration: BoxDecoration(
                                 color: isDark
                                     ? const Color(0xFF0F172A)
@@ -1087,21 +1156,24 @@ class _AiFlashcardGeneratorModalState
             },
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: FluentSpacing.m),
 
         ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF10B981),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            backgroundColor: scheme.primary,
+            foregroundColor: scheme.onPrimary,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: FluentSpacing.m),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: FluentRadius.controlBorder,
             ),
           ),
           icon: const Icon(Icons.check, size: 18),
           label: Text(
             'ফ্ল্যাশ কার্ডে যুক্ত করুন ($selectedCountটি)',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            style: FluentType.bodyStrong,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           onPressed: selectedCount == 0 ? null : _saveCards,
         ),

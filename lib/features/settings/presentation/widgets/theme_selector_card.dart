@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/theme/theme_provider.dart';
 
 class ThemeSelectorCard extends ConsumerWidget {
@@ -11,7 +12,8 @@ class ThemeSelectorCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(themeModeProvider);
     final activeDarkPreset = ref.watch(darkThemePresetProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     void selectDarkPreset(DarkThemePreset preset) {
       HapticFeedback.selectionClick();
@@ -22,69 +24,69 @@ class ThemeSelectorCard extends ConsumerWidget {
     }
 
     return Card(
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-        ),
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(theme.brightness),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(
-                  Icons.palette_outlined,
-                  size: 18,
-                  color: Color(0xFF6366F1),
-                ),
-                SizedBox(width: 8),
+                Icon(Icons.palette_outlined, size: 18, color: scheme.primary),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     'Select Interface Theme',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    style: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               'চোখের আরাম ও পড়ালেখার পরিবেশ অনুযায়ী আপনার পছন্দের থিম ও কালার স্কিম বেছে নিন।',
-              style: TextStyle(
-                fontSize: 11.5,
-                color: isDark ? Colors.white60 : Colors.grey.shade600,
+              style: FluentType.caption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             // General Modes (System & Light)
             ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.brightness_auto, size: 20),
-              title: const Text(
+              leading: Icon(
+                Icons.brightness_auto,
+                size: 20,
+                color: scheme.onSurface.withValues(alpha: 0.65),
+              ),
+              title: Text(
                 'System Default',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
               ),
-              subtitle: const Text(
+              subtitle: Text(
                 'ডিভাইসের ডিফল্ট লাইট/ডার্ক শিডিউল অনুসরণ করে',
-                style: TextStyle(fontSize: 11),
+                style: FluentType.caption.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
-              trailing: currentMode == ThemeMode.system
-                  ? const Icon(
-                      Icons.check_circle,
-                      color: Color(0xFF6366F1),
-                      size: 20,
-                    )
-                  : const Icon(
-                      Icons.circle_outlined,
-                      color: Colors.grey,
-                      size: 20,
-                    ),
+              trailing: Icon(
+                currentMode == ThemeMode.system
+                    ? Icons.check_circle
+                    : Icons.circle_outlined,
+                color: currentMode == ThemeMode.system
+                    ? scheme.primary
+                    : scheme.onSurface.withValues(alpha: 0.38),
+                size: 20,
+              ),
               onTap: () {
                 HapticFeedback.selectionClick();
                 ref
@@ -100,27 +102,27 @@ class ThemeSelectorCard extends ConsumerWidget {
               leading: const Icon(
                 Icons.light_mode_rounded,
                 size: 20,
-                color: Colors.amber,
+                color: Color(0xFFF59E0B),
               ),
-              title: const Text(
+              title: Text(
                 'Clean Light Mode ☀️',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
               ),
-              subtitle: const Text(
+              subtitle: Text(
                 'উজ্জ্বল সাদা ও ডিপ ইনডিগো — দিনের বেলায় পড়ার জন্য',
-                style: TextStyle(fontSize: 11),
+                style: FluentType.caption.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
-              trailing: currentMode == ThemeMode.light
-                  ? const Icon(
-                      Icons.check_circle,
-                      color: Color(0xFF6366F1),
-                      size: 20,
-                    )
-                  : const Icon(
-                      Icons.circle_outlined,
-                      color: Colors.grey,
-                      size: 20,
-                    ),
+              trailing: Icon(
+                currentMode == ThemeMode.light
+                    ? Icons.check_circle
+                    : Icons.circle_outlined,
+                color: currentMode == ThemeMode.light
+                    ? scheme.primary
+                    : scheme.onSurface.withValues(alpha: 0.38),
+                size: 20,
+              ),
               onTap: () {
                 HapticFeedback.selectionClick();
                 ref
@@ -129,30 +131,25 @@ class ThemeSelectorCard extends ConsumerWidget {
               },
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
             Row(
               children: [
-                const Icon(
-                  Icons.nightlight_round,
-                  size: 15,
-                  color: Color(0xFFA78BFA),
-                ),
-                const SizedBox(width: 6),
+                Icon(Icons.nightlight_round, size: 16, color: scheme.primary),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     'ডার্ক ও স্টাডি থিমসমূহ (Aesthetic Dark Palettes)',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.s),
 
             // 1. Cute Velvet Night
             _buildThemeOption(
@@ -265,21 +262,32 @@ class ThemeSelectorCard extends ConsumerWidget {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
+      // The swatch colour stays: it is a preview of the palette, not decoration.
       leading: Icon(icon, size: 20, color: iconColor),
       title: Text(
         title,
-        style: TextStyle(
-          fontSize: 12.5,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+        style: (isSelected ? FluentType.bodyStrong : FluentType.body).copyWith(
+          color: scheme.onSurface,
         ),
       ),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 10.5)),
-      trailing: isSelected
-          ? Icon(Icons.check_circle, color: iconColor, size: 20)
-          : const Icon(Icons.circle_outlined, color: Colors.grey, size: 20),
+      subtitle: Text(
+        subtitle,
+        style: FluentType.caption.copyWith(
+          color: scheme.onSurface.withValues(alpha: 0.65),
+        ),
+      ),
+      trailing: Icon(
+        isSelected ? Icons.check_circle : Icons.circle_outlined,
+        color: isSelected
+            ? scheme.primary
+            : scheme.onSurface.withValues(alpha: 0.38),
+        size: 20,
+      ),
       onTap: onTap,
     );
   }

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../quiz/presentation/providers/drill_history_provider.dart';
 import '../../../quiz/presentation/widgets/quiz_batch_correction_sheet.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
@@ -168,24 +169,31 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
           : const Color(0xFFF8FAFC),
       appBar: AppBar(
         titleSpacing: 0,
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.menu_book_rounded, color: Colors.indigo, size: 24),
-            SizedBox(width: 8),
+            Icon(
+              Icons.menu_book_rounded,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
+            const SizedBox(width: FluentSpacing.s),
             Flexible(
               child: Text(
-                'স্মার্ট মিস্টেক নোটবুক',
+                'TITLE_NOTEBOOK',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                style: FluentType.subtitle.copyWith(fontSize: 17),
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            tooltip: 'রাতের ৫ মিনিটের রিভিশন',
-            icon: const Icon(Icons.nightlight_round, color: Colors.amber),
+            tooltip: 'TOOLTIP_NIGHT',
+            icon: Icon(
+              Icons.nightlight_round,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             onPressed: () {
               final unmastered = (allMistakesAsync.value ?? [])
                   .where((q) => !q.isMastered)
@@ -210,6 +218,8 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
     List<DrillQuestion> allMistakes,
     bool isDark,
   ) {
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
     final folders = groupMistakesIntoFolders(allMistakes);
     final totalMistakes = allMistakes.length;
     final masteredCount = allMistakes.where((q) => q.isMastered).length;
@@ -264,7 +274,12 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      padding: const EdgeInsets.fromLTRB(
+        FluentSpacing.l,
+        FluentSpacing.m,
+        FluentSpacing.l,
+        80,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -283,15 +298,15 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
             },
             onReDrill: () => _startQuizDrill(filtered),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.l),
 
           // 2. Subject Folders Horizontal Carousel
           _buildSubjectFoldersCarousel(folders, totalMistakes, isDark),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.l),
 
           // 3. Search & Filter Bar
-          _buildSearchAndFilters(isDark),
-          const SizedBox(height: 14),
+          _buildSearchAndFilters(context, isDark),
+          const SizedBox(height: FluentSpacing.l),
 
           // 4. Questions Counter and Quick Action Header
           Row(
@@ -302,10 +317,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                   'সংরক্ষিত ভুলসমূহ (${filtered.length}টি)',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                  style: FluentType.bodyStrong,
                 ),
               ),
               if (filtered.isNotEmpty)
@@ -316,77 +328,69 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                       style: OutlinedButton.styleFrom(
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: FluentSpacing.s,
+                          vertical: FluentSpacing.xs,
                         ),
-                        foregroundColor: isDark
-                            ? const Color(0xFFA5B4FC)
-                            : const Color(0xFF4F46E5),
-                        side: BorderSide(
-                          color: isDark
-                              ? const Color(0xFF6366F1)
-                              : const Color(0xFF4F46E5),
-                        ),
+                        foregroundColor: scheme.primary,
+                        side: FluentStroke.side(brightness),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                       ),
                       onPressed: () =>
                           _copyFilteredMistakesToClipboard(filtered),
                       icon: const Icon(Icons.copy_rounded, size: 13),
-                      label: const Text(
-                        'কপি',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                      label: Text(
+                        'COPY_LABEL',
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: FluentSpacing.s),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: FluentSpacing.s,
+                          vertical: FluentSpacing.xs,
                         ),
-                        backgroundColor: const Color(0xFF6366F1),
-                        foregroundColor: Colors.white,
+                        backgroundColor: scheme.primary,
+                        foregroundColor: scheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                       ),
                       onPressed: () => _batchFixFilteredMistakes(filtered),
                       icon: const Icon(Icons.auto_fix_high_rounded, size: 13),
-                      label: const Text(
-                        'AI ফিক্স',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                      label: Text(
+                        'AI_FIX_LABEL',
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: FluentSpacing.xs),
                     IconButton(
                       tooltip: 'এই তালিকা ড্রিল করুন',
                       visualDensity: VisualDensity.compact,
                       onPressed: () => _startQuizDrill(filtered),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.flash_on,
                         size: 19,
-                        color: Colors.amber,
+                        color: scheme.primary,
                       ),
                     ),
                   ],
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
 
           // 5. Mistakes List or Empty State
           if (filtered.isEmpty)
-            _buildEmptyState(isDark)
+            _buildEmptyState(context, isDark)
           else
             ListView.builder(
               shrinkWrap: true,
@@ -410,11 +414,11 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'বিষয়ভিত্তিক ফোল্ডারসমূহ',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+          style: FluentType.bodyStrong.copyWith(fontSize: 13),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: FluentSpacing.s),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -464,15 +468,13 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
     required bool isSelected,
     required bool isDark,
   }) {
-    final chipBg = isSelected
-        ? color
-        : (isDark ? const Color(0xFF1E293B) : Colors.white);
-    final textColor = isSelected
-        ? Colors.white
-        : (isDark ? Colors.white : Colors.black87);
+    final brightness = Theme.of(context).brightness;
+    final scheme = Theme.of(context).colorScheme;
+    final chipBg = isSelected ? color : scheme.surface;
+    final textColor = isSelected ? Colors.white : scheme.onSurface;
     final borderColor = isSelected
         ? color
-        : (isDark ? Colors.white12 : Colors.grey.shade300);
+        : FluentStroke.card(brightness);
 
     return InkWell(
       onTap: () {
@@ -480,50 +482,50 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
           _selectedFolderId = id;
         });
       },
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: FluentRadius.controlBorder,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: FluentSpacing.m,
+          vertical: FluentSpacing.s,
+        ),
         decoration: BoxDecoration(
           color: chipBg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+          borderRadius: FluentRadius.controlBorder,
+          border: Border.all(color: borderColor, width: FluentStroke.width),
+          boxShadow: FluentElevation.card(brightness),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 16, color: isSelected ? Colors.white : color),
-            const SizedBox(width: 6),
+            const SizedBox(width: FluentSpacing.s),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.caption.copyWith(
+                fontWeight: isSelected
+                    ? FontWeight.w600
+                    : FontWeight.w400,
                 color: textColor,
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: FluentSpacing.s),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.s,
+                vertical: FluentSpacing.xxs,
+              ),
               decoration: BoxDecoration(
                 color: isSelected
                     ? Colors.white.withValues(alpha: 0.25)
-                    : color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+                    : FluentLayer.subtle(color, brightness),
+                borderRadius: FluentRadius.controlBorder,
               ),
               child: Text(
                 '$totalCount',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.bold,
+                style: FluentType.caption.copyWith(
+                  fontWeight: FontWeight.w600,
                   color: isSelected ? Colors.white : color,
                 ),
               ),
@@ -534,7 +536,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
     );
   }
 
-  Widget _buildSearchAndFilters(bool isDark) {
+  Widget _buildSearchAndFilters(BuildContext context, bool isDark) {
     return Column(
       children: [
         // Search text field
@@ -553,22 +555,22 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                   )
                 : null,
             filled: true,
-            fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            fillColor: Theme.of(context).colorScheme.surface,
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 10,
+              horizontal: FluentSpacing.l,
+              vertical: FluentSpacing.m,
             ),
             isDense: true,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: isDark ? Colors.white12 : Colors.grey.shade300,
+              borderRadius: FluentRadius.controlBorder,
+              borderSide: FluentStroke.side(
+                Theme.of(context).brightness,
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: isDark ? Colors.white12 : Colors.grey.shade300,
+              borderRadius: FluentRadius.controlBorder,
+              borderSide: FluentStroke.side(
+                Theme.of(context).brightness,
               ),
             ),
           ),
@@ -576,7 +578,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
             setState(() => _searchQuery = val);
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: FluentSpacing.s),
 
         // Filter chips row
         SingleChildScrollView(
@@ -585,61 +587,69 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
             children: [
               // Status filters
               _buildFilterBadge(
-                'সব ভুল',
+                context,
+                'ST_ALL',
                 'all',
                 _statusFilter,
                 (v) => setState(() => _statusFilter = v),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: FluentSpacing.s),
               _buildFilterBadge(
-                'বাকি ভুল',
+                context,
+                'ST_PENDING',
                 'pending',
                 _statusFilter,
                 (v) => setState(() => _statusFilter = v),
-                color: Colors.redAccent,
+                color: Theme.of(context).colorScheme.error,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: FluentSpacing.s),
               _buildFilterBadge(
-                'আয়ত্তে এসেছে',
+                context,
+                'ST_MASTERED',
                 'mastered',
                 _statusFilter,
                 (v) => setState(() => _statusFilter = v),
                 color: Colors.green,
               ),
-              const SizedBox(width: 12),
-              Container(width: 1, height: 20, color: Colors.grey.shade400),
-              const SizedBox(width: 12),
+              const SizedBox(width: FluentSpacing.m),
+              Container(
+                width: 1,
+                height: 20,
+                color: FluentStroke.divider(Theme.of(context).brightness),
+              ),
+              const SizedBox(width: FluentSpacing.m),
 
               // Source filters
               _buildFilterBadge(
-                'সকল উৎস',
+                context,
+                'SRC_ALL',
                 'all',
                 _sourceFilter,
                 (v) => setState(() => _sourceFilter = v),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: FluentSpacing.s),
               _buildFilterBadge(
-                '🎙️ LiveMCQ',
+                context,
+                'SRC_VOICE',
                 'voice',
                 _sourceFilter,
                 (v) => setState(() => _sourceFilter = v),
-                color: const Color(0xFF8B5CF6),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: FluentSpacing.s),
               _buildFilterBadge(
-                '📷 বই স্ক্যান',
+                context,
+                'SRC_BOOK',
                 'book',
                 _sourceFilter,
                 (v) => setState(() => _sourceFilter = v),
-                color: const Color(0xFF6366F1),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: FluentSpacing.s),
               _buildFilterBadge(
-                '📝 ড্রিল',
+                context,
+                'SRC_DRILL',
                 'drill',
                 _sourceFilter,
                 (v) => setState(() => _sourceFilter = v),
-                color: const Color(0xFF0EA5E9),
               ),
             ],
           ),
@@ -649,75 +659,88 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
   }
 
   Widget _buildFilterBadge(
+    BuildContext context,
     String label,
     String value,
     String current,
     ValueChanged<String> onSelected, {
-    Color color = Colors.indigo,
+    Color? color,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+    final c = color ?? scheme.primary;
     final isSelected = value == current;
     return InkWell(
       onTap: () => onSelected(value),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: FluentRadius.controlBorder,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: FluentSpacing.m,
+          vertical: FluentSpacing.xs,
+        ),
         decoration: BoxDecoration(
           color: isSelected
-              ? color.withValues(alpha: 0.18)
+              ? FluentLayer.subtle(c, brightness)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: FluentRadius.controlBorder,
           border: Border.all(
-            color: isSelected ? color : Colors.grey.shade400,
-            width: isSelected ? 1.4 : 1.0,
+            color: isSelected
+                ? c.withValues(alpha: 0.5)
+                : FluentStroke.card(brightness),
+            width: FluentStroke.width,
           ),
         ),
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? color : Colors.grey.shade700,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: FluentType.caption.copyWith(
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            color: isSelected
+                ? c
+                : scheme.onSurface.withValues(alpha: 0.65),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState(bool isDark) {
+  Widget _buildEmptyState(BuildContext context, bool isDark) {
+    final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
+        padding: const EdgeInsets.symmetric(vertical: FluentSpacing.xxl),
         child: Column(
           children: [
             Icon(Icons.verified, size: 64, color: Colors.green.shade400),
-            const SizedBox(height: 12),
-            const Text(
+            const SizedBox(height: FluentSpacing.m),
+            Text(
               'কোনো অমীমাংসিত ভুল নেই!',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: FluentType.subtitle.copyWith(fontSize: 16),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.s),
             Text(
               _searchQuery.isNotEmpty
                   ? 'আপনার খোঁজার সাথে কোনো ভুল প্রশ্ন মিলেনি।'
                   : 'লাইভ এমসিকিউ বা প্র্যাকটিস করার সময় ভুল হলে তা স্বয়ংক্রিয়ভাবে এখানে ফোল্ডার আকারে জমা হবে।',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.white60 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
             if (_searchQuery.isEmpty) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4F46E5),
-                  foregroundColor: Colors.white,
+                  backgroundColor: scheme.primary,
+                  foregroundColor: scheme.onPrimary,
+                  elevation: 0,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
+                    horizontal: FluentSpacing.l,
+                    vertical: FluentSpacing.m,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 onPressed: () {
@@ -728,9 +751,9 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                   );
                 },
                 icon: const Icon(Icons.flash_on, size: 16),
-                label: const Text(
+                label: Text(
                   'কুইজ ড্রিল শুরু করুন ⚡',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  style: FluentType.caption.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
             ],

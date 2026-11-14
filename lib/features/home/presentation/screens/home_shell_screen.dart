@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:life_and_study_assistant/core/database/database_provider.dart';
+import 'package:life_and_study_assistant/core/theme/fluent_tokens.dart';
 import 'package:life_and_study_assistant/core/services/overlay/bubble_handoff_provider.dart';
 import 'package:life_and_study_assistant/core/services/overlay/bubble_handoff_service.dart';
 import 'package:life_and_study_assistant/core/services/sharing/sharing_intent_service.dart';
@@ -186,11 +187,14 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: FluentSpacing.m),
                   Expanded(
                     child: Text(
                       state.message ?? 'Analyzing routine with Gemini...',
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      // Sits on a saturated snackbar fill.
+                      style: FluentType.body.copyWith(color: Colors.white),
                     ),
                   ),
                 ],
@@ -242,11 +246,23 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
         title: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 24),
-            const SizedBox(width: 8),
-            const Text('Routine Imported!'),
+            // Green here is status: the import succeeded.
+            const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 24),
+            const SizedBox(width: FluentSpacing.s),
+            Flexible(
+              child: Text(
+                'Routine Imported!',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: FluentType.subtitle.copyWith(
+                  fontSize: 18,
+                  color: Theme.of(ctx).colorScheme.onSurface,
+                ),
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -255,9 +271,11 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
           children: [
             Text(
               'Gemini successfully parsed and added ${state.parsedItems.length} exam schedules to your calendar:',
-              style: const TextStyle(fontSize: 13),
+              style: FluentType.body.copyWith(
+                color: Theme.of(ctx).colorScheme.onSurface,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 200),
               child: ListView.builder(
@@ -268,21 +286,25 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
                   return ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.event,
                       size: 20,
-                      color: Colors.indigo,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     title: Text(
                       '${item.subject} (${item.examType})',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.bodyStrong.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     subtitle: Text(
                       '📅 ${item.date.toIso8601String().substring(0, 10)} at ${item.examTime}\nTopics: ${item.topics.join(", ")}',
-                      style: const TextStyle(fontSize: 11),
+                      style: FluentType.caption.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.65),
+                      ),
                     ),
                   );
                 },
@@ -292,6 +314,12 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
         ),
         actions: [
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: FluentRadius.controlBorder,
+              ),
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               setState(() {
@@ -313,52 +341,60 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
     super.dispose();
   }
 
+  /// Windows 11 marks the selected navigation item with a short rounded
+  /// accent bar. The filled indicator plate alone is a Material idiom; this
+  /// adds the Fluent selection mark above the icon.
+  static Widget _selectedNavIcon(BuildContext context, Widget icon) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 16,
+          height: 3,
+          decoration: BoxDecoration(
+            color: primary,
+            borderRadius: BorderRadius.circular(1.5),
+          ),
+        ),
+        const SizedBox(height: FluentSpacing.xs),
+        icon,
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
 
-    const activeColor = Color(0xFF6366F1);
-    final navBg = isDark ? const Color(0xFF0F172A) : Colors.white;
-    final borderColor = isDark
-        ? const Color(0xFF1E293B)
-        : const Color(0xFFE2E8F0);
-    final indicatorBg = isDark
-        ? const Color(0xFF1E293B)
-        : const Color(0xFFEEF2FF);
+    final navBg = scheme.surface;
 
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: navBg,
-          border: Border(top: BorderSide(color: borderColor, width: 1.2)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -3),
-            ),
-          ],
+          // Fluent defines the window chrome with a stroke, not a glow.
+          border: Border(top: FluentStroke.side(brightness)),
         ),
         child: NavigationBarTheme(
           data: NavigationBarThemeData(
-            height: 66,
+            height: 72,
             backgroundColor: navBg,
-            indicatorColor: indicatorBg,
+            indicatorColor: FluentLayer.subtle(scheme.primary, brightness),
             indicatorShape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: FluentRadius.controlBorder,
             ),
             labelTextStyle: WidgetStateProperty.resolveWith((states) {
               final isSelected = states.contains(WidgetState.selected);
-              return TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              return FluentType.caption.copyWith(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: isSelected
-                    ? (isDark
-                          ? const Color(0xFFA5B4FC)
-                          : const Color(0xFF4338CA))
-                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                letterSpacing: 0.1,
+                    ? scheme.primary
+                    : scheme.onSurface.withValues(alpha: 0.65),
               );
             }),
             iconTheme: WidgetStateProperty.resolveWith((states) {
@@ -366,8 +402,8 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
               return IconThemeData(
                 size: 22,
                 color: isSelected
-                    ? activeColor
-                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                    ? scheme.primary
+                    : scheme.onSurface.withValues(alpha: 0.65),
               );
             }),
           ),
@@ -383,15 +419,21 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
               }
             },
             destinations: [
-              const NavigationDestination(
-                icon: Icon(Icons.space_dashboard_outlined),
-                selectedIcon: Icon(Icons.space_dashboard_rounded),
+              NavigationDestination(
+                icon: const Icon(Icons.space_dashboard_outlined),
+                selectedIcon: _selectedNavIcon(
+                  context,
+                  const Icon(Icons.space_dashboard_rounded),
+                ),
                 label: 'Dashboard',
                 tooltip: 'ড্যাশবোর্ড',
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.auto_awesome_outlined),
-                selectedIcon: Icon(Icons.auto_awesome),
+              NavigationDestination(
+                icon: const Icon(Icons.auto_awesome_outlined),
+                selectedIcon: _selectedNavIcon(
+                  context,
+                  const Icon(Icons.auto_awesome),
+                ),
                 label: 'AI Mentor',
                 tooltip: 'এআই মেন্টর চ্যাট',
               ),
@@ -418,11 +460,14 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
                         (s) => s.value?.length ?? 0,
                       ),
                     );
-                    return Badge.count(
-                      count: count,
-                      isLabelVisible: count > 0,
-                      backgroundColor: const Color(0xFFEF4444),
-                      child: const Icon(Icons.radar_rounded),
+                    return _selectedNavIcon(
+                      context,
+                      Badge.count(
+                        count: count,
+                        isLabelVisible: count > 0,
+                        backgroundColor: const Color(0xFFEF4444),
+                        child: const Icon(Icons.radar_rounded),
+                      ),
                     );
                   },
                 ),
@@ -452,20 +497,26 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen>
                         (s) => s.value?.length ?? 0,
                       ),
                     );
-                    return Badge.count(
-                      count: count,
-                      isLabelVisible: count > 0,
-                      backgroundColor: const Color(0xFF10B981),
-                      child: const Icon(Icons.event_note_rounded),
+                    return _selectedNavIcon(
+                      context,
+                      Badge.count(
+                        count: count,
+                        isLabelVisible: count > 0,
+                        backgroundColor: const Color(0xFF10B981),
+                        child: const Icon(Icons.event_note_rounded),
+                      ),
                     );
                   },
                 ),
                 label: 'LiveMCQ',
                 tooltip: 'লাইভ এমসিকিউ হাব',
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.tune_outlined),
-                selectedIcon: Icon(Icons.tune_rounded),
+              NavigationDestination(
+                icon: const Icon(Icons.tune_outlined),
+                selectedIcon: _selectedNavIcon(
+                  context,
+                  const Icon(Icons.tune_rounded),
+                ),
                 label: 'Settings',
                 tooltip: 'অ্যাপ সেটিংস',
               ),

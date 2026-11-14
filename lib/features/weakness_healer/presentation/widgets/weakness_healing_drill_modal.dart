@@ -7,10 +7,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/tables/weak_topics_table.dart';
 import '../../../../core/services/ai/quiz_generator_service.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../quiz/presentation/providers/drill_history_provider.dart';
 import '../../../topics/presentation/providers/topics_provider.dart';
+
+/// The healing green. A status colour (this flow is a health meter), kept
+/// while the gradients and coloured glows around it go.
+const Color _healingAccent = Color(0xFF10B981);
 
 class WeaknessHealingDrillModal extends ConsumerStatefulWidget {
   final WeakTopic topic;
@@ -235,19 +240,25 @@ class _WeaknessHealingDrillModalState
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final timerColor = _secondsRemaining <= 30
+        ? Colors.redAccent
+        : _healingAccent;
 
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.healing_rounded, color: Color(0xFF10B981), size: 22),
-            SizedBox(width: 8),
+            const Icon(
+              Icons.healing_rounded,
+              color: _healingAccent,
+              size: 22,
+            ),
+            const SizedBox(width: FluentSpacing.s),
             Flexible(
               child: Text(
                 '৩ মিনিটের হিলিং ড্রিল',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: FluentType.subtitle.copyWith(fontSize: 16),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -256,38 +267,30 @@ class _WeaknessHealingDrillModalState
         ),
         actions: [
           Container(
-            margin: const EdgeInsets.only(right: 14),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            margin: const EdgeInsets.only(right: FluentSpacing.m),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.s,
+              vertical: FluentSpacing.xs,
+            ),
             decoration: BoxDecoration(
-              color: _secondsRemaining <= 30
-                  ? Colors.redAccent.withValues(alpha: 0.15)
-                  : const Color(0xFF10B981).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _secondsRemaining <= 30
-                    ? Colors.redAccent
-                    : const Color(0xFF10B981),
+              color: FluentLayer.subtle(
+                timerColor,
+                Theme.of(context).brightness,
               ),
+              borderRadius: FluentRadius.controlBorder,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.timer_outlined,
-                  size: 15,
-                  color: _secondsRemaining <= 30
-                      ? Colors.redAccent
-                      : const Color(0xFF10B981),
-                ),
-                const SizedBox(width: 4),
+                Icon(Icons.timer_outlined, size: 15, color: timerColor),
+                const SizedBox(width: FluentSpacing.xs),
                 Text(
                   _formatTimer(_secondsRemaining),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: _secondsRemaining <= 30
-                        ? Colors.redAccent
-                        : const Color(0xFF10B981),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: timerColor,
                   ),
                 ),
               ],
@@ -314,27 +317,34 @@ class _WeaknessHealingDrillModalState
       // Reached when nothing could be gathered and nothing was invented to
       // cover for it.
       return Padding(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(FluentSpacing.xxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.cloud_off_rounded,
               size: 38,
-              color: Colors.orange.shade700,
+              color: Colors.orange,
             ),
-            const SizedBox(height: 14),
-            const Text(
+            const SizedBox(height: FluentSpacing.l),
+            Text(
               'এই টপিকের জন্য ড্রিল তৈরি করা গেল না।\n'
               'ইন্টারনেট দেখে আবার চেষ্টা করুন।',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13.5),
+              style: FluentType.body.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: FluentSpacing.xl),
             FilledButton.icon(
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                ),
+              ),
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.close, size: 18),
-              label: const Text('বন্ধ করুন'),
+              label: Text('বন্ধ করুন', style: FluentType.bodyStrong),
             ),
           ],
         ),
@@ -344,8 +354,11 @@ class _WeaknessHealingDrillModalState
     final currentQ = _questions[_currentIndex];
     final total = _questions.length;
 
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -356,85 +369,88 @@ class _WeaknessHealingDrillModalState
               Flexible(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
+                    color: FluentLayer.subtle(_healingAccent, brightness),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   child: Text(
                     '${widget.topic.subject} • ${widget.topic.topicName}',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF10B981),
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: _healingAccent,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                'প্রশ্ন ${_currentIndex + 1} / $total',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+              const SizedBox(width: FluentSpacing.s),
+              Flexible(
+                child: Text(
+                  'প্রশ্ন ${_currentIndex + 1} / $total',
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: FluentRadius.controlBorder,
             child: LinearProgressIndicator(
               value: (_currentIndex + 1) / total,
               minHeight: 5,
-              backgroundColor: isDark ? Colors.white12 : Colors.grey.shade300,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF10B981),
-              ),
+              backgroundColor: scheme.onSurface.withValues(alpha: 0.10),
+              valueColor: const AlwaysStoppedAnimation<Color>(_healingAccent),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: FluentSpacing.l),
 
           // Question Card
           Card(
-            elevation: 2,
+            elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: FluentRadius.cardBorder,
+              side: FluentStroke.side(brightness),
             ),
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(FluentSpacing.l),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (currentQ.sourceMistakeId != null) ...[
                     Container(
-                      margin: const EdgeInsets.only(bottom: 10),
+                      margin: const EdgeInsets.only(bottom: FluentSpacing.s),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xxs,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.redAccent.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
+                        color: FluentLayer.subtle(Colors.redAccent, brightness),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.replay, size: 12, color: Colors.redAccent),
-                          SizedBox(width: 4),
+                          const Icon(
+                            Icons.replay,
+                            size: 12,
+                            color: Colors.redAccent,
+                          ),
+                          const SizedBox(width: FluentSpacing.xs),
                           Flexible(
                             child: Text(
                               'পূর্বের ভুল প্রশ্ন',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
+                              style: FluentType.caption.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
                                 color: Colors.redAccent,
                               ),
                               maxLines: 1,
@@ -447,61 +463,57 @@ class _WeaknessHealingDrillModalState
                   ],
                   Text(
                     BengaliMathSanitizer.sanitize(currentQ.questionText),
-                    style: const TextStyle(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.bold,
-                      height: 1.45,
+                    style: FluentType.bodyStrong.copyWith(
+                      fontSize: 15,
+                      color: scheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: FluentSpacing.l),
 
                   // 4 Options
                   ...List.generate(currentQ.options.length, (idx) {
                     final isSelected = _selectedOptionIndex == idx;
                     final isCorrect = idx == currentQ.correctIndex;
 
-                    Color optBg = isDark
-                        ? const Color(0xFF0F172A)
-                        : const Color(0xFFF1F5F9);
-                    Color optBorder = isDark
-                        ? Colors.white10
-                        : Colors.grey.shade300;
-                    Color optTextColor = isDark ? Colors.white : Colors.black87;
+                    Color optBg = scheme.onSurface.withValues(alpha: 0.04);
+                    Color optBorder = FluentStroke.card(brightness);
+                    Color optTextColor = scheme.onSurface;
 
                     if (_isAnswerSubmitted) {
                       if (isCorrect) {
-                        optBg = Colors.green.withValues(alpha: 0.18);
+                        optBg = FluentLayer.subtle(Colors.green, brightness);
                         optBorder = Colors.green;
                         optTextColor = Colors.green.shade800;
                       } else if (isSelected) {
-                        optBg = Colors.red.withValues(alpha: 0.18);
+                        optBg = FluentLayer.subtle(
+                          Colors.redAccent,
+                          brightness,
+                        );
                         optBorder = Colors.redAccent;
                         optTextColor = Colors.red.shade800;
                       }
                     }
 
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(bottom: FluentSpacing.s),
                       child: InkWell(
                         onTap: () => _selectOption(idx),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
+                            horizontal: FluentSpacing.m,
+                            vertical: FluentSpacing.m,
                           ),
                           decoration: BoxDecoration(
                             color: optBg,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: FluentRadius.controlBorder,
                             border: Border.all(color: optBorder),
                           ),
                           child: Row(
                             children: [
                               Text(
                                 '${String.fromCharCode(65 + idx)}. ',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                                style: FluentType.bodyStrong.copyWith(
                                   color: optTextColor,
                                 ),
                               ),
@@ -510,13 +522,11 @@ class _WeaknessHealingDrillModalState
                                   BengaliMathSanitizer.sanitize(
                                     currentQ.options[idx],
                                   ),
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    color: optTextColor,
-                                    fontWeight: isCorrect && _isAnswerSubmitted
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
+                                  style:
+                                      (isCorrect && _isAnswerSubmitted
+                                              ? FluentType.bodyStrong
+                                              : FluentType.body)
+                                          .copyWith(color: optTextColor),
                                 ),
                               ),
                               if (_isAnswerSubmitted && isCorrect)
@@ -542,12 +552,12 @@ class _WeaknessHealingDrillModalState
 
                   // Explanation after answer submission
                   if (_isAnswerSubmitted) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: FluentSpacing.m),
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(FluentSpacing.m),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
+                        color: FluentLayer.subtle(Colors.amber, brightness),
+                        borderRadius: FluentRadius.controlBorder,
                         border: Border.all(
                           color: Colors.amber.withValues(alpha: 0.3),
                         ),
@@ -555,20 +565,19 @@ class _WeaknessHealingDrillModalState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.lightbulb_outline,
                                 color: Colors.amber,
                                 size: 16,
                               ),
-                              SizedBox(width: 6),
+                              const SizedBox(width: FluentSpacing.s),
                               Flexible(
                                 child: Text(
                                   'ব্যাখ্যা ও মনে রাখার রুল:',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
+                                  style: FluentType.caption.copyWith(
+                                    fontWeight: FontWeight.w600,
                                     color: Colors.amber,
                                   ),
                                   maxLines: 1,
@@ -577,29 +586,31 @@ class _WeaknessHealingDrillModalState
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: FluentSpacing.s),
                           Text(
                             BengaliMathSanitizer.sanitize(currentQ.explanation),
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              height: 1.45,
+                            style: FluentType.caption.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.8),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: FluentSpacing.l),
 
                     // Next / Finish Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
+                          backgroundColor: _healingAccent,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: FluentSpacing.m,
+                          ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: FluentRadius.controlBorder,
                           ),
                         ),
                         onPressed: _nextQuestion,
@@ -607,7 +618,9 @@ class _WeaknessHealingDrillModalState
                           _currentIndex + 1 >= total
                               ? 'ফলাফল ও হিলিং প্রগ্রেস দেখুন'
                               : 'পরবর্তী প্রশ্ন →',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: FluentType.bodyStrong,
                         ),
                       ),
                     ),
@@ -626,95 +639,98 @@ class _WeaknessHealingDrillModalState
     final percent = total == 0 ? 0 : ((_correctCount / total) * 100).round();
     final isLevelUp = percent >= 66;
 
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+    final resultColor = isLevelUp ? Colors.green : Colors.amber;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(FluentSpacing.xxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(FluentSpacing.xl),
               decoration: BoxDecoration(
-                color: (isLevelUp ? Colors.green : Colors.amber).withValues(
-                  alpha: 0.15,
-                ),
-                shape: BoxShape.circle,
+                color: FluentLayer.subtle(resultColor, brightness),
+                borderRadius: FluentRadius.cardBorder,
               ),
               child: Icon(
                 isLevelUp ? Icons.celebration_rounded : Icons.replay_rounded,
-                color: isLevelUp ? Colors.green : Colors.amber,
+                color: resultColor,
                 size: 64,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: FluentSpacing.xl),
             Text(
               isLevelUp ? '🎉 হিলিং সফল হয়েছে!' : 'খুব ভালো চেষ্টা! 👍',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+              style: FluentType.subtitle.copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             Text(
               isLevelUp
                   ? '"${widget.topic.topicName}" টপিকটি সফলভাবে রিভিশন দেওয়া হয়েছে এবং আপনার প্রফিশিয়েন্সি লেভেল বৃদ্ধি পেয়েছে।'
                   : '"${widget.topic.topicName}" টপিকটি নিয়মিত রিভিশন দিন, শীঘ্রই এটি আপনার স্ট্রং জোনে চলে আসবে।',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white70 : Colors.black54,
+              style: FluentType.body.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: FluentSpacing.xl),
 
             // Score Pill
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.xl,
+                vertical: FluentSpacing.m,
+              ),
               decoration: BoxDecoration(
-                color: (isLevelUp ? Colors.green : Colors.amber).withValues(
-                  alpha: 0.1,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: (isLevelUp ? Colors.green : Colors.amber).withValues(
-                    alpha: 0.3,
-                  ),
-                ),
+                color: FluentLayer.subtle(resultColor, brightness),
+                borderRadius: FluentRadius.controlBorder,
               ),
               child: Column(
                 children: [
                   Text(
                     '$percent%',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.title.copyWith(
                       color: isLevelUp ? Colors.green : Colors.amber.shade800,
                     ),
                   ),
                   Text(
                     '$_correctCount / $total টি প্রশ্ন সঠিক হয়েছে',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                    textAlign: TextAlign.center,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: FluentSpacing.xxl),
 
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: _healingAccent,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: FluentSpacing.m,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
+                child: Text(
                   'ড্যাশবোর্ডে ফিরে যান',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.bodyStrong,
                 ),
               ),
             ),

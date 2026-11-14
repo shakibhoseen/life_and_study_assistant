@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
 import '../providers/settings_provider.dart';
 
 class WeaknessHealerToggleCard extends ConsumerWidget {
@@ -11,53 +13,47 @@ class WeaknessHealerToggleCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isEnabled = settings.isWeaknessHealingEnabled;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+
+    // Green here carries status meaning: the engine is on.
+    const successColor = Color(0xFF10B981);
 
     return Card(
-      elevation: 2,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-        ),
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981)
-                        .withValues(alpha: isDark ? 0.25 : 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.healing_rounded,
-                    color: Color(0xFF10B981),
-                    size: 22,
-                  ),
+                PremiumIconBadge(
+                  icon: Icons.healing_rounded,
+                  size: 38,
+                  iconSize: 20,
+                  color: scheme.primary,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Daily 3-Min Weakness Micro Drills',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                        style: FluentType.bodyStrong.copyWith(
+                          color: scheme.onSurface,
                         ),
                       ),
                       Text(
                         'অটো-উইকনেস হিলিং ইঞ্জিন ও ড্রিল কন্ট্রোল',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                        style: FluentType.caption.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.65),
                         ),
                       ),
                     ],
@@ -65,7 +61,7 @@ class WeaknessHealerToggleCard extends ConsumerWidget {
                 ),
                 Switch(
                   value: isEnabled,
-                  activeThumbColor: const Color(0xFF10B981),
+                  activeThumbColor: scheme.primary,
                   onChanged: (val) {
                     ref
                         .read(settingsNotifierProvider.notifier)
@@ -74,8 +70,8 @@ class WeaknessHealerToggleCard extends ConsumerWidget {
                       SnackBar(
                         content: Text(
                           val
-                              ? 'অটো-উইকনেস হিলিং সক্রিয় করা হয়েছে 🩺'
-                              : 'অটো-উইকনেস হিলিং বন্ধ রাখা হয়েছে ⏸️',
+                              ? 'অটো-উইকনেস হিলিং সক্রিয় করা হয়েছে 🩺'
+                              : 'অটো-উইকনেস হিলিং বন্ধ রাখা হয়েছে ⏸️',
                         ),
                         behavior: SnackBarBehavior.floating,
                       ),
@@ -84,17 +80,15 @@ class WeaknessHealerToggleCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.s),
             Text(
               isEnabled
-                  ? '✓ সক্রিয়: লাইভ এমসিকিউ বা পরীক্ষায় ভুল হওয়া টপিকগুলোর ওপর ড্যাশবোর্ডে দৈনিক ৩ মিনিটের মাইক্রো-রিভিশন ড্রিল প্রদর্শন করা হবে।'
-                  : '⏸️ নিষ্ক্রিয়: দুর্বল টপিকের মাইক্রো-ড্রিল কার্ড ড্যাশবোর্ডে প্রদর্শিত হবে না। যেকোনো সময় পুনরায় চালু করতে পারেন।',
-              style: TextStyle(
-                fontSize: 11.5,
+                  ? '✓ সক্রিয়: লাইভ এমসিকিউ বা পরীক্ষায় ভুল হওয়া টপিকগুলোর ওপর ড্যাশবোর্ডে দৈনিক ৩ মিনিটের মাইক্রো-রিভিশন ড্রিল প্রদর্শন করা হবে।'
+                  : '⏸️ নিষ্ক্রিয়: দুর্বল টপিকের মাইক্রো-ড্রিল কার্ড ড্যাশবোর্ডে প্রদর্শিত হবে না। যেকোনো সময় পুনরায় চালু করতে পারেন।',
+              style: FluentType.caption.copyWith(
                 color: isEnabled
-                    ? (isDark ? Colors.greenAccent : Colors.green.shade800)
-                    : (isDark ? Colors.white60 : Colors.grey.shade700),
-                height: 1.4,
+                    ? successColor
+                    : scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
           ],

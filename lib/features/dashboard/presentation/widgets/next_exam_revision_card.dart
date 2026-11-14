@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
 import '../../domain/exam_revision_match.dart';
 
@@ -23,23 +24,31 @@ class NextExamRevisionCard extends ConsumerWidget {
       error: (_, _) => const SizedBox.shrink(),
       data: (data) {
         if (data == null || data.items.isEmpty) return const SizedBox.shrink();
-        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final onSurface = scheme.onSurface;
+        final onSurfaceMuted = onSurface.withValues(alpha: 0.65);
 
         return Card(
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          elevation: 0,
+          margin: const EdgeInsets.symmetric(vertical: FluentSpacing.s),
+          shape: RoundedRectangleBorder(
+            borderRadius: FluentRadius.cardBorder,
+            side: FluentStroke.side(theme.brightness),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(FluentSpacing.l),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.auto_stories_rounded,
                       size: 18,
-                      color: Color(0xFF6366F1),
+                      color: scheme.primary,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Text(
                         data.daysAway == 0
@@ -47,42 +56,38 @@ class NextExamRevisionCard extends ConsumerWidget {
                             : data.daysAway == 1
                             ? 'কালকের পরীক্ষার আগে'
                             : '${data.daysAway} দিন পরের পরীক্ষার আগে',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.bodyStrong.copyWith(color: onSurface),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: FluentSpacing.xxs),
                 Text(
                   data.examTitle,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: isDark ? Colors.white60 : Colors.black54,
-                  ),
+                  style: FluentType.caption.copyWith(color: onSurfaceMuted),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 Text(
                   'এই পরীক্ষার বিষয়ে আপনার দুর্বল জায়গা:',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: isDark ? Colors.white70 : Colors.black87,
-                  ),
+                  style: FluentType.caption.copyWith(color: onSurfaceMuted),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: FluentSpacing.s),
                 for (final item in data.items)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.only(bottom: FluentSpacing.xs),
                     child: Row(
                       children: [
                         Expanded(
                           child: Text(
                             '• ${item.label}',
-                            style: const TextStyle(fontSize: 12.5),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: FluentType.body.copyWith(color: onSurface),
                           ),
                         ),
+                        const SizedBox(width: FluentSpacing.s),
                         TextButton(
                           onPressed: () => QuizDrillModal.show(
                             context,
@@ -91,12 +96,15 @@ class NextExamRevisionCard extends ConsumerWidget {
                           ),
                           style: TextButton.styleFrom(
                             visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            foregroundColor: scheme.primary,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: FluentSpacing.s,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: FluentRadius.controlBorder,
+                            ),
                           ),
-                          child: const Text(
-                            'অনুশীলন',
-                            style: TextStyle(fontSize: 12),
-                          ),
+                          child: Text('অনুশীলন', style: FluentType.caption),
                         ),
                       ],
                     ),

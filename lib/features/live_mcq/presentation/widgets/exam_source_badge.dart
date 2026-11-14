@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../domain/models/exam_source_info.dart';
 
 class ExamSourceBadge extends StatelessWidget {
@@ -64,23 +65,25 @@ class ExamSourceBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.s,
+        vertical: FluentSpacing.xxs,
+      ),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: border, width: 0.8),
+        borderRadius: FluentRadius.controlBorder,
+        border: Border.all(color: border, width: FluentStroke.width),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(source.icon, size: 10.5, color: text),
-          const SizedBox(width: 3.5),
+          Icon(source.icon, size: 12, color: text),
+          const SizedBox(width: FluentSpacing.xs),
           Flexible(
             child: Text(
               source.label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
                 color: text,
               ),
               overflow: TextOverflow.ellipsis,

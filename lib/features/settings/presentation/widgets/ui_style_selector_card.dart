@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/theme/ui_style_provider.dart';
 
 /// Lets the user pick how the app's surfaces are rendered, independently of
@@ -13,7 +14,8 @@ class UiStyleSelectorCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final style = ref.watch(appUiStyleProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     void select(AppUiStyle next) {
       if (next == style) return;
@@ -22,74 +24,65 @@ class UiStyleSelectorCard extends ConsumerWidget {
     }
 
     return Card(
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-        ),
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(theme.brightness),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(
-                  Icons.layers_outlined,
-                  size: 18,
-                  color: Color(0xFF0078D4),
-                ),
-                SizedBox(width: 8),
+                Icon(Icons.layers_outlined, size: 18, color: scheme.primary),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     'Interface Style (সারফেস লুক)',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               'কালার থিম আলাদা — এটা ঠিক করে সারফেসগুলো কীভাবে আঁকা হবে। পুরনো ফ্ল্যাট লুক চাইলে Classic, '
               'উইন্ডোজ ১১-এর মতো শান্ত টিন্ট চাইলে Mica, আর ঝলমলে ব্লার-গ্লাস চাইলে Acrylic।',
-              style: TextStyle(
-                fontSize: 11.5,
-                height: 1.45,
-                color: isDark ? Colors.white60 : Colors.grey.shade600,
+              style: FluentType.caption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             _StyleOption(
               icon: Icons.crop_square_rounded,
-              accent: const Color(0xFF64748B),
+              accent: scheme.primary,
               title: 'Classic (পুরনো লুক)',
-              subtitle:
-                  'ফ্ল্যাট ব্যাকগ্রাউন্ড, সলিড কার্ড, কোনো ব্লার বা অ্যানিমেশন নেই — সবচেয়ে হালকা ও ব্যাটারি-সাশ্রয়ী।',
+              subtitle: 'ফ্ল্যাট ব্যাকগ্রাউন্ড, সলিড কার্ড, কোনো ব্লার বা অ্যানিমেশন নেই — সবচেয়ে হালকা ও ব্যাটারি-সাশ্রয়ী।',
               isSelected: style == AppUiStyle.classic,
               onTap: () => select(AppUiStyle.classic),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             _StyleOption(
               icon: Icons.gradient_rounded,
-              accent: const Color(0xFF0078D4),
+              accent: scheme.primary,
               title: 'Fluent Mica (উইন্ডোজ ১১ স্টাইল)',
-              subtitle:
-                  'পেছনে একটা স্থির, মৃদু অ্যাকসেন্ট টিন্ট; কার্ড সলিডই থাকে। নড়াচড়া নেই, তাই লেখা সবচেয়ে পরিষ্কার।',
+              subtitle: 'পেছনে একটা স্থির, মৃদু অ্যাকসেন্ট টিন্ট; কার্ড সলিডই থাকে। নড়াচড়া নেই, তাই লেখা সবচেয়ে পরিষ্কার।',
               isSelected: style == AppUiStyle.mica,
               onTap: () => select(AppUiStyle.mica),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             _StyleOption(
               icon: Icons.blur_on_rounded,
-              accent: const Color(0xFF8B5CF6),
+              accent: scheme.primary,
               title: 'Fluent Acrylic (অ্যানিমেটেড গ্লাস)',
-              subtitle:
-                  'চলমান গ্রেডিয়েন্ট ব্যাকড্রপ, ভাসমান অর্ব ও ফ্রস্টেড স্বচ্ছ কার্ড — সবচেয়ে প্রিমিয়াম, তবে ভারী।',
+              subtitle: 'চলমান গ্রেডিয়েন্ট ব্যাকড্রপ, ভাসমান অর্ব ও ফ্রস্টেড স্বচ্ছ কার্ড — সবচেয়ে প্রিমিয়াম, তবে ভারী।',
               isSelected: style == AppUiStyle.acrylic,
               onTap: () => select(AppUiStyle.acrylic),
             ),
@@ -123,25 +116,25 @@ class _StyleOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final scheme = theme.colorScheme;
 
     return Material(
       color: isSelected
-          ? accent.withValues(alpha: isDark ? 0.18 : 0.10)
+          ? FluentLayer.subtle(accent, theme.brightness)
           : Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: FluentRadius.controlBorder,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: FluentRadius.controlBorder,
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+          padding: const EdgeInsets.all(FluentSpacing.m),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: FluentRadius.controlBorder,
             border: Border.all(
               color: isSelected
                   ? accent.withValues(alpha: 0.55)
-                  : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
-              width: isSelected ? 1.4 : 1,
+                  : FluentStroke.card(theme.brightness),
+              width: FluentStroke.width,
             ),
           ),
           child: Row(
@@ -150,47 +143,45 @@ class _StyleOption extends StatelessWidget {
               // Fluent selection bar
               AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                width: 3.5,
+                width: 3,
                 height: isSelected ? 30 : 0,
                 decoration: BoxDecoration(
                   color: accent,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(1.5),
                 ),
               ),
-              SizedBox(width: isSelected ? 10 : 13.5),
+              SizedBox(width: isSelected ? FluentSpacing.s : FluentSpacing.m),
               Icon(icon, size: 20, color: accent),
-              const SizedBox(width: 10),
+              const SizedBox(width: FluentSpacing.m),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.w500,
-                      ),
+                      style:
+                          (isSelected ? FluentType.bodyStrong : FluentType.body)
+                              .copyWith(color: scheme.onSurface),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: FluentSpacing.xxs),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        height: 1.4,
-                        color: isDark ? Colors.white60 : Colors.grey.shade600,
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.65),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               Icon(
                 isSelected
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
-                size: 19,
-                color: isSelected ? accent : Colors.grey,
+                size: 20,
+                color: isSelected
+                    ? accent
+                    : scheme.onSurface.withValues(alpha: 0.38),
               ),
             ],
           ),

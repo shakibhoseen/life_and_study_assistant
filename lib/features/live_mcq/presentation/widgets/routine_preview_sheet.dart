@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/services/ai/models/parsed_routine_item.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 
 /// Shows what an import is about to save, before it saves anything.
 ///
@@ -77,8 +78,8 @@ class _RoutinePreviewSheetState extends State<RoutinePreviewSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
 
     final dates = _kept.map((e) => e.date).toList()..sort();
     final tracks = _kept.map((e) => e.trackName).toSet();
@@ -88,47 +89,61 @@ class _RoutinePreviewSheetState extends State<RoutinePreviewSheet> {
         maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
       decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: scheme.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
+        border: Border(
+          top: FluentStroke.side(brightness),
+          left: FluentStroke.side(brightness),
+          right: FluentStroke.side(brightness),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 8),
+            margin: const EdgeInsets.only(
+              top: FluentSpacing.m,
+              bottom: FluentSpacing.s,
+            ),
             width: 44,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade400,
-              borderRadius: BorderRadius.circular(2),
+              color: scheme.onSurface.withValues(alpha: 0.2),
+              borderRadius: FluentRadius.controlBorder,
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 4, 18, 10),
+            padding: const EdgeInsets.fromLTRB(
+              FluentSpacing.l,
+              FluentSpacing.xs,
+              FluentSpacing.l,
+              FluentSpacing.m,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.fact_check_outlined,
                       size: 19,
-                      color: Colors.indigo,
+                      color: scheme.primary,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Text(
                         'যোগ করার আগে দেখে নিন',
-                        style: TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black87,
+                        style: FluentType.bodyStrong.copyWith(
+                          fontSize: 15,
+                          color: scheme.onSurface,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: FluentSpacing.s),
                 Text(
                   _kept.isEmpty
                       ? (_isStudyPlan
@@ -137,18 +152,15 @@ class _RoutinePreviewSheetState extends State<RoutinePreviewSheet> {
                       : '${_bn(_kept.length)}টি ${_isStudyPlan ? "স্টাডি সেশন" : "পরীক্ষা"} · '
                             '${_dateLabel(dates.first)} – ${_dateLabel(dates.last)}'
                             '${tracks.length == 1 ? " · ${tracks.first}" : " · ${_bn(tracks.length)}টি ট্র্যাক"}',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    height: 1.45,
-                    color: isDark ? Colors.white70 : Colors.black54,
+                  style: FluentType.caption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: FluentSpacing.xs),
                 Text(
                   'উৎস: ${widget.sourceLabel}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? Colors.white38 : Colors.black38,
+                  style: FluentType.caption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.45),
                   ),
                 ),
               ],
@@ -158,41 +170,45 @@ class _RoutinePreviewSheetState extends State<RoutinePreviewSheet> {
           Flexible(
             child: _kept.isEmpty
                 ? Padding(
-                    padding: const EdgeInsets.all(28),
+                    padding: const EdgeInsets.all(FluentSpacing.xxl),
                     child: Text(
                       'সব সারি বাদ দেওয়া হয়েছে। বাতিল করে আবার চেষ্টা করুন।',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? Colors.white54 : Colors.black54,
+                      style: FluentType.body.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.65),
                       ),
                     ),
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
+                      horizontal: FluentSpacing.l,
+                      vertical: FluentSpacing.m,
                     ),
                     itemCount: _kept.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 7),
-                    itemBuilder: (context, i) => _buildRow(_kept[i], i, isDark),
+                    separatorBuilder: (_, _) => const SizedBox(height: FluentSpacing.s),
+                    itemBuilder: (context, i) => _buildRow(_kept[i], i),
                   ),
           ),
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 18),
+            padding: const EdgeInsets.fromLTRB(
+              FluentSpacing.l,
+              FluentSpacing.m,
+              FluentSpacing.l,
+              FluentSpacing.xl,
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      padding: const EdgeInsets.symmetric(vertical: FluentSpacing.m),
                     ),
                     child: const Text('বাতিল'),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   flex: 2,
                   child: FilledButton.icon(
@@ -204,7 +220,7 @@ class _RoutinePreviewSheetState extends State<RoutinePreviewSheet> {
                       '${_bn(_kept.length)}টি ${_isStudyPlan ? "সেশন যোগ করুন" : "যোগ করুন"}',
                     ),
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      padding: const EdgeInsets.symmetric(vertical: FluentSpacing.m),
                     ),
                   ),
                 ),
@@ -216,18 +232,27 @@ class _RoutinePreviewSheetState extends State<RoutinePreviewSheet> {
     );
   }
 
-  Widget _buildRow(ParsedRoutineItem item, int index, bool isDark) {
+  Widget _buildRow(ParsedRoutineItem item, int index) {
     final title = (item.title == null || item.title!.trim().isEmpty)
         ? '${item.subject} ${item.examType}'
         : item.title!;
 
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(11, 9, 5, 9),
+      padding: const EdgeInsets.fromLTRB(
+        FluentSpacing.m,
+        FluentSpacing.s,
+        FluentSpacing.xs,
+        FluentSpacing.s,
+      ),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
+        color: scheme.onSurface.withValues(alpha: 0.04),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? Colors.white12 : Colors.grey.shade300,
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Row(
@@ -242,24 +267,22 @@ class _RoutinePreviewSheetState extends State<RoutinePreviewSheet> {
                     Flexible(
                       child: Text(
                         _dateLabel(item.date),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.indigo,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.primary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: FluentSpacing.s),
                     Flexible(
                       child: Text(
                         // Left as written: "১০:০০ PM" is half one script and
                         // half the other, which reads worse than either.
                         item.examTime,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white38 : Colors.black45,
+                        style: FluentType.caption.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.45),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -267,25 +290,22 @@ class _RoutinePreviewSheetState extends State<RoutinePreviewSheet> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: FluentSpacing.xs),
                 Text(
                   title,
-                  style: TextStyle(
+                  style: FluentType.bodyStrong.copyWith(
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: scheme.onSurface,
                   ),
                 ),
                 if (item.topics.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: FluentSpacing.xxs),
                   Text(
                     item.topics.join(', '),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      height: 1.35,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                 ],
@@ -298,7 +318,7 @@ class _RoutinePreviewSheetState extends State<RoutinePreviewSheet> {
             icon: Icon(
               Icons.close,
               size: 17,
-              color: isDark ? Colors.white38 : Colors.black38,
+              color: scheme.onSurface.withValues(alpha: 0.45),
             ),
             onPressed: () => setState(() => _kept.removeAt(index)),
           ),

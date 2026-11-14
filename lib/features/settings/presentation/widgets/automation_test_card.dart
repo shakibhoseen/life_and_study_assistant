@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/services/ai/routine_parser_service.dart';
 import '../../../../core/services/attendance/packly_attendance_service.dart';
 import '../../../../core/services/attendance/steadfast_lunch_service.dart';
@@ -18,58 +19,60 @@ class AutomationTestCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsNotifierProvider).value;
     final officeSsid = settings?.officeWifiSsid ?? 'Office-WiFi';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(theme.brightness),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.developer_mode,
-                  color: isDark ? Colors.blueGrey.shade200 : Colors.blueGrey,
-                  size: 22,
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
+                Icon(Icons.developer_mode, color: scheme.primary, size: 20),
+                const SizedBox(width: FluentSpacing.s),
+                Expanded(
                   child: Text(
                     'Trigger Engine & Automation Lab',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               'Test background notifications, Wi-Fi trigger simulation, and notification tray action buttons directly on this device.',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.white70 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: FluentSpacing.s,
+              runSpacing: FluentSpacing.s,
               children: [
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.lunch_dining_rounded,
-                  color: Colors.deepOrange,
                   label: '🍱 Ping Lunch Portal',
                   onPressed: () async {
                     final res = await SteadfastLunchService.instance.ping();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          backgroundColor: res.success ? Colors.green.shade800 : Colors.red.shade800,
+                          backgroundColor: res.success
+                              ? Colors.green.shade800
+                              : Colors.red.shade800,
                           content: Text(res.message),
                         ),
                       );
@@ -77,36 +80,40 @@ class AutomationTestCard extends ConsumerWidget {
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.notifications_active,
-                  color: Colors.orange,
                   label: '🍱 Test 5 PM Lunch Reminder',
                   onPressed: () async {
                     await NotificationService.instance.requestPermissions();
-                    await NotificationService.instance.showSteadfastLunchReminderNotification(
-                      isTomorrowBooked: false,
-                      cutoff: '6:00 PM',
-                    );
+                    await NotificationService.instance
+                        .showSteadfastLunchReminderNotification(
+                          isTomorrowBooked: false,
+                          cutoff: '6:00 PM',
+                        );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('🍱 Fired 5:00 PM Lunch Reminder with "Book Tomorrow" button! Check tray.'),
+                          content: Text(
+                            '🍱 Fired 5:00 PM Lunch Reminder with "Book Tomorrow" button! Check tray.',
+                          ),
                         ),
                       );
                     }
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.swap_horiz,
-                  color: Colors.brown,
                   label: '🍱 Mock Toggle Tomorrow Lunch',
                   onPressed: () async {
-                    final res = await SteadfastLunchService.instance.toggleTomorrowMeal(forceSimulate: true);
+                    final res = await SteadfastLunchService.instance
+                        .toggleTomorrowMeal(forceSimulate: true);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          backgroundColor: res.success ? Colors.green.shade800 : Colors.red.shade800,
+                          backgroundColor: res.success
+                              ? Colors.green.shade800
+                              : Colors.red.shade800,
                           content: Text(res.message),
                         ),
                       );
@@ -114,17 +121,21 @@ class AutomationTestCard extends ConsumerWidget {
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.check_circle_outline,
-                  color: Colors.green,
                   label: '🧪 Mock Check-In (On-Time)',
                   onPressed: () async {
-                    final res = await PacklyAttendanceService.instance.checkIn(forceSimulate: true);
-                    await NotificationService.instance.showOfficeCheckInSuccessNotification(
-                      time: res.status?.checkInTime ?? '09:05 AM',
-                      isLate: false,
+                    final res = await PacklyAttendanceService.instance.checkIn(
+                      forceSimulate: true,
                     );
-                    await ref.read(settingsNotifierProvider.notifier).updateCheckInStatus('Punched In');
+                    await NotificationService.instance
+                        .showOfficeCheckInSuccessNotification(
+                          time: res.status?.checkInTime ?? '09:05 AM',
+                          isLate: false,
+                        );
+                    await ref
+                        .read(settingsNotifierProvider.notifier)
+                        .updateCheckInStatus('Punched In');
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -136,89 +147,98 @@ class AutomationTestCard extends ConsumerWidget {
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.warning_amber_rounded,
-                  color: Colors.orange,
                   label: '🧪 Mock Check-In (Late)',
                   onPressed: () async {
-                    await PacklyAttendanceService.instance.checkIn(forceSimulate: true);
-                    await NotificationService.instance.showOfficeCheckInSuccessNotification(
-                      time: '09:18 AM',
-                      isLate: true,
+                    await PacklyAttendanceService.instance.checkIn(
+                      forceSimulate: true,
                     );
-                    await ref.read(settingsNotifierProvider.notifier).updateCheckInStatus('Punched In');
+                    await NotificationService.instance
+                        .showOfficeCheckInSuccessNotification(
+                          time: '09:18 AM',
+                          isLate: true,
+                        );
+                    await ref
+                        .read(settingsNotifierProvider.notifier)
+                        .updateCheckInStatus('Punched In');
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           backgroundColor: Colors.orange.shade900,
-                          content: const Text('[TEST MODE] Simulated Check-In at 09:18 AM (LATE > 9:14 AM)'),
+                          content: const Text(
+                            '[TEST MODE] Simulated Check-In at 09:18 AM (LATE > 9:14 AM)',
+                          ),
                         ),
                       );
                     }
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.logout,
-                  color: Colors.teal,
                   label: '🧪 Mock Check-Out',
                   onPressed: () async {
-                    final res = await PacklyAttendanceService.instance.checkOut(forceSimulate: true);
-                    await NotificationService.instance.showOfficeCheckOutSuccessNotification(
-                      time: res.status?.checkOutTime ?? '06:05 PM',
+                    final res = await PacklyAttendanceService.instance.checkOut(
+                      forceSimulate: true,
                     );
+                    await NotificationService.instance
+                        .showOfficeCheckOutSuccessNotification(
+                          time: res.status?.checkOutTime ?? '06:05 PM',
+                        );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           backgroundColor: Colors.teal.shade800,
-                          content: Text('${res.message} (Check notification tray)'),
+                          content: Text(
+                            '${res.message} (Check notification tray)',
+                          ),
                         ),
                       );
                     }
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.alarm,
-                  color: Colors.redAccent,
                   label: '🚨 Test 9:15 AM Late Alarm',
                   onPressed: () async {
                     await NotificationService.instance.requestPermissions();
-                    await NotificationService.instance.showLateWarningNotification(
-                      minutesRemaining: 4,
-                    );
+                    await NotificationService.instance
+                        .showLateWarningNotification(minutesRemaining: 4);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('🚨 Fired 9:15 AM Late Warning Alarm with "Punch In Now" button! Check tray.'),
+                          content: Text(
+                            '🚨 Fired 9:15 AM Late Warning Alarm with "Punch In Now" button! Check tray.',
+                          ),
                         ),
                       );
                     }
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.alarm_off,
-                  color: Colors.deepOrange,
                   label: '🚨 Test 9:15 AM Cutoff Passed',
                   onPressed: () async {
                     await NotificationService.instance.requestPermissions();
-                    await NotificationService.instance.showLateWarningNotification(
-                      minutesRemaining: 0,
-                    );
+                    await NotificationService.instance
+                        .showLateWarningNotification(minutesRemaining: 0);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('🚨 Fired 9:15 AM Cutoff Passed penalty alert! Check tray.'),
+                          content: Text(
+                            '🚨 Fired 9:15 AM Cutoff Passed penalty alert! Check tray.',
+                          ),
                         ),
                       );
                     }
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.notifications_active,
-                  color: Colors.indigo,
                   label: 'Test Check-In Alert',
                   onPressed: () async {
                     await NotificationService.instance.requestPermissions();
@@ -239,9 +259,8 @@ class AutomationTestCard extends ConsumerWidget {
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.flash_on,
-                  color: Colors.amber,
                   label: 'Test 5s Office Flashcard',
                   onPressed: () async {
                     await NotificationService.instance.requestPermissions();
@@ -260,9 +279,8 @@ class AutomationTestCard extends ConsumerWidget {
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.psychology,
-                  color: Colors.purple,
                   label: 'Test Spaced Review Alert',
                   onPressed: () async {
                     await NotificationService.instance.requestPermissions();
@@ -283,9 +301,8 @@ class AutomationTestCard extends ConsumerWidget {
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.dinner_dining,
-                  color: Colors.deepOrange,
                   label: 'Test 4 PM Dinner Tray',
                   onPressed: () async {
                     await NotificationService.instance.requestPermissions();
@@ -303,9 +320,8 @@ class AutomationTestCard extends ConsumerWidget {
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.exit_to_app,
-                  color: Colors.purple,
                   label: 'Test Check-Out Alert',
                   onPressed: () async {
                     await NotificationService.instance.requestPermissions();
@@ -323,9 +339,8 @@ class AutomationTestCard extends ConsumerWidget {
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.wifi,
-                  color: Colors.teal,
                   label: 'Simulate Office Wi-Fi',
                   onPressed: () async {
                     await WifiMonitorService.instance
@@ -340,9 +355,8 @@ class AutomationTestCard extends ConsumerWidget {
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.wifi_off,
-                  color: Colors.redAccent,
                   label: 'Simulate Wi-Fi Disconnect',
                   onPressed: () async {
                     await WifiMonitorService.instance
@@ -357,9 +371,8 @@ class AutomationTestCard extends ConsumerWidget {
                   },
                 ),
                 _buildChip(
-                  isDark: isDark,
+                  context: context,
                   icon: Icons.share,
-                  color: Colors.deepPurple,
                   label: 'Simulate Shared Routine',
                   onPressed: () async {
                     const samplePost =
@@ -393,30 +406,29 @@ class AutomationTestCard extends ConsumerWidget {
     );
   }
 
+  /// One Fluent chip. These used to carry fifteen different accent colours;
+  /// in Fluent the accent marks the thing you act on, so they all share it.
   Widget _buildChip({
-    required bool isDark,
+    required BuildContext context,
     required IconData icon,
-    required Color color,
     required String label,
     required VoidCallback onPressed,
   }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return ActionChip(
-      avatar: Icon(icon, size: 16, color: isDark ? color : color),
+      avatar: Icon(icon, size: 16, color: scheme.primary),
       label: Text(
         label,
-        style: TextStyle(
-          fontSize: 12,
-          color: isDark ? Colors.white : Colors.black87,
-        ),
+        style: FluentType.caption.copyWith(color: scheme.onSurface),
       ),
-      backgroundColor: isDark
-          ? color.withValues(alpha: 0.18)
-          : color.withValues(alpha: 0.1),
+      backgroundColor: FluentLayer.subtle(scheme.primary, theme.brightness),
       side: BorderSide(
-        color: isDark
-            ? color.withValues(alpha: 0.3)
-            : color.withValues(alpha: 0.2),
+        color: FluentStroke.card(theme.brightness),
+        width: FluentStroke.width,
       ),
+      shape: RoundedRectangleBorder(borderRadius: FluentRadius.controlBorder),
       onPressed: onPressed,
     );
   }

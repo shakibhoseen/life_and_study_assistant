@@ -10,31 +10,39 @@ import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/export/app_export_service.dart';
 import '../../../../core/services/export/auto_backup_service.dart';
 import '../../../../core/services/export/preference_backup.dart';
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
+import '../../../../core/widgets/premium_ui_kit.dart';
 
 class BackupRestoreCard extends ConsumerWidget {
   const BackupRestoreCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader(
-          'Offline Data Backup & Restore',
-          Icons.cloud_sync_rounded,
-          Colors.teal.shade700,
+        const Padding(
+          padding: EdgeInsets.only(
+            bottom: FluentSpacing.s,
+            top: FluentSpacing.xs,
+          ),
+          child: PremiumSectionHeader(
+            icon: Icons.cloud_sync_rounded,
+            label: 'Offline Data Backup & Restore',
+          ),
         ),
         Card(
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-            ),
+            borderRadius: FluentRadius.cardBorder,
+            side: FluentStroke.side(theme.brightness),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: FluentSpacing.s),
             child: Column(
               children: [
                 // Where a silent failure becomes visible: the automatic backup
@@ -42,54 +50,52 @@ class BackupRestoreCard extends ConsumerWidget {
                 // anybody would notice it had stopped happening.
                 const _AutoBackupStatus(),
                 ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.teal.withValues(alpha: 0.2)
-                          : Colors.teal.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.download_rounded,
-                      color: isDark ? Colors.tealAccent : Colors.teal.shade700,
-                    ),
+                  leading: const PremiumIconBadge(
+                    icon: Icons.download_rounded,
+                    size: 40,
+                    iconSize: 20,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Export Study Backup (JSON)',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
+                    ),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'Save all Weak Topics, LiveMCQ routines & daily logs',
-                    style: TextStyle(fontSize: 12),
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
+                    ),
                   ),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                   onTap: () => _handleExportBackup(context, ref),
                 ),
-                const Divider(height: 1, indent: 64),
+                Divider(
+                  height: 1,
+                  indent: 64,
+                  color: FluentStroke.divider(theme.brightness),
+                ),
                 ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.indigo.withValues(alpha: 0.2)
-                          : const Color(0xFFEEF2FF),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.upload_rounded,
-                      color: isDark
-                          ? const Color(0xFFA5B4FC)
-                          : const Color(0xFF4338CA),
-                    ),
+                  leading: const PremiumIconBadge(
+                    icon: Icons.upload_rounded,
+                    size: 40,
+                    iconSize: 20,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Restore Study Data from Backup',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
+                    ),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'Paste JSON or select a backup file to merge',
-                    style: TextStyle(fontSize: 12),
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
+                    ),
                   ),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                   onTap: () => _handleRestoreBackup(context, ref),
@@ -99,30 +105,6 @@ class BackupRestoreCard extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSectionHeader(String title, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, top: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -141,7 +123,9 @@ class BackupRestoreCard extends ConsumerWidget {
       final logsCount = (parsed['daily_energy_logs'] as List?)?.length ?? 0;
 
       if (!context.mounted) return;
-      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final theme = Theme.of(context);
+      final scheme = theme.colorScheme;
+      final brightness = theme.brightness;
 
       showModalBottomSheet(
         context: context,
@@ -149,10 +133,13 @@ class BackupRestoreCard extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         builder: (ctx) => Container(
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF111827) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            color: scheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(FluentRadius.large),
+            ),
+            border: Border(top: FluentStroke.side(brightness)),
           ),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(FluentSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,45 +148,40 @@ class BackupRestoreCard extends ConsumerWidget {
                 child: Container(
                   width: 40,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
+                  margin: const EdgeInsets.only(bottom: FluentSpacing.l),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.grey.shade300,
+                    color: scheme.onSurface.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.teal.withValues(alpha: 0.2)
-                          : Colors.teal.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.cloud_done_rounded,
-                      color: isDark ? Colors.tealAccent : Colors.teal.shade700,
-                    ),
+                  const PremiumIconBadge(
+                    icon: Icons.cloud_done_rounded,
+                    size: 40,
+                    iconSize: 20,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: FluentSpacing.m),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Export Study Data Backup',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: FluentType.bodyStrong.copyWith(
+                            fontSize: 15,
+                            color: scheme.onSurface,
                           ),
                         ),
                         Text(
                           'Zero-loss offline JSON format',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.white70 : Colors.black54,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: FluentType.caption.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.65),
                           ),
                         ),
                       ],
@@ -207,16 +189,15 @@ class BackupRestoreCard extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E293B)
-                      : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
+                  color: scheme.onSurface.withValues(alpha: 0.04),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
-                    color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                    color: FluentStroke.card(brightness),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Column(
@@ -225,42 +206,53 @@ class BackupRestoreCard extends ConsumerWidget {
                       'Weak Topics & Syllabus',
                       '$topicsCount items',
                       Icons.playlist_add_check,
-                      isDark,
+                      ctx,
                     ),
-                    const Divider(height: 12),
+                    Divider(
+                      height: FluentSpacing.m,
+                      color: FluentStroke.divider(brightness),
+                    ),
                     _buildBackupStatRow(
                       'LiveMCQ Exam Schedules',
                       '$examsCount exams',
                       Icons.calendar_today_outlined,
-                      isDark,
+                      ctx,
                     ),
-                    const Divider(height: 12),
+                    Divider(
+                      height: FluentSpacing.m,
+                      color: FluentStroke.divider(brightness),
+                    ),
                     _buildBackupStatRow(
                       'Energy & Fatigue Logs',
                       '$logsCount logs',
                       Icons.bolt_outlined,
-                      isDark,
+                      ctx,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
               // Option 1: Save directly to Download folder (Recommended)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal.shade700,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: FluentSpacing.m,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
-                  icon: const Icon(Icons.download_rounded, size: 20),
-                  label: const Text(
+                  icon: const Icon(Icons.download_rounded, size: 18),
+                  label: Text(
                     'Download ফোল্ডারে সেভ করুন',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.bodyStrong,
                   ),
                   onPressed: () async {
                     Navigator.pop(ctx);
@@ -304,25 +296,29 @@ class BackupRestoreCard extends ConsumerWidget {
                   },
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.s),
               // Option 2 & 3: Save As (Custom Folder) & Copy JSON
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: FluentSpacing.m,
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                       ),
                       icon: const Icon(
                         Icons.create_new_folder_outlined,
                         size: 16,
                       ),
-                      label: const Text(
+                      label: Text(
                         'অন্য ফোল্ডার',
-                        style: TextStyle(fontSize: 12.5),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.caption,
                       ),
                       onPressed: () async {
                         Navigator.pop(ctx);
@@ -366,19 +362,23 @@ class BackupRestoreCard extends ConsumerWidget {
                       },
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: FluentSpacing.m,
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                       ),
                       icon: const Icon(Icons.copy_rounded, size: 16),
-                      label: const Text(
+                      label: Text(
                         'Copy JSON',
-                        style: TextStyle(fontSize: 12.5),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.caption,
                       ),
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: jsonString));
@@ -396,7 +396,7 @@ class BackupRestoreCard extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.s),
             ],
           ),
         ),
@@ -416,32 +416,33 @@ class BackupRestoreCard extends ConsumerWidget {
   Widget _buildBackupStatRow(
     String label,
     String value,
-    IconData icon, [
-    bool isDark = false,
-  ]) {
+    IconData icon,
+    BuildContext context,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 16,
-          color: isDark ? Colors.blueGrey.shade200 : Colors.blueGrey,
-        ),
-        const SizedBox(width: 8),
+        Icon(icon, size: 16, color: scheme.onSurface.withValues(alpha: 0.65)),
+        const SizedBox(width: FluentSpacing.s),
         Expanded(
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.white70 : const Color(0xFF334155),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: FluentType.caption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.65),
             ),
           ),
         ),
+        const SizedBox(width: FluentSpacing.s),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: FluentType.caption.copyWith(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
           ),
         ),
       ],
@@ -449,17 +450,23 @@ class BackupRestoreCard extends ConsumerWidget {
   }
 
   Future<void> _handleRestoreBackup(BuildContext context, WidgetRef ref) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF111827) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          color: scheme.surface,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(FluentRadius.large),
+          ),
+          border: Border(top: FluentStroke.side(brightness)),
         ),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(FluentSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,47 +475,40 @@ class BackupRestoreCard extends ConsumerWidget {
               child: Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
+                margin: const EdgeInsets.only(bottom: FluentSpacing.l),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.grey.shade300,
+                  color: scheme.onSurface.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.indigo.withValues(alpha: 0.2)
-                        : Colors.indigo.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.settings_backup_restore_rounded,
-                    color: isDark
-                        ? Colors.indigoAccent
-                        : Colors.indigo.shade700,
-                  ),
+                const PremiumIconBadge(
+                  icon: Icons.settings_backup_restore_rounded,
+                  size: 40,
+                  iconSize: 20,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Restore from Backup',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.bodyStrong.copyWith(
+                          fontSize: 15,
+                          color: scheme.onSurface,
                         ),
                       ),
                       Text(
                         'Import without losing existing data',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white70 : Colors.black54,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.caption.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.65),
                         ),
                       ),
                     ],
@@ -516,30 +516,30 @@ class BackupRestoreCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
             ListTile(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: isDark ? Colors.white12 : Colors.grey.shade200,
-                ),
+                borderRadius: FluentRadius.cardBorder,
+                side: FluentStroke.side(brightness),
               ),
-              leading: CircleAvatar(
-                backgroundColor: isDark
-                    ? Colors.indigo.withValues(alpha: 0.3)
-                    : const Color(0xFFEEF2FF),
-                child: Icon(
-                  Icons.paste_rounded,
-                  color: isDark ? Colors.indigoAccent : Colors.indigo,
-                ),
+              leading: const PremiumIconBadge(
+                icon: Icons.paste_rounded,
+                size: 40,
+                iconSize: 20,
               ),
-              title: const Text(
+              title: Text(
                 'Paste JSON from Clipboard',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
               ),
-              subtitle: const Text(
+              subtitle: Text(
                 'Directly read from clipboard',
-                style: TextStyle(fontSize: 12),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: FluentType.caption.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
               trailing: const Icon(Icons.arrow_forward_ios, size: 14),
               onTap: () async {
@@ -564,30 +564,30 @@ class BackupRestoreCard extends ConsumerWidget {
                 }
               },
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.s),
             ListTile(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: isDark ? Colors.white12 : Colors.grey.shade200,
-                ),
+                borderRadius: FluentRadius.cardBorder,
+                side: FluentStroke.side(brightness),
               ),
-              leading: CircleAvatar(
-                backgroundColor: isDark
-                    ? Colors.green.withValues(alpha: 0.25)
-                    : const Color(0xFFF0FDF4),
-                child: Icon(
-                  Icons.file_open_rounded,
-                  color: isDark ? Colors.greenAccent : Colors.green,
-                ),
+              leading: const PremiumIconBadge(
+                icon: Icons.file_open_rounded,
+                size: 40,
+                iconSize: 20,
               ),
-              title: const Text(
+              title: Text(
                 'Pick JSON Backup File',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
               ),
-              subtitle: const Text(
+              subtitle: Text(
                 'Select a .json file from phone storage',
-                style: TextStyle(fontSize: 12),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: FluentType.caption.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
               trailing: const Icon(Icons.arrow_forward_ios, size: 14),
               onTap: () async {
@@ -605,7 +605,7 @@ class BackupRestoreCard extends ConsumerWidget {
                 }
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
           ],
         ),
       ),
@@ -642,18 +642,17 @@ class BackupRestoreCard extends ConsumerWidget {
       final mistakesCount = result['mistakes'] ?? 0;
 
       if (!context.mounted) return;
-      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final scheme = Theme.of(context).colorScheme;
 
       showDialog(
         context: context,
         builder: (dCtx) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
           title: const Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 28),
-              SizedBox(width: 10),
+              // Green here is status: the restore succeeded.
+              Icon(Icons.check_circle, color: Color(0xFF10B981), size: 24),
+              SizedBox(width: FluentSpacing.s),
               Flexible(
                 child: Text(
                   'Restore Complete!',
@@ -669,12 +668,9 @@ class BackupRestoreCard extends ConsumerWidget {
             children: [
               Text(
                 'আপনার ব্যাকআপ সফলভাবে রিস্টোর হয়েছে:',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? Colors.white70 : Colors.black87,
-                ),
+                style: FluentType.body.copyWith(color: scheme.onSurface),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               Text('• $topicsCount টি Weak Topics যুক্ত বা আপডেট হয়েছে'),
               Text('• $examsCount টি LiveMCQ পরীক্ষার শিডিউল রিস্টোর হয়েছে'),
               Text('• $logsCount টি Daily Energy Logs সিঙ্ক হয়েছে'),
@@ -686,22 +682,28 @@ class BackupRestoreCard extends ConsumerWidget {
                 Text('• ${result['drill_records']} টি ড্রিলের রেকর্ড ফিরেছে'),
               if ((result['spaced_reviews'] ?? 0) > 0)
                 Text('• ${result['spaced_reviews']} টি রিভিশন কার্ড ফিরেছে'),
-              if (restoredPrefs > 0)
-                Text('• $restoredPrefs টি সেটিংস ফিরেছে'),
-              const SizedBox(height: 8),
+              if (restoredPrefs > 0) Text('• $restoredPrefs টি সেটিংস ফিরেছে'),
+              const SizedBox(height: FluentSpacing.s),
               // Said every time: it is the one thing a restore cannot do for
               // you, and finding out later costs a failed scan.
-              const Text(
+              Text(
                 'API key ব্যাকআপ ফাইলে রাখা হয় না — সেটি আবার বসাতে হবে।',
-                style: TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic),
+                style: FluentType.caption.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: scheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
             ],
           ),
           actions: [
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo.shade700,
-                foregroundColor: Colors.white,
+                elevation: 0,
+                backgroundColor: scheme.primary,
+                foregroundColor: scheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                ),
               ),
               onPressed: () => Navigator.pop(dCtx),
               child: const Text('ঠিক আছে'),
@@ -735,7 +737,7 @@ class _AutoBackupStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
 
     return FutureBuilder<DateTime?>(
       future: AutoBackupService.lastRunAt(),
@@ -752,34 +754,40 @@ class _AutoBackupStatus extends StatelessWidget {
                   '${at.minute.toString().padLeft(2, '0')}';
 
         return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          padding: const EdgeInsets.fromLTRB(
+            FluentSpacing.l,
+            FluentSpacing.s,
+            FluentSpacing.l,
+            FluentSpacing.xs,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
                 at == null ? Icons.schedule : Icons.verified_outlined,
-                size: 15,
-                color: at == null ? Colors.orange : Colors.teal,
+                size: 16,
+                // Amber warns no backup has run yet; green confirms one has.
+                color: at == null
+                    ? const Color(0xFFF59E0B)
+                    : const Color(0xFF10B981),
               ),
-              const SizedBox(width: 7),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       text,
-                      style: TextStyle(
-                        fontSize: 11.5,
+                      style: FluentType.caption.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: scheme.onSurface,
                       ),
                     ),
                     Text(
                       'Download/${AppExportService.defaultSubfolder} ফোল্ডারে, '
                       'দিনে একবার, শেষ ${AutoBackupService.keepCount}টি রাখা হয়',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        color: isDark ? Colors.white38 : Colors.black45,
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ],

@@ -33,7 +33,10 @@ import '../widgets/exam_source_badge.dart';
 import '../widgets/live_mcq_timeline_filter_bar.dart';
 import '../widgets/live_mcq_track_filter_bar.dart';
 import '../widgets/study_sheet_summary_card.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/widgets/animated_premium_background.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
+import '../../../../core/widgets/premium_ui_kit.dart';
 import '../widgets/test_paper_card_summary.dart';
 import '../widgets/voice_mistake_bottom_sheet.dart';
 import '../widgets/exam_topic_checklist_widget.dart';
@@ -82,29 +85,23 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'LiveMCQ Hub',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: FluentType.subtitle.copyWith(fontSize: 18),
         ),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.quiz_outlined,
-              color: Color(0xFFF59E0B),
-            ),
+            icon: const Icon(Icons.quiz_outlined),
             tooltip: 'বিসিএস প্রশ্ন ব্যাংক প্র্যাকটিস',
             onPressed: () => _openBcsQuestionBank(context),
           ),
           IconButton(
-            icon: const Icon(
-              Icons.document_scanner_outlined,
-              color: Color(0xFF10B981),
-            ),
+            icon: const Icon(Icons.document_scanner_outlined),
             tooltip: 'প্রশ্ন ব্যাংক স্ক্যান করে এক্সাম তৈরি',
             onPressed: () => QuestionBankScannerModal.show(context),
           ),
           IconButton(
-            icon: const Icon(Icons.mic, color: Color(0xFF6366F1)),
+            icon: const Icon(Icons.mic),
             tooltip: 'Voice Mistake Note & Floating Bubble',
             onPressed: () => VoiceMistakeBottomSheet.show(context),
           ),
@@ -152,35 +149,56 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               children: [
                 FloatingActionButton.small(
                   heroTag: 'fab_scan_qb_mcq',
-                  backgroundColor: const Color(0xFF10B981),
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                    side: FluentStroke.side(Theme.of(context).brightness),
+                  ),
                   tooltip: 'প্রশ্ন ব্যাংক স্ক্যান করে এক্সাম',
                   onPressed: () => QuestionBankScannerModal.show(context),
                   child: const Icon(Icons.document_scanner_outlined, size: 20),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 FloatingActionButton.small(
                   heroTag: 'fab_screenshot_mistake_mcq',
-                  backgroundColor: const Color(0xFF0284C7),
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                    side: FluentStroke.side(Theme.of(context).brightness),
+                  ),
                   tooltip: 'LiveMCQ স্ক্রিনশট থেকে ভুল সেভ',
                   onPressed: () => _pickAndParseScreenshotMistake(context),
                   child: const Icon(Icons.add_photo_alternate_rounded, size: 20),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 FloatingActionButton.small(
                   heroTag: 'fab_voice_bubble_mcq',
-                  backgroundColor: const Color(0xFF6366F1),
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                    side: FluentStroke.side(Theme.of(context).brightness),
+                  ),
                   tooltip: 'Voice Mistake Note & Floating Bubble',
                   onPressed: () => VoiceMistakeBottomSheet.show(context),
                   child: const Icon(Icons.mic, size: 20),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 FloatingActionButton.extended(
                   heroTag: 'fab_add_exam_mcq',
+                  elevation: 0,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                   icon: const Icon(Icons.add),
-                  label: const Text('Add Exam'),
+                  label: Text('Add Exam', style: FluentType.bodyStrong),
                   onPressed: () => _showAddExamDialog(context),
                 ),
               ],
@@ -261,17 +279,24 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                       Icon(
                         Icons.event_busy,
                         size: 64,
-                        color: Colors.grey.shade400,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.35),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: FluentSpacing.m),
                       Text(
                         selectedTrack == 'All'
                             ? 'No LiveMCQ exams scheduled'
                             : 'No exams found under "$selectedTrack"',
-                        style: const TextStyle(color: Colors.grey),
+                        textAlign: TextAlign.center,
+                        style: FluentType.body.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.65),
+                        ),
                       ),
                       if (selectedTrack != 'All') ...[
-                        const SizedBox(height: 8),
+                        const SizedBox(height: FluentSpacing.s),
                         TextButton(
                           onPressed: () {
                             ref
@@ -400,49 +425,52 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
     required String selectedTrack,
     required String searchQuery,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
 
     if (currentFilter == ExamTimelineFilter.upcoming) {
       if (upcomingExams.isEmpty) {
         return Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(FluentSpacing.xxl),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   Icons.check_circle_outline,
                   size: 56,
-                  color: Colors.teal.shade400,
+                  color: const Color(0xFF10B981),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: FluentSpacing.m),
                 Text(
                   'No upcoming exams right now!',
-                  style: TextStyle(
+                  textAlign: TextAlign.center,
+                  style: FluentType.subtitle.copyWith(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                    color: scheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: FluentSpacing.xs),
                 Text(
                   pastExams.isNotEmpty
                       ? '${pastExams.length} past exams have already occurred or passed.'
                       : 'Add an exam or import a routine to get started.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: isDark ? const Color(0xFF94A3B8) : Colors.grey,
+                  style: FluentType.caption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
                 if (pastExams.isNotEmpty) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: FluentSpacing.l),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? const Color(0xFF3B82F6)
-                          : const Color(0xFF1E3A8A),
-                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
                     ),
                     icon: const Icon(Icons.history, size: 16),
                     label: Text('View Past Exams (${pastExams.length})'),
@@ -468,81 +496,68 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           }
           // Bottom archived hint banner
           return Container(
-            margin: const EdgeInsets.only(top: 8, bottom: 20),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            margin: const EdgeInsets.only(
+              top: FluentSpacing.s,
+              bottom: FluentSpacing.xl,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.m,
+              vertical: FluentSpacing.m,
+            ),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(12),
+              color: theme.cardTheme.color ?? theme.cardColor,
+              borderRadius: FluentRadius.cardBorder,
               border: Border.all(
-                color: isDark
-                    ? const Color(0xFF334155)
-                    : const Color(0xFFE2E8F0),
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
+              boxShadow: FluentElevation.card(brightness),
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.history,
-                    size: 16,
-                    color: isDark
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFF64748B),
-                  ),
+                PremiumIconBadge(
+                  icon: Icons.history,
+                  size: 28,
+                  iconSize: 16,
+                  color: scheme.onSurface.withValues(alpha: 0.65),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         '${pastExams.length} past exam(s) archived',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? Colors.white
-                              : const Color(0xFF334155),
+                        style: FluentType.bodyStrong.copyWith(
+                          fontSize: 13,
+                          color: scheme.onSurface,
                         ),
                       ),
                       Text(
                         'Older dates are archived so you can focus on upcoming tests.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF64748B),
+                        style: FluentType.caption.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.65),
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: FluentSpacing.s),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isDark
-                        ? const Color(0xFF0F172A)
-                        : Colors.white,
-                    foregroundColor: isDark
-                        ? const Color(0xFF93C5FD)
-                        : const Color(0xFF1E3A8A),
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: scheme.primary,
                     elevation: 0,
-                    side: BorderSide(
-                      color: isDark
-                          ? const Color(0xFF334155)
-                          : const Color(0xFFCBD5E1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
                     ),
+                    side: FluentStroke.side(brightness),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                      horizontal: FluentSpacing.m,
+                      vertical: FluentSpacing.s,
                     ),
-                    textStyle: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
+                    textStyle: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   onPressed: () {
@@ -568,17 +583,17 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               Icon(
                 Icons.history_toggle_off,
                 size: 56,
-                color: Colors.grey.shade400,
+                color: scheme.onSurface.withValues(alpha: 0.35),
               ),
-              const SizedBox(height: 12),
-              const Text(
+              const SizedBox(height: FluentSpacing.m),
+              Text(
                 'No past exams found',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
+                textAlign: TextAlign.center,
+                style: FluentType.bodyStrong.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.65),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: FluentSpacing.s),
               TextButton(
                 onPressed: () {
                   ref
@@ -598,38 +613,28 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
         itemBuilder: (context, index) {
           if (index == 0) {
             return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.s,
+              ),
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF881337).withValues(alpha: 0.25)
-                    : const Color(0xFFFFF1F2),
-                borderRadius: BorderRadius.circular(10),
+                color: FluentLayer.subtle(scheme.primary, brightness),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
-                  color: isDark
-                      ? const Color(0xFFBE123C)
-                      : const Color(0xFFFECDD3),
+                  color: FluentStroke.card(brightness),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: isDark
-                        ? const Color(0xFFFB7185)
-                        : const Color(0xFFBE123C),
-                  ),
-                  const SizedBox(width: 8),
+                  Icon(Icons.info_outline, size: 16, color: scheme.primary),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       'Showing ${pastExams.length} past exams (most recent first). Tap "Drill Topic" to practice.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: isDark
-                            ? const Color(0xFFFECDD3)
-                            : const Color(0xFF9F1239),
-                        fontWeight: FontWeight.w500,
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.85),
                       ),
                     ),
                   ),
@@ -651,17 +656,17 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               Icon(
                 Icons.fact_check_outlined,
                 size: 56,
-                color: Colors.grey.shade400,
+                color: scheme.onSurface.withValues(alpha: 0.35),
               ),
-              const SizedBox(height: 12),
-              const Text(
+              const SizedBox(height: FluentSpacing.m),
+              Text(
                 'No completed exams yet',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
+                textAlign: TextAlign.center,
+                style: FluentType.bodyStrong.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.65),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: FluentSpacing.s),
               TextButton(
                 onPressed: () {
                   ref
@@ -681,7 +686,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
         itemBuilder: (context, index) {
           if (index == 0) {
             return const Padding(
-              padding: EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: FluentSpacing.m),
               child: ExamScoreAnalyticsCard(),
             );
           }
@@ -697,18 +702,16 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
         if (upcomingExams.isNotEmpty) ...[
           _buildSectionHeaderCard(
             title: '🎯 Upcoming & Active Exams (${upcomingExams.length})',
-            color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF1E3A8A),
-            bgColor: const Color(0xFFEFF6FF),
+            color: scheme.primary,
           ),
           ...upcomingExams.map((e) => _buildExamCard(e, todayStart)),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.l),
         ],
         if (pastExams.isNotEmpty || completedExams.isNotEmpty) ...[
           _buildSectionHeaderCard(
             title:
                 '📜 Past & Completed Exams (${pastExams.length + completedExams.length})',
-            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            bgColor: const Color(0xFFF1F5F9),
+            color: scheme.onSurface.withValues(alpha: 0.45),
           ),
           ...pastExams.map((e) => _buildExamCard(e, todayStart)),
           ...completedExams.map((e) => _buildExamCard(e, todayStart)),
@@ -720,36 +723,43 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
   Widget _buildSectionHeaderCard({
     required String title,
     required Color color,
-    required Color bgColor,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final effectiveBg = isDark ? color.withValues(alpha: 0.15) : bgColor;
-    final effectiveBorderColor = isDark
-        ? color.withValues(alpha: 0.4)
-        : color.withValues(alpha: 0.2);
-    final effectiveTextColor = isDark ? Colors.white : color;
+    final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10, top: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: effectiveBg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: effectiveBorderColor),
+    return Padding(
+      padding: const EdgeInsets.only(
+        bottom: FluentSpacing.s,
+        top: FluentSpacing.xs,
       ),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 12.5,
-          fontWeight: FontWeight.bold,
-          color: effectiveTextColor,
-        ),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 20,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(1.5),
+            ),
+          ),
+          const SizedBox(width: FluentSpacing.m),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildExamCard(ExamSchedule exam, DateTime todayStart) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
     final examDateOnly = DateTime(
       exam.examDate.year,
       exam.examDate.month,
@@ -760,27 +770,39 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
     final isTomorrow = daysDiff == 1;
     final isPast = daysDiff < 0;
 
+    // Status accents. Green and amber stay because they carry meaning here:
+    // done vs. happening today. Everything else is neutral.
+    const doneAccent = Color(0xFF10B981);
+    const todayAccent = Color(0xFFF59E0B);
+    final baseSurface = theme.cardTheme.color ?? theme.cardColor;
+
     return Card(
-      elevation: isToday ? 2.5 : 1,
-      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: FluentSpacing.m),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: FluentRadius.cardBorder,
         side: BorderSide(
           color: exam.completedStatus
-              ? (isDark ? const Color(0xFF059669) : const Color(0xFF86EFAC))
+              ? doneAccent.withValues(alpha: 0.45)
               : isToday
-              ? const Color(0xFFF59E0B)
-              : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-          width: isToday ? 1.6 : 1,
+              ? todayAccent.withValues(alpha: 0.55)
+              : FluentStroke.card(brightness),
+          width: FluentStroke.width,
         ),
       ),
       color: isToday
-          ? (isDark ? const Color(0xFF261D11) : const Color(0xFFFFFDF5))
+          ? Color.alphaBlend(
+              FluentLayer.subtle(todayAccent, brightness),
+              baseSurface,
+            )
           : (exam.completedStatus
-                ? (isDark ? const Color(0xFF062315) : const Color(0xFFF0FDF4))
-                : (isDark ? const Color(0xFF111827) : Colors.white)),
+                ? Color.alphaBlend(
+                    FluentLayer.subtle(doneAccent, brightness),
+                    baseSurface,
+                  )
+                : baseSurface),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(FluentSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -789,151 +811,36 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               children: [
                 // Track Pill
                 Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getTrackBackgroundColor(exam.trackName, isDark),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: _getTrackColor(exam.trackName)
-                            .withValues(alpha: isDark ? 0.6 : 0.35),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.bookmark_outline,
-                          size: 11,
-                          color: isDark
-                              ? const Color(0xFF93C5FD)
-                              : _getTrackColor(exam.trackName),
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            exam.trackName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? const Color(0xFFE2E8F0)
-                                  : _getTrackColor(exam.trackName),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: PremiumTag(
+                    label: exam.trackName,
+                    icon: Icons.bookmark_outline,
+                    color: _getTrackColor(exam.trackName),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
 
                 // Status Badge (Today / Tomorrow / in X d / Passed / Done)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: exam.completedStatus
-                        ? (isDark
-                              ? const Color(0xFF064E3B)
-                              : const Color(0xFFDCFCE7))
+                Flexible(
+                  child: PremiumTag(
+                    label: exam.completedStatus
+                        ? 'Done ✓'
                         : isToday
-                        ? (isDark
-                              ? const Color(0xFF78350F)
-                              : const Color(0xFFFEF3C7))
+                        ? 'TODAY 🎯'
                         : isTomorrow
-                        ? (isDark
-                              ? const Color(0xFF312E81)
-                              : const Color(0xFFEEF2FF))
+                        ? 'Tomorrow ⏳'
                         : isPast
-                        ? (isDark
-                              ? const Color(0xFF881337)
-                              : const Color(0xFFFFF1F2))
-                        : (isDark
-                              ? const Color(0xFF1E3A8A)
-                              : const Color(0xFFEFF6FF)),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: exam.completedStatus
-                          ? (isDark
-                                ? const Color(0xFF059669)
-                                : const Color(0xFF86EFAC))
-                          : isToday
-                          ? (isDark
-                                ? const Color(0xFFD97706)
-                                : const Color(0xFFFDE68A))
-                          : isTomorrow
-                          ? (isDark
-                                ? const Color(0xFF6366F1)
-                                : const Color(0xFFC7D2FE))
-                          : isPast
-                          ? (isDark
-                                ? const Color(0xFFE11D48)
-                                : const Color(0xFFFECDD3))
-                          : (isDark
-                                ? const Color(0xFF3B82F6)
-                                : const Color(0xFFBFDBFE)),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isToday && !exam.completedStatus) ...[
-                        Icon(
-                          Icons.stars,
-                          size: 11,
-                          color: isDark
-                              ? const Color(0xFFFCD34D)
-                              : const Color(0xFFB45309),
-                        ),
-                        const SizedBox(width: 3),
-                      ],
-                      Flexible(
-                        child: Text(
-                          exam.completedStatus
-                              ? 'Done ✓'
-                              : isToday
-                              ? 'TODAY 🎯'
-                              : isTomorrow
-                              ? 'Tomorrow ⏳'
-                              : isPast
-                              ? 'Passed (${-daysDiff}d ago)'
-                              : 'in $daysDiff d',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: exam.completedStatus
-                                ? (isDark
-                                      ? const Color(0xFF6EE7B7)
-                                      : const Color(0xFF15803D))
-                                : isToday
-                                ? (isDark
-                                      ? const Color(0xFFFCD34D)
-                                      : const Color(0xFFB45309))
-                                : isTomorrow
-                                ? (isDark
-                                      ? const Color(0xFFA5B4FC)
-                                      : const Color(0xFF4338CA))
-                                : isPast
-                                ? (isDark
-                                      ? const Color(0xFFFDA4AF)
-                                      : const Color(0xFFBE123C))
-                                : (isDark
-                                      ? const Color(0xFF93C5FD)
-                                      : const Color(0xFF1D4ED8)),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                        ? 'Passed (${-daysDiff}d ago)'
+                        : 'in $daysDiff d',
+                    icon: isToday && !exam.completedStatus
+                        ? Icons.stars
+                        : null,
+                    color: exam.completedStatus
+                        ? doneAccent
+                        : isToday
+                        ? todayAccent
+                        : isPast
+                        ? scheme.error
+                        : scheme.primary,
                   ),
                 ),
                 const Spacer(),
@@ -941,20 +848,17 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 // Calendar date text
                 Text(
                   _formatExamDate(exam.examDate),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
                     color: isToday
-                        ? (isDark
-                              ? const Color(0xFFFCD34D)
-                              : const Color(0xFFB45309))
-                        : (isDark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600),
+                        ? todayAccent
+                        : scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
 
-                const SizedBox(width: 4),
+                const SizedBox(width: FluentSpacing.xs),
                 // Popup menu
                 SizedBox(
                   width: 24,
@@ -1139,30 +1043,29 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
             Row(
               children: [
                 InkWell(
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: FluentRadius.controlBorder,
                   onTap: () => _copyExamRef(exam.id),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 2,
+                      horizontal: FluentSpacing.xs,
+                      vertical: FluentSpacing.xxs,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.copy,
-                          size: 11,
-                          color: isDark ? Colors.white30 : Colors.black26,
+                          size: 12,
+                          color: scheme.onSurface.withValues(alpha: 0.45),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: FluentSpacing.xs),
                         Flexible(
                           child: Text(
                             EntityRef(EntityKind.exam, exam.id).tag,
-                            style: TextStyle(
-                              fontSize: 10.5,
+                            style: FluentType.caption.copyWith(
                               fontFamily: 'monospace',
                               letterSpacing: 0.4,
-                              color: isDark ? Colors.white38 : Colors.black38,
+                              color: scheme.onSurface.withValues(alpha: 0.45),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1189,20 +1092,17 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
             // Exam Title
             Text(
               exam.title,
-              style: TextStyle(
+              style: FluentType.bodyStrong.copyWith(
                 fontSize: 15,
-                fontWeight: FontWeight.bold,
                 decoration: exam.completedStatus
                     ? TextDecoration.lineThrough
                     : null,
                 color: exam.completedStatus
-                    ? Colors.grey.shade600
-                    : (Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : const Color(0xFF0F172A)),
+                    ? scheme.onSurface.withValues(alpha: 0.45)
+                    : scheme.onSurface,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.s),
 
             // Topics Covered with interactive checklist
             ExamTopicChecklistWidget(exam: exam),
@@ -1241,27 +1141,28 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               }
 
               return Padding(
-                padding: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.only(top: FluentSpacing.s),
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(FluentSpacing.s),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF1E293B)
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
+                    color: scheme.onSurface.withValues(alpha: 0.04),
+                    borderRadius: FluentRadius.cardBorder,
+                    border: Border.all(
+                      color: FluentStroke.card(brightness),
+                      width: FluentStroke.width,
+                    ),
                   ),
                   child: Text(
                     summaryText,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white70 : Colors.black54,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                 ),
               );
             }(),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
 
             // Bottom Quick Action Bar: Drill Topic & Done toggle
             Row(
@@ -1269,31 +1170,20 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                      horizontal: FluentSpacing.m,
+                      vertical: FluentSpacing.xs + 2,
                     ),
                     visualDensity: VisualDensity.compact,
-                    foregroundColor:
-                        Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF93C5FD)
-                        : const Color(0xFF1E3A8A),
-                    side: BorderSide(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white12
-                          : const Color(0xFFCBD5E1),
-                    ),
+                    foregroundColor: scheme.primary,
+                    side: FluentStroke.side(brightness),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   icon: const Icon(Icons.psychology, size: 15),
-                  label: const Text(
-                    'Drill Topic',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  label: Text('Drill Topic', style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  )),
                   onPressed: () {
                     List<QuizQuestion>? customQuestions;
                     if (exam.resourceSummary != null &&
@@ -1320,34 +1210,24 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     );
                   },
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: FluentSpacing.s),
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 6,
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xs + 2,
                     ),
                     visualDensity: VisualDensity.compact,
-                    foregroundColor: isDark
-                        ? const Color(0xFFFBBF24)
-                        : const Color(0xFFD97706),
-                    side: BorderSide(
-                      color: isDark
-                          ? const Color(0xFFB45309)
-                          : const Color(0xFFFDE68A),
-                    ),
+                    foregroundColor: scheme.onSurface.withValues(alpha: 0.75),
+                    side: FluentStroke.side(brightness),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   icon: const Icon(Icons.timer_outlined, size: 14),
-                  label: const Text(
-                    'টাইমার',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  label: Text('টাইমার', style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  )),
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -1358,47 +1238,35 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   },
                 ),
                 if (isPast || exam.completedStatus) ...[
-                  const SizedBox(width: 6),
+                  const SizedBox(width: FluentSpacing.s),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xs + 2,
                       ),
                       visualDensity: VisualDensity.compact,
-                      foregroundColor: isDark
-                          ? const Color(0xFFA5B4FC)
-                          : const Color(0xFF6366F1),
-                      side: BorderSide(
-                        color: isDark
-                            ? const Color(0xFF4338CA)
-                            : const Color(0xFFC7D2FE),
+                      foregroundColor: scheme.primary,
+                      side: FluentStroke.side(brightness),
+                      backgroundColor: FluentLayer.subtle(
+                        scheme.primary,
+                        brightness,
                       ),
-                      backgroundColor: isDark
-                          ? const Color(0xFF312E81).withValues(alpha: 0.3)
-                          : const Color(0xFFEEF2FF),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     icon: const Icon(Icons.mic, size: 14),
-                    label: const Text(
-                      'Voice Mistake',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    label: Text('Voice Mistake', style: FluentType.caption
+                        .copyWith(fontWeight: FontWeight.w600)),
                     onPressed: () => VoiceMistakeBottomSheet.show(context),
                   ),
                 ],
-                const SizedBox(width: 6),
+                const SizedBox(width: FluentSpacing.s),
                 IconButton(
                   style: IconButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    foregroundColor: isDark
-                        ? const Color(0xFFA5B4FC)
-                        : const Color(0xFF6366F1),
+                    foregroundColor: scheme.primary,
                   ),
                   icon: const Icon(Icons.calendar_month, size: 18),
                   tooltip: 'Sync to Calendar with 30m alert',
@@ -1410,8 +1278,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   TextButton.icon(
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xs + 2,
                       ),
                       visualDensity: VisualDensity.compact,
                       foregroundColor: isDark
@@ -1419,26 +1287,25 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                           : const Color(0xFF047857),
                     ),
                     icon: const Icon(Icons.check, size: 15),
-                    label: const Text(
-                      'Mark Done',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    label: Text('Mark Done', style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                    )),
                     onPressed: () {
                       _showScoreDialog(context, exam);
                     },
                   )
                 else
-                  Text(
-                    'Score: ${exam.score != null ? "${exam.score!.toStringAsFixed(1)} marks" : "Completed ✓"}',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: isDark
-                          ? const Color(0xFF34D399)
-                          : const Color(0xFF047857),
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      'Score: ${exam.score != null ? "${exam.score!.toStringAsFixed(1)} marks" : "Completed ✓"}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.caption.copyWith(
+                        color: isDark
+                            ? const Color(0xFF34D399)
+                            : const Color(0xFF047857),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
               ],
@@ -1475,25 +1342,19 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
     showDialog(
       context: context,
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final scheme = Theme.of(ctx).colorScheme;
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: FluentRadius.cardBorder,
           ),
           title: Row(
             children: [
-              const Icon(
-                Icons.menu_book_rounded,
-                color: Color(0xFF1E3A8A),
-              ),
-              const SizedBox(width: 8),
+              Icon(Icons.menu_book_rounded, color: scheme.primary),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   exam.title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: FluentType.bodyStrong.copyWith(fontSize: 15),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -1506,36 +1367,26 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               children: [
                 Text(
                   'সম্পূর্ণ সিলেবাস ও টপিক (Original Topics):',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFF64748B),
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: FluentSpacing.s),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(FluentSpacing.m),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF1E293B)
-                        : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(8),
+                    color: scheme.onSurface.withValues(alpha: 0.04),
+                    borderRadius: FluentRadius.cardBorder,
                     border: Border.all(
-                      color: isDark
-                          ? const Color(0xFF334155)
-                          : const Color(0xFFCBD5E1),
+                      color: FluentStroke.card(Theme.of(ctx).brightness),
+                      width: FluentStroke.width,
                     ),
                   ),
                   child: SelectableText(
                     'Topics: ${exam.topicsCovered}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.45,
-                      color: isDark ? Colors.white : const Color(0xFF1E293B),
-                    ),
+                    style: FluentType.body.copyWith(color: scheme.onSurface),
                   ),
                 ),
               ],
@@ -1575,11 +1426,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              exam.title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            const SizedBox(height: 12),
+            Text(exam.title, style: FluentType.bodyStrong),
+            const SizedBox(height: FluentSpacing.m),
             TextField(
               controller: scoreController,
               keyboardType: const TextInputType.numberWithOptions(
@@ -1629,7 +1477,6 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
   }
 
   void _showChangeTrackDialog(BuildContext context, ExamSchedule exam) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final distinctTracks = ref.read(distinctTracksStreamProvider).value ?? [];
     final suggestions = <String>{
       ...distinctTracks,
@@ -1648,19 +1495,19 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
+          final scheme = Theme.of(ctx).colorScheme;
           return AlertDialog(
-            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: FluentRadius.cardBorder,
             ),
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.bookmark_outline, color: Color(0xFF2563EB)),
-                SizedBox(width: 8),
+                Icon(Icons.bookmark_outline, color: scheme.primary),
+                const SizedBox(width: FluentSpacing.s),
                 Flexible(
                   child: Text(
                     'ট্র্যাক পরিবর্তন করুন',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: FluentType.subtitle.copyWith(fontSize: 16),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1674,49 +1521,53 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 children: [
                   Text(
                     'পরীক্ষা: ${exam.title}',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: isDark ? Colors.white70 : Colors.black54,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
+                  const SizedBox(height: FluentSpacing.m),
+                  Text(
                     'ট্র্যাক নির্বাচন করুন:',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    style: FluentType.bodyStrong.copyWith(fontSize: 13),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.s),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.m,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: isDark ? Colors.white24 : Colors.grey.shade300,
+                        color: FluentStroke.card(Theme.of(ctx).brightness),
+                        width: FluentStroke.width,
                       ),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         isExpanded: true,
                         value: isCustom ? 'custom' : selected,
-                        dropdownColor: isDark
-                            ? const Color(0xFF1E293B)
-                            : Colors.white,
+                        dropdownColor: scheme.surface,
                         items: [
                           ...suggestions.map(
                             (t) => DropdownMenuItem(
                               value: t,
                               child: Text(
                                 t,
-                                style: const TextStyle(fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: FluentType.body.copyWith(fontSize: 13),
                               ),
                             ),
                           ),
-                          const DropdownMenuItem(
+                          DropdownMenuItem(
                             value: 'custom',
                             child: Text(
                               '+ নতুন ট্র্যাক লিখুন (Custom)',
-                              style: TextStyle(
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: FluentType.body.copyWith(
                                 fontSize: 13,
-                                color: Colors.blueAccent,
+                                color: scheme.primary,
                               ),
                             ),
                           ),
@@ -1736,7 +1587,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     ),
                   ),
                   if (isCustom) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: FluentSpacing.m),
                     TextField(
                       controller: customController,
                       autofocus: true,
@@ -1744,8 +1595,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                         labelText: 'নতুন ট্র্যাকের নাম (যেমন: Self Test)',
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                          horizontal: FluentSpacing.m,
+                          vertical: FluentSpacing.m,
                         ),
                       ),
                     ),
@@ -1806,30 +1657,26 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
   Color _getTrackColor(String track) =>
       LiveMcqTrackFilterBar.getTrackColor(track);
 
-  Color _getTrackBackgroundColor(String track, [bool isDark = false]) =>
-      LiveMcqTrackFilterBar.getTrackBackgroundColor(track, isDark);
-
   Widget _buildSummarizerTab() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'পড়ার নোট ও PDF থেকে সারাংশ',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: FluentType.subtitle.copyWith(fontSize: 16),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: FluentSpacing.s),
           Text(
             'পড়ার নোট বা স্টাডি শিটের লেখা পেস্ট করুন। ৫টি গুরুত্বপূর্ণ পয়েন্ট, '
             'বিগত পরীক্ষার প্রশ্ন আর মনে রাখার কৌশল বেরিয়ে আসবে।',
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.white70 : Colors.black54,
+            style: FluentType.caption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.l),
           TextField(
             controller: _subjectController,
             decoration: const InputDecoration(
@@ -1838,7 +1685,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               isDense: true,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
           TextField(
             controller: _studySheetController,
             maxLines: 5,
@@ -1862,11 +1709,13 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Text(
                     'AI পড়ছে… ${_summarySeconds}s',
-                    style: const TextStyle(fontSize: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.body.copyWith(fontSize: 13),
                   ),
                 ),
                 TextButton.icon(
@@ -1874,7 +1723,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   icon: const Icon(Icons.stop_circle_outlined, size: 18),
                   label: const Text('থামাও'),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.red.shade700,
+                    foregroundColor: scheme.error,
                   ),
                 ),
               ],
@@ -1890,18 +1739,17 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
             ),
           if (!_isSummarizing && _studySheetLength > 0)
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.only(top: FluentSpacing.s),
               child: Text(
                 _studySheetLength > GeminiPrompts.largeStudySheetChars
                     ? 'লেখাটা বড় — $_studySheetLength অক্ষর, পুরোটাই পাঠানো হবে'
                     : '$_studySheetLength অক্ষর',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark ? Colors.white54 : Colors.black45,
+                style: FluentType.caption.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.55),
                 ),
               ),
             ),
-          const SizedBox(height: 20),
+          const SizedBox(height: FluentSpacing.xl),
           if (_summaryResult != null) _buildSummaryDisplay(_summaryResult!),
         ],
       ),
@@ -2000,23 +1848,20 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 children: [
                   Text(
                     'Program / Track:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(ctx).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black87,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(ctx).colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.s),
                   DropdownButtonFormField<String>(
                     initialValue: selectedTrack,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 10,
+                        horizontal: FluentSpacing.m,
+                        vertical: FluentSpacing.m,
                       ),
                     ),
                     items: defaultTracks
@@ -2025,7 +1870,9 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                             value: t,
                             child: Text(
                               t,
-                              style: const TextStyle(fontSize: 13),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: FluentType.body.copyWith(fontSize: 13),
                             ),
                           ),
                         )
@@ -2039,7 +1886,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     },
                   ),
                   if (isCustom) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: FluentSpacing.s),
                     TextField(
                       controller: customTrackController,
                       decoration: const InputDecoration(
@@ -2049,7 +1896,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                       ),
                     ),
                   ],
-                  const SizedBox(height: 12),
+                  const SizedBox(height: FluentSpacing.m),
                   TextField(
                     controller: titleController,
                     decoration: const InputDecoration(
@@ -2058,7 +1905,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                       isDense: true,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.m),
                   TextField(
                     controller: topicsController,
                     decoration: const InputDecoration(
@@ -2067,7 +1914,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                       isDense: true,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.m),
                   TextField(
                     controller: summaryController,
                     decoration: const InputDecoration(
@@ -2076,12 +1923,14 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                       isDense: true,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: FluentSpacing.m),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(
                       'Exam Date: ${selectedDate.toIso8601String().substring(0, 10)}',
-                      style: const TextStyle(fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.body.copyWith(fontSize: 13),
                     ),
                     trailing: const Icon(Icons.calendar_today, size: 20),
                     onTap: () async {
@@ -2166,14 +2015,18 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           final isCustom = selectedTrack == 'Custom Track...';
 
           return AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.auto_awesome, color: Colors.indigo, size: 22),
-                SizedBox(width: 8),
+                Icon(
+                  Icons.auto_awesome,
+                  color: Theme.of(ctx).colorScheme.primary,
+                  size: 22,
+                ),
+                const SizedBox(width: FluentSpacing.s),
                 Flexible(
                   child: Text(
                     'Import Routine (AI / Text)',
-                    style: TextStyle(fontSize: 16),
+                    style: FluentType.subtitle.copyWith(fontSize: 16),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -2187,23 +2040,20 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 children: [
                   Text(
                     'Program / Routine Track:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(ctx).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black87,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(ctx).colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.s),
                   DropdownButtonFormField<String>(
                     initialValue: selectedTrack,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
+                        horizontal: FluentSpacing.m,
+                        vertical: FluentSpacing.s,
                       ),
                     ),
                     items: trackOptions
@@ -2212,7 +2062,9 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                             value: t,
                             child: Text(
                               t,
-                              style: const TextStyle(fontSize: 12),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: FluentType.caption,
                             ),
                           ),
                         )
@@ -2236,16 +2088,18 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                       ),
                     ),
                   ],
-                  const SizedBox(height: 12),
+                  const SizedBox(height: FluentSpacing.m),
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(FluentSpacing.m),
                     decoration: BoxDecoration(
-                      color: Theme.of(ctx).colorScheme.primaryContainer
-                          .withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(8),
+                      color: FluentLayer.subtle(
+                        Theme.of(ctx).colorScheme.primary,
+                        Theme.of(ctx).brightness,
+                      ),
+                      borderRadius: FluentRadius.cardBorder,
                       border: Border.all(
-                        color: Theme.of(ctx).colorScheme.primary
-                            .withValues(alpha: 0.25),
+                        color: FluentStroke.card(Theme.of(ctx).brightness),
+                        width: FluentStroke.width,
                       ),
                     ),
                     child: Column(
@@ -2258,44 +2112,44 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                               size: 16,
                               color: Theme.of(ctx).colorScheme.primary,
                             ),
-                            const SizedBox(width: 6),
-                            const Expanded(
+                            const SizedBox(width: FluentSpacing.s),
+                            Expanded(
                               child: Text(
                                 'ChatGPT / Claude দিয়ে রুটিন আনবেন?',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                                style: FluentType.caption.copyWith(
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: FluentSpacing.xs),
                         Text(
                           'প্রম্পট কপি করে ChatGPT বা Claude-এ আপনার রুটিন (PDF/ছবি/টেক্সট) সহ দিন। AI যে JSON কোড দেবে তা নিচে পেস্ট করে সেভ করুন। এতে কোনো টোকেন লিমিট নেই!',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Theme.of(ctx).brightness == Brightness.dark
-                                ? Colors.white70
-                                : Colors.black87,
+                          style: FluentType.caption.copyWith(
+                            color: Theme.of(ctx).colorScheme.onSurface
+                                .withValues(alpha: 0.65),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: FluentSpacing.s),
                         Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
+                          spacing: FluentSpacing.s,
+                          runSpacing: FluentSpacing.s,
                           children: [
                             OutlinedButton.icon(
                               icon: const Icon(Icons.copy, size: 14),
-                              label: const Text(
+                              label: Text(
                                 'Copy AI Prompt',
-                                style: TextStyle(fontSize: 11),
+                                style: FluentType.caption,
                               ),
                               style: OutlinedButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: FluentRadius.controlBorder,
+                                ),
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
+                                  horizontal: FluentSpacing.m,
+                                  vertical: FluentSpacing.xs,
                                 ),
                               ),
                               onPressed: () {
@@ -2317,15 +2171,18 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                             ),
                             OutlinedButton.icon(
                               icon: const Icon(Icons.content_paste, size: 14),
-                              label: const Text(
+                              label: Text(
                                 'Paste from Clipboard',
-                                style: TextStyle(fontSize: 11),
+                                style: FluentType.caption,
                               ),
                               style: OutlinedButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: FluentRadius.controlBorder,
+                                ),
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
+                                  horizontal: FluentSpacing.m,
+                                  vertical: FluentSpacing.xs,
                                 ),
                               ),
                               onPressed: () async {
@@ -2345,17 +2202,15 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: FluentSpacing.m),
                   Text(
                     'Paste Facebook post text, notice routine, or AI JSON below:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(ctx).brightness == Brightness.dark
-                          ? Colors.white70
-                          : Colors.black54,
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(ctx).colorScheme.onSurface
+                          .withValues(alpha: 0.65),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.m),
                   TextField(
                     controller: textController,
                     maxLines: 6,
@@ -2364,16 +2219,16 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: FluentSpacing.s),
                   TextButton.icon(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.flash_on,
                       size: 16,
-                      color: Colors.amber,
+                      color: Theme.of(ctx).colorScheme.primary,
                     ),
-                    label: const Text(
+                    label: Text(
                       'Insert Multi-Track Sample Routine',
-                      style: TextStyle(fontSize: 11),
+                      style: FluentType.caption,
                     ),
                     onPressed: () {
                       textController.text =
@@ -2477,16 +2332,24 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
   }
 
   void _showPdfOptionsSheet(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        final brightness = Theme.of(ctx).brightness;
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(FluentSpacing.xl),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            color: scheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(FluentRadius.large),
+            ),
+            border: Border(
+              top: FluentStroke.side(brightness),
+              left: FluentStroke.side(brightness),
+              right: FluentStroke.side(brightness),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2496,34 +2359,27 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 child: Container(
                   width: 40,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
+                  margin: const EdgeInsets.only(bottom: FluentSpacing.l),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
+                    color: scheme.onSurface.withValues(alpha: 0.2),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
               ),
-              const Text(
+              Text(
                 'PDF ইম্পোর্ট অপশন',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: FluentType.subtitle.copyWith(fontSize: 16),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: FluentSpacing.l),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.calendar_month,
-                    color: Color(0xFF6366F1),
-                  ),
+                leading: PremiumIconBadge(
+                  icon: Icons.calendar_month,
+                  color: scheme.primary,
                 ),
-                title: const Text(
+                title: Text(
                   'পরীক্ষার রুটিন PDF',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: FluentType.bodyStrong,
                 ),
                 subtitle: const Text(
                   'LiveMCQ বা কোচিং রুটিন থেকে পরীক্ষার তালিকা ও শিডিউল সেভ করুন',
@@ -2533,23 +2389,19 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   _pickAndParsePdf(context);
                 },
               ),
-              const Divider(height: 20),
+              Divider(
+                height: FluentSpacing.xl,
+                color: FluentStroke.divider(brightness),
+              ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.menu_book_rounded,
-                    color: Color(0xFF10B981),
-                  ),
+                leading: PremiumIconBadge(
+                  icon: Icons.menu_book_rounded,
+                  color: scheme.primary,
                 ),
-                title: const Text(
+                title: Text(
                   'পড়ার রিসোর্স / লেকচার শিট PDF',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: FluentType.bodyStrong,
                 ),
                 subtitle: const Text(
                   'PDF পড়ে তাৎক্ষণিক ১০টি প্রশ্নে পরীক্ষা দিন (Active Recall)',
@@ -2949,19 +2801,20 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
       technicalDetails = error.toString();
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.error_outline, color: Colors.redAccent, size: 24),
-            SizedBox(width: 8),
+            Icon(Icons.error_outline, color: scheme.error, size: 24),
+            const SizedBox(width: FluentSpacing.s),
             Expanded(
               child: Text(
                 'রুটিন নিষ্কাশনে ত্রুটি / Diagnostic',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: FluentType.subtitle.copyWith(fontSize: 16),
               ),
             ),
           ],
@@ -2973,26 +2826,20 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
             children: [
               Text(
                 userMessage,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: FluentType.bodyStrong.copyWith(fontSize: 13),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
 
               // Diagnostic Info Card
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E293B)
-                      : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(8),
+                  color: scheme.onSurface.withValues(alpha: 0.04),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
-                    color: isDark
-                        ? const Color(0xFF334155)
-                        : const Color(0xFFE2E8F0),
+                    color: FluentStroke.card(brightness),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Column(
@@ -3000,98 +2847,92 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   children: [
                     Text(
                       '🔍 বিস্তারিত কারণ / Diagnostic Info:',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
                     if (model != null)
                       Text(
                         '• Model: $model',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                        style: FluentType.caption.copyWith(
+                          color: scheme.onSurface
+                              .withValues(alpha: 0.65),
                         ),
                       ),
                     if (finishReason != null)
                       Text(
                         '• Finish Reason: $finishReason'
                         '${finishReason == "maxTokens" ? " (টোকেন লিমিটের কারণে আউটপুট কেটে গেছে)" : ""}',
-                        style: TextStyle(
-                          fontSize: 11,
+                        style: FluentType.caption.copyWith(
                           color: finishReason == "maxTokens"
                               ? Colors.amber.shade700
-                              : (isDark ? Colors.white60 : Colors.black54),
+                              : scheme.onSurface
+                                    .withValues(alpha: 0.65),
                           fontWeight: finishReason == "maxTokens"
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                         ),
                       ),
                     if (tokens != null && tokens > 0)
                       Text(
                         '• Tokens Used: $tokens',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                        style: FluentType.caption.copyWith(
+                          color: scheme.onSurface
+                              .withValues(alpha: 0.65),
                         ),
                       ),
                     if (technicalDetails != null &&
                         technicalDetails.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: FluentSpacing.xs),
                       Text(
                         '• Details: $technicalDetails',
-                        style: TextStyle(
-                          fontSize: 10.5,
+                        style: FluentType.caption.copyWith(
                           fontFamily: 'monospace',
-                          color: isDark
-                              ? Colors.red.shade300
-                              : Colors.red.shade800,
+                          color: scheme.error,
                         ),
                       ),
                     ],
                     if (isTooLarge) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: FluentSpacing.xs),
                       Text(
                         '⚠️ ফাইল সাইজ Gemini API লিমিটের বেশি। PDF ফাইলটি ছোট করুন বা ChatGPT ব্যবহার করুন।',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
                           color: Colors.amber.shade700,
                         ),
                       ),
                     ],
                     if (rawSnippet != null && rawSnippet.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: FluentSpacing.s),
                       Text(
                         'Gemini Raw Output:',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface
+                              .withValues(alpha: 0.65),
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: FluentSpacing.xxs),
                       Container(
                         constraints: const BoxConstraints(maxHeight: 120),
                         width: double.infinity,
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.all(FluentSpacing.s),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.black26 : Colors.white,
-                          borderRadius: BorderRadius.circular(4),
+                          color: scheme.surface,
+                          borderRadius: FluentRadius.controlBorder,
                           border: Border.all(
-                            color: isDark
-                                ? Colors.white12
-                                : const Color(0xFFCBD5E1),
+                            color: FluentStroke.card(brightness),
+                            width: FluentStroke.width,
                           ),
                         ),
                         child: SingleChildScrollView(
                           child: SelectableText(
                             rawSnippet,
-                            style: const TextStyle(
-                              fontSize: 10,
+                            style: FluentType.caption.copyWith(
                               fontFamily: 'monospace',
+                              fontSize: 10,
                             ),
                           ),
                         ),
@@ -3101,32 +2942,33 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               // Helpful Recommendation Card
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
-                  color: Colors.indigo.withValues(alpha: isDark ? 0.2 : 0.08),
-                  borderRadius: BorderRadius.circular(8),
+                  color: FluentLayer.subtle(scheme.primary, brightness),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
-                    color: Colors.indigo.withValues(alpha: isDark ? 0.4 : 0.2),
+                    color: FluentStroke.card(brightness),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.lightbulb_outline,
                       size: 16,
-                      color: Colors.amber,
+                      color: scheme.primary,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Text(
                         '💡 বড় বা দীর্ঘমেয়াদী রুটিনের (যেমন ১৩৫ দিনের বিসিএস রুটিন) জন্য ChatGPT বা Claude দিয়ে রুটিন নিয়ে আসুন। নিচের বাটন চেপে প্রম্পট কপি করে ChatGPT-তে আপনার রুটিন দিলেই কোনো টোকেন লিমিট ছাড়া শতভাগ নির্ভুল ফলাফল পাওয়া যাবে!',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white70 : Colors.black87,
+                        style: FluentType.caption.copyWith(
+                          color: scheme.onSurface
+                              .withValues(alpha: 0.65),
                         ),
                       ),
                     ),
@@ -3139,9 +2981,9 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
         actions: [
           OutlinedButton.icon(
             icon: const Icon(Icons.copy, size: 14),
-            label: const Text(
+            label: Text(
               'Copy ChatGPT Prompt',
-              style: TextStyle(fontSize: 11),
+              style: FluentType.caption,
             ),
             onPressed: () {
               Clipboard.setData(
@@ -3222,20 +3064,17 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
             children: [
               Text(
                 '${exams.length}টি পরীক্ষার রুটিন ক্যালেন্ডার ফাইলে এক্সপোর্ট হয়েছে!',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: FluentType.bodyStrong.copyWith(color: Colors.white),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: FluentSpacing.xs),
               Text(
                 '📁 $displayLoc',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                style: FluentType.caption.copyWith(color: Colors.white70),
               ),
-              const SizedBox(height: 2),
-              const Text(
+              const SizedBox(height: FluentSpacing.xxs),
+              Text(
                 '💡 ফোনের Download ফোল্ডারে ফাইলটি পাবেন।',
-                style: TextStyle(color: Colors.tealAccent, fontSize: 11),
+                style: FluentType.caption.copyWith(color: Colors.white70),
               ),
             ],
           ),

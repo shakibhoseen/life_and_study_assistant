@@ -11,6 +11,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/tables/weak_topics_table.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/quiz_generator_service.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
 import '../../../../core/widgets/celebration_confetti.dart';
@@ -26,6 +27,32 @@ import '../../domain/weak_topic_signal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum QuizMode { practice, realExam }
+
+/// The three status colours the quiz actually means something by: a right
+/// answer, a wrong one, and one that was skipped.
+///
+/// They are kept here rather than typed at each call site so the same green
+/// and the same red are used everywhere, and so each has a light-mode and a
+/// dark-mode value that genuinely reads on that surface — the previous mix of
+/// `Colors.green.shade900` and `Colors.greenAccent` did not.
+Color _correctColor(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFF4ADE80)
+    : const Color(0xFF15803D);
+
+Color _wrongColor(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFF87171)
+    : const Color(0xFFB91C1C);
+
+Color _skippedColor(BuildContext context) =>
+    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55);
+
+/// Amber is the explanation/warning accent, legible on both themes.
+Color _noticeColor(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFFCD34D)
+    : const Color(0xFFB45309);
 
 class QuizDrillModal extends ConsumerStatefulWidget {
   final String topic;
@@ -270,22 +297,25 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
           context: context,
           builder: (dCtx) => AlertDialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: FluentRadius.cardBorder,
             ),
-            title: const Row(
+            title: Row(
               children: [
                 Icon(
                   Icons.warning_amber_rounded,
-                  color: Colors.amber,
-                  size: 24,
+                  color: Colors.amber.shade700,
+                  size: 20,
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Flexible(
                   child: Text(
                     'সাবমিট নিশ্চিতকরণ',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: FluentType.subtitle.copyWith(
+                      fontSize: 16,
+                      color: Theme.of(dCtx).colorScheme.onSurface,
+                    ),
                   ),
                 ),
               ],
@@ -294,7 +324,10 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
               'আপনার এখনো $unansweredটি প্রশ্নের উত্তর বাকি রয়েছে।\n\n'
               'নেগেটিভ মার্কিং (-০.৫০) এড়াতে স্কিপ করতে পারেন অথবা উত্তর দিয়ে সাবমিট করতে পারেন।\n\n'
               'আপনি কি নিশ্চিত এখনই পরীক্ষা জমা দিতে চান?',
-              style: const TextStyle(fontSize: 13),
+              style: FluentType.body.copyWith(
+                color: Theme.of(dCtx).colorScheme.onSurface
+                    .withValues(alpha: 0.80),
+              ),
             ),
             actions: [
               TextButton(
@@ -303,8 +336,12 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4F46E5),
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(dCtx).colorScheme.primary,
+                  foregroundColor: Theme.of(dCtx).colorScheme.onPrimary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                 ),
                 onPressed: () => Navigator.pop(dCtx, true),
                 child: const Text('হ্যাঁ, সাবমিট করুন'),
@@ -511,11 +548,15 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
         content: Row(
           children: [
             Icon(Icons.check_circle, color: Colors.white, size: 18),
-            SizedBox(width: 8),
+            SizedBox(width: FluentSpacing.s),
             Expanded(
               child: Text(
                 'সম্পূর্ণ কুইজ ও উত্তরপত্র ক্লিপবোর্ডে কপি হয়েছে! অন্য AI-তে পেস্ট করতে পারেন।',
-                style: TextStyle(fontSize: 12.5),
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.45,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
@@ -611,48 +652,64 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
     final isRealExam = _mode == QuizMode.realExam;
+    final headerAccent = isRealExam ? _wrongColor(context) : scheme.primary;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.90,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: scheme.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
+        border: Border(
+          top: BorderSide(
+            color: FluentStroke.card(brightness),
+            width: FluentStroke.width,
+          ),
+        ),
       ),
       child: Column(
         children: [
           // Drag handle
           Container(
-            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            margin: const EdgeInsets.only(
+              top: FluentSpacing.m,
+              bottom: FluentSpacing.s,
+            ),
             width: 44,
             height: 4,
             decoration: BoxDecoration(
-              color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+              color: scheme.onSurface.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
 
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.l,
+              vertical: FluentSpacing.xs + 2,
+            ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(7),
+                  padding: const EdgeInsets.all(FluentSpacing.s),
                   decoration: BoxDecoration(
-                    color: isRealExam
-                        ? Colors.red.withValues(alpha: 0.12)
-                        : Colors.indigo.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
+                    color: FluentLayer.subtle(headerAccent, brightness),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   child: Icon(
                     isRealExam ? Icons.timer_rounded : Icons.psychology,
-                    color: isRealExam ? Colors.red.shade600 : Colors.indigo,
+                    color: headerAccent,
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -661,19 +718,19 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                         isRealExam
                             ? 'রিয়েল এক্সাম (BCS স্ট্যান্ডার্ড)'
                             : 'LiveMCQ ড্রিল ও প্র্যাকটিস',
-                        style: TextStyle(
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.bodyStrong.copyWith(
                           fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.indigo.shade900,
+                          color: scheme.onSurface,
                         ),
                       ),
                       Text(
                         '${widget.subject} • ${widget.topic}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.grey.shade400 : Colors.black54,
+                        style: FluentType.caption.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.65),
                         ),
-                      overflow: TextOverflow.ellipsis,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -682,58 +739,60 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                     !_isFinished &&
                     !_isLoading &&
                     _questions.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _remainingSeconds < 60
-                          ? Colors.red.withValues(alpha: 0.15)
-                          : const Color(0xFF6366F1).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _remainingSeconds < 60
-                            ? Colors.red.shade400
-                            : const Color(0xFF6366F1).withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.timer_outlined,
-                          size: 13,
-                          color: _remainingSeconds < 60
-                              ? Colors.red
-                              : const Color(0xFF6366F1),
+                  Builder(
+                    builder: (chipCtx) {
+                      // Under a minute the timer turns into the error colour:
+                      // it is the one moment the clock outranks the accent.
+                      final urgent = _remainingSeconds < 60;
+                      final timerColor = urgent
+                          ? _wrongColor(chipCtx)
+                          : scheme.primary;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: FluentSpacing.s,
+                          vertical: FluentSpacing.xs,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${(_remainingSeconds ~/ 60).toString().padLeft(2, '0')}:${(_remainingSeconds % 60).toString().padLeft(2, '0')}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: _remainingSeconds < 60
-                                ? Colors.red
-                                : const Color(0xFF6366F1),
+                        decoration: BoxDecoration(
+                          color: FluentLayer.subtle(timerColor, brightness),
+                          borderRadius: FluentRadius.controlBorder,
+                          border: Border.all(
+                            color: timerColor.withValues(alpha: 0.4),
+                            width: FluentStroke.width,
                           ),
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.timer_outlined,
+                              size: 13,
+                              color: timerColor,
+                            ),
+                            const SizedBox(width: FluentSpacing.xs),
+                            Text(
+                              '${(_remainingSeconds ~/ 60).toString().padLeft(2, '0')}:${(_remainingSeconds % 60).toString().padLeft(2, '0')}',
+                              style: FluentType.caption.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: timerColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: FluentSpacing.xs + 2),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.white,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                        horizontal: FluentSpacing.m,
+                        vertical: FluentSpacing.xs + 2,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                       elevation: 0,
                     ),
@@ -741,12 +800,13 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                     child: const Text(
                       'জমা দিন',
                       style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        height: 1.45,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: FluentSpacing.xs),
                 ],
                 IconButton(
                   icon: const Icon(Icons.close, size: 20),
@@ -759,14 +819,21 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
           // Mode Toggle Pills (Shown before exam completes)
           if (!_isFinished && !_isLoading && _questions.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.l,
+                vertical: FluentSpacing.xs,
+              ),
               child: Container(
-                padding: const EdgeInsets.all(3),
+                padding: const EdgeInsets.all(FluentSpacing.xs),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E293B)
-                      : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(10),
+                  color: scheme.onSurface.withValues(
+                    alpha: isDark ? 0.06 : 0.04,
+                  ),
+                  borderRadius: FluentRadius.controlBorder,
+                  border: Border.all(
+                    color: FluentStroke.card(brightness),
+                    width: FluentStroke.width,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -774,24 +841,22 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                       child: GestureDetector(
                         onTap: () => _switchMode(QuizMode.practice),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: FluentSpacing.xs + 2,
+                          ),
                           decoration: BoxDecoration(
                             color: _mode == QuizMode.practice
-                                ? (isDark
-                                      ? const Color(0xFF334155)
-                                      : Colors.white)
+                                ? scheme.surface
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: FluentRadius.controlBorder,
+                            border: _mode == QuizMode.practice
+                                ? Border.all(
+                                    color: FluentStroke.card(brightness),
+                                    width: FluentStroke.width,
+                                  )
+                                : null,
                             boxShadow: _mode == QuizMode.practice
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.06,
-                                      ),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 1),
-                                    ),
-                                  ]
+                                ? FluentElevation.card(brightness)
                                 : null,
                           ),
                           child: Row(
@@ -801,25 +866,24 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                                 Icons.menu_book_rounded,
                                 size: 14,
                                 color: _mode == QuizMode.practice
-                                    ? const Color(0xFF6366F1)
-                                    : Colors.grey,
+                                    ? scheme.primary
+                                    : scheme.onSurface.withValues(alpha: 0.55),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: FluentSpacing.xs + 2),
                               Flexible(
                                 child: Text(
                                   'প্র্যাকটিস মোড',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11.5,
+                                  style: FluentType.caption.copyWith(
                                     fontWeight: _mode == QuizMode.practice
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
                                     color: _mode == QuizMode.practice
-                                        ? (isDark
-                                              ? Colors.white
-                                              : const Color(0xFF1E293B))
-                                        : Colors.grey,
+                                        ? scheme.onSurface
+                                        : scheme.onSurface.withValues(
+                                            alpha: 0.55,
+                                          ),
                                   ),
                                 ),
                               ),
@@ -832,24 +896,22 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                       child: GestureDetector(
                         onTap: () => _switchMode(QuizMode.realExam),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: FluentSpacing.xs + 2,
+                          ),
                           decoration: BoxDecoration(
                             color: _mode == QuizMode.realExam
-                                ? (isDark
-                                      ? const Color(0xFF334155)
-                                      : Colors.white)
+                                ? scheme.surface
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: FluentRadius.controlBorder,
+                            border: _mode == QuizMode.realExam
+                                ? Border.all(
+                                    color: FluentStroke.card(brightness),
+                                    width: FluentStroke.width,
+                                  )
+                                : null,
                             boxShadow: _mode == QuizMode.realExam
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.06,
-                                      ),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 1),
-                                    ),
-                                  ]
+                                ? FluentElevation.card(brightness)
                                 : null,
                           ),
                           child: Row(
@@ -859,25 +921,24 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                                 Icons.timer_rounded,
                                 size: 14,
                                 color: _mode == QuizMode.realExam
-                                    ? Colors.red.shade600
-                                    : Colors.grey,
+                                    ? _wrongColor(context)
+                                    : scheme.onSurface.withValues(alpha: 0.55),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: FluentSpacing.xs + 2),
                               Flexible(
                                 child: Text(
                                   'রিয়েল এক্সাম (-০.৫০)',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11.5,
+                                  style: FluentType.caption.copyWith(
                                     fontWeight: _mode == QuizMode.realExam
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
                                     color: _mode == QuizMode.realExam
-                                        ? (isDark
-                                              ? Colors.white
-                                              : const Color(0xFF1E293B))
-                                        : Colors.grey,
+                                        ? scheme.onSurface
+                                        : scheme.onSurface.withValues(
+                                            alpha: 0.55,
+                                          ),
                                   ),
                                 ),
                               ),
@@ -892,7 +953,11 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             ),
           ],
 
-          const Divider(height: 1),
+          Divider(
+            height: FluentStroke.width,
+            thickness: FluentStroke.width,
+            color: FluentStroke.divider(brightness),
+          ),
 
           Expanded(
             child: _isLoading
@@ -918,7 +983,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
         AiKeyMissingNotice.looksLikeKeyProblem(_loadError!)) {
       // A missing key is a thing to go and do, not a failure to report.
       return Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(FluentSpacing.xl),
         child: AiKeyMissingNotice(
           message: _loadError!,
           onRetry: _loadQuestions,
@@ -927,23 +992,31 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     }
     if (_loadError != null) {
       return Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(FluentSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.cloud_off_rounded,
               size: 36,
-              color: Colors.orange.shade700,
+              color: _noticeColor(context),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
             Text(
               _loadError!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13.5),
+              style: FluentType.body.copyWith(
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.80),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
             FilledButton.icon(
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                ),
+              ),
               onPressed: _loadQuestions,
               icon: const Icon(Icons.refresh, size: 18),
               label: const Text('আবার চেষ্টা'),
@@ -962,13 +1035,18 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
       _currentIndex = 0;
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
     final question = _questions[_currentIndex];
     final progress = (_currentIndex + 1) / _questions.length;
     final isRealExam = _mode == QuizMode.realExam;
+    final correctColor = _correctColor(context);
+    final wrongColor = _wrongColor(context);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -979,7 +1057,8 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _questions.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                separatorBuilder: (_, _) =>
+                    const SizedBox(width: FluentSpacing.xs + 2),
                 itemBuilder: (ctx, i) {
                   final isCurrent = i == _currentIndex;
                   final isAnswered = _userAnswers.containsKey(i);
@@ -989,25 +1068,28 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   Border? border;
 
                   if (isCurrent) {
-                    bgColor = const Color(0xFF6366F1);
-                    textColor = Colors.white;
-                    border = Border.all(color: Colors.white, width: 1.5);
-                  } else if (isAnswered) {
-                    bgColor = const Color(0xFF10B981)
-                        .withValues(alpha: isDark ? 0.25 : 0.15);
-                    textColor = isDark
-                        ? const Color(0xFF6EE7B7)
-                        : const Color(0xFF047857);
+                    bgColor = scheme.primary;
+                    textColor = scheme.onPrimary;
                     border = Border.all(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.5),
+                      color: scheme.primary,
+                      width: FluentStroke.width,
+                    );
+                  } else if (isAnswered) {
+                    bgColor = FluentLayer.subtle(correctColor, brightness);
+                    textColor = correctColor;
+                    border = Border.all(
+                      color: correctColor.withValues(alpha: 0.5),
+                      width: FluentStroke.width,
                     );
                   } else {
-                    bgColor = isDark
-                        ? const Color(0xFF1E293B)
-                        : const Color(0xFFF1F5F9);
-                    textColor = isDark
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade600;
+                    bgColor = scheme.onSurface.withValues(
+                      alpha: isDark ? 0.06 : 0.04,
+                    );
+                    textColor = scheme.onSurface.withValues(alpha: 0.65);
+                    border = Border.all(
+                      color: FluentStroke.card(brightness),
+                      width: FluentStroke.width,
+                    );
                   }
 
                   return GestureDetector(
@@ -1017,16 +1099,15 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: bgColor,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: FluentRadius.controlBorder,
                         border: border,
                       ),
                       child: Text(
                         '${i + 1}',
-                        style: TextStyle(
-                          fontSize: 11.5,
+                        style: FluentType.caption.copyWith(
                           fontWeight: isCurrent || isAnswered
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                           color: textColor,
                         ),
                       ),
@@ -1035,7 +1116,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                 },
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
           ],
 
           // Progress bar and counter
@@ -1043,13 +1124,12 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             children: [
               Text(
                 'প্রশ্ন ${_currentIndex + 1} / ${_questions.length}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF6366F1),
+                style: FluentType.caption.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: scheme.primary,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   isRealExam
@@ -1058,55 +1138,49 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.end,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isRealExam
-                        ? (isDark
-                              ? Colors.indigo.shade200
-                              : Colors.indigo.shade800)
-                        : Colors.green.shade700,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isRealExam ? scheme.primary : correctColor,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: FluentSpacing.s),
           LinearProgressIndicator(
             value: progress,
-            backgroundColor: isDark
-                ? const Color(0xFF1E293B)
-                : Colors.indigo.shade50,
-            valueColor: AlwaysStoppedAnimation(
-              isRealExam ? const Color(0xFF6366F1) : Colors.indigo,
+            backgroundColor: scheme.onSurface.withValues(
+              alpha: isDark ? 0.10 : 0.08,
             ),
-            minHeight: 5,
-            borderRadius: BorderRadius.circular(4),
+            valueColor: AlwaysStoppedAnimation(scheme.primary),
+            minHeight: 4,
+            borderRadius: FluentRadius.controlBorder,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: FluentSpacing.l),
 
-          // Question Card
+          // Question Card — the thing actually being read, so it gets the
+          // largest type on the screen rather than a shouting weight.
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(FluentSpacing.l),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(14),
+              color: scheme.surface,
+              borderRadius: FluentRadius.cardBorder,
               border: Border.all(
-                color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
+              boxShadow: FluentElevation.card(brightness),
             ),
             child: Text(
               BengaliMathSanitizer.sanitize(question.questionText),
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                height: 1.45,
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              style: FluentType.bodyStrong.copyWith(
+                fontSize: 16,
+                color: scheme.onSurface,
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: FluentSpacing.l),
 
           // Options
           ...List.generate(question.options.length, (index) {
@@ -1116,66 +1190,60 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             final isCorrectOption = index == question.correctIndex;
             final isSelected = index == _selectedOptionIndex;
 
-            Color borderColor = isDark
-                ? const Color(0xFF334155)
-                : const Color(0xFFE2E8F0);
-            Color bgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-            Color textColor = isDark
-                ? const Color(0xFFF1F5F9)
-                : const Color(0xFF1E293B);
+            // An answer option is a control, so it takes the 4px control
+            // radius. The green/red/accent states are the signal the whole
+            // screen exists for, so they keep their colour — only the surface
+            // and the stroke become neutral Fluent.
+            Color borderColor = FluentStroke.card(brightness);
+            Color bgColor = scheme.surface;
+            Color textColor = scheme.onSurface;
             IconData? icon;
             Color iconColor = Colors.transparent;
+            bool emphasised = false;
 
             if (isRealExam) {
               if (isSelected) {
-                borderColor = const Color(0xFF6366F1);
-                bgColor = isDark
-                    ? const Color(0xFF312E81)
-                    : const Color(0xFFEEF2FF);
-                textColor = isDark ? Colors.white : const Color(0xFF4338CA);
+                borderColor = scheme.primary;
+                bgColor = FluentLayer.subtle(scheme.primary, brightness);
+                textColor = scheme.onSurface;
                 icon = Icons.check_circle_rounded;
-                iconColor = const Color(0xFF6366F1);
+                iconColor = scheme.primary;
+                emphasised = true;
               }
             } else if (_hasAnswered) {
               if (isCorrectOption) {
-                borderColor = Colors.green.shade600;
-                bgColor = isDark
-                    ? Colors.green.shade900.withValues(alpha: 0.3)
-                    : Colors.green.shade50;
-                textColor = isDark
-                    ? Colors.green.shade200
-                    : Colors.green.shade900;
+                borderColor = correctColor;
+                bgColor = FluentLayer.subtle(correctColor, brightness);
+                textColor = scheme.onSurface;
                 icon = Icons.check_circle;
-                iconColor = Colors.green.shade700;
+                iconColor = correctColor;
+                emphasised = true;
               } else if (isSelected && !isCorrectOption) {
-                borderColor = Colors.red.shade400;
-                bgColor = isDark
-                    ? Colors.red.shade900.withValues(alpha: 0.3)
-                    : Colors.red.shade50;
-                textColor = isDark ? Colors.red.shade200 : Colors.red.shade900;
+                borderColor = wrongColor;
+                bgColor = FluentLayer.subtle(wrongColor, brightness);
+                textColor = scheme.onSurface;
                 icon = Icons.cancel;
-                iconColor = Colors.red.shade700;
+                iconColor = wrongColor;
+                emphasised = true;
               }
             }
 
             return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.only(bottom: FluentSpacing.s),
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: FluentRadius.controlBorder,
                 onTap: () => _onOptionSelected(index),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
+                    horizontal: FluentSpacing.m,
+                    vertical: FluentSpacing.m,
                   ),
                   decoration: BoxDecoration(
                     color: bgColor,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: FluentRadius.controlBorder,
                     border: Border.all(
                       color: borderColor,
-                      width: isSelected || (!isRealExam && isCorrectOption)
-                          ? 1.5
-                          : 1,
+                      width: emphasised ? 1.5 : FluentStroke.width,
                     ),
                   ),
                   child: Row(
@@ -1183,17 +1251,16 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                       Expanded(
                         child: Text(
                           optionText,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                          style: FluentType.body.copyWith(
+                            fontWeight: emphasised
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                             color: textColor,
                           ),
                         ),
                       ),
                       if (icon != null) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         Icon(icon, color: iconColor, size: 20),
                       ],
                     ],
@@ -1205,14 +1272,19 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
 
           // Real Exam Action Buttons
           if (isRealExam) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
             Row(
               children: [
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
+                    side: BorderSide(
+                      color: FluentStroke.card(brightness),
+                      width: FluentStroke.width,
+                    ),
+                    foregroundColor: scheme.onSurface,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   icon: const Icon(Icons.arrow_back, size: 16),
@@ -1221,15 +1293,18 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                       ? () => _jumpToQuestion(_currentIndex - 1)
                       : null,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: FluentSpacing.xs + 2),
                 if (_selectedOptionIndex != null) ...[
                   TextButton.icon(
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
-                      foregroundColor: Colors.red.shade600,
+                      foregroundColor: wrongColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
                     ),
                     icon: const Icon(Icons.clear_rounded, size: 15),
-                    label: const Text('মুছুন', style: TextStyle(fontSize: 11)),
+                    label: Text('মুছুন', style: FluentType.caption),
                     onPressed: _clearSelectedOption,
                   ),
                 ],
@@ -1237,11 +1312,12 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                 if (_currentIndex < _questions.length - 1) ...[
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6366F1),
-                      foregroundColor: Colors.white,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
                       visualDensity: VisualDensity.compact,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     icon: const Icon(Icons.arrow_forward, size: 16),
@@ -1251,11 +1327,12 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                 ] else ...[
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.white,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
                       visualDensity: VisualDensity.compact,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     icon: const Icon(Icons.check_circle_outline, size: 16),
@@ -1269,7 +1346,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             // A question the user simply does not know had no way past it:
             // practice mode only moved on once an option was picked, so the
             // choice was to guess or to abandon the drill.
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.s),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
@@ -1279,28 +1356,28 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   _currentIndex == _questions.length - 1
                       ? 'জানি না — ফলাফল দেখুন'
                       : 'জানি না — পরেরটা',
-                  style: const TextStyle(fontSize: 12.5),
+                  style: FluentType.caption,
                 ),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.orange.shade800,
+                  foregroundColor: _noticeColor(context),
                 ),
               ),
             ),
           ] else if (_hasAnswered) ...[
             // Explanation Box (Practice Mode Only)
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.s),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.amber.shade900.withValues(alpha: 0.25)
-                    : Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(10),
+                color: FluentLayer.subtle(
+                  _noticeColor(context),
+                  Theme.of(context).brightness,
+                ),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
-                  color: isDark
-                      ? Colors.amber.shade700.withValues(alpha: 0.5)
-                      : Colors.amber.shade200,
+                  color: _noticeColor(context).withValues(alpha: 0.35),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Column(
@@ -1314,41 +1391,35 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                           'ব্যাখ্যা (Explanation):',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: isDark
-                                ? Colors.amber.shade200
-                                : Colors.amber.shade900,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: _noticeColor(context),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: FluentSpacing.xs),
                   Text(
                     BengaliMathSanitizer.sanitize(question.explanation),
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: isDark
-                          ? Colors.amber.shade100
-                          : Colors.brown.shade800,
-                      height: 1.45,
+                    style: FluentType.body.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
             SizedBox(
               width: double.infinity,
-              height: 46,
+              height: 44,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E3A8A),
-                  foregroundColor: Colors.white,
+                  backgroundColor: scheme.primary,
+                  foregroundColor: scheme.onPrimary,
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 icon: const Icon(Icons.arrow_forward, size: 18),
@@ -1356,7 +1427,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   _currentIndex == _questions.length - 1
                       ? 'See Results & Summary'
                       : 'Next Question',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: FluentType.bodyStrong,
                 ),
                 onPressed: _nextQuestion,
               ),
@@ -1374,38 +1445,42 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     required String value,
     required bool isDark,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.m,
+        vertical: FluentSpacing.s,
+      ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        color: scheme.surface,
+        borderRadius: FluentRadius.controlBorder,
         border: Border.all(
-          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+          color: FluentStroke.card(Theme.of(context).brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Row(
         children: [
           Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
+          const SizedBox(width: FluentSpacing.s),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
                 Text(
                   value,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  style: FluentType.bodyStrong.copyWith(
+                    color: scheme.onSurface,
                   ),
-                overflow: TextOverflow.ellipsis,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -1456,32 +1531,39 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
   /// size felt, rather than before they know what they are choosing.
   Widget _buildSizeChooser(bool isDark) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.fromLTRB(
+        FluentSpacing.l,
+        FluentSpacing.s,
+        FluentSpacing.l,
+        0,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'আবার অনুশীলন করুন',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white70 : Colors.black87,
+            style: FluentType.bodyStrong.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: FluentSpacing.s),
           Wrap(
-            spacing: 8,
+            spacing: FluentSpacing.s,
             children: [
               for (final size in _drillSizes)
                 OutlinedButton(
                   onPressed: () => _setDrillSize(size),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
+                    side: BorderSide(
+                      color: FluentStroke.card(Theme.of(context).brightness),
+                      width: FluentStroke.width,
+                    ),
                   ),
-                  child: Text(
-                    '$size টি প্রশ্ন',
-                    style: const TextStyle(fontSize: 12),
-                  ),
+                  child: Text('$size টি প্রশ্ন', style: FluentType.caption),
                 ),
             ],
           ),
@@ -1597,6 +1679,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
         ? (percent >= 50)
         : (_correctCount >= (total * 0.6).ceil());
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
     final timeSpent = _totalExamSeconds - _remainingSeconds;
 
     final wrongQuestions = <QuizQuestion>[];
@@ -1641,62 +1724,44 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             if (_mode == QuizMode.realExam) ...[
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
+                  horizontal: FluentSpacing.m,
+                  vertical: FluentSpacing.xs + 2,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
+                  color: FluentLayer.subtle(
+                    scheme.primary,
+                    Theme.of(context).brightness,
+                  ),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.timer_rounded,
-                      size: 16,
-                      color: Color(0xFF6366F1),
-                    ),
-                    const SizedBox(width: 6),
+                    Icon(Icons.timer_rounded, size: 16, color: scheme.primary),
+                    const SizedBox(width: FluentSpacing.s),
                     Flexible(
                       child: Text(
                         'রিয়েল এক্সাম ফলাফল (BCS ফরম্যাট: ভুল উত্তরে -০.৫০)',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? const Color(0xFFA5B4FC)
-                              : const Color(0xFF4338CA),
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.primary,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               // Score Banner
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(FluentSpacing.l),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isGood
-                        ? [const Color(0xFF065F46), const Color(0xFF047857)]
-                        : [const Color(0xFF991B1B), const Color(0xFFB91C1C)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isGood ? Colors.green : Colors.red).withValues(
-                        alpha: 0.3,
-                      ),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  color: isGood ? _correctColor(context) : _wrongColor(context),
+                  borderRadius: FluentRadius.cardBorder,
+                  boxShadow: FluentElevation.card(Theme.of(context).brightness),
                 ),
                 child: Column(
                   children: [
@@ -1704,38 +1769,35 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                       isGood
                           ? '🎉 চমৎকার পারফর্মেন্স!'
                           : '⚠️ আরেকটু মনোযোগ প্রয়োজন',
-                      style: const TextStyle(
+                      textAlign: TextAlign.center,
+                      style: FluentType.subtitle.copyWith(
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: FluentSpacing.s),
                     Text(
                       '${netScore.toStringAsFixed(2)} / ${maxScore.toStringAsFixed(0)}',
-                      style: const TextStyle(
+                      style: FluentType.title.copyWith(
                         color: Colors.white,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1,
+                        fontSize: 32,
                       ),
                     ),
                     Text(
                       'অর্জিত নেট স্কোর (${percent.clamp(0, 100)}%)',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
+                      style: FluentType.caption.copyWith(
+                        color: Colors.white.withValues(alpha: 0.85),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: FluentSpacing.m),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                        horizontal: FluentSpacing.m,
+                        vertical: FluentSpacing.xs,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                       child: Text(
                         percent >= 70
@@ -1743,34 +1805,34 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                             : (percent >= 45
                                   ? '👍 সন্তোষজনক, নেগেটিভ মার্কিং কমানো প্রয়োজন'
                                   : '📚 দুর্বল টপিকগুলোতে পুনরায় রিভিশন দিন'),
-                        style: const TextStyle(
+                        textAlign: TextAlign.center,
+                        style: FluentType.caption.copyWith(
                           color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               // 4 Stats Grid
               Row(
                 children: [
                   Expanded(
                     child: _buildMiniStat(
                       icon: Icons.check_circle_rounded,
-                      color: Colors.green,
+                      color: _correctColor(context),
                       label: 'সঠিক',
                       value: '$correct (+$correct.00)',
                       isDark: isDark,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: _buildMiniStat(
                       icon: Icons.cancel_rounded,
-                      color: Colors.red,
+                      color: _wrongColor(context),
                       label: 'ভুল',
                       value: '$wrong (-${(wrong * 0.50).toStringAsFixed(2)})',
                       isDark: isDark,
@@ -1778,23 +1840,23 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: FluentSpacing.s),
               Row(
                 children: [
                   Expanded(
                     child: _buildMiniStat(
                       icon: Icons.skip_next_rounded,
-                      color: Colors.orange,
+                      color: _skippedColor(context),
                       label: 'স্কিপড',
                       value: '$skipped (0.00)',
                       isDark: isDark,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: _buildMiniStat(
                       icon: Icons.timer_outlined,
-                      color: Colors.indigo,
+                      color: scheme.primary,
                       label: 'ব্যয়িত সময়',
                       value: '${timeSpent ~/ 60}মি ${timeSpent % 60}সে',
                       isDark: isDark,
@@ -1802,59 +1864,59 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
             ] else ...[
               // Result Header Circle (Practice Mode)
               Container(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(FluentSpacing.l),
                 decoration: BoxDecoration(
-                  color: isGood
-                      ? (isDark
-                            ? Colors.green.withValues(alpha: 0.2)
-                            : Colors.green.shade50)
-                      : (isDark
-                            ? Colors.amber.withValues(alpha: 0.2)
-                            : Colors.amber.shade50),
-                  shape: BoxShape.circle,
+                  color: FluentLayer.subtle(
+                    isGood ? _correctColor(context) : _noticeColor(context),
+                    Theme.of(context).brightness,
+                  ),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
                 child: Icon(
                   isGood ? Icons.military_tech : Icons.refresh,
-                  color: isGood ? Colors.green.shade700 : Colors.amber.shade800,
+                  color: isGood
+                      ? _correctColor(context)
+                      : _noticeColor(context),
                   size: 48,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               Text(
                 isGood ? 'দারুণ প্রস্তুতি!' : 'আরেকটু রিভিশন প্রয়োজন',
-                style: const TextStyle(
+                textAlign: TextAlign.center,
+                style: FluentType.subtitle.copyWith(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  color: scheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: FluentSpacing.s),
               Text(
                 'আপনি $totalটির মধ্যে $_correctCountটি প্রশ্নের সঠিক উত্তর দিয়েছেন (${total > 0 ? ((_correctCount / total) * 100).toInt() : 0}%)',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? Colors.white70 : Colors.black87,
+                textAlign: TextAlign.center,
+                style: FluentType.body.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.65),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
             ],
 
             // Mistake Bank Auto-Save & Re-drill Banner
             if (wrongQuestions.isNotEmpty) ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.red.withValues(alpha: 0.18)
-                      : const Color(0xFFFFF1F2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: FluentLayer.subtle(
+                    _wrongColor(context),
+                    Theme.of(context).brightness,
+                  ),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
-                    color: isDark
-                        ? Colors.red.withValues(alpha: 0.4)
-                        : const Color(0xFFFECDD3),
+                    color: _wrongColor(context).withValues(alpha: 0.35),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Column(
@@ -1862,51 +1924,51 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   children: [
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.error_outline,
-                          color: Color(0xFFBE123C),
+                          color: _wrongColor(context),
                           size: 18,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: Text(
                             '${wrongQuestions.length}টি ভুল উত্তর Mistake Bank-এ সেভ হয়েছে!',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? Colors.red.shade200
-                                  : const Color(0xFF9F1239),
+                            style: FluentType.bodyStrong.copyWith(
+                              color: _wrongColor(context),
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: FluentSpacing.xs),
                     Text(
                       'পরবর্তীতে রিভিশন দিতে পারবেন অথবা এখনই পুনরায় চেষ্টা করতে পারেন।',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: isDark
-                            ? Colors.red.shade100
-                            : const Color(0xFF881337),
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.65),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: FluentSpacing.s),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFBE123C),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          backgroundColor: scheme.primary,
+                          foregroundColor: scheme.onPrimary,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: FluentSpacing.s,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: FluentRadius.controlBorder,
+                          ),
                         ),
                         icon: const Icon(Icons.replay, size: 15),
                         label: Text(
                           'ভুল ${wrongQuestions.length}টি প্রশ্ন পুনরায় দিন (Re-drill)',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         onPressed: () {
@@ -1929,7 +1991,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
             ],
 
             // Detailed Question-by-Question Review with Copy and Voice/AI Batch Fix
@@ -1940,12 +2002,8 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                     '📋 প্রশ্নভিত্তিক পর্যালোচনা (Detailed Review)',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? Colors.indigo.shade200
-                          : Colors.indigo.shade900,
+                    style: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
                     ),
                   ),
                 ),
@@ -1953,59 +2011,54 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                      horizontal: FluentSpacing.m,
+                      vertical: FluentSpacing.xs,
                     ),
-                    foregroundColor: isDark
-                        ? const Color(0xFFA5B4FC)
-                        : const Color(0xFF4F46E5),
+                    foregroundColor: scheme.primary,
                     side: BorderSide(
-                      color: isDark
-                          ? const Color(0xFF6366F1)
-                          : const Color(0xFF4F46E5),
+                      color: FluentStroke.card(Theme.of(context).brightness),
+                      width: FluentStroke.width,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   icon: const Icon(Icons.copy_rounded, size: 14),
-                  label: const Text(
+                  label: Text(
                     'কপি করুন',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   onPressed: _copyFullReviewToClipboard,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: FluentSpacing.s),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                      horizontal: FluentSpacing.m,
+                      vertical: FluentSpacing.xs,
                     ),
-                    backgroundColor: const Color(0xFF6366F1),
-                    foregroundColor: Colors.white,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   icon: const Icon(Icons.mic_rounded, size: 14),
-                  label: const Text(
+                  label: Text(
                     'AI ফিক্স / 🎙️ ভয়েস',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   onPressed: _showPasteExternalAiFixSheet,
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
 
             ...List.generate(_questions.length, (i) {
               final q = _questions[i];
@@ -2020,62 +2073,51 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
               if (_mode == QuizMode.realExam) {
                 if (isCorrect) {
                   statusLabel = 'প্রশ্ন ${i + 1} · সঠিক (+১.০০)';
-                  statusColor = const Color(0xFF15803D);
+                  statusColor = _correctColor(context);
                   statusIcon = Icons.check_circle;
                 } else if (isSkipped) {
                   statusLabel = 'প্রশ্ন ${i + 1} · স্কিপড (০.০০)';
-                  statusColor = Colors.grey.shade600;
+                  statusColor = _skippedColor(context);
                   statusIcon = Icons.remove_circle_outline;
                 } else {
                   statusLabel = 'প্রশ্ন ${i + 1} · ভুল (-০.৫০)';
-                  statusColor = const Color(0xFFC2410C);
+                  statusColor = _wrongColor(context);
                   statusIcon = Icons.cancel;
                 }
               } else {
                 if (isCorrect) {
                   statusLabel = 'প্রশ্ন ${i + 1}: সঠিক উত্তর';
-                  statusColor = const Color(0xFF15803D);
+                  statusColor = _correctColor(context);
                   statusIcon = Icons.check_circle;
                 } else if (isSkipped) {
                   statusLabel = 'প্রশ্ন ${i + 1}: উত্তর দেননি (স্কিপড)';
-                  statusColor = Colors.grey.shade600;
+                  statusColor = _skippedColor(context);
                   statusIcon = Icons.remove_circle_outline;
                 } else {
                   statusLabel = 'প্রশ্ন ${i + 1}: ভুল উত্তর';
-                  statusColor = const Color(0xFFC2410C);
+                  statusColor = _wrongColor(context);
                   statusIcon = Icons.cancel;
                 }
               }
 
               return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: FluentSpacing.s),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
-                  color: isCorrect
-                      ? (isDark
-                            ? Colors.green.withValues(alpha: 0.15)
-                            : const Color(0xFFF0FDF4))
-                      : (isSkipped
-                            ? (isDark
-                                  ? Colors.grey.withValues(alpha: 0.15)
-                                  : const Color(0xFFF8FAFC))
-                            : (isDark
-                                  ? Colors.orange.withValues(alpha: 0.15)
-                                  : const Color(0xFFFFF7ED))),
-                  borderRadius: BorderRadius.circular(10),
+                  color: isSkipped
+                      ? Theme.of(context).colorScheme.surface
+                      : FluentLayer.subtle(
+                          statusColor,
+                          Theme.of(context).brightness,
+                        ),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
-                    color: isCorrect
-                        ? (isDark
-                              ? Colors.green.withValues(alpha: 0.4)
-                              : const Color(0xFFBBF7D0))
-                        : (isSkipped
-                              ? (isDark
-                                    ? Colors.white12
-                                    : const Color(0xFFE2E8F0))
-                              : (isDark
-                                    ? Colors.orange.withValues(alpha: 0.4)
-                                    : const Color(0xFFFED7AA))),
+                    color: isSkipped
+                        ? FluentStroke.card(Theme.of(context).brightness)
+                        : statusColor.withValues(alpha: 0.35),
+                    width: FluentStroke.width,
                   ),
+                  boxShadow: FluentElevation.card(Theme.of(context).brightness),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2083,15 +2125,14 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                     Row(
                       children: [
                         Icon(statusIcon, size: 16, color: statusColor),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: FluentSpacing.s),
                         Flexible(
                           child: Text(
                             statusLabel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
                               color: statusColor,
                             ),
                           ),
@@ -2106,78 +2147,69 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
                     Text(
                       q.questionText,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      style: FluentType.bodyStrong.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: FluentSpacing.s),
 
                     if (!isCorrect) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: FluentSpacing.s,
+                          vertical: FluentSpacing.xs,
                         ),
                         decoration: BoxDecoration(
-                          color: isSkipped
-                              ? (isDark
-                                    ? Colors.grey.withValues(alpha: 0.2)
-                                    : Colors.grey.shade100)
-                              : (isDark
-                                    ? Colors.red.withValues(alpha: 0.2)
-                                    : Colors.red.shade50),
-                          borderRadius: BorderRadius.circular(6),
+                          color: FluentLayer.subtle(
+                            isSkipped
+                                ? _skippedColor(context)
+                                : _wrongColor(context),
+                            Theme.of(context).brightness,
+                          ),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                         child: Text(
                           isSkipped
                               ? '⏭️ কোনো উত্তর দেননি (স্কিপ করা হয়েছে)'
                               : '❌ আপনার উত্তর: ${(selected >= 0 && selected < q.options.length) ? q.options[selected] : "অজানা"}',
-                          style: TextStyle(
-                            fontSize: 11.5,
+                          style: FluentType.caption.copyWith(
                             color: isSkipped
-                                ? (isDark
-                                      ? Colors.grey.shade300
-                                      : Colors.grey.shade800)
-                                : (isDark
-                                      ? Colors.red.shade200
-                                      : Colors.red.shade900),
+                                ? Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.65)
+                                : _wrongColor(context),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: FluentSpacing.xs),
                     ],
 
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xs,
                       ),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.green.withValues(alpha: 0.2)
-                            : Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(6),
+                        color: FluentLayer.subtle(
+                          _correctColor(context),
+                          Theme.of(context).brightness,
+                        ),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                       child: Text(
                         '✅ সঠিক উত্তর: ${(q.correctIndex >= 0 && q.correctIndex < q.options.length) ? q.options[q.correctIndex] : "অজানা"}',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: isDark
-                              ? Colors.greenAccent
-                              : Colors.green.shade900,
+                        style: FluentType.caption.copyWith(
+                          color: _correctColor(context),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
 
                     if (q.explanation.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: FluentSpacing.s),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2191,19 +2223,12 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                                   MarkdownStyleSheet.fromTheme(
                                     Theme.of(context),
                                   ).copyWith(
-                                    p: TextStyle(
-                                      fontSize: 11.5,
-                                      color: isDark
-                                          ? Colors.amber.shade200
-                                          : Colors.brown.shade800,
-                                      height: 1.4,
+                                    p: FluentType.caption.copyWith(
+                                      color: _noticeColor(context),
                                     ),
-                                    strong: TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark
-                                          ? Colors.amberAccent
-                                          : const Color(0xFF0F172A),
+                                    strong: FluentType.caption.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: _noticeColor(context),
                                     ),
                                   ),
                             ),
@@ -2216,43 +2241,45 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
               );
             }),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
 
             // Add to Weak Topics if score is low
             if (_correctCount < total) ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.purple.withValues(alpha: 0.2)
-                      : Colors.purple.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                  color: FluentLayer.subtle(
+                    scheme.primary,
+                    Theme.of(context).brightness,
+                  ),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
-                    color: isDark
-                        ? Colors.purple.withValues(alpha: 0.4)
-                        : Colors.purple.shade100,
+                    color: scheme.primary.withValues(alpha: 0.35),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.radar, color: Colors.deepPurple, size: 22),
-                    const SizedBox(width: 10),
+                    Icon(Icons.radar, color: scheme.primary, size: 22),
+                    const SizedBox(width: FluentSpacing.m),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'দুর্বল টপিক রাডারে যুক্ত করবেন?',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12.5,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: FluentType.bodyStrong.copyWith(
+                              color: scheme.onSurface,
                             ),
                           ),
                           Text(
                             'টপিক: ${widget.topic}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? Colors.white70 : Colors.black54,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: FluentType.caption.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.65),
                             ),
                           ),
                         ],
@@ -2272,7 +2299,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              backgroundColor: Colors.deepPurple,
+                              backgroundColor: scheme.primary,
                               content: Text(
                                 '"${widget.topic}" দুর্বল টপিক রাডারে যুক্ত হয়েছে!',
                               ),
@@ -2285,24 +2312,25 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
             ],
 
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 44,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E3A8A),
-                  foregroundColor: Colors.white,
+                  backgroundColor: scheme.primary,
+                  foregroundColor: scheme.onPrimary,
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
+                child: Text(
                   'Finish Drill & Close',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: FluentType.bodyStrong,
                 ),
               ),
             ),

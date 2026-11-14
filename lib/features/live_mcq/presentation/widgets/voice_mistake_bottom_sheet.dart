@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -481,19 +484,26 @@ class _VoiceMistakeBottomSheetState
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
 
     return Container(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        left: 20,
-        right: 20,
-        top: 12,
+        bottom: MediaQuery.of(context).viewInsets.bottom + FluentSpacing.l,
+        left: FluentSpacing.xl,
+        right: FluentSpacing.xl,
+        top: FluentSpacing.m,
       ),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: scheme.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
+        border: Border(
+          top: FluentStroke.side(brightness),
+          left: FluentStroke.side(brightness),
+          right: FluentStroke.side(brightness),
+        ),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -506,43 +516,36 @@ class _VoiceMistakeBottomSheetState
                 width: 44,
                 height: 4.5,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(4),
+                  color: scheme.onSurface.withValues(alpha: 0.2),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             // Header Row
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.mic,
-                    color: Color(0xFF10B981),
-                    size: 22,
-                  ),
+                PremiumIconBadge(
+                  icon: Icons.mic,
+                  size: 38,
+                  iconSize: 22,
+                  color: scheme.primary,
                 ),
-                const SizedBox(width: 10),
-                const Expanded(
+                const SizedBox(width: FluentSpacing.m),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'LiveMCQ Voice Mistake Note',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: FluentType.subtitle.copyWith(fontSize: 16),
                       ),
                       Text(
-                        'ভুল হওয়া প্রশ্ন মুখে বলুন — জেমিনি ব্যাখ্যাসহ সেভ করবে',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                        'ভুল হওয়া প্রশ্ন মুখে বলুন — জেমিনি ব্যাখ্যাসহ সেভ করবে',
+                        style: FluentType.caption.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.65),
+                        ),
                       ),
                     ],
                   ),
@@ -553,22 +556,27 @@ class _VoiceMistakeBottomSheetState
                 ),
               ],
             ),
-            const Divider(height: 24),
+            Divider(height: FluentSpacing.xxl, color: FluentStroke.divider(brightness)),
 
             // Launch Floating Bubble CTA Banner
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.l,
+                vertical: FluentSpacing.m,
+              ),
               decoration: BoxDecoration(
                 color: _isBubbleActive
-                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                    : (isDark
-                          ? const Color(0xFF1E293B)
-                          : const Color(0xFFF1F5F9)),
-                borderRadius: BorderRadius.circular(14),
+                    ? FluentLayer.subtle(
+                        const Color(0xFF10B981),
+                        brightness,
+                      )
+                    : scheme.onSurface.withValues(alpha: 0.04),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
                   color: _isBubbleActive
-                      ? const Color(0xFF10B981)
-                      : Colors.transparent,
+                      ? const Color(0xFF10B981).withValues(alpha: 0.5)
+                      : FluentStroke.card(brightness),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Row(
@@ -579,10 +587,10 @@ class _VoiceMistakeBottomSheetState
                         : Icons.bubble_chart_outlined,
                     color: _isBubbleActive
                         ? const Color(0xFF10B981)
-                        : const Color(0xFF6366F1),
+                        : scheme.primary,
                     size: 24,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: FluentSpacing.m),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -591,18 +599,14 @@ class _VoiceMistakeBottomSheetState
                           _isBubbleActive
                               ? 'Floating Bubble is Active'
                               : 'LiveMCQ Floating Bubble',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
+                          style: FluentType.bodyStrong.copyWith(fontSize: 13),
                         ),
                         Text(
                           _isBubbleActive
                               ? 'Open LiveMCQ to speak without leaving the app'
                               : 'Messenger-style bubble over LiveMCQ app',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey,
+                          style: FluentType.caption.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.65),
                           ),
                         ),
                       ],
@@ -612,30 +616,30 @@ class _VoiceMistakeBottomSheetState
                     onPressed: _toggleFloatingBubble,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isBubbleActive
-                          ? Colors.red.shade700
-                          : const Color(0xFF1E3A8A),
-                      foregroundColor: Colors.white,
+                          ? scheme.error
+                          : scheme.primary,
+                      foregroundColor: scheme.onPrimary,
+                      elevation: 0,
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                        horizontal: FluentSpacing.m,
+                        vertical: FluentSpacing.s,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     child: Text(
                       _isBubbleActive ? 'Stop' : 'Launch',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: FluentSpacing.xl),
 
             // Microphone Recording Area
             Center(
@@ -657,21 +661,11 @@ class _VoiceMistakeBottomSheetState
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        borderRadius: FluentRadius.controlBorder,
                         color: (_isRecording || _isDictating)
-                            ? const Color(0xFFEF4444)
-                            : const Color(0xFF10B981),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                (_isRecording
-                                        ? Colors.red
-                                        : const Color(0xFF10B981))
-                                    .withValues(alpha: 0.4),
-                            blurRadius: _isRecording ? 20 : 10,
-                            spreadRadius: _isRecording ? 4 : 1,
-                          ),
-                        ],
+                            ? scheme.error
+                            : scheme.primary,
+                        boxShadow: FluentElevation.card(brightness),
                       ),
                       child: Icon(
                         (_isRecording || _isDictating) ? Icons.stop : Icons.mic,
@@ -680,36 +674,31 @@ class _VoiceMistakeBottomSheetState
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.m),
                   Text(
                     _isDictating
                         ? 'শুনছি…'
                         : _isRecording
                         ? 'Recording... ${_formatTimer(_recordSeconds)}'
                         : 'চেপে বলুন — ফোনই লিখে দেবে',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: _isRecording ? Colors.redAccent : null,
+                    style: FluentType.bodyStrong.copyWith(
+                      color: _isRecording ? scheme.error : scheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: FluentSpacing.xs),
                   Text(
                     _statusMessage ??
                         'মুখে বলুন: "১২ নম্বর প্রশ্নে মানস সরোবর থেকে উৎপন্ন নদী ছিল ব্রহ্মপুত্র"\n'
                             '(দীর্ঘক্ষণ চেপে ধরলে রেকর্ড করে পাঠাবে)',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: isDark
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade600,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
 
             // LiveMCQ Screenshot / Camera Buttons (for non-copyable text in LiveMCQ)
             Row(
@@ -719,18 +708,17 @@ class _VoiceMistakeBottomSheetState
                     icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
                     label: const Text('LiveMCQ স্ক্রিনশট'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF0284C7),
-                      side: BorderSide(
-                        color: isDark
-                            ? const Color(0xFF0369A1)
-                            : const Color(0xFFBAE6FD),
+                      foregroundColor: scheme.primary,
+                      side: FluentStroke.side(brightness),
+                      backgroundColor: FluentLayer.subtle(
+                        scheme.primary,
+                        brightness,
                       ),
-                      backgroundColor: const Color(0xFF0284C7).withValues(
-                        alpha: isDark ? 0.15 : 0.08,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.m,
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     onPressed: _isProcessing
@@ -738,23 +726,19 @@ class _VoiceMistakeBottomSheetState
                         : () => _pickImageAndParse(ImageSource.gallery),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 OutlinedButton.icon(
                   icon: const Icon(Icons.camera_alt_outlined, size: 18),
                   label: const Text('ক্যামেরা ছবি'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark
-                        ? Colors.grey.shade300
-                        : const Color(0xFF334155),
-                    side: BorderSide(
-                      color: isDark ? Colors.white24 : Colors.grey.shade300,
-                    ),
+                    foregroundColor: scheme.onSurface.withValues(alpha: 0.75),
+                    side: FluentStroke.side(brightness),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
+                      horizontal: FluentSpacing.l,
+                      vertical: FluentSpacing.m,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   onPressed: _isProcessing
@@ -763,7 +747,7 @@ class _VoiceMistakeBottomSheetState
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
 
             // Processing state
             if (_isProcessing) ...[
@@ -771,20 +755,22 @@ class _VoiceMistakeBottomSheetState
                 type: _isProcessingImage ? AiTaskType.image : AiTaskType.audio,
                 isCompact: true,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
             ],
 
             // Successfully Parsed Card
             if (_parsedResult != null) ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E293B)
-                      : const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(12),
+                  color: FluentLayer.subtle(
+                    const Color(0xFF10B981),
+                    brightness,
+                  ),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Column(
@@ -797,50 +783,42 @@ class _VoiceMistakeBottomSheetState
                           color: Color(0xFF10B981),
                           size: 18,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: Text(
                             'Saved: ${_parsedResult!.subject} • ${_parsedResult!.topic}',
-                            style: const TextStyle(
-                              color: Color(0xFF10B981),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12.5,
+                            style: FluentType.caption.copyWith(
+                              color: const Color(0xFF10B981),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: FluentSpacing.s),
                     Text(
                       _parsedResult!.questionText,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: FluentType.bodyStrong.copyWith(fontSize: 13),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
                     Text(
                       'সঠিক উত্তর: ${(_parsedResult!.correctIndex >= 0 && _parsedResult!.correctIndex < _parsedResult!.options.length) ? _parsedResult!.options[_parsedResult!.correctIndex] : "অজানা"}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFF59E0B),
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFF59E0B),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: FluentSpacing.xs),
                     Text(
                       'ব্যাখ্যা: ${_parsedResult!.explanation}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? Colors.grey.shade300
-                            : Colors.grey.shade700,
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.65),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
             ],
 
             // Text input alternative
@@ -849,26 +827,26 @@ class _VoiceMistakeBottomSheetState
                 Expanded(
                   child: TextField(
                     controller: _textController,
-                    style: const TextStyle(fontSize: 12.5),
+                    style: FluentType.body.copyWith(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Or type mistake topic (e.g. পলাশী যুদ্ধ ১৭৫৭)',
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
+                        horizontal: FluentSpacing.m,
+                        vertical: FluentSpacing.m,
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 IconButton.filled(
                   onPressed: _parseTextMistake,
                   style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E3A8A),
-                    foregroundColor: Colors.white,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                   ),
                   icon: const Icon(Icons.send, size: 18),
                 ),

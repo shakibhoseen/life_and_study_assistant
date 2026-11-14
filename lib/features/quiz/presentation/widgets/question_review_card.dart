@@ -1,7 +1,30 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
+
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/ai/question_bank_ocr_service.dart';
+
+/// The three status colours this card means something by: a read it trusts,
+/// one it wants a second look at, and one it could not read at all.
+///
+/// Kept here rather than typed at each call site so the same green, amber and
+/// red are used throughout, and so each has a light-mode and a dark-mode value
+/// that genuinely reads on that surface.
+Color _okColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFF4ADE80)
+    : const Color(0xFF15803D);
+
+Color _warnColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFFCD34D)
+    : const Color(0xFFB45309);
+
+Color _badColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFF87171)
+    : const Color(0xFFB91C1C);
 
 /// One scanned question, as it is reviewed before the set is saved.
 ///
@@ -59,29 +82,27 @@ class QuestionReviewCard extends StatelessWidget {
     // the check and the use.
     final verification = this.verification;
 
-
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: FluentSpacing.l),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
           color: question.needsReview
-              ? Colors.orange.shade600
+              ? _warnColour(context)
               : (verification != null &&
                         (!verification.isCorrect || verification.isAmbiguous)
-                    ? Colors.amber.shade600
-                    : (isDark
-                          ? const Color(0xFF334155)
-                          : Colors.grey.shade300)),
+                    ? _warnColour(context)
+                    : FluentStroke.card(Theme.of(context).brightness)),
           width:
               question.needsReview ||
                   (verification != null &&
                       (!verification.isCorrect || verification.isAmbiguous))
-              ? 1.8
-              : 1.0,
+              ? 1.5
+              : FluentStroke.width,
         ),
+        boxShadow: FluentElevation.card(Theme.of(context).brightness),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,7 +131,7 @@ class QuestionReviewCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
           ],
 
           // A row the scan could not actually read, or answered without
@@ -119,21 +140,27 @@ class QuestionReviewCard extends StatelessWidget {
           if (question.correctIndex < 0) ...[
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 9),
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+              margin: const EdgeInsets.only(bottom: FluentSpacing.s),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.s,
+                vertical: FluentSpacing.s,
+              ),
               decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: isDark ? 0.2 : 0.12),
-                borderRadius: BorderRadius.circular(7),
-                border: Border.all(color: Colors.amber.shade600),
+                color: FluentLayer.subtle(
+                  _warnColour(context),
+                  Theme.of(context).brightness,
+                ),
+                borderRadius: FluentRadius.controlBorder,
+                border: Border.all(color: _warnColour(context)),
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.help_outline,
                     size: 15,
-                    color: Colors.amber.shade900,
+                    color: _warnColour(context),
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       // Naming the letter that was read matters: the reader can
@@ -155,12 +182,9 @@ class QuestionReviewCard extends StatelessWidget {
                                 '(দেখাচ্ছে "${question.printedAnswerLetter}") '
                                 '— সঠিক অপশনে ট্যাপ করুন'
                           : 'উত্তর নির্বাচিত নেই — অপশনে ট্যাপ করুন বা সমাধান দিন',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? Colors.amber.shade200
-                            : Colors.amber.shade900,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: _warnColour(context),
                       ),
                     ),
                   ),
@@ -168,57 +192,58 @@ class QuestionReviewCard extends StatelessWidget {
                     onTap: () => onVoiceAnswer(),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xs,
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.mic, size: 12, color: Color(0xFF4F46E5)),
-                          SizedBox(width: 2),
+                          SizedBox(width: FluentSpacing.xxs),
                           Text(
                             'ভয়েস',
-                            style: TextStyle(
-                              fontSize: 10,
+                            style: FluentType.caption.copyWith(
                               color: Color(0xFF4F46E5),
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: FluentSpacing.xs),
                   InkWell(
                     onTap: () => onSolveWithAi(),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xs,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        color: FluentLayer.subtle(
+                          _okColour(context),
+                          Theme.of(context).brightness,
+                        ),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.auto_awesome,
                             size: 12,
-                            color: Color(0xFF10B981),
+                            color: _okColour(context),
                           ),
-                          SizedBox(width: 2),
+                          SizedBox(width: FluentSpacing.xxs),
                           Text(
                             'AI সমাধান',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF10B981),
-                              fontWeight: FontWeight.bold,
+                            style: FluentType.caption.copyWith(
+                              color: _okColour(context),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -231,12 +256,21 @@ class QuestionReviewCard extends StatelessWidget {
           ] else if (question.needsReview) ...[
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 9),
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+              margin: const EdgeInsets.only(bottom: FluentSpacing.s),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.s,
+                vertical: FluentSpacing.s,
+              ),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: isDark ? 0.15 : 0.09),
-                borderRadius: BorderRadius.circular(7),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                color: FluentLayer.subtle(
+                  _warnColour(context),
+                  Theme.of(context).brightness,
+                ),
+                borderRadius: FluentRadius.controlBorder,
+                border: Border.all(
+                  color: _warnColour(context).withValues(alpha: 0.35),
+                  width: FluentStroke.width,
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,20 +280,16 @@ class QuestionReviewCard extends StatelessWidget {
                         ? Icons.help_outline
                         : Icons.visibility_off_outlined,
                     size: 15,
-                    color: Colors.orange.shade800,
+                    color: _warnColour(context),
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       !question.legible
                           ? 'ছবিতে এই প্রশ্নটি স্পষ্ট পড়া যায়নি — সংরক্ষণের আগে নিজে মিলিয়ে নিন বা বাদ দিন।'
                           : 'উত্তরটি অনিশ্চিত (${question.answerSource.label}) — মিলিয়ে নিন।',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        height: 1.4,
-                        color: isDark
-                            ? Colors.orange.shade200
-                            : Colors.orange.shade900,
+                      style: FluentType.caption.copyWith(
+                        color: _warnColour(context),
                       ),
                     ),
                   ),
@@ -272,18 +302,19 @@ class QuestionReviewCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: FluentSpacing.s,
+                  vertical: FluentSpacing.xxs,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF334155)
-                      : Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(4),
+                  color: Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.06),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
                 child: Text(
                   '#${qIndex + 1}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -296,20 +327,20 @@ class QuestionReviewCard extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 onPressed: () => onEdit(),
               ),
-              const SizedBox(width: 2),
+              const SizedBox(width: FluentSpacing.xxs),
               // Delete / Exclude button
               IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.delete_outline,
                   size: 16,
-                  color: Colors.redAccent,
+                  color: _badColour(context),
                 ),
                 tooltip: 'অপ্রয়োজনীয় বা ভুল প্রশ্নটি বাদ দিন',
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 onPressed: () => onDelete(),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: FluentSpacing.xs),
               // AI Verify Single Button
               if (isVerifying)
                 const SizedBox(
@@ -320,31 +351,32 @@ class QuestionReviewCard extends StatelessWidget {
               else
                 InkWell(
                   onTap: () => onVerify(),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: FluentRadius.controlBorder,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xs,
                     ),
                     decoration: BoxDecoration(
                       color: verification != null
-                          ? (verification.isCorrect && !verification.isAmbiguous
-                                ? Colors.green.shade50.withValues(
-                                    alpha: isDark ? 0.2 : 1,
-                                  )
-                                : Colors.amber.shade50.withValues(
-                                    alpha: isDark ? 0.2 : 1,
-                                  ))
-                          : (isDark
-                                ? const Color(0xFF312E81).withValues(alpha: 0.4)
-                                : const Color(0xFFEEF2FF)),
-                      borderRadius: BorderRadius.circular(6),
+                          ? FluentLayer.subtle(
+                              verification.isCorrect &&
+                                      !verification.isAmbiguous
+                                  ? _okColour(context)
+                                  : _warnColour(context),
+                              Theme.of(context).brightness,
+                            )
+                          : FluentLayer.subtle(
+                              Theme.of(context).colorScheme.primary,
+                              Theme.of(context).brightness,
+                            ),
+                      borderRadius: FluentRadius.controlBorder,
                       border: Border.all(
                         color: verification != null
                             ? (verification.isCorrect &&
                                       !verification.isAmbiguous
-                                  ? Colors.green
-                                  : Colors.amber.shade700)
+                                  ? _okColour(context)
+                                  : _warnColour(context))
                             : const Color(0xFF818CF8),
                         width: 0.8,
                       ),
@@ -363,11 +395,11 @@ class QuestionReviewCard extends StatelessWidget {
                           color: verification != null
                               ? (verification.isCorrect &&
                                         !verification.isAmbiguous
-                                    ? Colors.green
-                                    : Colors.amber.shade800)
+                                    ? _okColour(context)
+                                    : _warnColour(context))
                               : const Color(0xFF6366F1),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: FluentSpacing.xs),
                         Text(
                           verification != null
                               ? (verification.isCorrect &&
@@ -375,14 +407,13 @@ class QuestionReviewCard extends StatelessWidget {
                                     ? 'AI পরীক্ষিত (সঠিক)'
                                     : 'অসঙ্গতি চিহ্নিত')
                               : 'AI যাচাই',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
                             color: verification != null
                                 ? (verification.isCorrect &&
                                           !verification.isAmbiguous
-                                      ? Colors.green
-                                      : Colors.amber.shade900)
+                                      ? _okColour(context)
+                                      : _warnColour(context))
                                 : const Color(0xFF4F46E5),
                           ),
                         ),
@@ -392,29 +423,25 @@ class QuestionReviewCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: FluentSpacing.s),
 
           // Question text
-          Text(
-            question.questionText,
-            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
+          Text(question.questionText, style: FluentType.bodyStrong),
+          const SizedBox(height: FluentSpacing.m),
 
           // Verification Alert Box (if flawed, irrelevant, or discrepancy found)
           if (verification != null &&
               (verification.isFlawed || verification.isIrrelevant)) ...[
             Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.red.shade900.withValues(alpha: 0.25)
-                    : Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isDark ? Colors.red.shade700 : Colors.red.shade300,
+                color: FluentLayer.subtle(
+                  _badColour(context),
+                  Theme.of(context).brightness,
                 ),
+                borderRadius: FluentRadius.cardBorder,
+                border: Border.all(color: _badColour(context)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,71 +451,69 @@ class QuestionReviewCard extends StatelessWidget {
                       Icon(
                         Icons.cancel_outlined,
                         size: 16,
-                        color: Colors.red.shade700,
+                        color: _badColour(context),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Text(
                           verification.isFlawed
                               ? '🚫 ত্রুটিপূর্ণ প্রশ্ন (Invalid / Flawed Question)'
                               : '🗑️ অপ্রয়োজনীয় প্রশ্ন (Redundant for BCS)',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? Colors.red.shade200
-                                : Colors.red.shade900,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: _badColour(context),
                           ),
                         ),
                       ),
                     ],
                   ),
                   if (verification.explanation.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: FluentSpacing.xs),
                     Text(
                       verification.explanation,
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                      style: FluentType.caption.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 8),
+                  const SizedBox(height: FluentSpacing.s),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.redAccent,
-                          side: const BorderSide(color: Colors.redAccent),
+                          foregroundColor: _badColour(context),
+                          side: BorderSide(color: _badColour(context)),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: FluentSpacing.s,
+                            vertical: FluentSpacing.xs,
                           ),
                           visualDensity: VisualDensity.compact,
                         ),
                         icon: const Icon(Icons.delete_outline, size: 14),
                         label: const Text(
                           'প্রশ্নটি বাদ দিন',
-                          style: TextStyle(fontSize: 11),
+                          style: FluentType.caption,
                         ),
                         onPressed: () => onDelete(),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.s),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6366F1),
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: FluentSpacing.s,
+                            vertical: FluentSpacing.xs,
                           ),
                           visualDensity: VisualDensity.compact,
                         ),
                         icon: const Icon(Icons.edit, size: 14),
                         label: const Text(
                           'সংশোধন করুন',
-                          style: TextStyle(fontSize: 11),
+                          style: FluentType.caption,
                         ),
                         onPressed: () => onEdit(),
                       ),
@@ -500,16 +525,15 @@ class QuestionReviewCard extends StatelessWidget {
           ] else if (verification != null &&
               (!verification.isCorrect || verification.isAmbiguous)) ...[
             Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.amber.shade900.withValues(alpha: 0.25)
-                    : Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isDark ? Colors.amber.shade700 : Colors.amber.shade400,
+                color: FluentLayer.subtle(
+                  _warnColour(context),
+                  Theme.of(context).brightness,
                 ),
+                borderRadius: FluentRadius.cardBorder,
+                border: Border.all(color: _warnColour(context)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -519,86 +543,82 @@ class QuestionReviewCard extends StatelessWidget {
                       Icon(
                         Icons.warning_amber_rounded,
                         size: 16,
-                        color: Colors.amber.shade800,
+                        color: _warnColour(context),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.s),
                       Flexible(
                         child: Text(
                           '⚠️ সতর্কতা: বইয়ের উত্তরে অসঙ্গতি পাওয়া গেছে!',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? Colors.amber.shade200
-                                : Colors.amber.shade900,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: _warnColour(context),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.s),
                   Text(
                     '• বইয়ের চিহ্নিত উত্তর: ${question.correctIndex >= 0 ? "অপশন ${question.correctIndex + 1}" : "অচিহ্নিত"} (${(question.correctIndex >= 0 && question.correctIndex < question.options.length) ? question.options[question.correctIndex] : ''})',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                    style: FluentType.caption.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   if (verification.trueCorrectIndex >= 0 &&
-                      verification.trueCorrectIndex < question.options.length) ...[
-                    const SizedBox(height: 2),
+                      verification.trueCorrectIndex <
+                          question.options.length) ...[
+                    const SizedBox(height: FluentSpacing.xxs),
                     Text(
                       '• AI প্রস্তাবিত সঠিক উত্তর: অপশন ${verification.trueCorrectIndex + 1} (${question.options[verification.trueCorrectIndex]})',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF10B981),
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: _okColour(context),
                       ),
                     ),
                   ],
                   if (verification.explanation.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: FluentSpacing.xs),
                     Text(
                       'ব্যাখ্যা: ${verification.explanation}',
-                      style: TextStyle(
-                        fontSize: 10.5,
+                      style: FluentType.caption.copyWith(
                         fontStyle: FontStyle.italic,
-                        color: isDark
-                            ? Colors.amber.shade100
-                            : Colors.amber.shade900,
+                        color: _warnColour(context),
                       ),
                     ),
                   ],
                   if (verification.trueCorrectIndex >= 0 &&
                       verification.trueCorrectIndex < question.options.length &&
-                      verification.trueCorrectIndex != question.correctIndex) ...[
-                    const SizedBox(height: 8),
+                      verification.trueCorrectIndex !=
+                          question.correctIndex) ...[
+                    const SizedBox(height: FluentSpacing.s),
                     Align(
                       alignment: Alignment.centerRight,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
+                            horizontal: FluentSpacing.m,
+                            vertical: FluentSpacing.xs,
                           ),
                           visualDensity: VisualDensity.compact,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: FluentRadius.controlBorder,
                           ),
                         ),
                         icon: const Icon(Icons.check, size: 14),
-                        label: const Text(
+                        label: Text(
                           'সঠিক উত্তর হিসেবে গ্রহণ করুন',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        onPressed: () => onApplyCorrection(verification.trueCorrectIndex),
+                        onPressed: () =>
+                            onApplyCorrection(verification.trueCorrectIndex),
                       ),
                     ),
                   ],
@@ -609,29 +629,28 @@ class QuestionReviewCard extends StatelessWidget {
               verification.isCorrect &&
               !verification.isAmbiguous) ...[
             Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              margin: const EdgeInsets.only(bottom: FluentSpacing.s),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.s,
+              ),
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.green.shade900.withValues(alpha: 0.2)
-                    : Colors.green.shade50,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: isDark ? Colors.green.shade700 : Colors.green.shade300,
+                color: FluentLayer.subtle(
+                  _okColour(context),
+                  Theme.of(context).brightness,
                 ),
+                borderRadius: FluentRadius.controlBorder,
+                border: Border.all(color: _okColour(context)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle, size: 14, color: Colors.green),
-                  const SizedBox(width: 6),
+                  Icon(Icons.check_circle, size: 14, color: _okColour(context)),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       '✓ AI যাচাইকৃত: চিহ্নিত উত্তরটি সঠিক। ${verification.explanation}',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        color: isDark
-                            ? Colors.green.shade200
-                            : Colors.green.shade900,
+                      style: FluentType.caption.copyWith(
+                        color: _okColour(context),
                       ),
                     ),
                   ),
@@ -642,34 +661,32 @@ class QuestionReviewCard extends StatelessWidget {
 
           // Options
           ...List.generate(question.options.length, (optIndex) {
-            final isCorrect = question.correctIndex >= 0 && optIndex == question.correctIndex;
+            final isCorrect =
+                question.correctIndex >= 0 && optIndex == question.correctIndex;
             return InkWell(
               onTap: () {
                 onPickAnswer(optIndex);
               },
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: FluentRadius.cardBorder,
               child: Container(
-                margin: const EdgeInsets.only(bottom: 6),
+                margin: const EdgeInsets.only(bottom: FluentSpacing.s),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
+                  horizontal: FluentSpacing.m,
+                  vertical: FluentSpacing.s,
                 ),
                 decoration: BoxDecoration(
                   color: isCorrect
-                      ? (isDark
-                            ? Colors.green.withValues(alpha: 0.25)
-                            : Colors.green.shade50)
-                      : (isDark
-                            ? const Color(0xFF0F172A)
-                            : Colors.grey.shade50),
-                  borderRadius: BorderRadius.circular(8),
+                      ? FluentLayer.subtle(
+                          _okColour(context),
+                          Theme.of(context).brightness,
+                        )
+                      : Theme.of(context).colorScheme.surface,
+                  borderRadius: FluentRadius.controlBorder,
                   border: Border.all(
                     color: isCorrect
-                        ? Colors.green
-                        : (isDark
-                              ? const Color(0xFF334155)
-                              : Colors.grey.shade300),
-                    width: isCorrect ? 1.5 : 1.0,
+                        ? _okColour(context)
+                        : FluentStroke.card(Theme.of(context).brightness),
+                    width: isCorrect ? 1.5 : FluentStroke.width,
                   ),
                 ),
                 child: Row(
@@ -679,38 +696,40 @@ class QuestionReviewCard extends StatelessWidget {
                           ? Icons.check_circle
                           : Icons.radio_button_unchecked,
                       size: 16,
-                      color: isCorrect ? Colors.green : Colors.grey.shade400,
+                      color: isCorrect
+                          ? _okColour(context)
+                          : Theme.of(context).colorScheme.onSurface
+                                .withValues(alpha: 0.65),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Text(
                         question.options[optIndex],
-                        style: TextStyle(
-                          fontSize: 12.5,
+                        style: FluentType.caption.copyWith(
                           fontWeight: isCorrect
                               ? FontWeight.bold
                               : FontWeight.normal,
                           color: isCorrect
-                              ? (isDark
-                                    ? Colors.green.shade300
-                                    : Colors.green.shade900)
-                              : (isDark ? Colors.white70 : Colors.black87),
+                              ? (_okColour(context))
+                              : (Theme.of(context).colorScheme.onSurface),
                         ),
                       ),
                     ),
                     if (isCorrect)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                          horizontal: FluentSpacing.s,
+                          vertical: FluentSpacing.xxs,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.green.shade700,
-                          borderRadius: BorderRadius.circular(4),
+                          color: _okColour(context),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
-                        child: const Text(
+                        child: Text(
                           'চিহ্নিত উত্তর',
-                          style: TextStyle(color: Colors.white, fontSize: 9.5),
+                          style: FluentType.caption.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                   ],
@@ -720,14 +739,18 @@ class QuestionReviewCard extends StatelessWidget {
           }),
 
           if (question.explanation.isNotEmpty && verification == null) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.s),
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(FluentSpacing.s),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(6),
+                color: FluentLayer.subtle(
+                  _warnColour(context),
+                  Theme.of(context).brightness,
+                ),
+                borderRadius: FluentRadius.controlBorder,
                 border: Border.all(
-                  color: isDark ? Colors.amber.shade900 : Colors.amber.shade200,
+                  color: _warnColour(context).withValues(alpha: 0.35),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Row(
@@ -736,19 +759,14 @@ class QuestionReviewCard extends StatelessWidget {
                   Icon(
                     Icons.info_outline,
                     size: 14,
-                    color: isDark
-                        ? Colors.amber.shade300
-                        : Colors.amber.shade900,
+                    color: _warnColour(context),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       'ব্যাখ্যা: ${question.explanation}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? Colors.amber.shade200
-                            : Colors.amber.shade900,
+                      style: FluentType.caption.copyWith(
+                        color: _warnColour(context),
                       ),
                     ),
                   ),
@@ -756,19 +774,22 @@ class QuestionReviewCard extends StatelessWidget {
               ),
             ),
           ] else if (question.explanation.isEmpty && verification == null) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.s),
             InkWell(
               onTap: () => onEdit(),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: FluentRadius.controlBorder,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: FluentSpacing.s,
+                  vertical: FluentSpacing.s,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E293B).withValues(alpha: 0.5)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(6),
+                  color: Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.06),
+                  borderRadius: FluentRadius.controlBorder,
                   border: Border.all(
-                    color: isDark ? const Color(0xFF334155) : Colors.grey.shade300,
+                    color: FluentStroke.card(Theme.of(context).brightness),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Row(
@@ -777,19 +798,18 @@ class QuestionReviewCard extends StatelessWidget {
                     Icon(
                       Icons.edit_note,
                       size: 14,
-                      color: isDark ? Colors.blueGrey.shade300 : Colors.blueGrey,
+                      color: Theme.of(context).colorScheme.onSurface
+                          .withValues(alpha: 0.65),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: FluentSpacing.s),
                     Flexible(
                       child: Text(
                         '+ ব্যাখ্যা যোগ করুন (লিখুন বা মুখে বলুন)',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark
-                              ? Colors.blueGrey.shade300
-                              : Colors.blueGrey,
+                        style: FluentType.caption.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface
+                              .withValues(alpha: 0.65),
                           fontStyle: FontStyle.italic,
                         ),
                       ),
@@ -819,26 +839,31 @@ class _OriginChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colour = isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4F46E5);
+    final colour = Theme.of(context).colorScheme.primary;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.s,
+        vertical: FluentSpacing.xs,
+      ),
       decoration: BoxDecoration(
-        color: colour.withValues(alpha: isDark ? 0.16 : 0.08),
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: colour.withValues(alpha: 0.4), width: 0.8),
+        color: FluentLayer.subtle(colour, Theme.of(context).brightness),
+        borderRadius: FluentRadius.controlBorder,
+        border: Border.all(
+          color: colour.withValues(alpha: 0.35),
+          width: FluentStroke.width,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 11, color: colour),
-          const SizedBox(width: 4),
+          const SizedBox(width: FluentSpacing.xs),
           Flexible(
             child: Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 10,
+              style: FluentType.caption.copyWith(
                 fontWeight: FontWeight.w600,
                 color: colour,
               ),

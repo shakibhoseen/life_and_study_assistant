@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_ui_kit.dart';
+
 /// One line of the backlog: what it is, how much of it, and where it goes.
 @immutable
 class AttentionItem {
@@ -39,38 +42,45 @@ class AttentionCard extends StatelessWidget {
     // Nothing waiting needs no card. The recommendation above already says so.
     if (waiting.isEmpty) return const SizedBox.shrink();
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+    final onSurfaceMuted = onSurface.withValues(alpha: 0.65);
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: theme.cardTheme.color ?? theme.cardColor,
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF334155) : Colors.grey.shade200,
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
         ),
+        boxShadow: FluentElevation.card(brightness),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            padding: const EdgeInsets.fromLTRB(
+              FluentSpacing.l,
+              FluentSpacing.m,
+              FluentSpacing.l,
+              FluentSpacing.s,
+            ),
             child: Row(
               children: [
                 Icon(
                   Icons.playlist_add_check_circle_outlined,
                   size: 17,
-                  color: isDark ? Colors.white70 : Colors.black54,
+                  color: onSurfaceMuted,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     'যা মনোযোগ চায়',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
+                    style: FluentType.bodyStrong.copyWith(color: onSurface),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -83,55 +93,36 @@ class AttentionCard extends StatelessWidget {
               onTap: item.onTap,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+                  horizontal: FluentSpacing.l,
+                  vertical: FluentSpacing.s,
                 ),
                 child: Row(
                   children: [
                     Icon(item.icon, size: 16, color: item.colour),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: FluentSpacing.m),
                     Expanded(
                       child: Text(
                         item.label,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.body.copyWith(color: onSurface),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: item.colour.withValues(
-                          alpha: isDark ? 0.3 : 0.14,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${item.count}',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : item.colour,
-                        ),
-                      ),
-                    ),
+                    const SizedBox(width: FluentSpacing.s),
+                    PremiumTag(label: '${item.count}', color: item.colour),
                     if (item.onTap != null) ...[
-                      const SizedBox(width: 2),
+                      const SizedBox(width: FluentSpacing.xxs),
                       Icon(
                         Icons.chevron_right,
                         size: 16,
-                        color: isDark ? Colors.white38 : Colors.black38,
+                        color: onSurface.withValues(alpha: 0.5),
                       ),
                     ],
                   ],
                 ),
               ),
             ),
-          const SizedBox(height: 4),
+          const SizedBox(height: FluentSpacing.xs),
         ],
       ),
     );

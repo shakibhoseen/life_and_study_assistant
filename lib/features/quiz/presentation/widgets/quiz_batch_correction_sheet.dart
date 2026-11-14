@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
@@ -19,6 +20,24 @@ import '../../../../core/services/ai/ai_cancellation.dart';
 
 /// Reusable modal sheet that allows students to paste external AI (ChatGPT, Claude, etc.)
 /// critiques or speak voice instructions to batch-fix or delete faulty questions with a 1-tap confirmation preview.
+/// The two status colours this sheet means something by — a correction it is
+/// confident in and one that needs a look — kept here so the same green and
+/// amber are used throughout and each reads on both themes.
+Color _okColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFF4ADE80)
+    : const Color(0xFF15803D);
+
+Color _warnColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFFCD34D)
+    : const Color(0xFFB45309);
+
+Color _badColour(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFF87171)
+    : const Color(0xFFB91C1C);
+
 class QuizBatchCorrectionSheet {
   static Future<List<QuizQuestion>?> show(
     BuildContext context, {
@@ -46,7 +65,6 @@ class QuizBatchCorrectionSheet {
       builder: (sheetCtx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
-            final isDark = Theme.of(ctx).brightness == Brightness.dark;
             final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
             final selectedCount =
                 parsedCorrections?.where((c) => c.isSelected).length ?? 0;
@@ -56,22 +74,22 @@ class QuizBatchCorrectionSheet {
                 maxHeight: MediaQuery.of(ctx).size.height * 0.85,
               ),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                color: Theme.of(ctx).colorScheme.surface,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
+                  top: Radius.circular(FluentRadius.large),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
+                border: Border(
+                  top: BorderSide(
+                    color: FluentStroke.card(Theme.of(ctx).brightness),
+                    width: FluentStroke.width,
                   ),
-                ],
+                ),
+                boxShadow: FluentElevation.flyout(Theme.of(ctx).brightness),
               ),
               padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 12,
+                left: FluentSpacing.l,
+                right: FluentSpacing.l,
+                top: FluentSpacing.m,
                 bottom: bottomInset + 16,
               ),
               child: Column(
@@ -83,11 +101,10 @@ class QuizBatchCorrectionSheet {
                     child: Container(
                       width: 40,
                       height: 4,
-                      margin: const EdgeInsets.only(bottom: 12),
+                      margin: const EdgeInsets.only(bottom: FluentSpacing.m),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.grey.shade700
-                            : Colors.grey.shade300,
+                        color: Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.65),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -97,29 +114,26 @@ class QuizBatchCorrectionSheet {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.all(FluentSpacing.s),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1)
+                          color: Theme.of(context).colorScheme.primary
                               .withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: FluentRadius.cardBorder,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.auto_fix_high_rounded,
-                          color: Color(0xFF6366F1),
+                          color: Theme.of(context).colorScheme.primary,
                           size: 20,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: FluentSpacing.m),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               'AI অ্যানালাইসিস দিয়ে অটো-ফিক্স',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: FluentType.bodyStrong,
                             ),
                             Text(
                               examId != null
@@ -127,14 +141,12 @@ class QuizBatchCorrectionSheet {
                                   : (topic != null && topic.isNotEmpty
                                         ? '$topic · এক্সটার্নাল AI দিয়ে এক ক্লিকে সমাধান'
                                         : 'এক্সটার্নাল AI-এর বিশ্লেষণ দিয়ে এক ক্লিকে সমাধান'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade600,
+                              style: FluentType.caption.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface
+                                    .withValues(alpha: 0.65),
                               ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -145,49 +157,45 @@ class QuizBatchCorrectionSheet {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: FluentSpacing.m),
 
                   // Content: either Input Mode or Review Mode
                   if (parsedCorrections == null) ...[
                     // Input Mode
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(FluentSpacing.m),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF0F172A)
-                            : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Theme.of(context).colorScheme.onSurface
+                            .withValues(alpha: 0.06),
+                        borderRadius: FluentRadius.cardBorder,
                         border: Border.all(
-                          color: isDark
-                              ? Colors.white12
-                              : const Color(0xFFE2E8F0),
+                          color: FluentStroke.card(
+                            Theme.of(context).brightness,
+                          ),
                         ),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.info_outline,
                             size: 16,
-                            color: Color(0xFF6366F1),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: FluentSpacing.s),
                           Expanded(
                             child: Text(
                               'ChatGPT, Claude বা অন্য যেকোনো AI থেকে পাওয়া উত্তরের পর্যালোচনা বা ভুলের টেক্সট এখানে পেস্ট করুন। সিস্টেম স্বয়ংক্রিয়ভাবে প্রশ্নের সঠিক উত্তর পরিবর্তন বা ত্রুটিপূর্ণ প্রশ্ন বাদ দেওয়ার প্রস্তাবনা তৈরি করবে।',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: isDark
-                                    ? Colors.grey.shade300
-                                    : const Color(0xFF334155),
-                                height: 1.35,
+                              style: FluentType.caption.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface
+                                    .withValues(alpha: 0.65),
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: FluentSpacing.m),
 
                     // Voice Recording & Quick Paste Bar
                     Row(
@@ -196,12 +204,14 @@ class QuizBatchCorrectionSheet {
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: isRecordingVoice
-                                  ? Colors.red.shade600
-                                  : const Color(0xFF6366F1),
+                                  ? _badColour(context)
+                                  : Theme.of(context).colorScheme.primary,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: FluentSpacing.m,
+                              ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: FluentRadius.controlBorder,
                               ),
                               elevation: 0,
                             ),
@@ -215,9 +225,8 @@ class QuizBatchCorrectionSheet {
                               isRecordingVoice
                                   ? 'রেকর্ড থামান (${(recordingSeconds ~/ 60).toString().padLeft(2, '0')}:${(recordingSeconds % 60).toString().padLeft(2, '0')})'
                                   : '🎙️ মুখে বলুন (ভয়েস ফিক্স)',
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.bold,
+                              style: FluentType.caption.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                             onPressed: isAnalyzing
@@ -319,34 +328,33 @@ class QuizBatchCorrectionSheet {
                                   },
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: isDark
-                                ? Colors.grey.shade300
-                                : const Color(0xFF334155),
+                            foregroundColor: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.65),
                             side: BorderSide(
-                              color: isDark
-                                  ? Colors.white24
-                                  : Colors.grey.shade300,
+                              color: Theme.of(context).colorScheme.onSurface
+                                  .withValues(alpha: 0.65),
                             ),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
+                              horizontal: FluentSpacing.m,
+                              vertical: FluentSpacing.m,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: FluentRadius.controlBorder,
                             ),
                           ),
                           icon: const Icon(
                             Icons.content_paste_rounded,
                             size: 16,
                           ),
-                          label: const Text(
+                          label: Text(
                             'পেস্ট',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           onPressed: isAnalyzing
@@ -364,12 +372,14 @@ class QuizBatchCorrectionSheet {
                         TextButton.icon(
                           style: TextButton.styleFrom(
                             visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: FluentSpacing.s,
+                            ),
                           ),
                           icon: const Icon(Icons.copy_all_rounded, size: 15),
                           label: const Text(
                             'প্রম্পট',
-                            style: TextStyle(fontSize: 12),
+                            style: FluentType.caption,
                           ),
                           onPressed: () {
                             // Plain Bengali still works; this shape is simply
@@ -392,54 +402,53 @@ class QuizBatchCorrectionSheet {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
 
                     // The grammar, where it is used. A reader that understands
                     // seven phrases and says so is more use than one that
                     // understands nine and keeps them to itself.
                     Theme(
-                      data: Theme.of(
-                        context,
-                      ).copyWith(dividerColor: Colors.transparent),
+                      data: Theme.of(context)
+                          .copyWith(dividerColor: Colors.transparent),
                       child: ExpansionTile(
                         tilePadding: EdgeInsets.zero,
-                        childrenPadding: const EdgeInsets.only(bottom: 8),
+                        childrenPadding: const EdgeInsets.only(
+                          bottom: FluentSpacing.s,
+                        ),
                         leading: const Icon(Icons.mic_none, size: 18),
-                        title: const Text(
+                        title: Text(
                           'মুখে বা টাইপ করে কীভাবে বলবেন',
-                          style: TextStyle(
-                            fontSize: 12.5,
+                          style: FluentType.caption.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         children: [
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.only(
+                              bottom: FluentSpacing.s,
+                            ),
                             child: Text(
                               voicePhrasingHelp,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color:
-                                    Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white70
-                                    : Colors.black87,
+                              style: FluentType.caption.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ),
                           for (final (phrase, effect) in voiceFixPhrasebook)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.only(
+                                bottom: FluentSpacing.s,
+                              ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('• ', style: TextStyle(fontSize: 12)),
+                                  const Text('• ', style: FluentType.caption),
                                   Expanded(
                                     child: RichText(
                                       text: TextSpan(
-                                        style: DefaultTextStyle.of(
-                                          context,
-                                        ).style.copyWith(fontSize: 11.5),
+                                        style: DefaultTextStyle.of(context)
+                                            .style
+                                            .copyWith(fontSize: 11.5),
                                         children: [
                                           TextSpan(
                                             text: '"$phrase"',
@@ -455,21 +464,18 @@ class QuizBatchCorrectionSheet {
                                 ],
                               ),
                             ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: FluentSpacing.xxs),
                           Text(
                             voiceTargetHelp,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white60
-                                  : Colors.black54,
+                            style: FluentType.caption.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface
+                                  .withValues(alpha: 0.65),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
 
                     // Tap a tag, then say or type only the words. Free speech
                     // is read too, but a tag removes the guessing: it is the
@@ -484,11 +490,13 @@ class QuizBatchCorrectionSheet {
                             visualDensity: VisualDensity.compact,
                             materialTapTargetSize:
                                 MaterialTapTargetSize.shrinkWrap,
-                            labelStyle: const TextStyle(fontSize: 11),
+                            labelStyle: FluentType.caption,
                             label: Text(label),
                             onPressed: () {
                               final existing = textController.text.trimRight();
-                              final lead = existing.isEmpty ? '' : '$existing\n';
+                              final lead = existing.isEmpty
+                                  ? ''
+                                  : '$existing\n';
                               textController.text = '$lead$prefix';
                               textController.selection =
                                   TextSelection.fromPosition(
@@ -500,26 +508,24 @@ class QuizBatchCorrectionSheet {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
 
                     TextField(
                       controller: textController,
                       maxLines: 4,
-                      style: const TextStyle(fontSize: 12.5),
+                      style: FluentType.caption,
                       decoration: InputDecoration(
                         hintText:
                             'AI-এর বিশ্লেষণ এখানে পেস্ট করুন — যেভাবে খুশি লিখুন।\n'
                             'এক লাইনেও চলবে: "৪ নম্বরটা ভুল, প্রশ্নটা ঠিক করো"\n'
                             'উপরের প্রম্পটে চাইলে JSON আসে — সেটা ফোনেই পড়া হয়, ফ্রি।',
-                        hintStyle: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? Colors.grey.shade500
-                              : Colors.grey.shade400,
+                        hintStyle: FluentType.caption.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface
+                              .withValues(alpha: 0.65),
                         ),
-                        contentPadding: const EdgeInsets.all(12),
+                        contentPadding: const EdgeInsets.all(FluentSpacing.m),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: FluentRadius.cardBorder,
                         ),
                         suffixIcon: IconButton(
                           tooltip: 'ক্লিপবোর্ড থেকে পেস্ট করুন',
@@ -539,15 +545,17 @@ class QuizBatchCorrectionSheet {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: FluentSpacing.m),
 
                     if (statusMessage != null) ...[
                       Text(
                         statusMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                        style: FluentType.caption.copyWith(
+                          color: _badColour(context),
+                        ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: FluentSpacing.s),
                     ],
 
                     // The button's own spinner said only "wait". This
@@ -561,16 +569,18 @@ class QuizBatchCorrectionSheet {
                         // the user's call, so it needs to be reachable.
                         onCancel: () => analysisCancellation?.cancel(),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: FluentSpacing.m),
                     ],
 
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6366F1),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: FluentSpacing.m,
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                       ),
                       icon: isAnalyzing
@@ -665,32 +675,30 @@ class QuizBatchCorrectionSheet {
                     // Preview & Confirmation Mode
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
+                        horizontal: FluentSpacing.m,
+                        vertical: FluentSpacing.s,
                       ),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF1E1B4B)
-                            : const Color(0xFFEEF2FF),
-                        borderRadius: BorderRadius.circular(8),
+                        color: FluentLayer.subtle(
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(context).brightness,
+                        ),
+                        borderRadius: FluentRadius.cardBorder,
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.check_circle_outline,
                             size: 16,
-                            color: Color(0xFF6366F1),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: FluentSpacing.s),
                           Expanded(
                             child: Text(
                               '${parsedCorrections!.length}টি সংশোধনের প্রস্তাবনা পাওয়া গেছে ($selectedCountটি নির্বাচিত)',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? const Color(0xFFA5B4FC)
-                                    : const Color(0xFF3730A3),
+                              style: FluentType.caption.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           ),
@@ -713,13 +721,13 @@ class QuizBatchCorrectionSheet {
                               parsedCorrections!.every((c) => c.isSelected)
                                   ? 'সব আনচেক'
                                   : 'সব নির্বাচন',
-                              style: const TextStyle(fontSize: 11),
+                              style: FluentType.caption,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: FluentSpacing.s),
 
                     Flexible(
                       child: ListView.builder(
@@ -734,21 +742,22 @@ class QuizBatchCorrectionSheet {
                               : null;
 
                           return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(10),
+                            margin: const EdgeInsets.only(
+                              bottom: FluentSpacing.s,
+                            ),
+                            padding: const EdgeInsets.all(FluentSpacing.m),
                             decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF0F172A)
-                                  : const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(8),
+                              color: Theme.of(context).colorScheme.surface,
+                              borderRadius: FluentRadius.cardBorder,
                               border: Border.all(
                                 color: item.isSelected
                                     ? (item.isDelete
-                                          ? Colors.red.shade400
-                                          : const Color(0xFF6366F1))
-                                    : (isDark
-                                          ? Colors.white12
-                                          : Colors.grey.shade300),
+                                          ? _badColour(context)
+                                          : Theme.of(context)
+                                                .colorScheme
+                                                .primary)
+                                    : (Theme.of(context).colorScheme.onSurface
+                                          .withValues(alpha: 0.65)),
                                 width: item.isSelected ? 1.5 : 1.0,
                               ),
                             ),
@@ -758,15 +767,15 @@ class QuizBatchCorrectionSheet {
                                 Checkbox(
                                   value: item.isSelected,
                                   activeColor: item.isDelete
-                                      ? Colors.red
-                                      : const Color(0xFF6366F1),
+                                      ? _badColour(context)
+                                      : Theme.of(context).colorScheme.primary,
                                   onChanged: (val) {
                                     setSheetState(() {
                                       item.isSelected = val ?? false;
                                     });
                                   },
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: FluentSpacing.xs),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -774,34 +783,31 @@ class QuizBatchCorrectionSheet {
                                     children: [
                                       Text(
                                         'প্রশ্ন ${item.questionIndex + 1}: ${q?.questionText ?? item.questionSnippet}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
+                                        style: FluentType.caption.copyWith(
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: FluentSpacing.xs),
                                       if (item.isDelete) ...[
                                         Container(
                                           padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
+                                            horizontal: FluentSpacing.s,
+                                            vertical: FluentSpacing.xxs,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.red.withValues(
-                                              alpha: 0.15,
-                                            ),
+                                            color: _badColour(context)
+                                                .withValues(alpha: 0.15),
                                             borderRadius: BorderRadius.circular(
                                               4,
                                             ),
                                           ),
-                                          child: const Text(
+                                          child: Text(
                                             '🗑️ এই প্রশ্নটি বাতিল/ডিলিট করা হবে',
-                                            style: TextStyle(
-                                              color: Colors.red,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
+                                            style: FluentType.caption.copyWith(
+                                              color: _badColour(context),
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ),
@@ -810,61 +816,77 @@ class QuizBatchCorrectionSheet {
                                           builder: (_) {
                                             final targetOptions =
                                                 item.newOptions ?? q?.options;
-                                            final proposedText = item
+                                            final proposedText =
+                                                item
                                                     .proposedOptionText
                                                     .isNotEmpty
                                                 ? item.proposedOptionText
                                                 : (item.proposedCorrectIndex !=
-                                                            null &&
-                                                        item.proposedCorrectIndex! >=
-                                                            0 &&
-                                                        targetOptions != null &&
-                                                        item.proposedCorrectIndex! <
-                                                            targetOptions.length
-                                                    ? targetOptions[item
-                                                        .proposedCorrectIndex!]
-                                                    : '');
+                                                              null &&
+                                                          item.proposedCorrectIndex! >=
+                                                              0 &&
+                                                          targetOptions !=
+                                                              null &&
+                                                          item.proposedCorrectIndex! <
+                                                              targetOptions
+                                                                  .length
+                                                      ? targetOptions[item
+                                                            .proposedCorrectIndex!]
+                                                      : '');
 
                                             if (proposedText.isNotEmpty) {
                                               return Row(
                                                 children: [
-                                                  if (item.oldOptionText
+                                                  if (item
+                                                      .oldOptionText
                                                       .isNotEmpty) ...[
                                                     Flexible(
                                                       child: Text(
                                                         'পূর্বের: ${item.oldOptionText}',
-                                                        style: TextStyle(
-                                                          decoration:
-                                                              TextDecoration
-                                                                  .lineThrough,
-                                                          color: isDark
-                                                              ? Colors
-                                                                  .grey.shade400
-                                                              : Colors
-                                                                  .grey.shade600,
-                                                          fontSize: 11,
-                                                        ),
+                                                        style: FluentType
+                                                            .caption
+                                                            .copyWith(
+                                                              decoration:
+                                                                  TextDecoration
+                                                                      .lineThrough,
+                                                              color:
+                                                                  Theme.of(
+                                                                        context,
+                                                                      )
+                                                                      .colorScheme
+                                                                      .onSurface
+                                                                      .withValues(
+                                                                        alpha:
+                                                                            0.65,
+                                                                      ),
+                                                            ),
                                                         overflow: TextOverflow
                                                             .ellipsis,
                                                       ),
                                                     ),
-                                                    const SizedBox(width: 6),
-                                                    const Icon(
+                                                    const SizedBox(
+                                                      width: FluentSpacing.s,
+                                                    ),
+                                                    Icon(
                                                       Icons.arrow_forward,
                                                       size: 12,
-                                                      color: Colors.green,
+                                                      color: _okColour(context),
                                                     ),
-                                                    const SizedBox(width: 6),
+                                                    const SizedBox(
+                                                      width: FluentSpacing.s,
+                                                    ),
                                                   ],
                                                   Flexible(
                                                     child: Text(
                                                       'নতুন উত্তর: $proposedText',
-                                                      style: const TextStyle(
-                                                        color: Colors.green,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 11.5,
-                                                      ),
+                                                      style: FluentType.caption
+                                                          .copyWith(
+                                                            color: _okColour(
+                                                              context,
+                                                            ),
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
                                                       overflow:
                                                           TextOverflow.ellipsis,
                                                     ),
@@ -874,50 +896,65 @@ class QuizBatchCorrectionSheet {
                                             } else if (item.newQuestionText !=
                                                     null ||
                                                 item.newOptions != null) {
-                                              return const Row(
+                                              return Row(
                                                 children: [
                                                   Icon(
                                                     Icons.edit_note_rounded,
                                                     size: 14,
-                                                    color: Color(0xFF6366F1),
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .primary,
                                                   ),
-                                                  SizedBox(width: 4),
+                                                  SizedBox(
+                                                    width: FluentSpacing.xs,
+                                                  ),
                                                   Flexible(
                                                     child: Text(
                                                       'প্রশ্ন বা অপশন পরিমার্জন',
                                                       maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        color: Color(0xFF6366F1),
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 11.5,
-                                                      ),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: FluentType.caption
+                                                          .copyWith(
+                                                            color:
+                                                                Theme.of(
+                                                                      context,
+                                                                    )
+                                                                    .colorScheme
+                                                                    .primary,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
                                                     ),
                                                   ),
                                                 ],
                                               );
                                             } else if (item.newExplanation !=
                                                 null) {
-                                              return const Row(
+                                              return Row(
                                                 children: [
                                                   Icon(
                                                     Icons.lightbulb_outline,
                                                     size: 14,
-                                                    color: Colors.amber,
+                                                    color: _warnColour(context),
                                                   ),
-                                                  SizedBox(width: 4),
+                                                  SizedBox(
+                                                    width: FluentSpacing.xs,
+                                                  ),
                                                   Flexible(
                                                     child: Text(
                                                       'ব্যাখ্যা পরিমার্জন',
                                                       maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        color: Colors.amber,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 11.5,
-                                                      ),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: FluentType.caption
+                                                          .copyWith(
+                                                            color: _warnColour(
+                                                              context,
+                                                            ),
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
                                                     ),
                                                   ),
                                                 ],
@@ -928,15 +965,14 @@ class QuizBatchCorrectionSheet {
                                         ),
                                       ],
                                       if (item.reason.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
+                                        const SizedBox(
+                                          height: FluentSpacing.xs,
+                                        ),
                                         Text(
                                           '💡 ${item.reason}',
-                                          style: TextStyle(
-                                            fontSize: 10.5,
+                                          style: FluentType.caption.copyWith(
                                             fontStyle: FontStyle.italic,
-                                            color: isDark
-                                                ? Colors.amber.shade200
-                                                : Colors.brown.shade800,
+                                            color: _warnColour(context),
                                           ),
                                         ),
                                       ],
@@ -949,7 +985,7 @@ class QuizBatchCorrectionSheet {
                         },
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: FluentSpacing.m),
 
                     Row(
                       children: [
@@ -961,15 +997,17 @@ class QuizBatchCorrectionSheet {
                           },
                           child: const Text('পুনরায় পেস্ট'),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green.shade700,
+                              backgroundColor: _okColour(context),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: FluentSpacing.m,
+                              ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: FluentRadius.controlBorder,
                               ),
                             ),
                             icon: const Icon(Icons.check, size: 18),
@@ -1055,7 +1093,9 @@ class QuizBatchCorrectionSheet {
                                               color: Colors.white,
                                               size: 18,
                                             ),
-                                            const SizedBox(width: 8),
+                                            const SizedBox(
+                                              width: FluentSpacing.s,
+                                            ),
                                             Expanded(
                                               child: Text(
                                                 '${selectedItems.length}টি প্রশ্ন সফলভাবে সংশোধন করা হয়েছে$targetDesc',

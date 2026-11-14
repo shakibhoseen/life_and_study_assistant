@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../chat/presentation/providers/chat_provider.dart';
 import '../../../chat/presentation/screens/ai_chat_screen.dart';
@@ -81,7 +82,12 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
     final historyAsync = ref.watch(drillHistoryStreamProvider);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 80),
+      padding: const EdgeInsets.fromLTRB(
+        FluentSpacing.l,
+        FluentSpacing.l,
+        FluentSpacing.l,
+        80,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -91,12 +97,12 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
             error: (err, stack) => const SizedBox.shrink(),
             data: (stats) => _buildStatsCard(stats),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.l),
 
           // 2. Prominent Re-drill Action Banner (if active mistakes exist)
           if (widget.wrongQuestions.isNotEmpty) ...[
             _buildMistakeBanner(widget.wrongQuestions),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
           ],
 
           // 3. Sub-segment Selector: Mistake Bank vs Drill History
@@ -110,7 +116,7 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
               history.length,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: FluentSpacing.l),
 
           // 4. Sub-view Content
           if (_hubSubViewIndex == 0)
@@ -139,96 +145,93 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
     final activeMistakes = stats['active_wrong_count'] ?? 0;
     final accuracy = (stats['accuracy_percentage'] as num?)?.toDouble() ?? 0.0;
 
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final accuracyColor = accuracy >= 70
+        ? Colors.green
+        : (accuracy >= 40 ? Colors.orange : Colors.redAccent);
+
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.analytics_outlined,
-                  color: Colors.indigo,
+                  color: scheme.primary,
                   size: 20,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 // Was an unconstrained Text + Spacer(): the title and the
                 // accuracy badge both demanded their full intrinsic width,
                 // so the row blew past the card on a narrow screen.
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Drill Performance Summary',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    style: FluentType.bodyStrong.copyWith(
+                      fontSize: 15,
+                      color: scheme.onSurface,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xxs,
                   ),
                   decoration: BoxDecoration(
-                    color: accuracy >= 70
-                        ? Colors.green.shade50
-                        : (accuracy >= 40
-                              ? Colors.orange.shade50
-                              : Colors.red.shade50),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: accuracy >= 70
-                          ? Colors.green.shade200
-                          : (accuracy >= 40
-                                ? Colors.orange.shade200
-                                : Colors.red.shade200),
-                    ),
+                    color: FluentLayer.subtle(accuracyColor, brightness),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   child: Text(
                     '${accuracy.toStringAsFixed(1)}% Accuracy',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: accuracy >= 70
-                          ? Colors.green.shade800
-                          : (accuracy >= 40
-                                ? Colors.orange.shade800
-                                : Colors.red.shade800),
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: accuracyColor,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
             Row(
               children: [
-                _buildStatPill('Total Drills', '$totalDrills', Colors.indigo),
-                const SizedBox(width: 8),
-                _buildStatPill('Questions', '$totalAnswered', Colors.blueGrey),
-                const SizedBox(width: 8),
+                _buildStatPill('Total Drills', '$totalDrills', scheme.primary),
+                const SizedBox(width: FluentSpacing.s),
+                _buildStatPill(
+                  'Questions',
+                  '$totalAnswered',
+                  scheme.onSurface.withValues(alpha: 0.75),
+                ),
+                const SizedBox(width: FluentSpacing.s),
                 _buildStatPill('Correct', '$totalCorrect', Colors.green),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 _buildStatPill('Mistakes', '$activeMistakes', Colors.redAccent),
               ],
             ),
             if (totalAnswered > 0) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: FluentRadius.controlBorder,
                 child: LinearProgressIndicator(
                   value: (accuracy / 100).clamp(0.0, 1.0),
                   minHeight: 6,
-                  backgroundColor: Colors.red.shade100,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    accuracy >= 70
-                        ? Colors.green
-                        : (accuracy >= 50 ? Colors.orange : Colors.redAccent),
-                  ),
+                  backgroundColor: scheme.onSurface.withValues(alpha: 0.10),
+                  valueColor: AlwaysStoppedAnimation<Color>(accuracyColor),
                 ),
               ),
             ],
@@ -239,28 +242,36 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
   }
 
   Widget _buildStatPill(String title, String value, Color color) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        padding: const EdgeInsets.symmetric(
+          vertical: FluentSpacing.s,
+          horizontal: FluentSpacing.xs,
+        ),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          color: FluentLayer.subtle(color, Theme.of(context).brightness),
+          borderRadius: FluentRadius.controlBorder,
         ),
         child: Column(
           children: [
             Text(
               value,
-              style: TextStyle(
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.bodyStrong.copyWith(
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: FluentSpacing.xxs),
             Text(
               title,
-              style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
+              style: FluentType.caption.copyWith(
+                fontSize: 10,
+                color: scheme.onSurface.withValues(alpha: 0.65),
+              ),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -272,87 +283,85 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
   }
 
   Widget _buildMistakeBanner(List<DrillQuestion> wrongQuestions) {
+    final scheme = Theme.of(context).colorScheme;
+    final onAccent = scheme.onPrimary;
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.indigo.shade700, Colors.indigo.shade900],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.indigo.withValues(alpha: 0.25),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        // A flat accent panel: Fluent marks the thing you act on with the
+        // accent fill, not with a gradient and a coloured glow.
+        color: scheme.primary,
+        borderRadius: FluentRadius.cardBorder,
+        boxShadow: FluentElevation.card(Theme.of(context).brightness),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(FluentSpacing.s),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
+              color: onAccent.withValues(alpha: 0.16),
+              borderRadius: FluentRadius.controlBorder,
             ),
-            child: const Icon(Icons.flash_on, color: Colors.amber, size: 26),
+            child: Icon(Icons.flash_on, color: onAccent, size: 24),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: FluentSpacing.m),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '${wrongQuestions.length} Mistakes to Master',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14.5,
-                  ),
+                  style: FluentType.bodyStrong.copyWith(color: onAccent),
                 ),
-                const SizedBox(height: 2),
-                const Text(
+                const SizedBox(height: FluentSpacing.xxs),
+                Text(
                   'Practice your exact wrong questions until you get 100%!',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                  style: FluentType.caption.copyWith(
+                    color: onAccent.withValues(alpha: 0.80),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
           Column(
             children: [
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  foregroundColor: Colors.black87,
+                  backgroundColor: onAccent,
+                  foregroundColor: scheme.primary,
+                  elevation: 0,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                    horizontal: FluentSpacing.m,
+                    vertical: FluentSpacing.xs + 2,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   visualDensity: VisualDensity.compact,
                 ),
                 onPressed: () => widget.onStartMistakeBankDrill(wrongQuestions),
-                child: const Text(
+                child: Text(
                   'Drill Now',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: FluentSpacing.xs),
               OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white70),
+                  foregroundColor: onAccent,
+                  side: BorderSide(color: onAccent.withValues(alpha: 0.55)),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
+                    horizontal: FluentSpacing.m,
+                    vertical: FluentSpacing.xs,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   visualDensity: VisualDensity.compact,
                 ),
@@ -362,9 +371,13 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                     builder: (_) => const MistakeNotebookScreen(),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Notebook 📓',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -374,59 +387,140 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
     );
   }
 
+  /// A Fluent segmented control.
+  ///
+  /// Hand-rolled rather than [SegmentedButton] because Material sizes every
+  /// segment to its widest intrinsic label: at 320px with 1.5x text the two
+  /// labels together were wider than the screen and the row overflowed.
+  /// Here each half is an [Expanded] with an ellipsising label, so the
+  /// control always fits the width it is given.
   Widget _buildSubViewSelector(int mistakesCount, int historyCount) {
-    return SegmentedButton<int>(
-      segments: [
-        ButtonSegment<int>(
-          value: 0,
-          icon: const Icon(Icons.highlight_off, size: 16),
-          label: Text('Mistake Bank ($mistakesCount)'),
+    final brightness = Theme.of(context).brightness;
+
+    return Container(
+      padding: const EdgeInsets.all(FluentSpacing.xs),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.onSurface.withValues(alpha: 0.04),
+        borderRadius: FluentRadius.controlBorder,
+        border: Border.all(
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
         ),
-        ButtonSegment<int>(
-          value: 1,
-          icon: const Icon(Icons.history, size: 16),
-          label: Text('Past Sessions ($historyCount)'),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildSubViewSegment(
+              index: 0,
+              icon: Icons.highlight_off,
+              label: 'Mistake Bank ($mistakesCount)',
+            ),
+          ),
+          const SizedBox(width: FluentSpacing.xs),
+          Expanded(
+            child: _buildSubViewSegment(
+              index: 1,
+              icon: Icons.history,
+              label: 'Past Sessions ($historyCount)',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubViewSegment({
+    required int index,
+    required IconData icon,
+    required String label,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final selected = _hubSubViewIndex == index;
+    final foreground = selected
+        ? scheme.primary
+        : scheme.onSurface.withValues(alpha: 0.65);
+
+    return Material(
+      color: selected
+          ? FluentLayer.subtle(scheme.primary, Theme.of(context).brightness)
+          : Colors.transparent,
+      borderRadius: FluentRadius.controlBorder,
+      child: InkWell(
+        borderRadius: FluentRadius.controlBorder,
+        onTap: () {
+          setState(() {
+            _hubSubViewIndex = index;
+          });
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: FluentSpacing.s,
+            vertical: FluentSpacing.s,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: foreground),
+              const SizedBox(width: FluentSpacing.xs + 2),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    color: foreground,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ],
-      selected: {_hubSubViewIndex},
-      onSelectionChanged: (set) {
-        setState(() {
-          _hubSubViewIndex = set.first;
-        });
-      },
+      ),
     );
   }
 
   Widget _buildMistakeBankList(List<DrillQuestion> wrongQuestions) {
     if (wrongQuestions.isEmpty) {
+      final scheme = Theme.of(context).colorScheme;
+
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Column(
             children: [
-              Icon(Icons.verified, size: 64, color: Colors.green.shade400),
-              const SizedBox(height: 12),
-              const Text(
+              const Icon(Icons.verified, size: 64, color: Colors.green),
+              const SizedBox(height: FluentSpacing.m),
+              Text(
                 'No Active Mistakes!',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+                style: FluentType.subtitle.copyWith(
+                  fontSize: 17,
+                  color: scheme.onSurface,
+                ),
               ),
-              const SizedBox(height: 6),
-              const Text(
+              const SizedBox(height: FluentSpacing.s),
+              Text(
                 'You have mastered all previous wrong questions.\nTake more drills to challenge yourself!',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: FluentType.caption.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
+                  backgroundColor: scheme.primary,
+                  foregroundColor: scheme.onPrimary,
+                  elevation: 0,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
+                    horizontal: FluentSpacing.m,
+                    vertical: FluentSpacing.s,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 onPressed: () {
@@ -437,9 +531,13 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                   );
                 },
                 icon: const Icon(Icons.flash_on, size: 16),
-                label: const Text(
+                label: Text(
                   'নতুন ড্রিল শুরু করুন ⚡',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -477,15 +575,23 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
         ? options[dq.correctIndex]
         : 'Unknown';
 
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final secondaryText = scheme.onSurface.withValues(alpha: 0.65);
+
     return Card(
-      elevation: 1.5,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: FluentRadius.cardBorder,
         onTap: () => AiMistakeExplainerSheet.show(context, dq),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(FluentSpacing.m),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -497,44 +603,33 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                         Flexible(
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
+                              horizontal: FluentSpacing.s,
+                              vertical: FluentSpacing.xxs,
                             ),
                             decoration: BoxDecoration(
-                              color:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.indigo.withValues(alpha: 0.2)
-                                  : Colors.indigo.shade50,
-                              borderRadius: BorderRadius.circular(6),
+                              color: FluentLayer.subtle(
+                                scheme.primary,
+                                brightness,
+                              ),
+                              borderRadius: FluentRadius.controlBorder,
                             ),
                             child: Text(
                               dq.subject,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.indigo.shade200
-                                    : Colors.indigo.shade800,
+                              style: FluentType.caption.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: scheme.primary,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: FluentSpacing.s),
                         Flexible(
                           child: Text(
                             '• ${dq.topic}',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white70
-                                  : Colors.grey.shade700,
+                            style: FluentType.caption.copyWith(
+                              color: secondaryText,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -543,17 +638,18 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _formatDateTime(dq.attemptedAt),
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white54
-                          : Colors.grey.shade500,
+                  const SizedBox(width: FluentSpacing.s),
+                  Flexible(
+                    child: Text(
+                      _formatDateTime(dq.attemptedAt),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: FluentSpacing.xs),
                   SizedBox(
                     width: 24,
                     height: 24,
@@ -563,9 +659,10 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                       icon: Icon(
                         Icons.more_vert,
                         size: 18,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white70
-                            : Colors.grey.shade700,
+                        color: secondaryText,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.cardBorder,
                       ),
                       tooltip: 'Options',
                       onSelected: (val) async {
@@ -623,46 +720,52 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                         }
                       },
                       itemBuilder: (ctx) => [
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'drill_single',
                           child: Row(
                             children: [
                               Icon(
                                 Icons.refresh,
                                 size: 16,
-                                color: Colors.indigo,
+                                color: scheme.primary,
                               ),
-                              SizedBox(width: 8),
-                              Text('Retry This Question'),
+                              const SizedBox(width: FluentSpacing.s),
+                              Text(
+                                'Retry This Question',
+                                style: FluentType.body,
+                              ),
                             ],
                           ),
                         ),
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'ask_ai',
                           child: Row(
                             children: [
                               Icon(
                                 Icons.auto_awesome,
                                 size: 16,
-                                color: Colors.indigo,
+                                color: scheme.primary,
                               ),
-                              SizedBox(width: 8),
-                              Text('Explain with AI Mentor'),
+                              const SizedBox(width: FluentSpacing.s),
+                              Text(
+                                'Explain with AI Mentor',
+                                style: FluentType.body,
+                              ),
                             ],
                           ),
                         ),
                         const PopupMenuDivider(),
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'master',
                           child: Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.done_all,
                                 size: 16,
                                 color: Colors.green,
                               ),
-                              SizedBox(width: 8),
-                              Text('Mark as Mastered'),
+                              const SizedBox(width: FluentSpacing.s),
+                              Text('Mark as Mastered', style: FluentType.body),
                             ],
                           ),
                         ),
@@ -671,27 +774,20 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.s),
               Text(
                 BengaliMathSanitizer.sanitize(dq.questionText),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  height: 1.35,
-                ),
+                style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.s),
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF1E293B)
-                      : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                  color: scheme.onSurface.withValues(alpha: 0.04),
+                  borderRadius: FluentRadius.controlBorder,
                   border: Border.all(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white12
-                        : Colors.grey.shade200,
+                    color: FluentStroke.card(brightness),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Column(
@@ -705,12 +801,11 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                           size: 16,
                           color: Colors.redAccent,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: Text(
                             'Your Answer: ${BengaliMathSanitizer.sanitize(userAns)}',
-                            style: const TextStyle(
-                              fontSize: 12,
+                            style: FluentType.caption.copyWith(
                               color: Colors.redAccent,
                               fontWeight: FontWeight.w600,
                             ),
@@ -718,84 +813,97 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: FluentSpacing.xs),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Icon(Icons.check, size: 16, color: Colors.green),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: Text(
                             'Correct Answer: ${BengaliMathSanitizer.sanitize(correctAns)}',
-                            style: TextStyle(
-                              fontSize: 12,
+                            style: FluentType.caption.copyWith(
                               color: Colors.green.shade700,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ],
                     ),
                     if (dq.explanation.trim().isNotEmpty) ...[
-                      const Divider(height: 14),
+                      Divider(
+                        height: FluentSpacing.l,
+                        color: FluentStroke.divider(brightness),
+                      ),
                       Text(
                         'Explanation: ${BengaliMathSanitizer.sanitize(dq.explanation)}',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontStyle: FontStyle.italic,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white70
-                              : Colors.grey.shade800,
+                        style: FluentType.caption.copyWith(
+                          color: secondaryText,
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              const SizedBox(height: FluentSpacing.s),
+              // A Wrap, not a Row: at 320px / 1.5x text the two action
+              // buttons together are wider than the card and the Row
+              // overflowed. Wrap drops the second button to its own line.
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: FluentSpacing.s,
+                runSpacing: FluentSpacing.s,
                 children: [
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xs,
                       ),
                       visualDensity: VisualDensity.compact,
+                      side: BorderSide(color: FluentStroke.card(brightness)),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.auto_awesome,
                       size: 14,
-                      color: Colors.indigo,
+                      color: scheme.primary,
                     ),
-                    label: const Text(
+                    label: Text(
                       'AI Explains',
-                      style: TextStyle(fontSize: 11.5, color: Colors.indigo),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.caption.copyWith(
+                        color: scheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     onPressed: () => AiMistakeExplainerSheet.show(context, dq),
                   ),
-                  const SizedBox(width: 8),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green.shade700,
                       foregroundColor: Colors.white,
+                      elevation: 0,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                        horizontal: FluentSpacing.m,
+                        vertical: FluentSpacing.xs,
                       ),
                       visualDensity: VisualDensity.compact,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     icon: const Icon(Icons.done_all, size: 14),
-                    label: const Text(
+                    label: Text(
                       'Mastered (বুঝেছি)',
-                      style: TextStyle(fontSize: 11.5),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     onPressed: () async {
                       HapticFeedback.mediumImpact();
@@ -839,18 +947,28 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
               Icon(
                 Icons.history_toggle_off,
                 size: 64,
-                color: Colors.grey.shade400,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.35),
               ),
-              const SizedBox(height: 12),
-              const Text(
+              const SizedBox(height: FluentSpacing.m),
+              Text(
                 'No Past Drill Sessions',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+                style: FluentType.subtitle.copyWith(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
-              const SizedBox(height: 6),
-              const Text(
+              const SizedBox(height: FluentSpacing.s),
+              Text(
                 'Start a drill from Weak Topics or AI Mentor to test your skills!',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: FluentType.caption.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
             ],
           ),
@@ -872,26 +990,27 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
           badgeColor = Colors.orangeAccent;
         }
 
+        final scheme = Theme.of(context).colorScheme;
+        final brightness = Theme.of(context).brightness;
+        final secondaryText = scheme.onSurface.withValues(alpha: 0.65);
+
         return Card(
-          elevation: 1.5,
-          margin: const EdgeInsets.only(bottom: 10),
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: FluentSpacing.m),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: FluentRadius.cardBorder,
+            side: FluentStroke.side(brightness),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(FluentSpacing.m),
             child: Row(
               children: [
                 Container(
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: badgeColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: badgeColor.withValues(alpha: 0.3),
-                      width: 2,
-                    ),
+                    color: FluentLayer.subtle(badgeColor, brightness),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   child: Center(
                     child: Column(
@@ -899,15 +1018,18 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                       children: [
                         Text(
                           '${r.correctCount}/${r.totalQuestions}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
                             color: badgeColor,
                           ),
                         ),
                         Text(
                           '${score.toStringAsFixed(0)}%',
-                          style: TextStyle(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: FluentType.caption.copyWith(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: badgeColor,
@@ -917,90 +1039,80 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Flexible(
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
+                                horizontal: FluentSpacing.s,
+                                vertical: FluentSpacing.xxs,
                               ),
                               decoration: BoxDecoration(
-                                color:
-                                    Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.indigo.withValues(alpha: 0.2)
-                                    : Colors.indigo.shade50,
-                                borderRadius: BorderRadius.circular(4),
+                                color: FluentLayer.subtle(
+                                  scheme.primary,
+                                  brightness,
+                                ),
+                                borderRadius: FluentRadius.controlBorder,
                               ),
                               child: Text(
                                 r.subject,
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.indigo.shade200
-                                      : Colors.indigo.shade800,
+                                style: FluentType.caption.copyWith(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.primary,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
-                          const Spacer(),
-                          Text(
-                            _formatDateTime(r.createdAt),
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              color:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white60
-                                  : Colors.grey.shade600,
+                          const SizedBox(width: FluentSpacing.s),
+                          // Flexible, not a bare Text after a Spacer: the
+                          // timestamp used to demand its full width and push
+                          // the row over the edge on a narrow screen.
+                          Flexible(
+                            child: Text(
+                              _formatDateTime(r.createdAt),
+                              textAlign: TextAlign.end,
+                              style: FluentType.caption.copyWith(
+                                fontSize: 10,
+                                color: secondaryText,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: FluentSpacing.xs),
                       Text(
                         r.topic,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.bold,
+                        style: FluentType.bodyStrong.copyWith(
+                          color: scheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: FluentSpacing.xxs),
                       Text(
                         'Correct: ${r.correctCount}  •  Mistakes: ${r.incorrectCount}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white70
-                              : Colors.grey.shade700,
+                        style: FluentType.caption.copyWith(
+                          color: secondaryText,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 IconButton(
                   tooltip: 'Drill again',
-                  icon: const Icon(
-                    Icons.refresh,
-                    size: 20,
-                    color: Colors.indigo,
-                  ),
+                  icon: Icon(Icons.refresh, size: 20, color: scheme.primary),
                   onPressed: () {
                     QuizDrillModal.show(
                       context,

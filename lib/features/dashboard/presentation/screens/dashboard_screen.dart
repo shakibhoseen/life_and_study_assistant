@@ -61,7 +61,11 @@ class DashboardScreen extends ConsumerWidget {
         ref.watch(dueSpacedReviewsStreamProvider).value ?? [];
     final settings = ref.watch(settingsNotifierProvider).value;
     final hasGeminiKey = GeminiAiService.instance.hasApiKey;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+    final onSurfaceMuted = onSurface.withValues(alpha: 0.65);
     final streak = ref.watch(studyStreakProvider).value ?? 0;
     final modelName = settings?.geminiModel ?? 'gemini-flash-lite-latest';
     final pillLabel = hasGeminiKey
@@ -70,11 +74,11 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 12,
+        titleSpacing: FluentSpacing.m,
         title: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: FluentRadius.controlBorder,
               child: Image.asset(
                 'assets/branding/playstore_icon_512.png',
                 width: 32,
@@ -82,10 +86,10 @@ class DashboardScreen extends ConsumerWidget {
                 fit: BoxFit.cover,
                 semanticLabel: 'অ্যাপ লোগো',
                 errorBuilder: (_, _, _) =>
-                    const Icon(Icons.school, size: 28, color: Colors.indigo),
+                    Icon(Icons.school, size: 28, color: scheme.primary),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: FluentSpacing.s),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,20 +97,16 @@ class DashboardScreen extends ConsumerWidget {
                 children: [
                   Text(
                     'Life & Study',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.bodyStrong.copyWith(
                       fontSize: 16,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      color: onSurface,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                   ),
                   Text(
                     'Engineer & BCS Companion',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: isDark ? Colors.white70 : Colors.black54,
-                    ),
+                    style: FluentType.caption.copyWith(color: onSurfaceMuted),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                   ),
@@ -117,44 +117,35 @@ class DashboardScreen extends ConsumerWidget {
         ),
         actions: [
           Container(
-            margin: const EdgeInsets.only(right: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            margin: const EdgeInsets.only(right: FluentSpacing.xs + 2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.s,
+              vertical: FluentSpacing.xxs,
+            ),
             decoration: BoxDecoration(
-              color: isDark
-                  ? (streak > 0
-                        ? Colors.orange.withValues(alpha: 0.18)
-                        : Colors.white10)
-                  : (streak > 0
-                        ? Colors.orange.shade50
-                        : const Color(0xFFF1F5F9)),
+              color: FluentLayer.subtle(
+                streak > 0 ? const Color(0xFFF59E0B) : onSurface,
+                brightness,
+              ),
               borderRadius: FluentRadius.controlBorder,
               border: Border.all(
-                color: isDark
-                    ? (streak > 0 ? Colors.orangeAccent : Colors.white24)
-                    : (streak > 0
-                          ? Colors.orange.shade300
-                          : const Color(0xFFCBD5E1)),
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  streak > 0 ? '🔥' : '⚡',
-                  style: const TextStyle(fontSize: 11),
-                ),
-                const SizedBox(width: 3),
+                Text(streak > 0 ? '🔥' : '⚡', style: FluentType.caption),
+                const SizedBox(width: FluentSpacing.xs),
                 Flexible(
                   child: Text(
                     streak > 0 ? '$streak দিন' : 'স্ট্রিক',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? (streak > 0 ? Colors.orangeAccent : Colors.white70)
-                          : (streak > 0
-                                ? Colors.orange.shade900
-                                : const Color(0xFF475569)),
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: streak > 0
+                          ? const Color(0xFFF59E0B)
+                          : onSurfaceMuted,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -164,21 +155,24 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
           Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            margin: const EdgeInsets.only(right: FluentSpacing.m),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.s,
+              vertical: FluentSpacing.xxs,
+            ),
             decoration: BoxDecoration(
-              color: isDark
-                  ? (hasGeminiKey
-                        ? Colors.green.withValues(alpha: 0.18)
-                        : Colors.amber.withValues(alpha: 0.18))
-                  : (hasGeminiKey
-                        ? Colors.green.shade50
-                        : Colors.amber.shade50),
+              // Green when the key is live, amber when it is not: a status,
+              // not decoration.
+              color: FluentLayer.subtle(
+                hasGeminiKey
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFF59E0B),
+                brightness,
+              ),
               borderRadius: FluentRadius.controlBorder,
               border: Border.all(
-                color: hasGeminiKey
-                    ? (isDark ? Colors.greenAccent : Colors.green.shade200)
-                    : (isDark ? Colors.amber : Colors.amber.shade200),
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
             ),
             child: Row(
@@ -187,24 +181,19 @@ class DashboardScreen extends ConsumerWidget {
                 Icon(
                   Icons.smart_toy_outlined,
                   size: 13,
-                  color: isDark
-                      ? (hasGeminiKey ? Colors.greenAccent : Colors.amber)
-                      : (hasGeminiKey
-                            ? Colors.green.shade800
-                            : Colors.amber.shade800),
+                  color: hasGeminiKey
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFF59E0B),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: FluentSpacing.xs),
                 Flexible(
                   child: Text(
                     pillLabel,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? (hasGeminiKey ? Colors.greenAccent : Colors.amber)
-                          : (hasGeminiKey
-                                ? Colors.green.shade800
-                                : Colors.amber.shade800),
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: hasGeminiKey
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFF59E0B),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -218,7 +207,9 @@ class DashboardScreen extends ConsumerWidget {
       body: Stack(
         children: [
           // Animated gradient background fills the entire body.
-          const Positioned.fill(child: AnimatedGradientBackground(child: SizedBox.expand())),
+          const Positioned.fill(
+            child: AnimatedGradientBackground(child: SizedBox.expand()),
+          ),
           // Floating orbs behind content.
           const FloatingOrb(top: -40, left: -60, size: 320, opacity: 0.18),
           const FloatingOrb(bottom: 60, right: -80, size: 280, opacity: 0.14),
@@ -230,122 +221,125 @@ class DashboardScreen extends ConsumerWidget {
               ref.invalidate(studyStreakProvider);
             },
             child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 0. The one thing to start now.
-              //
-              // Above everything else on purpose: the cards below offer six
-              // separate calls to action and rank none of them, and choosing
-              // between six is the hard part after a day's work.
-              _buildNextAction(
-                context,
-                ref,
-                dueSpacedReviews: dueSpacedReviews,
-                wrongQuestions: wrongQuestions,
-                weakTopics: weakTopics,
-                streak: streak,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.l,
+                vertical: FluentSpacing.m,
               ),
-              const SizedBox(height: 6),
-              PremiumSectionHeader(
-                icon: Icons.event_available_outlined,
-                label: 'পরীক্ষার দায়বদ্ধতা',
-                subtitle: 'Exam accountability tracker',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 0. The one thing to start now.
+                  //
+                  // Above everything else on purpose: the cards below offer six
+                  // separate calls to action and rank none of them, and choosing
+                  // between six is the hard part after a day's work.
+                  _buildNextAction(
+                    context,
+                    ref,
+                    dueSpacedReviews: dueSpacedReviews,
+                    wrongQuestions: wrongQuestions,
+                    weakTopics: weakTopics,
+                    streak: streak,
+                  ),
+                  const SizedBox(height: FluentSpacing.xs + 2),
+                  PremiumSectionHeader(
+                    icon: Icons.event_available_outlined,
+                    label: 'পরীক্ষার দায়বদ্ধতা',
+                    subtitle: 'Exam accountability tracker',
+                  ),
+                  const SizedBox(height: FluentSpacing.s),
+                  const ExamAccountabilityCard(),
+                  _buildTodayProgress(ref),
+                  const SizedBox(height: FluentSpacing.s),
+                  _buildAttention(
+                    context,
+                    dueSpacedReviews: dueSpacedReviews,
+                    wrongQuestions: wrongQuestions,
+                    weakTopics: weakTopics,
+                  ),
+                  const SizedBox(height: FluentSpacing.m),
+
+                  // 0.5. Quick Action & Productivity Bar
+                  PremiumSectionHeader(
+                    icon: Icons.flash_on_outlined,
+                    label: 'Quick Actions',
+                    subtitle: 'সব টুলে দ্রুত পৌঁছান',
+                  ),
+                  const SizedBox(height: FluentSpacing.s),
+                  _buildQuickActionStrip(context, ref),
+                  const SizedBox(height: FluentSpacing.m),
+
+                  // 1. Office & Attendance Status Banner (Context-aware: shows when at office / office hours)
+                  const BiometricStatusBanner(),
+
+                  // 2. Post-work Energy & Mood Tracker
+                  PremiumSectionHeader(
+                    icon: Icons.battery_charging_full_outlined,
+                    label: 'এনার্জি ও মুড ট্র্যাকার',
+                    subtitle: 'Post-work energy log',
+                  ),
+                  const SizedBox(height: FluentSpacing.s),
+                  const EnergyTrackerCard(),
+                  const SizedBox(height: FluentSpacing.l),
+
+                  // 3. Adaptive AI Study Routine
+                  // Above the plan: the night before an exam, what that exam
+                  // covers beats a general schedule.
+                  const NextExamRevisionCard(),
+                  PremiumSectionHeader(
+                    icon: Icons.auto_stories_outlined,
+                    label: 'AI স্টাডি রুটিন',
+                    subtitle: 'আজকের পড়ার পরিকল্পনা',
+                  ),
+                  const SizedBox(height: FluentSpacing.s),
+                  const StudyPlanCard(),
+
+                  const SizedBox(height: FluentSpacing.l),
+                  const WeeklyRoutineCard(),
+                  const SizedBox(height: FluentSpacing.l),
+
+                  // 3.5. Weekly Study Goal & Exam Score Analytics
+                  const WeeklyStudyGoalCard(),
+                  const SizedBox(height: FluentSpacing.l),
+                  const ExamScoreAnalyticsCard(),
+                  const SizedBox(height: FluentSpacing.l),
+
+                  // 4. GitHub-Style Study Activity Heatmap & Analytics
+                  PremiumSectionHeader(
+                    icon: Icons.insights_outlined,
+                    label: 'পড়ার অ্যানালিটিক্স',
+                    subtitle: 'Study streak & heatmap',
+                  ),
+                  const SizedBox(height: FluentSpacing.s),
+                  const GithubStudyHeatmap(),
+                  const SizedBox(height: FluentSpacing.l),
+
+                  // 5. Spaced Repetition (Forgetting Curve) & Office Flashcards Card
+                  _buildSpacedRepetitionCard(context, dueSpacedReviews.length),
+                  const SizedBox(height: FluentSpacing.l),
+
+                  // 6. Mistake Bank Spotlight (if mistakes exist)
+                  if (wrongQuestions.isNotEmpty) ...[
+                    _buildMistakeBankSection(context, wrongQuestions),
+                    const SizedBox(height: FluentSpacing.l),
+                  ],
+
+                  // 7. Multi-Track Exam Timeline & Live Countdown Card
+                  if (upcomingExams.isNotEmpty) ...[
+                    MultiTrackExamCountdownCard(exams: upcomingExams),
+                    const SizedBox(height: FluentSpacing.l),
+                  ],
+
+                  // 7.5. Auto-Weakness Healer Card (Daily 3-Min Micro Drill - Optional & Configurable)
+                  const WeaknessHealingCard(),
+                  const SizedBox(height: FluentSpacing.l),
+
+                  const SizedBox(height: FluentSpacing.xxl),
+                ],
               ),
-              const SizedBox(height: 8),
-              const ExamAccountabilityCard(),
-              _buildTodayProgress(ref),
-              const SizedBox(height: 10),
-              _buildAttention(
-                context,
-                dueSpacedReviews: dueSpacedReviews,
-                wrongQuestions: wrongQuestions,
-                weakTopics: weakTopics,
-              ),
-              const SizedBox(height: 14),
-
-              // 0.5. Quick Action & Productivity Bar
-              PremiumSectionHeader(
-                icon: Icons.flash_on_outlined,
-                label: 'Quick Actions',
-                subtitle: 'সব টুলে দ্রুত পৌঁছান',
-              ),
-              const SizedBox(height: 8),
-              _buildQuickActionStrip(context, ref),
-              const SizedBox(height: 14),
-
-              // 1. Office & Attendance Status Banner (Context-aware: shows when at office / office hours)
-              const BiometricStatusBanner(),
-
-              // 2. Post-work Energy & Mood Tracker
-              PremiumSectionHeader(
-                icon: Icons.battery_charging_full_outlined,
-                label: 'এনার্জি ও মুড ট্র্যাকার',
-                subtitle: 'Post-work energy log',
-              ),
-              const SizedBox(height: 8),
-              const EnergyTrackerCard(),
-              const SizedBox(height: 16),
-
-              // 3. Adaptive AI Study Routine
-              // Above the plan: the night before an exam, what that exam
-              // covers beats a general schedule.
-              const NextExamRevisionCard(),
-              PremiumSectionHeader(
-                icon: Icons.auto_stories_outlined,
-                label: 'AI স্টাডি রুটিন',
-                subtitle: 'আজকের পড়ার পরিকল্পনা',
-              ),
-              const SizedBox(height: 8),
-              const StudyPlanCard(),
-
-              const SizedBox(height: 16),
-              const WeeklyRoutineCard(),
-              const SizedBox(height: 16),
-
-              // 3.5. Weekly Study Goal & Exam Score Analytics
-              const WeeklyStudyGoalCard(),
-              const SizedBox(height: 16),
-              const ExamScoreAnalyticsCard(),
-              const SizedBox(height: 16),
-
-              // 4. GitHub-Style Study Activity Heatmap & Analytics
-              PremiumSectionHeader(
-                icon: Icons.insights_outlined,
-                label: 'পড়ার অ্যানালিটিক্স',
-                subtitle: 'Study streak & heatmap',
-              ),
-              const SizedBox(height: 8),
-              const GithubStudyHeatmap(),
-              const SizedBox(height: 16),
-
-              // 5. Spaced Repetition (Forgetting Curve) & Office Flashcards Card
-              _buildSpacedRepetitionCard(context, dueSpacedReviews.length),
-              const SizedBox(height: 16),
-
-              // 6. Mistake Bank Spotlight (if mistakes exist)
-              if (wrongQuestions.isNotEmpty) ...[
-                _buildMistakeBankSection(context, wrongQuestions),
-                const SizedBox(height: 16),
-              ],
-
-              // 7. Multi-Track Exam Timeline & Live Countdown Card
-              if (upcomingExams.isNotEmpty) ...[
-                MultiTrackExamCountdownCard(exams: upcomingExams),
-                const SizedBox(height: 16),
-              ],
-
-              // 7.5. Auto-Weakness Healer Card (Daily 3-Min Micro Drill - Optional & Configurable)
-              const WeaknessHealingCard(),
-              const SizedBox(height: 16),
-
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
-        ),
-      ),
         ],
       ),
     );
@@ -426,6 +420,7 @@ class DashboardScreen extends ConsumerWidget {
     required List<WeakTopic> weakTopics,
   }) {
     final firstWeakTopic = weakTopics.firstOrNull;
+    final scheme = Theme.of(context).colorScheme;
 
     return AttentionCard(
       items: [
@@ -433,7 +428,7 @@ class DashboardScreen extends ConsumerWidget {
           label: 'রিভিশন কার্ড আজ জমা',
           count: dueSpacedReviews.length,
           icon: Icons.history_toggle_off,
-          colour: const Color(0xFF6366F1),
+          colour: scheme.primary,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const SpacedRepetitionScreen()),
@@ -443,6 +438,7 @@ class DashboardScreen extends ConsumerWidget {
           label: 'ভুল প্রশ্ন আয়ত্তে আসেনি',
           count: wrongQuestions.length,
           icon: Icons.error_outline,
+          // Amber stays: a backlog of mistakes is a warning, not decoration.
           colour: const Color(0xFFF59E0B),
           onTap: () => QuizDrillModal.show(
             context,
@@ -455,7 +451,7 @@ class DashboardScreen extends ConsumerWidget {
           label: 'দুর্বল টপিক চিহ্নিত',
           count: weakTopics.length,
           icon: Icons.track_changes,
-          colour: const Color(0xFF14B8A6),
+          colour: scheme.primary,
           onTap: firstWeakTopic == null
               ? null
               : () => WeaknessHealingDrillModal.show(
@@ -505,6 +501,7 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildQuickActionStrip(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -514,20 +511,18 @@ class DashboardScreen extends ConsumerWidget {
           _buildQuickActionPill(
             context,
             icon: Icons.mic_external_on_rounded,
-            iconColor: const Color(0xFF8B5CF6),
-            bgColor: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+            iconColor: scheme.primary,
             label: 'Voice Mistake',
             badge: 'Bubble 🎙️',
             onTap: () => VoiceMistakeBottomSheet.show(context),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
 
           // 0.2. Image to Text (Offline Local OCR)
           _buildQuickActionPill(
             context,
             icon: Icons.document_scanner_rounded,
-            iconColor: const Color(0xFF0284C7),
-            bgColor: const Color(0xFF0284C7).withValues(alpha: 0.12),
+            iconColor: scheme.primary,
             label: 'Image to Text',
             badge: 'Local OCR 📴',
             onTap: () => Navigator.push(
@@ -535,14 +530,13 @@ class DashboardScreen extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const ImageToTextScreen()),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
 
           // 1. Mistake Notebook
           _buildQuickActionPill(
             context,
             icon: Icons.menu_book_rounded,
-            iconColor: const Color(0xFFE11D48),
-            bgColor: const Color(0xFFE11D48).withValues(alpha: 0.12),
+            iconColor: scheme.primary,
             label: 'Mistake Book',
             badge: 'Folders 📓',
             onTap: () => Navigator.push(
@@ -550,38 +544,35 @@ class DashboardScreen extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const MistakeNotebookScreen()),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
 
           // 1.5. Test Paper & Question Bank Scanner
           _buildQuickActionPill(
             context,
             icon: Icons.assignment_outlined,
-            iconColor: const Color(0xFF0D9488),
-            bgColor: const Color(0xFF0D9488).withValues(alpha: 0.12),
+            iconColor: scheme.primary,
             label: 'Test Paper',
             badge: 'Exam 📝',
             onTap: () => QuestionBankScannerModal.show(context),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
 
           // 2. Camera / Book Page to AI Drill
           _buildQuickActionPill(
             context,
             icon: Icons.camera_alt,
-            iconColor: const Color(0xFF6366F1),
-            bgColor: const Color(0xFF6366F1).withValues(alpha: 0.12),
+            iconColor: scheme.primary,
             label: 'Book to Drill',
             badge: '⚡ Vision',
             onTap: () => StudySheetCameraModal.show(context),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
 
           // 2.5. Office Portal (Attendance & Steadfast Lunch)
           _buildQuickActionPill(
             context,
             icon: Icons.domain_rounded,
-            iconColor: const Color(0xFF00B795),
-            bgColor: const Color(0xFF00B795).withValues(alpha: 0.12),
+            iconColor: scheme.primary,
             label: 'Office Portal',
             badge: 'Packly & Lunch 🏢',
             onTap: () => Navigator.push(
@@ -589,14 +580,13 @@ class DashboardScreen extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const OfficePortalScreen()),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
 
           // 2. Pomodoro Focus Timer
           _buildQuickActionPill(
             context,
             icon: Icons.timer_outlined,
-            iconColor: const Color(0xFF10B981),
-            bgColor: const Color(0xFF10B981).withValues(alpha: 0.12),
+            iconColor: scheme.primary,
             label: 'Focus Timer',
             badge: '15m Micro',
             onTap: () => Navigator.push(
@@ -604,14 +594,13 @@ class DashboardScreen extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const PomodoroFocusScreen()),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
 
           // 3. Spaced Repetition Flashcards
           _buildQuickActionPill(
             context,
             icon: Icons.bolt,
-            iconColor: const Color(0xFFF59E0B),
-            bgColor: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+            iconColor: scheme.primary,
             label: 'Flashcards',
             badge: 'Ebbinghaus',
             onTap: () => Navigator.push(
@@ -619,15 +608,13 @@ class DashboardScreen extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const SpacedRepetitionScreen()),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: FluentSpacing.s),
 
           // 4. OLED Theme Toggle
           _buildQuickActionPill(
             context,
             icon: isDark ? Icons.light_mode : Icons.dark_mode,
-            iconColor: isDark ? Colors.amber : const Color(0xFF1E3A8A),
-            bgColor: (isDark ? Colors.amber : const Color(0xFF1E3A8A))
-                .withValues(alpha: 0.12),
+            iconColor: scheme.primary,
             label: isDark ? 'Light' : 'OLED Dark',
             badge: 'Midnight',
             onTap: () => ref.read(themeModeProvider.notifier).toggleTheme(),
@@ -641,11 +628,12 @@ class DashboardScreen extends ConsumerWidget {
     BuildContext context, {
     required IconData icon,
     required Color iconColor,
-    required Color bgColor,
     required String label,
     required String badge,
     required VoidCallback onTap,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+
     return PremiumGlassCard(
       borderRadius: FluentRadius.control,
       blurSigma: 6.0,
@@ -654,36 +642,41 @@ class DashboardScreen extends ConsumerWidget {
         borderRadius: FluentRadius.controlBorder,
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: FluentSpacing.m,
+            vertical: FluentSpacing.s,
+          ),
+          // No Expanded/Flexible in here: this row lives inside a horizontal
+          // SingleChildScrollView, where an unbounded flex child throws.
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, size: 16, color: iconColor),
+              PremiumIconBadge(
+                icon: icon,
+                size: 26,
+                iconSize: 16,
+                color: iconColor,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
                     ),
                   ),
                   Text(
                     badge,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: iconColor,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                 ],
@@ -699,6 +692,11 @@ class DashboardScreen extends ConsumerWidget {
     BuildContext context,
     List<DrillQuestion> questions,
   ) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+
     return InkWell(
       onTap: () => Navigator.push(
         context,
@@ -708,85 +706,80 @@ class DashboardScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(FluentSpacing.l),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.indigo.shade800, Colors.deepPurple.shade900],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: theme.cardTheme.color ?? theme.cardColor,
           borderRadius: FluentRadius.cardBorder,
-          boxShadow: FluentElevation.card(Theme.of(context).brightness),
+          border: Border.all(
+            color: FluentStroke.card(brightness),
+            width: FluentStroke.width,
+          ),
+          boxShadow: FluentElevation.card(brightness),
         ),
         child: Column(
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(FluentSpacing.s),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: FluentRadius.controlBorder,
-                  ),
-                  child: const Icon(
-                    Icons.menu_book_rounded,
-                    color: Colors.amber,
-                    size: 24,
-                  ),
+                const PremiumIconBadge(
+                  icon: Icons.menu_book_rounded,
+                  size: 40,
+                  iconSize: 24,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'মিস্টেক নোটবুক: ${questions.length}টি বাকি ভুল',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: FluentType.bodyStrong.copyWith(color: onSurface),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: FluentSpacing.xxs),
                       Text(
                         'LiveMCQ ও প্র্যাকটিসের ভুলগুলো ফোল্ডার আকারে রিভিশন দিন',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
+                        style: FluentType.caption.copyWith(
+                          color: onSurface.withValues(alpha: 0.65),
                         ),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Icon(
+                const SizedBox(width: FluentSpacing.xs + 2),
+                Icon(
                   Icons.arrow_forward_ios,
-                  color: Colors.white54,
+                  color: onSurface.withValues(alpha: 0.5),
                   size: 14,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
             Row(
               children: [
                 Expanded(
                   child: PremiumButton(
                     label: 'রাতের রিভিশন 🌙',
                     icon: Icons.nightlight_round,
-                    onPressed: () => NightlyReviewModal.show(context, questions),
+                    onPressed: () =>
+                        NightlyReviewModal.show(context, questions),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white60),
+                      foregroundColor: scheme.primary,
+                      side: BorderSide(
+                        color: FluentStroke.card(brightness),
+                        width: FluentStroke.width,
+                      ),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.s,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                       visualDensity: VisualDensity.compact,
                     ),
@@ -815,11 +808,12 @@ class DashboardScreen extends ConsumerWidget {
                       );
                     },
                     icon: const Icon(Icons.flash_on, size: 14),
-                    label: const Text(
+                    label: Text(
                       'রি-ড্রিল ⚡',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -849,10 +843,7 @@ class DashboardScreen extends ConsumerWidget {
       onTap: openHub,
       child: Row(
         children: [
-          const PremiumIconBadge(
-            icon: Icons.psychology,
-            color: Colors.purpleAccent,
-          ),
+          const PremiumIconBadge(icon: Icons.psychology),
           const SizedBox(width: FluentSpacing.m),
           Expanded(
             child: Column(
@@ -872,10 +863,7 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                     if (dueCount > 0) ...[
                       const SizedBox(width: FluentSpacing.s),
-                      PremiumTag(
-                        label: '$dueCount Due',
-                        color: scheme.error,
-                      ),
+                      PremiumTag(label: '$dueCount Due', color: scheme.error),
                     ],
                   ],
                 ),

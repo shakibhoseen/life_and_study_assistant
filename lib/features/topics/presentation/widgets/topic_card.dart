@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/tables/weak_topics_table.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../chat/presentation/providers/chat_provider.dart';
 import '../../../chat/presentation/screens/ai_chat_screen.dart';
 import '../../../quiz/presentation/widgets/quiz_drill_modal.dart';
@@ -47,12 +48,19 @@ class TopicCard extends ConsumerWidget {
         ? 'Reviewed ${_formatDateTime(topic.lastReviewedAt)}'
         : 'Not reviewed yet';
 
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+    final secondaryText = scheme.onSurface.withValues(alpha: 0.65);
+
     return Card(
-      elevation: 1.5,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(FluentSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -63,62 +71,55 @@ class TopicCard extends ConsumerWidget {
                     alignment: Alignment.centerLeft,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
+                        horizontal: FluentSpacing.s,
+                        vertical: FluentSpacing.xxs,
                       ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.indigo.withValues(alpha: 0.2)
-                            : Colors.indigo.shade50,
-                        borderRadius: BorderRadius.circular(6),
+                        color: FluentLayer.subtle(scheme.primary, brightness),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                       child: Text(
                         topic.subject,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.indigo.shade200
-                              : Colors.indigo.shade800,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.primary,
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xxs,
                   ),
                   decoration: BoxDecoration(
-                    color: badgeColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
+                    color: FluentLayer.subtle(badgeColor, brightness),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   child: Text(
                     badgeText,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                       color: badgeColor,
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: FluentSpacing.xs),
                 SizedBox(
                   width: 24,
                   height: 24,
                   child: PopupMenuButton<String>(
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    icon: Icon(
-                      Icons.more_vert,
-                      size: 18,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white70
-                          : Colors.grey.shade700,
+                    icon: Icon(Icons.more_vert, size: 18, color: secondaryText),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.cardBorder,
                     ),
                     tooltip: 'Options',
                     onSelected: (val) {
@@ -168,53 +169,61 @@ class TopicCard extends ConsumerWidget {
                       }
                     },
                     itemBuilder: (ctx) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'drill',
                         child: Row(
                           children: [
                             Icon(
                               Icons.psychology,
                               size: 16,
-                              color: Colors.indigo,
+                              color: scheme.primary,
                             ),
-                            SizedBox(width: 8),
-                            Text('Drill 5 MCQs (AI Quiz)'),
+                            const SizedBox(width: FluentSpacing.s),
+                            Text(
+                              'Drill 5 MCQs (AI Quiz)',
+                              style: FluentType.body,
+                            ),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'ask_ai',
                         child: Row(
                           children: [
                             Icon(
                               Icons.auto_awesome,
                               size: 16,
-                              color: Colors.indigo,
+                              color: scheme.primary,
                             ),
-                            SizedBox(width: 8),
-                            Text('Explain with AI Mentor'),
+                            const SizedBox(width: FluentSpacing.s),
+                            Text(
+                              'Explain with AI Mentor',
+                              style: FluentType.body,
+                            ),
                           ],
                         ),
                       ),
                       const PopupMenuDivider(),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'weak',
-                        child: Text('Mark as Weak'),
+                        child: Text('Mark as Weak', style: FluentType.body),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'moderate',
-                        child: Text('Mark as Moderate'),
+                        child: Text('Mark as Moderate', style: FluentType.body),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'strong',
-                        child: Text('Mark as Strong'),
+                        child: Text('Mark as Strong', style: FluentType.body),
                       ),
                       const PopupMenuDivider(),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: Text(
                           'Delete',
-                          style: TextStyle(color: Colors.red),
+                          style: FluentType.body.copyWith(
+                            color: scheme.error,
+                          ),
                         ),
                       ),
                     ],
@@ -222,98 +231,94 @@ class TopicCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             Text(
               topic.topicName,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
             ),
             if (topic.notes != null && topic.notes.isNotEmpty) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: FluentSpacing.xs),
               Text(
                 topic.notes,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white70
-                      : Colors.black54,
-                ),
+                style: FluentType.caption.copyWith(color: secondaryText),
               ),
             ],
-            const SizedBox(height: 10),
-            Row(
+            const SizedBox(height: FluentSpacing.s),
+            // Reviewed-at and the actions stack instead of sharing a Row: at
+            // 320px with large text the two buttons alone fill the width.
+            Text(
+              reviewedText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.caption.copyWith(color: secondaryText),
+            ),
+            const SizedBox(height: FluentSpacing.s),
+            Wrap(
+              spacing: FluentSpacing.s,
+              runSpacing: FluentSpacing.xs,
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Expanded(
-                  child: Text(
-                    reviewedText,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white60
-                          : Colors.grey.shade600,
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xxs,
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    visualDensity: VisualDensity.compact,
+                    side: BorderSide(color: FluentStroke.card(brightness)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
                   ),
+                  icon: Icon(
+                    Icons.psychology,
+                    size: 14,
+                    color: scheme.primary,
+                  ),
+                  label: Text(
+                    'Drill',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.primary,
+                    ),
+                  ),
+                  onPressed: () {
+                    QuizDrillModal.show(
+                      context,
+                      topic: topic.topicName,
+                      subject: topic.subject,
+                    );
+                  },
                 ),
-                const SizedBox(width: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  alignment: WrapAlignment.end,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        visualDensity: VisualDensity.compact,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      icon: const Icon(
-                        Icons.psychology,
-                        size: 14,
-                        color: Colors.indigo,
-                      ),
-                      label: const Text(
-                        'Drill',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.indigo,
-                        ),
-                      ),
-                      onPressed: () {
-                        QuizDrillModal.show(
-                          context,
-                          topic: topic.topicName,
-                          subject: topic.subject,
-                        );
-                      },
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xxs,
                     ),
-                    TextButton.icon(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        minimumSize: const Size(40, 26),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      icon: const Icon(Icons.check, size: 13),
-                      label: const Text(
-                        'Reviewed',
-                        style: TextStyle(fontSize: 11),
-                      ),
-                      onPressed: () {
-                        ref
-                            .read(topicsNotifierProvider.notifier)
-                            .markReviewed(topic.id);
-                      },
+                    minimumSize: const Size(40, 26),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
                     ),
-                  ],
+                  ),
+                  icon: const Icon(Icons.check, size: 14),
+                  label: Text(
+                    'Reviewed',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onPressed: () {
+                    ref
+                        .read(topicsNotifierProvider.notifier)
+                        .markReviewed(topic.id);
+                  },
                 ),
               ],
             ),

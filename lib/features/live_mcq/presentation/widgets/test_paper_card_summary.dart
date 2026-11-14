@@ -8,6 +8,8 @@ import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../quiz/presentation/widgets/question_bank_scanner_modal.dart';
 import '../../../quiz/presentation/widgets/quiz_batch_correction_sheet.dart';
 import '../../../../core/utils/option_label.dart';
+import '../../../../core/theme/fluent_tokens.dart';
+import '../../../../core/widgets/premium_glass_card.dart';
 
 class TestPaperCardSummary extends ConsumerWidget {
   final ExamSchedule exam;
@@ -25,19 +27,19 @@ class TestPaperCardSummary extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+    final isDark = brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(top: FluentSpacing.s),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF1E293B).withValues(alpha: 0.6)
-            : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(10),
+        color: scheme.onSurface.withValues(alpha: 0.04),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-          width: 1,
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
@@ -46,36 +48,26 @@ class TestPaperCardSummary extends ConsumerWidget {
           // Header Row
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4F46E5)
-                      .withValues(alpha: isDark ? 0.2 : 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.menu_book_rounded,
-                  size: 16,
-                  color: Color(0xFF4F46E5),
-                ),
+              PremiumIconBadge(
+                icon: Icons.menu_book_rounded,
+                size: 28,
+                iconSize: 16,
+                color: scheme.primary,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   'টেস্ট পেপার প্রশ্নমালা (${BengaliMathSanitizer.toBengaliDigits('${questions.length}')}টি MCQ)',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: FluentType.bodyStrong.copyWith(fontSize: 13),
                 ),
               ),
               InkWell(
                 onTap: onToggleExpand,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: FluentRadius.controlBorder,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 3,
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -83,12 +75,9 @@ class TestPaperCardSummary extends ConsumerWidget {
                       Flexible(
                         child: Text(
                           isExpanded ? 'সংক্ষেপ' : 'প্রশ্ন দেখুন',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? const Color(0xFFA5B4FC)
-                                : const Color(0xFF4F46E5),
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.primary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -99,9 +88,7 @@ class TestPaperCardSummary extends ConsumerWidget {
                             ? Icons.keyboard_arrow_up
                             : Icons.keyboard_arrow_down,
                         size: 16,
-                        color: isDark
-                            ? const Color(0xFFA5B4FC)
-                            : const Color(0xFF4F46E5),
+                        color: scheme.primary,
                       ),
                     ],
                   ),
@@ -112,9 +99,9 @@ class TestPaperCardSummary extends ConsumerWidget {
 
           // If Expanded: Show the list of questions cleanly formatted
           if (isExpanded) ...[
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.m),
+            Divider(height: 1, color: FluentStroke.divider(brightness)),
+            const SizedBox(height: FluentSpacing.s),
             ...List.generate(questions.length, (idx) {
               final q = questions[idx];
               final hasLeadingNumber = RegExp(r'^(\d+|[০-৯]+)\.')
@@ -123,76 +110,70 @@ class TestPaperCardSummary extends ConsumerWidget {
                   ? q.questionText
                   : '${idx + 1}. ${q.questionText}';
               return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: FluentSpacing.s),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       displayText,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: FluentType.caption.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        color: scheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: FluentSpacing.xs),
                     Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
+                      spacing: FluentSpacing.s,
+                      runSpacing: FluentSpacing.xs,
                       children: q.options.asMap().entries.map((optEntry) {
                         final isCorrect = optEntry.key == q.correctIndex;
                         return Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                            horizontal: FluentSpacing.s,
+                            vertical: FluentSpacing.xxs,
                           ),
                           decoration: BoxDecoration(
                             color: isCorrect
-                                ? (isDark
-                                      ? Colors.green.shade900.withValues(
-                                          alpha: 0.3,
-                                        )
-                                      : Colors.green.shade50)
-                                : (isDark
-                                      ? const Color(0xFF0F172A)
-                                      : Colors.white),
-                            borderRadius: BorderRadius.circular(4),
+                                ? FluentLayer.subtle(
+                                    Colors.green,
+                                    brightness,
+                                  )
+                                : scheme.surface,
+                            borderRadius: FluentRadius.controlBorder,
                             border: Border.all(
                               color: isCorrect
-                                  ? Colors.green
-                                  : (isDark
-                                        ? Colors.white12
-                                        : Colors.grey.shade300),
-                              width: isCorrect ? 1.2 : 0.8,
+                                  ? Colors.green.withValues(alpha: 0.5)
+                                  : FluentStroke.card(brightness),
+                              width: FluentStroke.width,
                             ),
                           ),
                           child: Text(
                             optEntry.value,
-                            style: TextStyle(
-                              fontSize: 10.5,
+                            style: FluentType.caption.copyWith(
+                              fontSize: 11,
                               fontWeight: isCorrect
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                               color: isCorrect
                                   ? (isDark
                                         ? Colors.green.shade300
                                         : Colors.green.shade800)
-                                  : (isDark ? Colors.white70 : Colors.black87),
+                                  : scheme.onSurface
+                                        .withValues(alpha: 0.75),
                             ),
                           ),
                         );
                       }).toList(),
                     ),
                     if (q.explanation.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: FluentSpacing.xs),
                       Text(
                         '💡 ব্যাখ্যা: ${q.explanation}',
-                        style: TextStyle(
-                          fontSize: 10,
+                        style: FluentType.caption.copyWith(
+                          fontSize: 11,
                           fontStyle: FontStyle.italic,
-                          color: isDark
-                              ? Colors.amber.shade200
-                              : Colors.amber.shade900,
+                          color: scheme.onSurface
+                              .withValues(alpha: 0.65),
                         ),
                       ),
                     ],
@@ -201,48 +182,41 @@ class TestPaperCardSummary extends ConsumerWidget {
               );
             }),
           ] else ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.s),
             Text(
               '১ম প্রশ্ন: ${questions.first.questionText}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white60 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
           ],
 
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
 
           // Bottom Action Row
           Wrap(
-            spacing: 6,
-            runSpacing: 6,
+            spacing: FluentSpacing.s,
+            runSpacing: FluentSpacing.s,
             children: [
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
+                    horizontal: FluentSpacing.m,
+                    vertical: FluentSpacing.xs + 2,
                   ),
-                  foregroundColor: isDark
-                      ? const Color(0xFFA5B4FC)
-                      : const Color(0xFF4F46E5),
-                  side: BorderSide(
-                    color: isDark
-                        ? const Color(0xFF6366F1)
-                        : const Color(0xFF4F46E5),
-                  ),
+                  foregroundColor: scheme.primary,
+                  side: FluentStroke.side(brightness),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 icon: const Icon(Icons.edit_note, size: 14),
-                label: const Text(
+                label: Text(
                   'সম্পাদনা',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  style: FluentType.caption.copyWith(fontWeight: FontWeight.w600),
                 ),
                 onPressed: () => QuestionBankScannerModal.show(
                   context,
@@ -256,25 +230,19 @@ class TestPaperCardSummary extends ConsumerWidget {
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
+                    horizontal: FluentSpacing.m,
+                    vertical: FluentSpacing.xs + 2,
                   ),
-                  foregroundColor: isDark
-                      ? const Color(0xFFA5B4FC)
-                      : const Color(0xFF4F46E5),
-                  side: BorderSide(
-                    color: isDark
-                        ? const Color(0xFF6366F1)
-                        : const Color(0xFF4F46E5),
-                  ),
+                  foregroundColor: scheme.primary,
+                  side: FluentStroke.side(brightness),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 icon: const Icon(Icons.copy_rounded, size: 13),
-                label: const Text(
+                label: Text(
                   'কপি',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  style: FluentType.caption.copyWith(fontWeight: FontWeight.w600),
                 ),
                 onPressed: () =>
                     copyExamQuestionsToClipboard(context, exam, questions),
@@ -283,20 +251,20 @@ class TestPaperCardSummary extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
+                    horizontal: FluentSpacing.m,
+                    vertical: FluentSpacing.xs + 2,
                   ),
-                  backgroundColor: const Color(0xFF6366F1),
-                  foregroundColor: Colors.white,
+                  backgroundColor: scheme.primary,
+                  foregroundColor: scheme.onPrimary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 icon: const Icon(Icons.auto_fix_high_rounded, size: 13),
-                label: const Text(
+                label: Text(
                   'AI ফিক্স',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  style: FluentType.caption.copyWith(fontWeight: FontWeight.w600),
                 ),
                 onPressed: () => QuizBatchCorrectionSheet.show(
                   context,

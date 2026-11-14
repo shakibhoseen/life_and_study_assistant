@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/option_label.dart';
 
 /// Lets a question be corrected by hand.
@@ -107,8 +108,16 @@ class _EditQuestionDialogState extends State<EditQuestionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return AlertDialog(
-      title: const Text('প্রশ্ন সম্পাদনা', style: TextStyle(fontSize: 16)),
+      shape: RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder),
+      title: Text(
+        'প্রশ্ন সম্পাদনা',
+        style: FluentType.bodyStrong.copyWith(
+          fontSize: 16,
+          color: scheme.onSurface,
+        ),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -124,10 +133,13 @@ class _EditQuestionDialogState extends State<EditQuestionDialog> {
                 isDense: true,
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
+            const SizedBox(height: FluentSpacing.m),
+            Text(
               'সঠিক উত্তরটি বেছে নিন',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface.withValues(alpha: 0.65),
+              ),
             ),
             RadioGroup<int>(
               groupValue: _correct,
@@ -140,9 +152,11 @@ class _EditQuestionDialogState extends State<EditQuestionDialog> {
                         Radio<int>(value: i),
                         Text(
                           '${optionLabelChar(i)}.',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: FluentType.bodyStrong.copyWith(
+                            color: scheme.onSurface,
+                          ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: TextField(
                             controller: _options[i],
@@ -150,7 +164,9 @@ class _EditQuestionDialogState extends State<EditQuestionDialog> {
                               isDense: true,
                               border: OutlineInputBorder(),
                             ),
-                            style: const TextStyle(fontSize: 13),
+                            style: FluentType.body.copyWith(
+                              color: scheme.onSurface,
+                            ),
                           ),
                         ),
                       ],
@@ -158,7 +174,7 @@ class _EditQuestionDialogState extends State<EditQuestionDialog> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
             TextField(
               controller: _explanation,
               minLines: 2,
