@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/config/notification_constants.dart';
 import '../../../../core/services/attendance/packly_attendance_service.dart';
 import '../../../../core/services/attendance/steadfast_lunch_service.dart';
+import '../../../../core/services/home_widget_service.dart';
 
 // ==========================================
 // 1. STEADFAST LUNCH STATE & NOTIFIER
@@ -464,6 +465,15 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
         lastCheckOutTime: status.checkOutTime,
         clearCheckOutTime: status.checkOutTime == null,
         isLate: status.isLate,
+      );
+
+      final todayIso = DateTime.now().toIso8601String().substring(0, 10);
+      await HomeWidgetService.updateWidget(
+        checkInTime: status.checkInTime,
+        checkInDate: status.checkInTime != null ? todayIso : null,
+        isLate: status.isLate,
+        checkOutTime: status.checkOutTime,
+        checkOutDate: status.checkOutTime != null ? todayIso : null,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false);

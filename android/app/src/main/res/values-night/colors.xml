@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fluent 2 Tokens Dark (Windows 11 Mica / Acrylic dark aesthetic) -->
+    <color name="fluent_widget_bg">#202020</color>
+    <color name="fluent_widget_stroke">#26FFFFFF</color>
+    <color name="fluent_widget_header_bg">#14FFFFFF</color>
+    <color name="fluent_widget_text_primary">#FFFFFF</color>
+    <color name="fluent_widget_text_secondary">#ABABAB</color>
+    <color name="fluent_widget_accent">#4CC2FF</color>
+    <color name="fluent_widget_accent_subtle">#264CC2FF</color>
+    <color name="fluent_widget_badge_bg">#2D2D2D</color>
+    <color name="fluent_widget_badge_stroke">#1FFFFFFF</color>
+    <color name="fluent_widget_success">#54B054</color>
+    <color name="fluent_widget_success_bg">#2654B054</color>
+    <color name="fluent_widget_warning">#F7630C</color>
+    <color name="fluent_widget_warning_bg">#26F7630C</color>
+    <color name="fluent_widget_inactive">#6E6E6E</color>
+    <color name="fluent_widget_inactive_bg">#12FFFFFF</color>
+</resources>

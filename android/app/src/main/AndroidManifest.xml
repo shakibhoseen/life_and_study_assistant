@@ -105,6 +105,20 @@
             </intent-filter>
         </receiver>
 
+        <!-- Office & Lunch Sentinel Home Screen Widget -->
+        <receiver
+            android:name=".OfficeStatusWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.life_and_study_assistant.REFRESH_WIDGET" />
+                <action android:name="com.example.life_and_study_assistant.UPDATE_WIDGET_DATA" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_office_status_info" />
+        </receiver>
+
         <!-- The bubble is a window, not a recording. It used to be declared a
              microphone service, which made the app claim the microphone for as
              long as the bubble was on screen, whether or not anything was

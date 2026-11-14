@@ -8,6 +8,7 @@ import '../../../../core/services/attendance/packly_attendance_service.dart';
 import '../../../../core/services/attendance/steadfast_lunch_service.dart';
 import '../../../../core/services/background/lunch_sentinel_service.dart';
 import '../../../../core/services/background/office_sentinel_service.dart';
+import '../../../../core/services/home_widget_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
 import '../../../../core/services/system_settings_helper.dart';
 import '../../../../core/theme/fluent_tokens.dart';
@@ -819,7 +820,129 @@ class _AttendanceTestLabScreenState
           ),
           const SizedBox(height: 18),
 
-          // 7. Automation Test Card (Full developer tools)
+          // 7. Android Home Screen Widget (Fluent 2) Studio
+          _buildSectionCard(
+            title: '📱 Home Screen Widget (Fluent 2) Studio',
+            icon: Icons.widgets_rounded,
+            context: context,
+            children: [
+              const Text(
+                'অ্যান্ড্রয়েড হোম স্ক্রিনের Microsoft Fluent 2 উইজেটের বিভিন্ন স্ট্যাটাস লাইভ টেস্ট করুন:',
+                style: TextStyle(fontSize: 11.5),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal.shade800,
+                      foregroundColor: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.sync, size: 16),
+                    label: const Text('🔄 Sync Live Data'),
+                    onPressed: () async {
+                      await HomeWidgetService.updateWidget();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('📱 Widget synced with current data!')),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: Colors.orange,
+                    ),
+                    icon: const Icon(Icons.outdoor_grill, size: 16),
+                    label: const Text('🍳 Test: Cooking (Checked In 8:55 AM)'),
+                    onPressed: () async {
+                      await HomeWidgetService.updateWidget(
+                        checkInTime: '8:55 AM',
+                        checkInDate: DateTime.now().toIso8601String().substring(0, 10),
+                        isLate: false,
+                        lunchStatus: 'upcoming',
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('📱 Widget: Step 1 [Cooking] active')),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: Colors.indigo,
+                    ),
+                    icon: const Icon(Icons.directions_car, size: 16),
+                    label: const Text('🚗 Test: On Way'),
+                    onPressed: () async {
+                      await HomeWidgetService.updateWidget(
+                        checkInTime: '8:55 AM',
+                        checkInDate: DateTime.now().toIso8601String().substring(0, 10),
+                        isLate: false,
+                        lunchStatus: 'on_the_way',
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('📱 Widget: Step 2 [On The Way] active')),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: Colors.teal,
+                    ),
+                    icon: const Icon(Icons.business, size: 16),
+                    label: const Text('🏢 Test: Car Arrived'),
+                    onPressed: () async {
+                      await HomeWidgetService.updateWidget(
+                        checkInTime: '8:55 AM',
+                        checkInDate: DateTime.now().toIso8601String().substring(0, 10),
+                        isLate: false,
+                        lunchStatus: 'car_reached',
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('📱 Widget: Step 3 [Arrived] active')),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: Colors.green,
+                    ),
+                    icon: const Icon(Icons.restaurant, size: 16),
+                    label: const Text('🍽️ Test: Lunch Served'),
+                    onPressed: () async {
+                      await HomeWidgetService.updateWidget(
+                        checkInTime: '8:55 AM',
+                        checkInDate: DateTime.now().toIso8601String().substring(0, 10),
+                        isLate: false,
+                        lunchStatus: 'served',
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('📱 Widget: Step 4 [Served] active')),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // 8. Automation Test Card (Full developer tools)
           const AutomationTestCard(),
         ],
       ),

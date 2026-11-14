@@ -63,6 +63,14 @@ class MainActivity : FlutterActivity() {
                         result.error("ERROR", e.message, null)
                     }
                 }
+                "updateWidget" -> {
+                    try {
+                        OfficeStatusWidgetProvider.updateAllWidgets(applicationContext)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR", e.message, null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }

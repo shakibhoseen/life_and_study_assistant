@@ -11,6 +11,7 @@ import 'core/services/background/lunch_sentinel_service.dart';
 import 'core/services/background/office_sentinel_service.dart';
 import 'core/services/background/wifi_monitor_service.dart';
 import 'core/services/background/workmanager_service.dart';
+import 'core/services/home_widget_service.dart';
 import 'core/services/notification/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
@@ -79,7 +80,10 @@ void main() async {
   // full at every launch. Not awaited: nothing on screen depends on it.
   unawaited(GeminiResultCache.instance.sweepLegacyEntries());
 
-  // 6. Preload theme mode and dark preset to eliminate startup flicker
+  // 7. Push initial snapshot to native Android Home Screen Widget
+  unawaited(HomeWidgetService.updateWidget());
+
+  // 8. Preload theme mode and dark preset to eliminate startup flicker
   ThemeModeNotifier.initialMode =
       await ThemeModeNotifier.loadInitialThemeMode();
   DarkThemePresetNotifier.initialPreset =

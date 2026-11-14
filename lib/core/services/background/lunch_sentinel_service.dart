@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/notification_constants.dart';
 import '../attendance/steadfast_lunch_service.dart';
+import '../home_widget_service.dart';
 import '../notification/notification_service.dart';
 import 'wifi_monitor_service.dart';
 
@@ -99,6 +100,9 @@ class LunchSentinelTaskHandler extends TaskHandler {
 
       final statusKey = serving.status.toLowerCase();
       debugPrint('LunchSentinel: Current serving status: $statusKey (${serving.label})');
+
+      // Update home screen widget
+      await HomeWidgetService.updateWidget(lunchStatus: statusKey);
 
       // Update silent status bar notification
       _updateForegroundNotification(

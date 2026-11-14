@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#F2F7FD</color>
+
+    <!-- Fluent 2 Tokens Light (Windows 11 WinUI 2) -->
+    <color name="fluent_widget_bg">#FDFDFD</color>
+    <color name="fluent_widget_stroke">#1F000000</color>
+    <color name="fluent_widget_header_bg">#0D000000</color>
+    <color name="fluent_widget_text_primary">#1C1C1C</color>
+    <color name="fluent_widget_text_secondary">#616161</color>
+    <color name="fluent_widget_accent">#0067B8</color>
+    <color name="fluent_widget_accent_subtle">#1A0067B8</color>
+    <color name="fluent_widget_badge_bg">#F3F3F3</color>
+    <color name="fluent_widget_badge_stroke">#14000000</color>
+    <color name="fluent_widget_success">#107C41</color>
+    <color name="fluent_widget_success_bg">#1A107C41</color>
+    <color name="fluent_widget_warning">#D83B01</color>
+    <color name="fluent_widget_warning_bg">#1AD83B01</color>
+    <color name="fluent_widget_inactive">#8A8A8A</color>
+    <color name="fluent_widget_inactive_bg">#0A000000</color>
 </resources>

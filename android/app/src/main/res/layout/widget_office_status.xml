@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_surface_background"
+    android:padding="12dp">
+
+    <!-- Header Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Fluent Accent Dot & App Title -->
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🏢 ZaviSoft Office Sentinel"
+            android:textColor="@color/fluent_widget_text_primary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end" />
+
+        <!-- Sync Time -->
+        <TextView
+            android:id="@+id/widget_sync_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Just now"
+            android:textColor="@color/fluent_widget_text_secondary"
+            android:textSize="10.5sp"
+            android:layout_marginEnd="6dp" />
+
+        <!-- Refresh Button -->
+        <ImageView
+            android:id="@+id/widget_btn_refresh"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@android:drawable/ic_menu_rotate"
+            android:contentDescription="Refresh"
+            android:tint="@color/fluent_widget_accent" />
+    </LinearLayout>
+
+    <!-- Attendance Card Section -->
+    <LinearLayout
+        android:id="@+id/widget_attendance_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        android:background="@drawable/widget_punch_success"
+        android:padding="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/widget_punch_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🟢"
+                android:textSize="12sp"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/widget_punch_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Check-In: 8:54 AM (On-Time)"
+                android:textColor="@color/fluent_widget_text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_punch_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Workday: In Progress • 9h Target 6:00 PM"
+            android:textColor="@color/fluent_widget_text_secondary"
+            android:textSize="11sp"
+            android:singleLine="true"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <!-- Lunch Section Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widget_lunch_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🍱 Live Lunch Serving Tracker"
+            android:textColor="@color/fluent_widget_text_secondary"
+            android:textSize="10.5sp"
+            android:textStyle="bold"
+            android:singleLine="true" />
+
+        <TextView
+            android:id="@+id/widget_lunch_status_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="On Way"
+            android:textColor="@color/fluent_widget_accent"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- 4-Step Stepper Row -->
+    <LinearLayout
+        android:id="@+id/widget_stepper_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <!-- Step 1: Cooking -->
+        <TextView
+            android:id="@+id/widget_step_cooking"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="3dp"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="🍳 Cook"
+            android:textColor="@color/fluent_widget_text_primary"
+            android:textSize="10sp"
+            android:background="@drawable/widget_stepper_inactive" />
+
+        <!-- Step 2: Upcoming (Car on the way) -->
+        <TextView
+            android:id="@+id/widget_step_upcoming"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="3dp"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="🚗 On Way"
+            android:textColor="@color/fluent_widget_text_primary"
+            android:textSize="10sp"
+            android:background="@drawable/widget_stepper_active" />
+
+        <!-- Step 3: Received (Arrived at canteen) -->
+        <TextView
+            android:id="@+id/widget_step_received"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="3dp"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="🏢 Arrived"
+            android:textColor="@color/fluent_widget_text_primary"
+            android:textSize="10sp"
+            android:background="@drawable/widget_stepper_inactive" />
+
+        <!-- Step 4: Served (Ready to eat) -->
+        <TextView
+            android:id="@+id/widget_step_served"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="🍽️ Served"
+            android:textColor="@color/fluent_widget_text_primary"
+            android:textSize="10sp"
+            android:background="@drawable/widget_stepper_inactive" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">Office &amp; Lunch Sentinel</string>
+    <string name="widget_description">Real-time biometric attendance and lunch serving tracker in Microsoft Fluent style.</string>
+</resources>
