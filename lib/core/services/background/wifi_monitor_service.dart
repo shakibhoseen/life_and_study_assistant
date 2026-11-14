@@ -459,10 +459,9 @@ class WifiMonitorService {
 
     // CRITICAL OVERTIME & IN-OFFICE SAFETY RULE:
     // If user is physically inside or right next to office (< 100 meters):
-    // DO NOT AUTO CHECK-OUT! User is still in the building (working overtime, Wi-Fi glitched, etc.)
+    // DO NOT AUTO CHECK-OUT and DO NOT send reminders! User is still in the building working overtime.
     if (distance > 0 && distance < 100.0) {
-      debugPrint('WifiMonitor: Disconnected, but user is still at desk/office (${distance.toStringAsFixed(1)}m). Suppressing auto checkout for overtime.');
-      await NotificationService.instance.showOfficeCheckOutReminder();
+      debugPrint('WifiMonitor: Disconnected, but user is still at desk/office (${distance.toStringAsFixed(1)}m). Suppressing auto checkout & reminders for overtime.');
       return;
     }
 

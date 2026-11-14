@@ -243,130 +243,111 @@ class OfficeSentinelTaskHandler extends TaskHandler {
           (now.hour == 22 && now.minute <= 30);
 
       if (isEveningWindow) {
+        // Step 1: Check device cache - already checked out today?
         if (isAlreadyCheckedOut) {
-          debugPrint('OfficeSentinel: Check-Out already completed today. Dismissing sentinel.');
+          debugPrint('OfficeSentinel: Check-Out already completed today. Stopping sentinel.');
           await FlutterForegroundTask.stopService();
           await WorkmanagerService.instance.cancelSafetyWatchdog();
           return;
         }
 
-        // 1. While user is connected to office Wi-Fi, duty / overtime is IN PROGRESS!
-        // NEVER auto check-out while connected to office Wi-Fi!
-        if (isConnectedToOffice) {
-          _updateForegroundNotification(
-            title: '🏢 Office Departure Sentinel Active',
-            text: 'Office Wi-Fi connected. Monitoring departure (Overtime supported)...',
-          );
-          return;
-        }
-
-        // 2. If user is physically inside/at office building (< 100m):
-        // DO NOT auto check-out! User is still in building (working overtime, router reset, etc.)
-        if (distance > 0 && distance < 100.0) {
-          _updateForegroundNotification(
-            title: '🏢 অফিস ভবনে অবস্থানরত',
-            text: 'Wi-Fi বিচ্ছিন্ন কিন্তু আপনি অফিসে আছেন। কাজ শেষে বের হলে চেক-আউট হবে।',
-          );
-          return;
-        }
-
-        // 3. User is DISCONNECTED from office Wi-Fi AND outside the building:
-        // Step 1: Check if mobile internet / data is active & working.
-        final realInternet = await _hasRealInternet(prefs);
-        if (!realInternet) {
-          debugPrint(
-            'OfficeSentinel: Disconnected from office Wi-Fi, but mobile internet is not yet reachable. Waiting for internet...',
-          );
-          _updateForegroundNotification(
-            title: '📶 Wi-Fi বিচ্ছিন্ন - ইন্টারনেটের অপেক্ষা...',
-            text: 'রুম/সিঁড়িতে সংযোগ বিচ্ছিন্ন। মোবাইল নেটওয়ার্ক সচল হওয়া মাত্রই চেক-আউট হবে...',
-          );
-          return;
-        }
-
-        // Step 2: Internet is online! Check via server: is check-out already recorded on the server today?
-        try {
-          final liveStatus = await PacklyAttendanceService.instance.getAttendanceStatus();
-          if (liveStatus.isCheckedOut) {
-            debugPrint('OfficeSentinel: Portal confirms check-out already completed (${liveStatus.checkOutTime}). Dismissing sentinel.');
-            await prefs.setString(NotificationConstants.prefLastCheckOutDate, today);
-            if (liveStatus.checkOutTime != null) {
-              await prefs.setString(NotificationConstants.prefLastCheckOutTime, liveStatus.checkOutTime!);
-            }
-            await NotificationService.instance.cancelCheckOutReminder();
-            await FlutterForegroundTask.stopService();
-            await WorkmanagerService.instance.cancelSafetyWatchdog();
-            return;
-          }
-        } catch (e) {
-          debugPrint('OfficeSentinel: Live portal checkout verify error: $e');
-        }
-
-        // Step 3: Wi-Fi disconnected, internet is active, and checkout NOT done yet on server:
-        // Subcase A: Before 6:00 PM (Early Out)
-        // Rule: NEVER auto check-out without asking before 6:00 PM! Ask the user!
-        if (now.hour < 18) {
-          final shouldAlert = _lastDistanceAlert == null ||
-              now.difference(_lastDistanceAlert!).inMinutes >= 5;
-          if (shouldAlert) {
-            _lastDistanceAlert = now;
-            debugPrint('OfficeSentinel: Disconnected before 6:00 PM. Asking user for early departure.');
-            await NotificationService.instance.showOfficeCheckOutReminder(isEarly: true);
-            _updateForegroundNotification(
-              title: '⚠️ Early Departure Alert (Before 6 PM)',
-              text: 'অফিস সময় ৬:০০ টা পর্যন্ত। বের হলে ট্যাপ করে চেক-আউট দিন।',
-            );
-          }
-          return;
-        }
-
-        // Subcase B: At or after 6:00 PM (Normal / Overtime Departure)
-        debugPrint('OfficeSentinel: 6:00 PM+ departure detected outside building (${distance.toStringAsFixed(1)}m)...');
-
-        // Rule for after 6:00 PM:
-        // If distance > 400m (user far from office):
-        // DO NOT auto-punch blindly! ASK the user with urgent loud alert!
-        if (distance > 400.0) {
-          final shouldAlert = _lastDistanceAlert == null ||
-              now.difference(_lastDistanceAlert!).inMinutes >= 3;
-          if (shouldAlert) {
-            _lastDistanceAlert = now;
-            debugPrint('OfficeSentinel: User is FAR from office (${distance.toStringAsFixed(1)}m)! Triggering urgent alarm alert.');
-            await NotificationService.instance.showUrgentDepartureWarningNotification(
-              distanceMeters: distance,
-            );
-            _updateForegroundNotification(
-              title: '🚨 জরুরি সতর্কতা: চেক-আউট দেননি!',
-              text: 'অফিস থেকে দূরে সরে গেছেন। এখনই চেক-আউট পাঞ্চ করুন।',
-            );
-          }
-        } else if (distance >= 100.0) {
-          // User is between 100m and 400m (physically outside building exit):
-          // Auto check-out is safe and authorized!
-          if (autoOut) {
-            debugPrint('OfficeSentinel: Performing Safe Auto Check-Out at office exit (${distance.toStringAsFixed(1)}m)...');
-            final res = await PacklyAttendanceService.instance.checkOut(
-              latitude: pos?.latitude,
-              longitude: pos?.longitude,
-            );
-            if (res.success) {
-              final timeStr =
-                  '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
-              await NotificationService.instance.showOfficeCheckOutSuccessNotification(
-                time: timeStr,
-              );
-              debugPrint('OfficeSentinel: Auto Check-out recorded! Stopping sentinel (Until Checked Out achieved ✓).');
+        // Step 2: Live Server Verification (every ~60s when internet is available)
+        final shouldVerifyServer = _lastInternetSync == null ||
+            now.difference(_lastInternetSync!).inSeconds >= 60;
+        if (hasInternet && shouldVerifyServer) {
+          _lastInternetSync = now;
+          try {
+            final liveStatus = await PacklyAttendanceService.instance.getAttendanceStatus();
+            if (liveStatus.isCheckedOut) {
+              debugPrint('OfficeSentinel: Live server confirms already checked out (${liveStatus.checkOutTime}). Stopping sentinel.');
+              await prefs.setString(NotificationConstants.prefLastCheckOutDate, today);
+              if (liveStatus.checkOutTime != null) {
+                await prefs.setString(NotificationConstants.prefLastCheckOutTime, liveStatus.checkOutTime!);
+              }
+              await NotificationService.instance.cancelCheckOutReminder();
               await FlutterForegroundTask.stopService();
               await WorkmanagerService.instance.cancelSafetyWatchdog();
               return;
             }
-          } else {
-            final canRemind = _lastReminderAlert == null ||
-                now.difference(_lastReminderAlert!).inMinutes >= 5;
-            if (canRemind) {
-              _lastReminderAlert = now;
-              await NotificationService.instance.showOfficeCheckOutReminder();
+            if (!liveStatus.isCheckedIn && !isAlreadyCheckedIn) {
+              debugPrint('OfficeSentinel: User was not checked in today. Stopping sentinel.');
+              await FlutterForegroundTask.stopService();
+              await WorkmanagerService.instance.cancelSafetyWatchdog();
+              return;
             }
+          } catch (e) {
+            debugPrint('OfficeSentinel: Live server verification error: $e');
+          }
+        }
+
+        // =========================================================================
+        // SCENARIO A: Phone is connected to Office Wi-Fi
+        // User is at desk working (regular hours or OVERTIME)!
+        // RULE: STAY 100% SILENT! ZERO REMINDERS! NO 5-MINUTE POPUPS!
+        // =========================================================================
+        if (isConnectedToOffice) {
+          _updateForegroundNotification(
+            title: '🏢 Office Sentinel: কাজ চলমান (Overtime)',
+            text: 'অফিস ওয়াই-ফাই সংযুক্ত। প্রস্থান না করা পর্যন্ত নীরব থাকবে...',
+          );
+          return;
+        }
+
+        // =========================================================================
+        // SCENARIO B: Office Wi-Fi is DISCONNECTED!
+        // User has left desk/office.
+        // =========================================================================
+
+        // Subcase 1: Going down the stairs / elevator ("সিঁড়ি দিয়ে নামতে নেট উইক")
+        // Mobile data / internet is not reachable yet.
+        // Stay alive in foreground, poll every interval, wait for internet to stabilize!
+        final realInternet = await _hasRealInternet(prefs);
+        if (!realInternet) {
+          debugPrint('OfficeSentinel: Office Wi-Fi disconnected. Waiting for mobile internet...');
+          _updateForegroundNotification(
+            title: '📶 অফিস ওয়াই-ফাই বিচ্ছিন্ন',
+            text: 'সিঁড়ি/লিফটে নেটওয়ার্কের অপেক্ষা... ইন্টারনেট পাওয়া মাত্রই চেক-আউট হবে।',
+          );
+          return;
+        }
+
+        // Subcase 2: Mobile internet is online! Perform Auto Check-Out!
+        if (autoOut) {
+          debugPrint('OfficeSentinel: Office Wi-Fi disconnected & internet online. Performing Auto Check-Out...');
+          final res = await PacklyAttendanceService.instance.checkOut(
+            latitude: pos?.latitude,
+            longitude: pos?.longitude,
+          );
+          if (res.success) {
+            final timeStr =
+                '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
+            await NotificationService.instance.showOfficeCheckOutSuccessNotification(
+              time: timeStr,
+            );
+            debugPrint('OfficeSentinel: Auto Check-out recorded successfully! Stopping sentinel.');
+            await FlutterForegroundTask.stopService();
+            await WorkmanagerService.instance.cancelSafetyWatchdog();
+            return;
+          } else {
+            debugPrint('OfficeSentinel: Auto Check-Out API attempt failed: ${res.message}');
+          }
+        }
+
+        // Subcase 3: User moving FAR away from office (> 300 meters) without check-out completed!
+        // Sound the URGENT WARNING ALARM siren so user doesn't forget!
+        if (distance > 300.0) {
+          final shouldAlert = _lastDistanceAlert == null ||
+              now.difference(_lastDistanceAlert!).inMinutes >= 3;
+          if (shouldAlert) {
+            _lastDistanceAlert = now;
+            debugPrint('OfficeSentinel: User moved > 300m away without checkout! Triggering urgent siren warning.');
+            await NotificationService.instance.showUrgentDepartureWarningNotification(
+              distanceMeters: distance,
+            );
+            _updateForegroundNotification(
+              title: '🚨 জরুরি সতর্কতা: চেক-আউট সম্পন্ন হয়নি!',
+              text: 'আপনি অফিস থেকে দূরে সরে যাচ্ছেন। এখনই চেক-আউট দিন।',
+            );
           }
         }
         return;
