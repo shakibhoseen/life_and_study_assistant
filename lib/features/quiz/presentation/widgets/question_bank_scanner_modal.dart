@@ -1549,9 +1549,13 @@ class _QuestionBankScannerModalState
                 children: [
                   const Icon(Icons.edit_note, color: Color(0xFF6366F1)),
                   const SizedBox(width: 8),
-                  Text(
-                    'প্রশ্ন #${qIndex + 1} সম্পাদনা',
-                    style: const TextStyle(fontSize: 16),
+                  Flexible(
+                    child: Text(
+                      'প্রশ্ন #${qIndex + 1} সম্পাদনা',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 16),
+                    ),
                   ),
                 ],
               ),
@@ -1673,7 +1677,14 @@ class _QuestionBankScannerModalState
             children: [
               Icon(Icons.warning_amber_rounded, color: Colors.amber),
               SizedBox(width: 8),
-              Text('উত্তরবিহীন প্রশ্ন রয়েছে', style: TextStyle(fontSize: 16)),
+              Flexible(
+                child: Text(
+                  'উত্তরবিহীন প্রশ্ন রয়েছে',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
             ],
           ),
           content: Text(
@@ -2983,14 +2994,18 @@ class _QuestionBankScannerModalState
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  _hasAnswerMarkersInPastedText()
-                      ? 'টেক্সট প্রসেস ও কুইজ সাজানো হচ্ছে...'
-                      : 'AI প্রশ্নগুলো সমাধান করছে ও সঠিক উত্তর বের করছে...',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4F46E5),
+                Flexible(
+                  child: Text(
+                    _hasAnswerMarkersInPastedText()
+                        ? 'টেক্সট প্রসেস ও কুইজ সাজানো হচ্ছে...'
+                        : 'AI প্রশ্নগুলো সমাধান করছে ও সঠিক উত্তর বের করছে...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4F46E5),
+                    ),
                   ),
                 ),
               ],
@@ -3019,12 +3034,16 @@ class _QuestionBankScannerModalState
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'পাতা $_currentScanningPageIndex / $_totalScanningPages স্ক্যান হচ্ছে...',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4F46E5),
+                Flexible(
+                  child: Text(
+                    'পাতা $_currentScanningPageIndex / $_totalScanningPages স্ক্যান হচ্ছে...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4F46E5),
+                    ),
                   ),
                 ),
               ],
@@ -3288,40 +3307,48 @@ class _QuestionBankScannerModalState
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4F46E5),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      _result?.subject ?? 'General',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4F46E5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _result?.subject ?? 'General',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade700,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '${BengaliMathSanitizer.toBengaliDigits('${_editableQuestions.length}')}টি প্রশ্ন',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade700,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '${BengaliMathSanitizer.toBengaliDigits('${_editableQuestions.length}')}টি প্রশ্ন',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

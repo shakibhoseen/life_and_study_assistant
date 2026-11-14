@@ -94,12 +94,16 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                 children: [
                   Icon(Icons.science, size: 12, color: Colors.amber),
                   SizedBox(width: 4),
-                  Text(
-                    'TEST MODE',
-                    style: TextStyle(
-                      color: Colors.amber,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      'TEST MODE',
+                      style: TextStyle(
+                        color: Colors.amber,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -476,12 +480,16 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                     children: [
                       const Icon(Icons.check, size: 12, color: Colors.green),
                       const SizedBox(width: 4),
-                      Text(
-                        '$bookedCount Booked',
-                        style: const TextStyle(
-                          color: Colors.green,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                      Flexible(
+                        child: Text(
+                          '$bookedCount Booked',
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -1220,15 +1228,21 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.celebration, color: Colors.teal, size: 18),
-                          SizedBox(width: 8),
-                          Text(
-                            'Official Company Holidays',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
-                        ],
+                      const Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.celebration, color: Colors.teal, size: 18),
+                            SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Official Company Holidays',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       if (_isLoadingHolidays)
                         const SizedBox(

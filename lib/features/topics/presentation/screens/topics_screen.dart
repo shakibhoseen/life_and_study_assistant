@@ -329,7 +329,14 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Text('Proficiency: ', style: TextStyle(fontSize: 13)),
+                  const Flexible(
+                    child: Text(
+                      'Proficiency: ',
+                      style: TextStyle(fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   DropdownButton<ProficiencyLevel>(
                     value: level,
                     items: const [

@@ -581,13 +581,17 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
                                     color: Colors.amberAccent,
                                   ),
                                   SizedBox(width: 3),
-                                  Text(
-                                    'TEST MODE',
-                                    style: TextStyle(
-                                      color: Colors.amberAccent,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
+                                  Flexible(
+                                    child: Text(
+                                      'TEST MODE',
+                                      style: TextStyle(
+                                        color: Colors.amberAccent,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -630,15 +634,17 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
                                 color: Colors.tealAccent,
                               ),
                             const SizedBox(width: 4),
-                            Text(
-                              currentSsid,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
+                            Flexible(
+                              child: Text(
+                                currentSsid,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
                             ),
                           ],
                         ),
@@ -958,12 +964,16 @@ class _BiometricStatusBannerState extends ConsumerState<BiometricStatusBanner> {
                           color: Colors.tealAccent,
                         ),
                         SizedBox(width: 6),
-                        Text(
-                          'Open Meal Calendar & Office Portal ➔',
-                          style: TextStyle(
-                            color: Colors.tealAccent,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
+                        Flexible(
+                          child: Text(
+                            'Open Meal Calendar & Office Portal ➔',
+                            style: TextStyle(
+                              color: Colors.tealAccent,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

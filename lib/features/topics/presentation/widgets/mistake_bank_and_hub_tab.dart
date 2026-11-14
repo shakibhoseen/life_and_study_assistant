@@ -155,11 +155,18 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  'Drill Performance Summary',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                // Was an unconstrained Text + Spacer(): the title and the
+                // accuracy badge both demanded their full intrinsic width,
+                // so the row blew past the card on a narrow screen.
+                const Expanded(
+                  child: Text(
+                    'Drill Performance Summary',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -182,6 +189,8 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                   ),
                   child: Text(
                     '${accuracy.toStringAsFixed(1)}% Accuracy',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -915,29 +924,33 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                     children: [
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.indigo.withValues(alpha: 0.2)
-                                  : Colors.indigo.shade50,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              r.subject,
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
                                 color:
                                     Theme.of(context).brightness ==
                                         Brightness.dark
-                                    ? Colors.indigo.shade200
-                                    : Colors.indigo.shade800,
+                                    ? Colors.indigo.withValues(alpha: 0.2)
+                                    : Colors.indigo.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                r.subject,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.indigo.shade200
+                                      : Colors.indigo.shade800,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
@@ -952,6 +965,8 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                                   ? Colors.white60
                                   : Colors.grey.shade600,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),

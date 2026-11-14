@@ -80,14 +80,18 @@ class TestPaperCardSummary extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        isExpanded ? 'সংক্ষেপ' : 'প্রশ্ন দেখুন',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? const Color(0xFFA5B4FC)
-                              : const Color(0xFF4F46E5),
+                      Flexible(
+                        child: Text(
+                          isExpanded ? 'সংক্ষেপ' : 'প্রশ্ন দেখুন',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? const Color(0xFFA5B4FC)
+                                : const Color(0xFF4F46E5),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Icon(

@@ -144,16 +144,20 @@ class DashboardScreen extends ConsumerWidget {
                   style: const TextStyle(fontSize: 11),
                 ),
                 const SizedBox(width: 3),
-                Text(
-                  streak > 0 ? '$streak দিন' : 'স্ট্রিক',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? (streak > 0 ? Colors.orangeAccent : Colors.white70)
-                        : (streak > 0
-                              ? Colors.orange.shade900
-                              : const Color(0xFF475569)),
+                Flexible(
+                  child: Text(
+                    streak > 0 ? '$streak দিন' : 'স্ট্রিক',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? (streak > 0 ? Colors.orangeAccent : Colors.white70)
+                          : (streak > 0
+                                ? Colors.orange.shade900
+                                : const Color(0xFF475569)),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -190,16 +194,20 @@ class DashboardScreen extends ConsumerWidget {
                             : Colors.amber.shade800),
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  pillLabel,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? (hasGeminiKey ? Colors.greenAccent : Colors.amber)
-                        : (hasGeminiKey
-                              ? Colors.green.shade800
-                              : Colors.amber.shade800),
+                Flexible(
+                  child: Text(
+                    pillLabel,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? (hasGeminiKey ? Colors.greenAccent : Colors.amber)
+                          : (hasGeminiKey
+                                ? Colors.green.shade800
+                                : Colors.amber.shade800),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

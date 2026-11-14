@@ -358,7 +358,13 @@ class _AiFlashcardGeneratorModalState
           children: [
             Icon(Icons.edit, size: 18, color: Color(0xFF6366F1)),
             SizedBox(width: 8),
-            Text('ফ্ল্যাশ কার্ড সম্পাদনা'),
+            Flexible(
+              child: Text(
+                'ফ্ল্যাশ কার্ড সম্পাদনা',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -860,9 +866,16 @@ class _AiFlashcardGeneratorModalState
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'তৈরিকৃত কার্ড (${cards.length}টির মধ্যে $selectedCountটি নির্বাচিত)',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            Expanded(
+              child: Text(
+                'তৈরিকৃত কার্ড (${cards.length}টির মধ্যে $selectedCountটি নির্বাচিত)',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             Row(
               children: [
@@ -943,22 +956,26 @@ class _AiFlashcardGeneratorModalState
                             // Tags
                             Row(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF6366F1)
-                                        .withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    '${card.subject} • ${card.topic}',
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF6366F1),
+                                Flexible(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF6366F1)
+                                          .withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '${card.subject} • ${card.topic}',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF6366F1),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ),
@@ -980,29 +997,33 @@ class _AiFlashcardGeneratorModalState
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: switch (card.priority) {
-                                      CardPriority.high => Colors.green,
-                                      CardPriority.medium => Colors.blueGrey,
-                                      CardPriority.low => Colors.grey,
-                                    }.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    card.priority.label,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                                Flexible(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
                                       color: switch (card.priority) {
                                         CardPriority.high => Colors.green,
                                         CardPriority.medium => Colors.blueGrey,
                                         CardPriority.low => Colors.grey,
-                                      },
+                                      }.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      card.priority.label,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: switch (card.priority) {
+                                          CardPriority.high => Colors.green,
+                                          CardPriority.medium => Colors.blueGrey,
+                                          CardPriority.low => Colors.grey,
+                                        },
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ),

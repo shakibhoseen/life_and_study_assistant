@@ -41,9 +41,13 @@ class ThemeSelectorCard extends ConsumerWidget {
                   color: Color(0xFF6366F1),
                 ),
                 SizedBox(width: 8),
-                Text(
-                  'Select Interface Theme',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    'Select Interface Theme',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
@@ -134,12 +138,16 @@ class ThemeSelectorCard extends ConsumerWidget {
                   color: Color(0xFFA78BFA),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  'ডার্ক ও স্টাডি থিমসমূহ (Aesthetic Dark Palettes)',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white70 : Colors.black87,
+                Expanded(
+                  child: Text(
+                    'ডার্ক ও স্টাডি থিমসমূহ (Aesthetic Dark Palettes)',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
                   ),
                 ),
               ],

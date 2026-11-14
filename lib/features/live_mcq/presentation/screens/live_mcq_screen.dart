@@ -895,38 +895,42 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                         ),
                         const SizedBox(width: 3),
                       ],
-                      Text(
-                        exam.completedStatus
-                            ? 'Done ✓'
-                            : isToday
-                            ? 'TODAY 🎯'
-                            : isTomorrow
-                            ? 'Tomorrow ⏳'
-                            : isPast
-                            ? 'Passed (${-daysDiff}d ago)'
-                            : 'in $daysDiff d',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.bold,
-                          color: exam.completedStatus
-                              ? (isDark
-                                    ? const Color(0xFF6EE7B7)
-                                    : const Color(0xFF15803D))
+                      Flexible(
+                        child: Text(
+                          exam.completedStatus
+                              ? 'Done ✓'
                               : isToday
-                              ? (isDark
-                                    ? const Color(0xFFFCD34D)
-                                    : const Color(0xFFB45309))
+                              ? 'TODAY 🎯'
                               : isTomorrow
-                              ? (isDark
-                                    ? const Color(0xFFA5B4FC)
-                                    : const Color(0xFF4338CA))
+                              ? 'Tomorrow ⏳'
                               : isPast
-                              ? (isDark
-                                    ? const Color(0xFFFDA4AF)
-                                    : const Color(0xFFBE123C))
-                              : (isDark
-                                    ? const Color(0xFF93C5FD)
-                                    : const Color(0xFF1D4ED8)),
+                              ? 'Passed (${-daysDiff}d ago)'
+                              : 'in $daysDiff d',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: exam.completedStatus
+                                ? (isDark
+                                      ? const Color(0xFF6EE7B7)
+                                      : const Color(0xFF15803D))
+                                : isToday
+                                ? (isDark
+                                      ? const Color(0xFFFCD34D)
+                                      : const Color(0xFFB45309))
+                                : isTomorrow
+                                ? (isDark
+                                      ? const Color(0xFFA5B4FC)
+                                      : const Color(0xFF4338CA))
+                                : isPast
+                                ? (isDark
+                                      ? const Color(0xFFFDA4AF)
+                                      : const Color(0xFFBE123C))
+                                : (isDark
+                                      ? const Color(0xFF93C5FD)
+                                      : const Color(0xFF1D4ED8)),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -1151,13 +1155,17 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                           color: isDark ? Colors.white30 : Colors.black26,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          EntityRef(EntityKind.exam, exam.id).tag,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontFamily: 'monospace',
-                            letterSpacing: 0.4,
-                            color: isDark ? Colors.white38 : Colors.black38,
+                        Flexible(
+                          child: Text(
+                            EntityRef(EntityKind.exam, exam.id).tag,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontFamily: 'monospace',
+                              letterSpacing: 0.4,
+                              color: isDark ? Colors.white38 : Colors.black38,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -1649,9 +1657,13 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               children: [
                 Icon(Icons.bookmark_outline, color: Color(0xFF2563EB)),
                 SizedBox(width: 8),
-                Text(
-                  'ট্র্যাক পরিবর্তন করুন',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Flexible(
+                  child: Text(
+                    'ট্র্যাক পরিবর্তন করুন',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -2158,9 +2170,13 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               children: [
                 Icon(Icons.auto_awesome, color: Colors.indigo, size: 22),
                 SizedBox(width: 8),
-                Text(
-                  'Import Routine (AI / Text)',
-                  style: TextStyle(fontSize: 16),
+                Flexible(
+                  child: Text(
+                    'Import Routine (AI / Text)',
+                    style: TextStyle(fontSize: 16),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),

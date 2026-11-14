@@ -72,12 +72,16 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
           children: [
             Icon(Icons.tune, size: 14, color: Colors.grey.shade500),
             const SizedBox(width: 5),
-            Text(
-              'ছবির ধরন',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade600,
+            Flexible(
+              child: Text(
+                'ছবির ধরন',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade600,
+                ),
               ),
             ),
           ],
@@ -759,21 +763,25 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      result.subject,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        result.subject,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -841,11 +849,15 @@ class _StudySheetCameraModalState extends ConsumerState<StudySheetCameraModal> {
                       color: Color(0xFF6366F1),
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      'High-Yield Rules & Mnemonics (${result.keyRules.length})',
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        'High-Yield Rules & Mnemonics (${result.keyRules.length})',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],

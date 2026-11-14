@@ -285,38 +285,44 @@ class _MultiTrackExamCountdownCardState
                 // Track Pill + Exam Type + Date Status
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getTrackColor(heroExam.trackName)
-                            .withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _getTrackColor(heroExam.trackName)
-                              .withValues(alpha: 0.4),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3.5,
                         ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _getTrackIcon(heroExam.trackName),
-                            size: 13,
-                            color: _getTrackColor(heroExam.trackName),
+                        decoration: BoxDecoration(
+                          color: _getTrackColor(heroExam.trackName)
+                              .withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _getTrackColor(heroExam.trackName)
+                                .withValues(alpha: 0.4),
                           ),
-                          const SizedBox(width: 5),
-                          Text(
-                            heroExam.trackName,
-                            style: TextStyle(
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _getTrackIcon(heroExam.trackName),
+                              size: 13,
                               color: _getTrackColor(heroExam.trackName),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                heroExam.trackName,
+                                style: TextStyle(
+                                  color: _getTrackColor(heroExam.trackName),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -709,12 +715,16 @@ class _MultiTrackExamCountdownCardState
             children: [
               Icon(Icons.mic, color: Color(0xFF10B981), size: 18),
               SizedBox(width: 8),
-              Text(
-                'Exam is Live! Open LiveMCQ & Speak Mistakes 🎙️',
-                style: TextStyle(
-                  color: Color(0xFF10B981),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12.5,
+              Flexible(
+                child: Text(
+                  'Exam is Live! Open LiveMCQ & Speak Mistakes 🎙️',
+                  style: TextStyle(
+                    color: Color(0xFF10B981),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -838,12 +848,16 @@ class _MultiTrackExamCountdownCardState
               color: Color(0xFFEF4444),
             ),
             SizedBox(width: 3),
-            Text(
-              'STARTS SOON',
-              style: TextStyle(
-                color: Color(0xFFEF4444),
-                fontWeight: FontWeight.bold,
-                fontSize: 10.5,
+            Flexible(
+              child: Text(
+                'STARTS SOON',
+                style: TextStyle(
+                  color: Color(0xFFEF4444),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10.5,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

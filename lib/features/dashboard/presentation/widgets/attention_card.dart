@@ -63,12 +63,16 @@ class AttentionCard extends StatelessWidget {
                   color: isDark ? Colors.white70 : Colors.black54,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'যা মনোযোগ চায়',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
+                Expanded(
+                  child: Text(
+                    'যা মনোযোগ চায়',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

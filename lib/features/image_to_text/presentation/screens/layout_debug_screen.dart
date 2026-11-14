@@ -259,37 +259,43 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: a.isDualColumn
-                      ? Colors.blue.withValues(alpha: 0.15)
-                      : Colors.purple.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: a.isDualColumn ? Colors.blue : Colors.purple,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      a.isDualColumn
-                          ? Icons.view_column_rounded
-                          : Icons.article_outlined,
-                      size: 14,
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: a.isDualColumn
+                        ? Colors.blue.withValues(alpha: 0.15)
+                        : Colors.purple.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
                       color: a.isDualColumn ? Colors.blue : Colors.purple,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      a.layoutType.label,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        a.isDualColumn
+                            ? Icons.view_column_rounded
+                            : Icons.article_outlined,
+                        size: 14,
                         color: a.isDualColumn ? Colors.blue : Colors.purple,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          a.layoutType.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: a.isDualColumn ? Colors.blue : Colors.purple,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -392,14 +398,19 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'কলাম #${idx + 1} (${idx == 0 ? "বাম পাশ" : "ডান পাশ"})',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: idx == 0 ? Colors.blue : Colors.green,
+                    Expanded(
+                      child: Text(
+                        'কলাম #${idx + 1} (${idx == 0 ? "বাম পাশ" : "ডান পাশ"})',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: idx == 0 ? Colors.blue : Colors.green,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       '${(crop.lengthSync() / 1024).toStringAsFixed(1)} KB',
                       style: const TextStyle(fontSize: 11, color: Colors.grey),
@@ -480,24 +491,36 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Text(
-                'মোট প্রশ্ন: ${seg.totalQuestions}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              Text(
-                'নিখুঁত ৪-অপশন: ${seg.validMcqCount}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: Colors.green,
+              Flexible(
+                child: Text(
+                  'মোট প্রশ্ন: ${seg.totalQuestions}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
-              Text(
-                'রিভিউ প্রয়োজন: ${seg.reviewCount}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: seg.reviewCount > 0 ? Colors.orange : Colors.grey,
+              Flexible(
+                child: Text(
+                  'নিখুঁত ৪-অপশন: ${seg.validMcqCount}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.green,
+                  ),
+                ),
+              ),
+              Flexible(
+                child: Text(
+                  'রিভিউ প্রয়োজন: ${seg.reviewCount}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: seg.reviewCount > 0 ? Colors.orange : Colors.grey,
+                  ),
                 ),
               ),
             ],
@@ -529,25 +552,33 @@ class _LayoutDebugScreenState extends State<LayoutDebugScreen>
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.blueAccent,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    q.questionNumber.isNotEmpty ? 'প্রশ্ন ${q.questionNumber}' : 'নম্বরহীন',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      q.questionNumber.isNotEmpty ? 'প্রশ্ন ${q.questionNumber}' : 'নম্বরহীন',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'কলাম ${q.columnId + 1}',
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                Flexible(
+                  child: Text(
+                    'কলাম ${q.columnId + 1}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
                 ),
                 const Spacer(),
                 if (q.hasDiagram) ...[

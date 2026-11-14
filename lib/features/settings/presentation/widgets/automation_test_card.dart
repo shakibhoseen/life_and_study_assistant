@@ -36,9 +36,13 @@ class AutomationTestCard extends ConsumerWidget {
                   size: 22,
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  'Trigger Engine & Automation Lab',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                const Expanded(
+                  child: Text(
+                    'Trigger Engine & Automation Lab',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),

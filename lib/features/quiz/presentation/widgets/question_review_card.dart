@@ -522,14 +522,18 @@ class QuestionReviewCard extends StatelessWidget {
                         color: Colors.amber.shade800,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        '⚠️ সতর্কতা: বইয়ের উত্তরে অসঙ্গতি পাওয়া গেছে!',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? Colors.amber.shade200
-                              : Colors.amber.shade900,
+                      Flexible(
+                        child: Text(
+                          '⚠️ সতর্কতা: বইয়ের উত্তরে অসঙ্গতি পাওয়া গেছে!',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? Colors.amber.shade200
+                                : Colors.amber.shade900,
+                          ),
                         ),
                       ),
                     ],
@@ -776,12 +780,18 @@ class QuestionReviewCard extends StatelessWidget {
                       color: isDark ? Colors.blueGrey.shade300 : Colors.blueGrey,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      '+ ব্যাখ্যা যোগ করুন (লিখুন বা মুখে বলুন)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.blueGrey.shade300 : Colors.blueGrey,
-                        fontStyle: FontStyle.italic,
+                    Flexible(
+                      child: Text(
+                        '+ ব্যাখ্যা যোগ করুন (লিখুন বা মুখে বলুন)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? Colors.blueGrey.shade300
+                              : Colors.blueGrey,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   ],

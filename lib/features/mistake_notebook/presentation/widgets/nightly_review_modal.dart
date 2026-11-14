@@ -92,9 +92,13 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
           children: [
             Icon(Icons.nightlight_round, color: Colors.amber, size: 20),
             SizedBox(width: 8),
-            Text(
-              'রাতের ৫ মিনিটের রিভিশন',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Flexible(
+              child: Text(
+                'রাতের ৫ মিনিটের রিভিশন',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
             ),
           ],
         ),
@@ -138,44 +142,61 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'কার্ড ${_currentIndex + 1} / $total',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                  Flexible(
+                    child: Text(
+                      'কার্ড ${_currentIndex + 1} / $total',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: source.color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: source.color.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(source.icon, size: 12, color: source.color),
-                            const SizedBox(width: 4),
-                            Text(
-                              source.banglaLabel,
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                                color: source.color,
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: source.color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: source.color.withValues(alpha: 0.3),
                               ),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  source.icon,
+                                  size: 12,
+                                  color: source.color,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    source.banglaLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: source.color,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -414,12 +435,16 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                                     size: 16,
                                   ),
                                   SizedBox(width: 6),
-                                  Text(
-                                    'ব্যাখ্যা ও রুল:',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      color: Colors.amber,
+                                  Flexible(
+                                    child: Text(
+                                      'ব্যাখ্যা ও রুল:',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: Colors.amber,
+                                      ),
                                     ),
                                   ),
                                 ],

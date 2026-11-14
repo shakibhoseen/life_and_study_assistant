@@ -702,29 +702,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
-                      shape: BoxShape.circle,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Connected & Active',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: isDark
-                          ? const Color(0xFF34D399)
-                          : const Color(0xFF047857),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Connected & Active',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: isDark
+                              ? const Color(0xFF34D399)
+                              : const Color(0xFF047857),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -885,12 +892,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Enter Gemini API Key',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+              Flexible(
+                child: Text(
+                  'Enter Gemini API Key',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
                 ),
               ),
               if (_isEditingApiKey)
@@ -1851,12 +1862,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 const Icon(Icons.beach_access, size: 18, color: Colors.teal),
                 const SizedBox(width: 8),
-                Text(
-                  'Weekly Off-Days (No Office Work)',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                Expanded(
+                  child: Text(
+                    'Weekly Off-Days (No Office Work)',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                    ),
                   ),
                 ),
               ],
@@ -2161,9 +2176,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 title: Row(
                   children: [
-                    const Text(
-                      'Portal & Automation Test Lab',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    const Flexible(
+                      child: Text(
+                        'Portal & Automation Test Lab',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
                     ),
                     if (_simulationMode) ...[
                       const SizedBox(width: 8),
@@ -3267,12 +3286,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Icon(icon, size: 16, color: color),
           ),
           const SizedBox(width: 8),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF334155),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? const Color(0xFF93C5FD)
+                    : const Color(0xFF334155),
+              ),
             ),
           ),
         ],

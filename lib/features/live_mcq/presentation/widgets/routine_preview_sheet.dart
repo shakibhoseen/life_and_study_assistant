@@ -239,22 +239,30 @@ class _RoutinePreviewSheetState extends State<RoutinePreviewSheet> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      _dateLabel(item.date),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo,
+                    Flexible(
+                      child: Text(
+                        _dateLabel(item.date),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.indigo,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 7),
-                    Text(
-                      // Left as written: "১০:০০ PM" is half one script and
-                      // half the other, which reads worse than either.
-                      item.examTime,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.white38 : Colors.black45,
+                    Flexible(
+                      child: Text(
+                        // Left as written: "১০:০০ PM" is half one script and
+                        // half the other, which reads worse than either.
+                        item.examTime,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white38 : Colors.black45,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

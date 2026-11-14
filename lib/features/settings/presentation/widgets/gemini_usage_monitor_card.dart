@@ -411,11 +411,15 @@ class _GeminiUsageMonitorCardState extends State<GeminiUsageMonitorCard> {
                 color: isDark ? Colors.blueGrey.shade200 : Colors.blueGrey,
               ),
               const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isDark ? Colors.white60 : Colors.black54,
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.white60 : Colors.black54,
+                  ),
                 ),
               ),
             ],

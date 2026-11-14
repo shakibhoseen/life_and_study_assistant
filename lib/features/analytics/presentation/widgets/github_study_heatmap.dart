@@ -247,11 +247,15 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Text(
-              'Less',
-              style: TextStyle(
-                fontSize: 10,
-                color: isDark ? Colors.white60 : Colors.grey.shade600,
+            Flexible(
+              child: Text(
+                'Less',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isDark ? Colors.white60 : Colors.grey.shade600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 4),
@@ -261,11 +265,15 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
             _buildLegendCell(const Color(0xFF30A14E), isDark: isDark),
             _buildLegendCell(const Color(0xFF216E39), isDark: isDark),
             const SizedBox(width: 4),
-            Text(
-              'More',
-              style: TextStyle(
-                fontSize: 10,
-                color: isDark ? Colors.white60 : Colors.grey.shade600,
+            Flexible(
+              child: Text(
+                'More',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isDark ? Colors.white60 : Colors.grey.shade600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -279,9 +287,13 @@ class _GithubStudyHeatmapState extends ConsumerState<GithubStudyHeatmap> {
             children: [
               Icon(Icons.donut_small, color: Colors.indigo, size: 16),
               SizedBox(width: 6),
-              Text(
-                'Subject Time & Focus Distribution',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              Flexible(
+                child: Text(
+                  'Subject Time & Focus Distribution',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

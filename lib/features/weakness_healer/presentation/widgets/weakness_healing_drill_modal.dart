@@ -244,9 +244,13 @@ class _WeaknessHealingDrillModalState
           children: [
             Icon(Icons.healing_rounded, color: Color(0xFF10B981), size: 22),
             SizedBox(width: 8),
-            Text(
-              '৩ মিনিটের হিলিং ড্রিল',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Flexible(
+              child: Text(
+                '৩ মিনিটের হিলিং ড্রিল',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -349,30 +353,37 @@ class _WeaknessHealingDrillModalState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${widget.topic.subject} • ${widget.topic.topicName}',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF10B981),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${widget.topic.subject} • ${widget.topic.topicName}',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF10B981),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 'প্রশ্ন ${_currentIndex + 1} / $total',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -418,12 +429,16 @@ class _WeaknessHealingDrillModalState
                         children: [
                           Icon(Icons.replay, size: 12, color: Colors.redAccent),
                           SizedBox(width: 4),
-                          Text(
-                            'পূর্বের ভুল প্রশ্ন',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.redAccent,
+                          Flexible(
+                            child: Text(
+                              'পূর্বের ভুল প্রশ্ন',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.redAccent,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -548,12 +563,16 @@ class _WeaknessHealingDrillModalState
                                 size: 16,
                               ),
                               SizedBox(width: 6),
-                              Text(
-                                'ব্যাখ্যা ও মনে রাখার রুল:',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: Colors.amber,
+                              Flexible(
+                                child: Text(
+                                  'ব্যাখ্যা ও মনে রাখার রুল:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    color: Colors.amber,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],

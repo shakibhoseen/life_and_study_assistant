@@ -131,12 +131,16 @@ class LiveMcqTrackFilterBar extends ConsumerWidget {
                               color: Colors.red,
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              'ট্র্যাক মুছুন',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red.shade700,
+                            Flexible(
+                              child: Text(
+                                'ট্র্যাক মুছুন',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red.shade700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],

@@ -172,9 +172,13 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
           children: [
             Icon(Icons.menu_book_rounded, color: Colors.indigo, size: 24),
             SizedBox(width: 8),
-            Text(
-              'স্মার্ট মিস্টেক নোটবুক',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+            Flexible(
+              child: Text(
+                'স্মার্ট মিস্টেক নোটবুক',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              ),
             ),
           ],
         ),
@@ -293,11 +297,15 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'সংরক্ষিত ভুলসমূহ (${filtered.length}টি)',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+              Flexible(
+                child: Text(
+                  'সংরক্ষিত ভুলসমূহ (${filtered.length}টি)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
               if (filtered.isNotEmpty)

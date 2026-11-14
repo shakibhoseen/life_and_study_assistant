@@ -59,12 +59,16 @@ class MistakeQuestionCard extends ConsumerWidget {
         children: [
           Icon(icon, size: 12, color: colour),
           const SizedBox(width: 4),
-          Text(
-            mark.label,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.bold,
-              color: colour,
+          Flexible(
+            child: Text(
+              mark.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.bold,
+                color: colour,
+              ),
             ),
           ),
         ],
@@ -466,14 +470,18 @@ class MistakeQuestionCard extends ConsumerWidget {
                           color: Colors.amber,
                         ),
                         const SizedBox(width: 5),
-                        Text(
-                          'ব্যাখ্যা ও মনে রাখার ট্রিকস:',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? Colors.amber.shade300
-                                : Colors.amber.shade900,
+                        Flexible(
+                          child: Text(
+                            'ব্যাখ্যা ও মনে রাখার ট্রিকস:',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? Colors.amber.shade300
+                                  : Colors.amber.shade900,
+                            ),
                           ),
                         ),
                       ],
@@ -536,13 +544,17 @@ class MistakeQuestionCard extends ConsumerWidget {
                         color: isDark ? Colors.white30 : Colors.black26,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        EntityRef(EntityKind.question, dq.id).tag,
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontFamily: 'monospace',
-                          letterSpacing: 0.4,
-                          color: isDark ? Colors.white38 : Colors.black38,
+                      Flexible(
+                        child: Text(
+                          EntityRef(EntityKind.question, dq.id).tag,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontFamily: 'monospace',
+                            letterSpacing: 0.4,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
                         ),
                       ),
                     ],

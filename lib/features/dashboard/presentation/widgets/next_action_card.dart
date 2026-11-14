@@ -137,14 +137,18 @@ class NextActionCard extends StatelessWidget {
               children: [
                 const Text('🔥', style: TextStyle(fontSize: 12)),
                 const SizedBox(width: 5),
-                Text(
-                  '$streakDays দিনের ধারা — আজ কিছু না করলে ভাঙবে',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? Colors.orange.shade200
-                        : Colors.orange.shade800,
+                Expanded(
+                  child: Text(
+                    '$streakDays দিনের ধারা — আজ কিছু না করলে ভাঙবে',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? Colors.orange.shade200
+                          : Colors.orange.shade800,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

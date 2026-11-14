@@ -1051,12 +1051,16 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                         size: 16,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        '${_lastResult!.subject} • ${_lastResult!.topic}',
-                        style: const TextStyle(
-                          color: Color(0xFF10B981),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
+                      Flexible(
+                        child: Text(
+                          '${_lastResult!.subject} • ${_lastResult!.topic}',
+                          style: const TextStyle(
+                            color: Color(0xFF10B981),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

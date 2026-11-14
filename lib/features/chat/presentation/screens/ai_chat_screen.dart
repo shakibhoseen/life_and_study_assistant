@@ -132,7 +132,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           children: [
             Icon(Icons.check_circle, color: Colors.greenAccent, size: 18),
             SizedBox(width: 8),
-            Text('মেসেজ সফলভাবে কপি হয়েছে!'),
+            Flexible(
+              child: Text(
+                'মেসেজ সফলভাবে কপি হয়েছে!',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         duration: const Duration(seconds: 2),
@@ -733,18 +739,26 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Text(
-                  'AI Companion',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: Colors.indigo,
+                const Expanded(
+                  child: Text(
+                    'AI Companion',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: Colors.indigo,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  _formatDateTime(message.timestamp),
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    _formatDateTime(message.timestamp),
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 InkWell(
@@ -772,14 +786,18 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                               : Colors.indigo.shade600,
                         ),
                         const SizedBox(width: 3),
-                        Text(
-                          'Copy',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? const Color(0xFF94A3B8)
-                                : Colors.indigo.shade600,
+                        Flexible(
+                          child: Text(
+                            'Copy',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? const Color(0xFF94A3B8)
+                                  : Colors.indigo.shade600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -870,14 +888,18 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                           ),
                         ),
                         const SizedBox(width: 5),
-                        Text(
-                          'AI সরাসরি লিখছে (Streaming)...',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? Colors.indigo.shade200
-                                : Colors.indigo.shade800,
+                        Flexible(
+                          child: Text(
+                            'AI সরাসরি লিখছে (Streaming)...',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? Colors.indigo.shade200
+                                  : Colors.indigo.shade800,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -913,14 +935,18 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                               : const Color(0xFF475569),
                         ),
                         const SizedBox(width: 5),
-                        Text(
-                          'Copy Response',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? const Color(0xFFF1F5F9)
-                                : const Color(0xFF334155),
+                        Flexible(
+                          child: Text(
+                            'Copy Response',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? const Color(0xFFF1F5F9)
+                                  : const Color(0xFF334155),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -1625,17 +1651,21 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                           size: 22,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          'Study Threads & Sessions',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? Colors.white
-                                : const Color(0xFF0F172A),
+                        Expanded(
+                          child: Text(
+                            'Study Threads & Sessions',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF0F172A),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 8),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.indigo,
@@ -2032,7 +2062,14 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           children: [
             Icon(Icons.psychology, color: Colors.indigo),
             SizedBox(width: 8),
-            Text('Active Gemini Context', style: TextStyle(fontSize: 16)),
+            Flexible(
+              child: Text(
+                'Active Gemini Context',
+                style: TextStyle(fontSize: 16),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: SingleChildScrollView(

@@ -551,50 +551,60 @@ class _SpacedRepetitionScreenState
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Active Recall মেমোরি টেস্ট',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white70
-                      : Colors.black54,
+              Flexible(
+                child: Text(
+                  'Active Recall মেমোরি টেস্ট',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white70
+                        : Colors.black54,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    _revealAllByDefault = !_revealAllByDefault;
-                  });
-                },
-                borderRadius: BorderRadius.circular(6),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _revealAllByDefault
-                            ? Icons.visibility
-                            : Icons.visibility_off_outlined,
-                        size: 14,
-                        color: const Color(0xFF6366F1),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _revealAllByDefault
-                            ? 'সব উত্তর দৃশ্যমান'
-                            : 'উত্তর লুকানো 🔒',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF6366F1),
+              Flexible(
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _revealAllByDefault = !_revealAllByDefault;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _revealAllByDefault
+                              ? Icons.visibility
+                              : Icons.visibility_off_outlined,
+                          size: 14,
+                          color: const Color(0xFF6366F1),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            _revealAllByDefault
+                                ? 'সব উত্তর দৃশ্যমান'
+                                : 'উত্তর লুকানো 🔒',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6366F1),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -744,14 +754,18 @@ class _SpacedRepetitionScreenState
                             : const Color(0xFF4F46E5),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'উত্তর দেখুন (Tap to Reveal Answer)',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? const Color(0xFFA5B4FC)
-                              : const Color(0xFF4F46E5),
+                      Flexible(
+                        child: Text(
+                          'উত্তর দেখুন (Tap to Reveal Answer)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? const Color(0xFFA5B4FC)
+                                : const Color(0xFF4F46E5),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -776,25 +790,33 @@ class _SpacedRepetitionScreenState
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'উত্তর ও নিয়ম:',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white54 : Colors.black45,
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            setState(() {
-                              _revealedCardIds.remove(item.id);
-                            });
-                          },
+                        Flexible(
                           child: Text(
-                            'ঢাকুন 🙈',
+                            'উত্তর ও নিয়ম:',
                             style: TextStyle(
                               fontSize: 11,
-                              color: isDark ? Colors.white38 : Colors.grey,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white54 : Colors.black45,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Flexible(
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _revealedCardIds.remove(item.id);
+                              });
+                            },
+                            child: Text(
+                              'ঢাকুন 🙈',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white38 : Colors.grey,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ),
@@ -1179,9 +1201,13 @@ class _SpacedRepetitionScreenState
                   color: Colors.grey.shade500,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  'পরবর্তী রিভিশন: ${_formatDate(item.nextReviewDate)} (লেভেল ${item.repetitionLevel}, ব্যবধান: ${item.intervalDays} দিন)',
-                  style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                Expanded(
+                  child: Text(
+                    'পরবর্তী রিভিশন: ${_formatDate(item.nextReviewDate)} (লেভেল ${item.repetitionLevel}, ব্যবধান: ${item.intervalDays} দিন)',
+                    style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),

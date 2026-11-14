@@ -216,7 +216,13 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
           children: [
             Icon(Icons.workspace_premium, color: Color(0xFFF59E0B), size: 28),
             SizedBox(width: 10),
-            Text('Session Finished! 🎯'),
+            Flexible(
+              child: Text(
+                'Session Finished! 🎯',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -406,15 +412,19 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              _isRunning ? 'FOCUSING' : 'PAUSED',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.2,
-                                color: isDark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade600,
+                            Flexible(
+                              child: Text(
+                                _isRunning ? 'FOCUSING' : 'PAUSED',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                  color: isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
+                                ),
                               ),
                             ),
                           ],
@@ -495,14 +505,18 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
                         color: Color(0xFF6366F1),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Ambient Focus Sound',
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.bold,
+                      const Expanded(
+                        child: Text(
+                          'Ambient Focus Sound',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       if (_isPlayingAudio)
                         Container(
                           padding: const EdgeInsets.symmetric(

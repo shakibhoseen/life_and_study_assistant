@@ -431,19 +431,26 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
-                  children: [
-                    Icon(Icons.image_outlined, size: 18, color: Colors.indigo),
-                    SizedBox(width: 6),
-                    Text(
-                      'ছবির প্রিভিউ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                const Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.image_outlined, size: 18, color: Colors.indigo),
+                      SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'ছবির প্রিভিউ',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Row(
                   children: [
                     TextButton.icon(
@@ -504,12 +511,16 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
                           ),
                         ),
                         SizedBox(width: 10),
-                        Text(
-                          'ফিল্টার প্রয়োগ হচ্ছে...',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        Flexible(
+                          child: Text(
+                            'ফিল্টার প্রয়োগ হচ্ছে...',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -540,11 +551,15 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
             children: [
               Icon(Icons.tune_rounded, size: 16, color: Colors.teal),
               SizedBox(width: 6),
-              Text(
-                'ইমেজ অপ্টিমাইজেশন (ফিল্টার)',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+              Expanded(
+                child: Text(
+                  'ইমেজ অপ্টিমাইজেশন (ফিল্টার)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -623,11 +638,15 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
             children: [
               Icon(Icons.view_column_rounded, size: 16, color: Colors.blueAccent),
               SizedBox(width: 6),
-              Text(
-                'পৃষ্ঠা লেআউট (কলাম মোড)',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+              Expanded(
+                child: Text(
+                  'পৃষ্ঠা লেআউট (কলাম মোড)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -689,11 +708,15 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
             children: [
               Icon(Icons.translate_rounded, size: 16, color: Colors.purple),
               SizedBox(width: 6),
-              Text(
-                'ভাষা ও টাইপ নির্বাচন',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+              Expanded(
+                child: Text(
+                  'ভাষা ও টাইপ নির্বাচন',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -812,23 +835,30 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.check_circle_outline_rounded,
-                      size: 18,
-                      color: Colors.green,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'শনাক্তকৃত টেক্সট ($wordCount শব্দ, $charCount অক্ষর)',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 18,
+                        color: Colors.green,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'শনাক্তকৃত টেক্সট ($wordCount শব্দ, $charCount অক্ষর)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 if (text.isNotEmpty)
                   IconButton(
                     icon: const Icon(Icons.copy_rounded, size: 18),

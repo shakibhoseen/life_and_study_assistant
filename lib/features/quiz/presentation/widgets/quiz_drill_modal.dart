@@ -280,9 +280,13 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   size: 24,
                 ),
                 SizedBox(width: 8),
-                Text(
-                  'সাবমিট নিশ্চিতকরণ',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Flexible(
+                  child: Text(
+                    'সাবমিট নিশ্চিতকরণ',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
@@ -669,7 +673,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                           fontSize: 11,
                           color: isDark ? Colors.grey.shade400 : Colors.black54,
                         ),
-                        overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -801,18 +805,22 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                                     : Colors.grey,
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                'প্র্যাকটিস মোড',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: _mode == QuizMode.practice
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: _mode == QuizMode.practice
-                                      ? (isDark
-                                            ? Colors.white
-                                            : const Color(0xFF1E293B))
-                                      : Colors.grey,
+                              Flexible(
+                                child: Text(
+                                  'প্র্যাকটিস মোড',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: _mode == QuizMode.practice
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: _mode == QuizMode.practice
+                                        ? (isDark
+                                              ? Colors.white
+                                              : const Color(0xFF1E293B))
+                                        : Colors.grey,
+                                  ),
                                 ),
                               ),
                             ],
@@ -855,18 +863,22 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                                     : Colors.grey,
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                'রিয়েল এক্সাম (-০.৫০)',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: _mode == QuizMode.realExam
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: _mode == QuizMode.realExam
-                                      ? (isDark
-                                            ? Colors.white
-                                            : const Color(0xFF1E293B))
-                                      : Colors.grey,
+                              Flexible(
+                                child: Text(
+                                  'রিয়েল এক্সাম (-০.৫০)',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: _mode == QuizMode.realExam
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: _mode == QuizMode.realExam
+                                        ? (isDark
+                                              ? Colors.white
+                                              : const Color(0xFF1E293B))
+                                        : Colors.grey,
+                                  ),
                                 ),
                               ),
                             ],
@@ -1037,19 +1049,24 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   color: Color(0xFF6366F1),
                 ),
               ),
-              const Spacer(),
-              Text(
-                isRealExam
-                    ? 'উত্তরিত: ${_userAnswers.length}টি | বাকি: ${_questions.length - _userAnswers.length}টি'
-                    : 'স্কোর: $_correctCount',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: isRealExam
-                      ? (isDark
-                            ? Colors.indigo.shade200
-                            : Colors.indigo.shade800)
-                      : Colors.green.shade700,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isRealExam
+                      ? 'উত্তরিত: ${_userAnswers.length}টি | বাকি: ${_questions.length - _userAnswers.length}টি'
+                      : 'স্কোর: $_correctCount',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isRealExam
+                        ? (isDark
+                              ? Colors.indigo.shade200
+                              : Colors.indigo.shade800)
+                        : Colors.green.shade700,
+                  ),
                 ),
               ),
             ],
@@ -1292,14 +1309,18 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                   Row(
                     children: [
                       const Text('💡 ', style: TextStyle(fontSize: 14)),
-                      Text(
-                        'ব্যাখ্যা (Explanation):',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: isDark
-                              ? Colors.amber.shade200
-                              : Colors.amber.shade900,
+                      Flexible(
+                        child: Text(
+                          'ব্যাখ্যা (Explanation):',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: isDark
+                                ? Colors.amber.shade200
+                                : Colors.amber.shade900,
+                          ),
                         ),
                       ),
                     ],
@@ -1384,7 +1405,7 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : const Color(0xFF0F172A),
                   ),
-                  overflow: TextOverflow.ellipsis,
+                overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -1636,14 +1657,18 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                       color: Color(0xFF6366F1),
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      'রিয়েল এক্সাম ফলাফল (BCS ফরম্যাট: ভুল উত্তরে -০.৫০)',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? const Color(0xFFA5B4FC)
-                            : const Color(0xFF4338CA),
+                    Flexible(
+                      child: Text(
+                        'রিয়েল এক্সাম ফলাফল (BCS ফরম্যাট: ভুল উত্তরে -০.৫০)',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? const Color(0xFFA5B4FC)
+                              : const Color(0xFF4338CA),
+                        ),
                       ),
                     ),
                   ],
@@ -2059,12 +2084,16 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
                       children: [
                         Icon(statusIcon, size: 16, color: statusColor),
                         const SizedBox(width: 6),
-                        Text(
-                          statusLabel,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                            color: statusColor,
+                        Flexible(
+                          child: Text(
+                            statusLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: statusColor,
+                            ),
                           ),
                         ),
                         const Spacer(),

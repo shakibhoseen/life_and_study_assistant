@@ -66,9 +66,13 @@ class _StudyDataCleanupCardState extends ConsumerState<StudyDataCleanupCard> {
               children: [
                 const Icon(Icons.cleaning_services_rounded, size: 18),
                 const SizedBox(width: 8),
-                const Text(
-                  'ডেটা পরিষ্কার',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                const Expanded(
+                  child: Text(
+                    'ডেটা পরিষ্কার',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),

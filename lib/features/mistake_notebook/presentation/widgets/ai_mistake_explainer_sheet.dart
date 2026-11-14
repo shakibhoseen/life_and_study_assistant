@@ -1191,21 +1191,29 @@ class _AiMistakeExplainerSheetState
       children: [
         Icon(icon, size: 15, color: colour),
         const SizedBox(width: 6),
-        Text(
-          _mark.label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: colour,
+        Flexible(
+          child: Text(
+            _mark.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: colour,
+            ),
           ),
         ),
         if (when != null) ...[
           const SizedBox(width: 6),
-          Text(
-            '· ${when.day}/${when.month}',
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white38 : Colors.black38,
+          Flexible(
+            child: Text(
+              '· ${when.day}/${when.month}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.white38 : Colors.black38,
+              ),
             ),
           ),
         ],

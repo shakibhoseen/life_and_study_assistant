@@ -168,12 +168,16 @@ class ExamScoreAnalyticsCard extends ConsumerWidget {
                           color: Color(0xFF10B981),
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          'গড়: ${avgScore.toStringAsFixed(1)}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF10B981),
+                        Flexible(
+                          child: Text(
+                            'গড়: ${avgScore.toStringAsFixed(1)}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF10B981),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

@@ -458,12 +458,16 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                           ),
                         ),
                         const SizedBox(width: 2),
-                        Text(
-                          tokensStr,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.amber,
+                        Flexible(
+                          child: Text(
+                            tokensStr,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -499,12 +503,16 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                           color: isDark ? Colors.white60 : Colors.black54,
                         ),
                         const SizedBox(width: 3),
-                        Text(
-                          '$percentBn% • ${_formatElapsed()}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white70 : Colors.black87,
+                        Flexible(
+                          child: Text(
+                            '$percentBn% • ${_formatElapsed()}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -653,12 +661,16 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Text(
-                    'Gemini Live',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF6366F1),
+                  const Flexible(
+                    child: Text(
+                      'Gemini Live',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6366F1),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 5),
@@ -680,12 +692,16 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       ),
                     ),
                     const SizedBox(width: 2),
-                    Text(
-                      tokensStr,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.amber,
+                    Flexible(
+                      child: Text(
+                        tokensStr,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -713,32 +729,42 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'অগ্রগতি: $percentBn%',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF6366F1),
+                Flexible(
+                  child: Text(
+                    'অগ্রগতি: $percentBn%',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF6366F1),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.timer_outlined,
-                      size: 13,
-                      color: isDark ? Colors.white60 : Colors.black54,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'সময়: ${_formatElapsed()}',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.timer_outlined,
+                        size: 13,
+                        color: isDark ? Colors.white60 : Colors.black54,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          'সময়: ${_formatElapsed()}',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

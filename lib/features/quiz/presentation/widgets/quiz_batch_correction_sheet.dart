@@ -133,8 +133,8 @@ class QuizBatchCorrectionSheet {
                                     ? Colors.grey.shade400
                                     : Colors.grey.shade600,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -778,8 +778,8 @@ class QuizBatchCorrectionSheet {
                                           fontWeight: FontWeight.bold,
                                           fontSize: 12,
                                         ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 4),
                                       if (item.isDelete) ...[
@@ -882,13 +882,17 @@ class QuizBatchCorrectionSheet {
                                                     color: Color(0xFF6366F1),
                                                   ),
                                                   SizedBox(width: 4),
-                                                  Text(
-                                                    'প্রশ্ন বা অপশন পরিমার্জন',
-                                                    style: TextStyle(
-                                                      color: Color(0xFF6366F1),
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 11.5,
+                                                  Flexible(
+                                                    child: Text(
+                                                      'প্রশ্ন বা অপশন পরিমার্জন',
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        color: Color(0xFF6366F1),
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 11.5,
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
@@ -903,13 +907,17 @@ class QuizBatchCorrectionSheet {
                                                     color: Colors.amber,
                                                   ),
                                                   SizedBox(width: 4),
-                                                  Text(
-                                                    'ব্যাখ্যা পরিমার্জন',
-                                                    style: TextStyle(
-                                                      color: Colors.amber,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 11.5,
+                                                  Flexible(
+                                                    child: Text(
+                                                      'ব্যাখ্যা পরিমার্জন',
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        color: Colors.amber,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 11.5,
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
