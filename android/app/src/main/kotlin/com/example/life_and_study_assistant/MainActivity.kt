@@ -2,6 +2,8 @@ package com.example.life_and_study_assistant
 
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -9,6 +11,17 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.example.life_and_study_assistant/system_settings"
+
+    companion object {
+        var activeChannel: MethodChannel? = null
+
+        fun requestWidgetRefresh() {
+            val channel = activeChannel ?: return
+            Handler(Looper.getMainLooper()).post {
+                channel.invokeMethod("onWidgetRefreshRequested", null)
+            }
+        }
+    }
 
     // Explicitly reference raw notification sounds so R8 and resource shrinker never strip them
     private val soundResources = intArrayOf(
@@ -19,7 +32,9 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        activeChannel = channel
+        channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "openNotificationSettings" -> {
                     try {
@@ -74,5 +89,12 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onDestroy() {
+        if (activeChannel != null) {
+            activeChannel = null
+        }
+        super.onDestroy()
     }
 }

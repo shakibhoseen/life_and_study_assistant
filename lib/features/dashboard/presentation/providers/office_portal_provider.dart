@@ -136,6 +136,9 @@ class LunchNotifier extends Notifier<LunchState> {
         serving = await SteadfastLunchService.instance.getServingStatus(
           forceRefresh: forceRefresh,
         );
+        if (serving?.status != null) {
+          unawaited(HomeWidgetService.updateWidget(lunchStatus: serving!.status));
+        }
       } catch (_) {}
 
       state = state.copyWith(

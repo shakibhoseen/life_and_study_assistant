@@ -7,8 +7,16 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.widget.RemoteViews
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
+import dev.fluttercommunity.workmanager.BackgroundWorker
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -26,10 +34,52 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action == ACTION_REFRESH_WIDGET || intent.action == ACTION_UPDATE_DATA) {
-            val appWidgetManager = AppWidgetManager.getInstance(context)
-            val thisWidget = ComponentName(context, OfficeStatusWidgetProvider::class.java)
-            val appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget)
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val thisWidget = ComponentName(context, OfficeStatusWidgetProvider::class.java)
+        val appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget)
+
+        if (intent.action == ACTION_REFRESH_WIDGET) {
+            // 1. Immediately provide visual feedback on all widgets
+            for (appWidgetId in appWidgetIds) {
+                val views = RemoteViews(context.packageName, R.layout.widget_office_status)
+                views.setTextViewText(R.id.widget_sync_time, "Syncing... ⏳")
+                appWidgetManager.partiallyUpdateAppWidget(appWidgetId, views)
+            }
+
+            // 2. If app engine is active in memory, perform immediate sub-second Flutter sync
+            if (MainActivity.activeChannel != null) {
+                MainActivity.requestWidgetRefresh()
+            } else {
+                // 3. App is closed / suspended: enqueue WorkManager one-off background task
+                try {
+                    val data = Data.Builder()
+                        .putString(
+                            BackgroundWorker.DART_TASK_KEY,
+                            "com.example.life_and_study_assistant.widget_sync"
+                        )
+                        .putString(
+                            "dev.fluttercommunity.workmanager.UNIQUE_NAME",
+                            "widget_sync_${System.currentTimeMillis()}"
+                        )
+                        .build()
+
+                    val syncRequest = OneTimeWorkRequest.Builder(BackgroundWorker::class.java)
+                        .setInputData(data)
+                        .build()
+
+                    WorkManager.getInstance(context).enqueueUniqueWork(
+                        "widget_refresh_task",
+                        ExistingWorkPolicy.REPLACE,
+                        syncRequest
+                    )
+                } catch (e: Throwable) {
+                    // Fallback to repaint cached values
+                    for (appWidgetId in appWidgetIds) {
+                        updateAppWidget(context, appWidgetManager, appWidgetId)
+                    }
+                }
+            }
+        } else if (intent.action == ACTION_UPDATE_DATA) {
             for (appWidgetId in appWidgetIds) {
                 updateAppWidget(context, appWidgetManager, appWidgetId)
             }
@@ -49,6 +99,36 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
             }
         }
 
+        private fun calculateNineHourTarget(checkInTimeStr: String): String {
+            return try {
+                val cleaned = checkInTimeStr.trim()
+                val formats = arrayOf(
+                    SimpleDateFormat("h:mm:ss a", Locale.ENGLISH),
+                    SimpleDateFormat("h:mm a", Locale.ENGLISH),
+                    SimpleDateFormat("HH:mm:ss", Locale.ENGLISH),
+                    SimpleDateFormat("HH:mm", Locale.ENGLISH)
+                )
+                var date: Date? = null
+                for (fmt in formats) {
+                    try {
+                        date = fmt.parse(cleaned)
+                        if (date != null) break
+                    } catch (_: Exception) {}
+                }
+                if (date != null) {
+                    val cal = Calendar.getInstance()
+                    cal.time = date
+                    cal.add(Calendar.HOUR_OF_DAY, 9)
+                    val outFmt = SimpleDateFormat("h:mm a", Locale.ENGLISH)
+                    outFmt.format(cal.time)
+                } else {
+                    "6:00 PM"
+                }
+            } catch (_: Exception) {
+                "6:00 PM"
+            }
+        }
+
         fun updateAppWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
@@ -61,16 +141,31 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
             val todayIso = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             val timeFmt = SimpleDateFormat("h:mm a", Locale.getDefault())
 
-            // 1. Attendance Data
-            val checkInDate = prefs.getString("flutter.pref_last_check_in_date", "")
-            val checkInTime = prefs.getString("flutter.pref_last_check_in_time", "")
-            val isLate = prefs.getBoolean("flutter.pref_last_check_in_is_late", false)
+            val isSim = prefs.getBoolean("flutter.packly_simulation_mode", false)
 
-            val checkOutDate = prefs.getString("flutter.pref_last_check_out_date", "")
-            val checkOutTime = prefs.getString("flutter.pref_last_check_out_time", "")
+            // 1. Attendance Data - Check widget keys, then real keys, then simulation keys
+            val checkInDate = prefs.getString("flutter.pref_last_check_in_date", "")?.takeIf { it.isNotEmpty() }
+                ?: if (isSim) prefs.getString("flutter.simulated_check_in_date", "") else prefs.getString("flutter.last_checkin_date", "")
 
-            val isCheckedOutToday = checkOutDate == todayIso && !checkOutTime.isNullOrEmpty()
-            val isCheckedInToday = checkInDate == todayIso && !checkInTime.isNullOrEmpty()
+            val checkInTime = prefs.getString("flutter.pref_last_check_in_time", "")?.takeIf { it.isNotEmpty() }
+                ?: if (isSim) prefs.getString("flutter.simulated_check_in_time", "") else prefs.getString("flutter.packly_last_checkin_time", "")
+
+            val isLate = if (prefs.contains("flutter.pref_last_check_in_is_late")) {
+                prefs.getBoolean("flutter.pref_last_check_in_is_late", false)
+            } else if (isSim) {
+                prefs.getBoolean("flutter.simulated_check_in_is_late", false)
+            } else {
+                prefs.getBoolean("flutter.packly_last_checkin_is_late", false)
+            }
+
+            val checkOutDate = prefs.getString("flutter.pref_last_check_out_date", "")?.takeIf { it.isNotEmpty() }
+                ?: if (isSim) prefs.getString("flutter.simulated_check_out_date", "") else prefs.getString("flutter.last_checkout_date", "")
+
+            val checkOutTime = prefs.getString("flutter.pref_last_check_out_time", "")?.takeIf { it.isNotEmpty() }
+                ?: if (isSim) prefs.getString("flutter.simulated_check_out_time", "") else prefs.getString("flutter.packly_last_checkout_time", "")
+
+            val isCheckedOutToday = (checkOutDate == todayIso || checkOutDate?.startsWith(todayIso) == true) && !checkOutTime.isNullOrEmpty()
+            val isCheckedInToday = (checkInDate == todayIso || checkInDate?.startsWith(todayIso) == true) && !checkInTime.isNullOrEmpty()
 
             if (isCheckedOutToday) {
                 views.setTextViewText(R.id.widget_punch_icon, "🚪")
@@ -79,9 +174,10 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
                 views.setInt(R.id.widget_attendance_container, "setBackgroundResource", R.drawable.widget_punch_pending)
             } else if (isCheckedInToday) {
                 val lateLabel = if (isLate) "(Late)" else "(On-Time ✓)"
+                val targetNineHours = calculateNineHourTarget(checkInTime ?: "")
                 views.setTextViewText(R.id.widget_punch_icon, "🟢")
                 views.setTextViewText(R.id.widget_punch_title, "Check-In: $checkInTime $lateLabel")
-                views.setTextViewText(R.id.widget_punch_subtitle, "Workday: In Progress • 9h Target 6:00 PM")
+                views.setTextViewText(R.id.widget_punch_subtitle, "Workday: In Progress • 9h Target $targetNineHours")
                 views.setInt(R.id.widget_attendance_container, "setBackgroundResource", R.drawable.widget_punch_success)
             } else {
                 views.setTextViewText(R.id.widget_punch_icon, "⏳")
@@ -91,11 +187,14 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
             }
 
             // 2. Lunch Serving Status
-            val lunchStatus = prefs.getString("flutter.pref_last_notified_lunch_status", "cooking")?.lowercase() ?: "cooking"
+            val lunchStatusRaw = prefs.getString("flutter.pref_last_notified_lunch_status", "")?.takeIf { it.isNotEmpty() }
+                ?: if (isSim) prefs.getString("flutter.simulated_serving_status", "") else prefs.getString("flutter.last_notified_lunch_status", "")
+            val lunchStatus = lunchStatusRaw?.lowercase()?.ifEmpty { "cooking" } ?: "cooking"
+
             val customLunchBadge = when (lunchStatus) {
                 "served" -> "Served 🍽️"
-                "received" -> "Arrived 🏢"
-                "upcoming" -> "On Way 🚗"
+                "received", "car_reached" -> "Arrived 🏢"
+                "upcoming", "on_the_way" -> "On Way 🚗"
                 else -> "Cooking 🍳"
             }
             views.setTextViewText(R.id.widget_lunch_status_badge, customLunchBadge)
@@ -109,8 +208,8 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
             // Highlight the active step
             when (lunchStatus) {
                 "served" -> views.setInt(R.id.widget_step_served, "setBackgroundResource", R.drawable.widget_stepper_active)
-                "received" -> views.setInt(R.id.widget_step_received, "setBackgroundResource", R.drawable.widget_stepper_active)
-                "upcoming" -> views.setInt(R.id.widget_step_upcoming, "setBackgroundResource", R.drawable.widget_stepper_active)
+                "received", "car_reached" -> views.setInt(R.id.widget_step_received, "setBackgroundResource", R.drawable.widget_stepper_active)
+                "upcoming", "on_the_way" -> views.setInt(R.id.widget_step_upcoming, "setBackgroundResource", R.drawable.widget_stepper_active)
                 else -> views.setInt(R.id.widget_step_cooking, "setBackgroundResource", R.drawable.widget_stepper_active)
             }
 

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../config/notification_constants.dart';
+import '../home_widget_service.dart';
 import '../notification/notification_service.dart';
 import 'office_sentinel_service.dart';
 import 'wifi_monitor_service.dart';
@@ -11,6 +12,8 @@ const String backgroundTaskWifiCheck =
     'com.example.life_and_study_assistant.wifi_check';
 const String backgroundTaskDailyMeal =
     'com.example.life_and_study_assistant.daily_meal';
+const String backgroundTaskWidgetSync =
+    'com.example.life_and_study_assistant.widget_sync';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -30,6 +33,11 @@ void callbackDispatcher() {
       case backgroundTaskDailyMeal:
         await NotificationService.instance.init();
         await NotificationService.instance.scheduleDailyDinnerReminder();
+        break;
+
+      case backgroundTaskWidgetSync:
+        await NotificationService.instance.init();
+        await HomeWidgetService.syncCurrentDataToWidget(fetchFromNetwork: true);
         break;
     }
 

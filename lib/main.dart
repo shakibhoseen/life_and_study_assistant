@@ -81,7 +81,8 @@ void main() async {
   unawaited(GeminiResultCache.instance.sweepLegacyEntries());
 
   // 7. Push initial snapshot to native Android Home Screen Widget
-  unawaited(HomeWidgetService.updateWidget());
+  HomeWidgetService.init();
+  unawaited(HomeWidgetService.syncCurrentDataToWidget(fetchFromNetwork: false));
 
   // 8. Preload theme mode and dark preset to eliminate startup flicker
   ThemeModeNotifier.initialMode =
