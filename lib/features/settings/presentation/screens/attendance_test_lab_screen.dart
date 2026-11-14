@@ -515,7 +515,93 @@ class _AttendanceTestLabScreenState extends ConsumerState<AttendanceTestLabScree
           ),
           const SizedBox(height: 18),
 
-          // 5. Automation Test Card (Full developer tools)
+          // 5. Custom Notification Sounds Studio
+          _buildSectionCard(
+            title: '🎵 Custom Notification Sounds Studio',
+            icon: Icons.volume_up_rounded,
+            isDark: isDark,
+            children: [
+              const Text(
+                'প্রতিটি নোটিফিকেশন চ্যানেলের জন্য আলাদা কাস্টম সাউন্ড টেস্ট করে শুনুন:',
+                style: TextStyle(fontSize: 11.5),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal.shade800,
+                      foregroundColor: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.notifications_active, size: 16),
+                    label: const Text('🔔 Play Meal Bell (Lunch & Dinner)'),
+                    onPressed: () async {
+                      await NotificationService.instance.showLunchServedNotification(
+                        time: '1:15 PM',
+                        message: 'খাবার প্রস্তুত! এই নোটিফিকেশনে মিষ্টি ডাইনিং বেলের শব্দ শোনা যাবে।',
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('🔔 Meal Bell নোটিফিকেশন পাঠানো হয়েছে! সাউন্ড চেক করুন।'),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueGrey.shade800,
+                      foregroundColor: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.touch_app, size: 16),
+                    label: const Text('🏢 Play Office Chime (Punch In/Out)'),
+                    onPressed: () async {
+                      await NotificationService.instance.showOfficeCheckInSuccessNotification(
+                        time: '8:55 AM',
+                        isLate: false,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('🏢 Office Chime নোটিফিকেশন পাঠানো হয়েছে! সাউন্ড চেক করুন।'),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade900,
+                      foregroundColor: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.warning, size: 16),
+                    label: const Text('🚨 Play Urgent Siren (Cutoff Warning)'),
+                    onPressed: () async {
+                      await NotificationService.instance.showLateWarningNotification(
+                        minutesRemaining: 5,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('🚨 Urgent Siren অ্যালার্ট পাঠানো হয়েছে! সাউন্ড চেক করুন।'),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // 6. Automation Test Card (Full developer tools)
           const AutomationTestCard(),
         ],
       ),

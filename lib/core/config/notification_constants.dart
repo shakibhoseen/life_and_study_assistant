@@ -1,19 +1,33 @@
 class NotificationConstants {
   // Notification Channels
-  static const String officeChannelId = 'office_triggers_channel';
+  static const String officeChannelId = 'office_triggers_channel_v3';
+  static const String officeChannelIdLegacy = 'office_triggers_channel';
+  static const String officeChannelIdLegacyV2 = 'office_triggers_channel_v2';
   static const String officeChannelName = 'Office Attendance & Wi-Fi Alerts';
   static const String officeChannelDesc =
-      'High priority heads-up reminders for biometric check-in and check-out based on Wi-Fi/Geofence.';
+      'High priority heads-up reminders for biometric check-in and check-out with corporate chime.';
 
   static const String sentinelChannelId = 'office_sentinel_silent_channel_v1';
   static const String sentinelChannelName = 'Office Arrival & Departure Monitor';
   static const String sentinelChannelDesc =
       'Silent ongoing background monitor for office arrival and departure. Zero sound and zero vibration.';
 
-  static const String mealChannelId = 'meal_reminders_channel';
-  static const String mealChannelName = 'Office Meal / Dinner Cutoff';
+  static const String mealChannelId = 'meal_reminders_channel_v3';
+  static const String mealChannelIdLegacy = 'meal_reminders_channel';
+  static const String mealChannelName = 'Office Meal & Lunch Status';
   static const String mealChannelDesc =
-      'Daily scheduled cutoff reminders with action buttons to confirm dinner.';
+      'Daily scheduled meal cutoff and real-time lunch arrival alerts with dining chime.';
+
+  static const String urgentChannelId = 'urgent_alerts_channel_v2';
+  static const String urgentChannelIdLegacy = 'urgent_alerts_channel';
+  static const String urgentChannelName = 'Urgent Attendance & Cutoff Sirens';
+  static const String urgentChannelDesc =
+      'High priority urgent warning sirens for 9:15 AM late cutoff and leaving office without check-out.';
+
+  // Custom Raw Sound Asset Names (res/raw/<name>.wav)
+  static const String soundMealBell = 'meal_bell';
+  static const String soundOfficeChime = 'office_chime';
+  static const String soundUrgentSiren = 'urgent_siren';
 
   static const String studyChannelId = 'study_nudges_channel';
   static const String studyChannelName = 'AI Study Nudges & Micro-Commitments';
