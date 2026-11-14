@@ -55,6 +55,8 @@ class NotificationConstants {
   static const int mealNotificationId = 2001;
   static const int lunchReminderNotificationId = 2002;
   static const int studyPlanNotificationId = 3001;
+  static const int liveMcqExamReminderId = 3101;
+  static const int liveMcqScoreCheckinId = 3102;
   static const int flashcardNotificationId = 4001;
   static const int officeDowntimeFlashcardLunch = 4010;
   static const int officeDowntimeFlashcardTea = 4011;

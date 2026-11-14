@@ -33,8 +33,13 @@ import '../widgets/exam_source_badge.dart';
 import '../widgets/live_mcq_timeline_filter_bar.dart';
 import '../widgets/live_mcq_track_filter_bar.dart';
 import '../widgets/study_sheet_summary_card.dart';
+import '../../../../core/widgets/animated_premium_background.dart';
 import '../widgets/test_paper_card_summary.dart';
 import '../widgets/voice_mistake_bottom_sheet.dart';
+import '../widgets/exam_topic_checklist_widget.dart';
+import '../widgets/exam_score_analytics_card.dart';
+import '../../../focus/presentation/screens/pomodoro_focus_screen.dart';
+import '../../../../core/services/quiz/bcs_question_bank_service.dart';
 
 class LiveMcqScreen extends ConsumerStatefulWidget {
   const LiveMcqScreen({super.key});
@@ -84,6 +89,14 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
         actions: [
           IconButton(
             icon: const Icon(
+              Icons.quiz_outlined,
+              color: Color(0xFFF59E0B),
+            ),
+            tooltip: 'বিসিএস প্রশ্ন ব্যাংক প্র্যাকটিস',
+            onPressed: () => _openBcsQuestionBank(context),
+          ),
+          IconButton(
+            icon: const Icon(
               Icons.document_scanner_outlined,
               color: Color(0xFF10B981),
             ),
@@ -119,9 +132,18 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildSchedulesTab(), _buildSummarizerTab()],
+      body: Stack(
+        children: [
+          const Positioned.fill(
+            child: AnimatedGradientBackground(child: SizedBox.expand()),
+          ),
+          const FloatingOrb(top: 30, right: -40, size: 260, opacity: 0.16),
+          const FloatingOrb(bottom: 60, left: -40, size: 220, opacity: 0.13),
+          TabBarView(
+            controller: _tabController,
+            children: [_buildSchedulesTab(), _buildSummarizerTab()],
+          ),
+        ],
       ),
       floatingActionButton: _tabController.index == 0
           ? Column(
@@ -164,6 +186,23 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
               ],
             )
           : null,
+    );
+  }
+
+  Future<void> _openBcsQuestionBank(BuildContext context) async {
+    final questions = await BcsQuestionBankService.loadAllQuestions();
+    if (!context.mounted) return;
+    if (questions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('প্রশ্ন ব্যাংক লোড করা যায়নি')),
+      );
+      return;
+    }
+    QuizDrillModal.show(
+      context,
+      topic: 'বিসিএস মূল প্রশ্ন সমাধান',
+      subject: 'বিসিএস প্রশ্ন ব্যাংক',
+      customQuestions: questions,
     );
   }
 
@@ -638,9 +677,15 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
 
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
-        itemCount: completedExams.length,
+        itemCount: completedExams.length + 1,
         itemBuilder: (context, index) {
-          return _buildExamCard(completedExams[index], todayStart);
+          if (index == 0) {
+            return const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: ExamScoreAnalyticsCard(),
+            );
+          }
+          return _buildExamCard(completedExams[index - 1], todayStart);
         },
       );
     }
@@ -915,7 +960,9 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     constraints: const BoxConstraints(),
                     icon: const Icon(Icons.more_vert, size: 18),
                     onSelected: (val) {
-                      if (val == 'copy_ref') {
+                      if (val == 'view_topics') {
+                        _showFullTopicsDialog(context, exam);
+                      } else if (val == 'copy_ref') {
                         _copyExamRef(exam.id);
                       } else if (val == 'calendar') {
                         CalendarSyncService.instance.addToGoogleCalendar(exam);
@@ -940,6 +987,22 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                       }
                     },
                     itemBuilder: (ctx) => [
+                      PopupMenuItem(
+                        value: 'view_topics',
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.visibility_outlined,
+                              size: 16,
+                              color: Color(0xFF0284C7),
+                            ),
+                            const SizedBox(width: 8),
+                            const Flexible(
+                              child: Text('সম্পূর্ণ টপিক টেক্সট দেখুন'),
+                            ),
+                          ],
+                        ),
+                      ),
                       PopupMenuItem(
                         value: 'copy_ref',
                         child: Row(
@@ -1133,16 +1196,8 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
             ),
             const SizedBox(height: 6),
 
-            // Topics Covered
-            Text(
-              'Topics: ${exam.topicsCovered}',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white70
-                    : Colors.black87,
-              ),
-            ),
+            // Topics Covered with interactive checklist
+            ExamTopicChecklistWidget(exam: exam),
 
             () {
               final summaryText = exam.resourceSummary?.trim() ?? '';
@@ -1257,6 +1312,43 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                     );
                   },
                 ),
+                const SizedBox(width: 6),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: isDark
+                        ? const Color(0xFFFBBF24)
+                        : const Color(0xFFD97706),
+                    side: BorderSide(
+                      color: isDark
+                          ? const Color(0xFFB45309)
+                          : const Color(0xFFFDE68A),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.timer_outlined, size: 14),
+                  label: const Text(
+                    'টাইমার',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PomodoroFocusScreen(),
+                      ),
+                    );
+                  },
+                ),
                 if (isPast || exam.completedStatus) ...[
                   const SizedBox(width: 6),
                   OutlinedButton.icon(
@@ -1327,9 +1419,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                       ),
                     ),
                     onPressed: () {
-                      ref
-                          .read(examScheduleNotifierProvider.notifier)
-                          .markCompleted(exam.id);
+                      _showScoreDialog(context, exam);
                     },
                   )
                 else
@@ -1369,6 +1459,98 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
             _expandedTestPaperExams.add(exam.id);
           }
         });
+      },
+    );
+  }
+
+  void _showFullTopicsDialog(BuildContext context, ExamSchedule exam) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              const Icon(
+                Icons.menu_book_rounded,
+                color: Color(0xFF1E3A8A),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  exam.title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'সম্পূর্ণ সিলেবাস ও টপিক (Original Topics):',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  child: SelectableText(
+                    'Topics: ${exam.topicsCovered}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.45,
+                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton.icon(
+              icon: const Icon(Icons.copy, size: 16),
+              label: const Text('কপি করুন'),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: exam.topicsCovered));
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('টপিক টেক্সট কপি হয়েছে ✓')),
+                );
+              },
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('ঠিক আছে'),
+            ),
+          ],
+        );
       },
     );
   }
@@ -1416,6 +1598,16 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   .read(examScheduleNotifierProvider.notifier)
                   .markCompleted(exam.id, score: val);
               Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    val != null
+                        ? 'অভিনন্দন! স্কোর ${val.toStringAsFixed(1)} সংরক্ষিত হয়েছে 🎉'
+                        : 'পরীক্ষা সম্পন্ন চিহ্নিত হয়েছে ✓',
+                  ),
+                  backgroundColor: const Color(0xFF10B981),
+                ),
+              );
             },
             child: const Text('Save Score'),
           ),

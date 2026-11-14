@@ -11,7 +11,8 @@ enum LayoutType {
   /// Dual column with pure whitespace gutter (no vertical line).
   dualColumnWhitespace(
     label: 'দুই কলাম (হোয়াইটস্পেস গাটার)',
-    description: 'মাঝের শূন্যস্থান (Whitespace) ব্যবহার করে দুটি কলাম আলাদা করা হয়েছে',
+    description:
+        'মাঝের শূন্যস্থান (Whitespace) ব্যবহার করে দুটি কলাম আলাদা করা হয়েছে',
   ),
 
   /// Dual column separated by an explicit vertical line divider.
@@ -20,10 +21,7 @@ enum LayoutType {
     description: 'মাঝের উল্লম্ব রেখা (Vertical Divider) শনাক্ত করে দুটি কলাম আলাদা করা হয়েছে',
   );
 
-  const LayoutType({
-    required this.label,
-    required this.description,
-  });
+  const LayoutType({required this.label, required this.description});
 
   final String label;
   final String description;
@@ -48,13 +46,13 @@ class GutterRegion {
   });
 
   Map<String, dynamic> toJson() => {
-        'left': left,
-        'right': right,
-        'center': center,
-        'width': width,
-        'confidence': confidence,
-        'hasDividerLine': hasDividerLine,
-      };
+    'left': left,
+    'right': right,
+    'center': center,
+    'width': width,
+    'confidence': confidence,
+    'hasDividerLine': hasDividerLine,
+  };
 
   @override
   String toString() =>
@@ -81,12 +79,12 @@ class ColumnBoundingBox {
   int get bottom => top + height;
 
   Map<String, dynamic> toJson() => {
-        'index': index,
-        'left': left,
-        'top': top,
-        'width': width,
-        'height': height,
-      };
+    'index': index,
+    'left': left,
+    'top': top,
+    'width': width,
+    'height': height,
+  };
 
   @override
   String toString() =>
@@ -145,18 +143,18 @@ class LayoutAnalysisResult {
       layoutType == LayoutType.dualColumnDivider;
 
   Map<String, dynamic> toJson() => {
-        'originalPath': originalImage.path,
-        'deskewedPath': deskewedImage.path,
-        'layoutType': layoutType.name,
-        'skewAngle': skewAngle,
-        'gutter': gutter?.toJson(),
-        'columnBoxes': columnBoxes.map((b) => b.toJson()).toList(),
-        'cropPaths': columnCrops.map((f) => f.path).toList(),
-        'confidence': confidence,
-        'failureReason': failureReason,
-        'imageWidth': imageWidth,
-        'imageHeight': imageHeight,
-      };
+    'originalPath': originalImage.path,
+    'deskewedPath': deskewedImage.path,
+    'layoutType': layoutType.name,
+    'skewAngle': skewAngle,
+    'gutter': gutter?.toJson(),
+    'columnBoxes': columnBoxes.map((b) => b.toJson()).toList(),
+    'cropPaths': columnCrops.map((f) => f.path).toList(),
+    'confidence': confidence,
+    'failureReason': failureReason,
+    'imageWidth': imageWidth,
+    'imageHeight': imageHeight,
+  };
 
   @override
   String toString() =>

@@ -126,6 +126,53 @@ class AppTheme {
     );
   }
 
+  /// Nature Green: Soothing forest greens with earthy tones.
+  /// Perfect for nature‑loving users, low eye‑strain, calm focus.
+  static ThemeData get natureGreenDarkTheme {
+    return _buildDarkCustomTheme(
+      scaffoldBg: const Color(0xFF0D1B1A), // deep forest
+      cardBg: const Color(0xFF1A2E2C),
+      border: const Color(0xFF2C4B44),
+      primary: const Color(0xFF34D399), // teal‑green
+      secondary: const Color(0xFF10B981), // emerald
+      text: const Color(0xFFE6FFFA), // mint
+      textMuted: const Color(0xFF81E6D9),
+      inputFill: const Color(0xFF123530),
+      navBarBg: const Color(0xFF082622),
+    );
+  }
+
+  /// Ice Blue: Crisp icy cyan on a deep midnight backdrop.
+  /// Gives a fresh, clean look with subtle contrast.
+  static ThemeData get iceBlueDarkTheme {
+    return _buildDarkCustomTheme(
+      scaffoldBg: const Color(0xFF0A0F1A), // midnight blue
+      cardBg: const Color(0xFF111827), // slate dark
+      border: const Color(0xFF1E3A8A), // icy border
+      primary: const Color(0xFF60A5FA), // ice blue
+      secondary: const Color(0xFF38BDF8), // bright cyan
+      text: const Color(0xFFE0F2FE), // very light blue
+      textMuted: const Color(0xFF94A3B8),
+      inputFill: const Color(0xFF1E293B),
+      navBarBg: const Color(0xFF0F172A),
+    );
+  }
+
+  /// Premium Gold: Luxurious dark with vivid gold accent.
+  static ThemeData get premiumGoldDarkTheme {
+    return _buildDarkCustomTheme(
+      scaffoldBg: const Color(0xFF12100E),
+      cardBg: const Color(0xFF1C1A17),
+      border: const Color(0xFF3D3520),
+      primary: const Color(0xFFFFB800),
+      secondary: const Color(0xFFFF8C00),
+      text: const Color(0xFFFFF8E7),
+      textMuted: const Color(0xFFBFAE80),
+      inputFill: const Color(0xFF25211A),
+      navBarBg: const Color(0xFF0F0D0A),
+    );
+  }
+
   /// Cute Velvet Night: Soft Lavender, Pastel Rosewater & Cozy Deep Charcoal.
   /// Designed for visual delight, warmth, and zero eye fatigue.
   static ThemeData get cuteVelvetDarkTheme {

@@ -2,26 +2,26 @@ import 'segmentation_models.dart';
 
 /// Evidence-based confidence level for marker recovery.
 enum EvidenceConfidenceLevel {
-  high,    // Strong multi-signal evidence (spatial + layout + sequence + text body)
-  medium,  // Partial evidence (e.g. 2x2 grid recovery where glyph requires human confirmation)
-  low,     // Weak or circumstantial evidence
+  high, // Strong multi-signal evidence (spatial + layout + sequence + text body)
+  medium, // Partial evidence (e.g. 2x2 grid recovery where glyph requires human confirmation)
+  low, // Weak or circumstantial evidence
 }
 
 /// Status of the marker recovery evaluation.
 enum MarkerRecoveryStatus {
-  exactMatch,      // Naturally matched standard marker (e.g. '১.', '(ক)', 'A.')
-  recovered,       // Successfully recovered via contextual evidence
-  ambiguous,       // Multiple interpretations or weak evidence (original preserved)
-  unmatched,       // Not a marker (normal sentence words, numbers in math)
+  exactMatch, // Naturally matched standard marker (e.g. '১.', '(ক)', 'A.')
+  recovered, // Successfully recovered via contextual evidence
+  ambiguous, // Multiple interpretations or weak evidence (original preserved)
+  unmatched, // Not a marker (normal sentence words, numbers in math)
 }
 
 /// Specific reason why options might be missing.
 enum MissingOptionReason {
-  incompleteExtraction,  // Some lines fell below OCR threshold
-  possibleCrop,          // Question cut off by page/column crop boundary
-  missingOptionMarkers,  // Options printed without formal markers
-  ambiguousLayout,       // Irregular alignment or mixed column layout
-  uncertain,             // Insufficient evidence to conclusively diagnose
+  incompleteExtraction, // Some lines fell below OCR threshold
+  possibleCrop, // Question cut off by page/column crop boundary
+  missingOptionMarkers, // Options printed without formal markers
+  ambiguousLayout, // Irregular alignment or mixed column layout
+  uncertain, // Insufficient evidence to conclusively diagnose
 }
 
 /// Detailed audit trail for any evaluated marker candidate.

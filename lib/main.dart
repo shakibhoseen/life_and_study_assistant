@@ -50,6 +50,10 @@ void main() async {
   // 2.3 Schedule Evening 5:55 PM - 6:15 PM Departure Watchdogs (Exact Alarms)
   await NotificationService.instance.scheduleEveningOfficeWatchdogs();
 
+  // 2.5 Schedule Daily LiveMCQ Morning Syllabus Nudge & Evening Score Prompt
+  await NotificationService.instance.scheduleLiveMcqDailyNudge();
+  await NotificationService.instance.scheduleLiveMcqScorePrompt();
+
   // 3. Initialize High-Precision Office Sentinel (Active only until Check-In/Out)
   await OfficeSentinelService.instance.init();
   await OfficeSentinelService.instance.checkAndTriggerSentinelIfNeeded();

@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/widgets/premium_glass_card.dart';
+import '../../../../core/widgets/premium_ui_kit.dart';
+import '../../../../core/widgets/animated_premium_background.dart';
+
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
@@ -39,6 +43,9 @@ import '../widgets/multi_track_exam_countdown_card.dart';
 import '../widgets/study_plan_card.dart';
 import '../../../weekly_routine/presentation/widgets/weekly_routine_card.dart';
 import '../widgets/next_exam_revision_card.dart';
+import '../widgets/exam_accountability_card.dart';
+import '../widgets/weekly_study_goal_card.dart';
+import '../../../live_mcq/presentation/widgets/exam_score_analytics_card.dart';
 import '../../../image_to_text/presentation/screens/image_to_text_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -199,13 +206,21 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(upcomingExamsStreamProvider);
-          ref.invalidate(weakTopicsStreamProvider);
-          ref.invalidate(studyStreakProvider);
-        },
-        child: SingleChildScrollView(
+      body: Stack(
+        children: [
+          // Animated gradient background fills the entire body.
+          const Positioned.fill(child: AnimatedGradientBackground(child: SizedBox.expand())),
+          // Floating orbs behind content.
+          const FloatingOrb(top: -40, left: -60, size: 320, opacity: 0.18),
+          const FloatingOrb(bottom: 60, right: -80, size: 280, opacity: 0.14),
+          // Scrollable content on top.
+          RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(upcomingExamsStreamProvider);
+              ref.invalidate(weakTopicsStreamProvider);
+              ref.invalidate(studyStreakProvider);
+            },
+            child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
@@ -224,7 +239,14 @@ class DashboardScreen extends ConsumerWidget {
                 weakTopics: weakTopics,
                 streak: streak,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
+              PremiumSectionHeader(
+                icon: Icons.event_available_outlined,
+                label: 'পরীক্ষার দায়বদ্ধতা',
+                subtitle: 'Exam accountability tracker',
+              ),
+              const SizedBox(height: 8),
+              const ExamAccountabilityCard(),
               _buildTodayProgress(ref),
               const SizedBox(height: 10),
               _buildAttention(
@@ -236,6 +258,12 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 14),
 
               // 0.5. Quick Action & Productivity Bar
+              PremiumSectionHeader(
+                icon: Icons.flash_on_outlined,
+                label: 'Quick Actions',
+                subtitle: 'সব টুলে দ্রুত পৌঁছান',
+              ),
+              const SizedBox(height: 8),
               _buildQuickActionStrip(context, ref),
               const SizedBox(height: 14),
 
@@ -243,6 +271,12 @@ class DashboardScreen extends ConsumerWidget {
               const BiometricStatusBanner(),
 
               // 2. Post-work Energy & Mood Tracker
+              PremiumSectionHeader(
+                icon: Icons.battery_charging_full_outlined,
+                label: 'এনার্জি ও মুড ট্র্যাকার',
+                subtitle: 'Post-work energy log',
+              ),
+              const SizedBox(height: 8),
               const EnergyTrackerCard(),
               const SizedBox(height: 16),
 
@@ -250,13 +284,31 @@ class DashboardScreen extends ConsumerWidget {
               // Above the plan: the night before an exam, what that exam
               // covers beats a general schedule.
               const NextExamRevisionCard(),
+              PremiumSectionHeader(
+                icon: Icons.auto_stories_outlined,
+                label: 'AI স্টাডি রুটিন',
+                subtitle: 'আজকের পড়ার পরিকল্পনা',
+              ),
+              const SizedBox(height: 8),
               const StudyPlanCard(),
 
               const SizedBox(height: 16),
               const WeeklyRoutineCard(),
               const SizedBox(height: 16),
 
+              // 3.5. Weekly Study Goal & Exam Score Analytics
+              const WeeklyStudyGoalCard(),
+              const SizedBox(height: 16),
+              const ExamScoreAnalyticsCard(),
+              const SizedBox(height: 16),
+
               // 4. GitHub-Style Study Activity Heatmap & Analytics
+              PremiumSectionHeader(
+                icon: Icons.insights_outlined,
+                label: 'পড়ার অ্যানালিটিক্স',
+                subtitle: 'Study streak & heatmap',
+              ),
+              const SizedBox(height: 8),
               const GithubStudyHeatmap(),
               const SizedBox(height: 16),
 
@@ -284,6 +336,8 @@ class DashboardScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+        ],
       ),
     );
   }
@@ -583,16 +637,10 @@ class DashboardScreen extends ConsumerWidget {
     required String badge,
     required VoidCallback onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Material(
-      color: isDark ? const Color(0xFF111827) : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-        ),
-      ),
+    return PremiumGlassCard(
+      borderRadius: 12.0,
+      blurSigma: 6.0,
+      padding: EdgeInsets.zero,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
@@ -659,9 +707,9 @@ class DashboardScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.indigo.withValues(alpha: 0.25),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+              color: Colors.indigo.withValues(alpha: 0.4),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -718,29 +766,10 @@ class DashboardScreen extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    onPressed: () =>
-                        NightlyReviewModal.show(context, questions),
-                    icon: const Icon(Icons.nightlight_round, size: 14),
-                    label: const Text(
-                      'রাতের রিভিশন 🌙',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
+                  child: PremiumButton(
+                    label: 'রাতের রিভিশন 🌙',
+                    icon: Icons.nightlight_round,
+                    onPressed: () => NightlyReviewModal.show(context, questions),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -801,112 +830,68 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildSpacedRepetitionCard(BuildContext context, int dueCount) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.purple.withValues(alpha: 0.2)
-                    : Colors.purple.shade50,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.psychology,
-                color: isDark ? Colors.purpleAccent : Colors.purple,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Spaced Repetition',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+    return PremiumGlassCard(
+      borderRadius: 16.0,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          const PremiumIconBadge(
+            icon: Icons.psychology,
+            size: 44,
+            iconSize: 22,
+            color: Colors.purpleAccent,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      'Spaced Repetition',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
-                      if (dueCount > 0) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.red.withValues(alpha: 0.25)
-                                : Colors.red.shade100,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '$dueCount Due',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? Colors.redAccent
-                                  : Colors.red.shade900,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    dueCount > 0
-                        ? '$dueCount rules due before forgetting curve drops'
-                        : 'Review rules & 5s office flashcards',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white70 : Colors.black54,
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple.shade700,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                    if (dueCount > 0) ...[
+                      const SizedBox(width: 6),
+                      PremiumTag(
+                        label: '$dueCount Due',
+                        color: Colors.redAccent,
+                      ),
+                    ],
+                  ],
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                visualDensity: VisualDensity.compact,
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SpacedRepetitionScreen(),
+                const SizedBox(height: 2),
+                Text(
+                  dueCount > 0
+                      ? '$dueCount rules due before forgetting curve drops'
+                      : 'Review rules & 5s office flashcards',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.white70,
                   ),
-                );
-              },
-              child: const Text(
-                'Open Hub',
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-              ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          PremiumButton(
+            label: 'Open Hub',
+            icon: Icons.open_in_new,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SpacedRepetitionScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

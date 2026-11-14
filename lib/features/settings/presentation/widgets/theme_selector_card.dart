@@ -200,6 +200,48 @@ class ThemeSelectorCard extends ConsumerWidget {
                   activeDarkPreset == DarkThemePreset.oledBatterySaver,
               onTap: () => selectDarkPreset(DarkThemePreset.oledBatterySaver),
             ),
+            const Divider(height: 1),
+
+            // 5. Nature Green
+            _buildThemeOption(
+              context,
+              title: 'Nature Green 🌿🌲 (প্রকৃতি ও ফরেস্ট)',
+              subtitle: 'শান্ত বনানী সবুজ ও এমারেল্ড — চোখ জুড়ানো প্রশান্তি ও স্টাডি ফোকাস',
+              icon: Icons.forest_rounded,
+              iconColor: const Color(0xFF34D399),
+              isSelected:
+                  currentMode == ThemeMode.dark &&
+                  activeDarkPreset == DarkThemePreset.natureGreen,
+              onTap: () => selectDarkPreset(DarkThemePreset.natureGreen),
+            ),
+            const Divider(height: 1),
+
+            // 6. Ice Blue
+            _buildThemeOption(
+              context,
+              title: 'Ice Blue ❄️🧊 (আইসি ব্লু ফ্রস্ট)',
+              subtitle: 'ক্রিস্প বরফ নীল ও সায়ান — রিফ্রেশিং, ক্লিন ও আধুনিক প্রিমিয়াম লুক',
+              icon: Icons.ac_unit_rounded,
+              iconColor: const Color(0xFF60A5FA),
+              isSelected:
+                  currentMode == ThemeMode.dark &&
+                  activeDarkPreset == DarkThemePreset.iceBlue,
+              onTap: () => selectDarkPreset(DarkThemePreset.iceBlue),
+            ),
+            const Divider(height: 1),
+
+            // 7. Premium Gold
+            _buildThemeOption(
+              context,
+              title: 'Premium Gold 👑✨ (লাক্সারি গোল্ড)',
+              subtitle: 'অভিজাত গাঢ় অন্ধকার ও উজ্জ্বল স্বর্ণালী আভা — এক্সিকিউটিভ প্রিমিয়াম ফিল',
+              icon: Icons.workspace_premium_rounded,
+              iconColor: const Color(0xFFFFB800),
+              isSelected:
+                  currentMode == ThemeMode.dark &&
+                  activeDarkPreset == DarkThemePreset.premiumGold,
+              onTap: () => selectDarkPreset(DarkThemePreset.premiumGold),
+            ),
           ],
         ),
       ),

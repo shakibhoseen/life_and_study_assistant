@@ -39,7 +39,10 @@ class LayoutDetectionService {
 
     // Write deskewed image file
     final deskewedFile = File('${tempDir.path}/layout_deskew_$stamp.jpg');
-    await deskewedFile.writeAsBytes(resultData['deskewedBytes'] as Uint8List, flush: true);
+    await deskewedFile.writeAsBytes(
+      resultData['deskewedBytes'] as Uint8List,
+      flush: true,
+    );
 
     // Write column crop files
     final cropByteList = resultData['cropByteList'] as List<Uint8List>;
@@ -130,7 +133,8 @@ class LayoutDetectionService {
     String? failureReason;
     Map<String, dynamic>? gutterData;
 
-    if (gutterResult != null && gutterResult.confidence >= minDualColumnConfidence) {
+    if (gutterResult != null &&
+        gutterResult.confidence >= minDualColumnConfidence) {
       gutterData = gutterResult.toJson();
       layoutType = gutterResult.hasDividerLine
           ? LayoutType.dualColumnDivider
@@ -182,28 +186,24 @@ class LayoutDetectionService {
     } else {
       // Safe fallback to single-column layout
       layoutType = LayoutType.singleColumn;
-      overallConfidence = gutterResult != null ? (1.0 - gutterResult.confidence) : 0.90;
+      overallConfidence = gutterResult != null
+          ? (1.0 - gutterResult.confidence)
+          : 0.90;
       failureReason = gutterResult == null
           ? 'No vertical gutter or divider detected across central page region'
           : 'Gutter confidence (${(gutterResult.confidence * 100).toInt()}%) below required threshold (${(minDualColumnConfidence * 100).toInt()}%). Safely defaulting to single column';
 
       columnBoxes = [
-        {
-          'index': 0,
-          'left': 0,
-          'top': 0,
-          'width': width,
-          'height': height,
-        }
+        {'index': 0, 'left': 0, 'top': 0, 'width': width, 'height': height},
       ];
 
       // Single crop is the deskewed page
-      cropByteList = [
-        Uint8List.fromList(img.encodeJpg(current, quality: 95)),
-      ];
+      cropByteList = [Uint8List.fromList(img.encodeJpg(current, quality: 95))];
     }
 
-    final deskewedBytes = Uint8List.fromList(img.encodeJpg(current, quality: 95));
+    final deskewedBytes = Uint8List.fromList(
+      img.encodeJpg(current, quality: 95),
+    );
 
     return {
       'deskewedBytes': deskewedBytes,
@@ -229,6 +229,31 @@ class LayoutDetectionService {
     final sampleHeight = min(height, 800);
     final scaleY = height / sampleHeight;
 
+    // Sample background luminance across the central region to make ink threshold illumination-adaptive
+    final sampleLums = <int>[];
+    final lumSampleStepX = max(1, (width * 0.05).round());
+    final lumSampleStepY = max(1, (sampleHeight * 0.10).round());
+    for (
+      int sx = (width * 0.35).round();
+      sx <= (width * 0.65).round();
+      sx += lumSampleStepX
+    ) {
+      for (int sy = 0; sy < sampleHeight; sy += lumSampleStepY) {
+        final y = (sy * scaleY).round().clamp(0, height - 1);
+        final p = image.getPixel(sx, y);
+        if (p.a != 0) {
+          sampleLums.add((p.r * 299 + p.g * 587 + p.b * 114) ~/ 1000);
+        }
+      }
+    }
+    sampleLums.sort();
+    // 80th percentile luminance represents paper background
+    final bgLum = sampleLums.isNotEmpty
+        ? sampleLums[(sampleLums.length * 0.80).floor()]
+        : 240;
+    // Ink threshold: significantly darker than paper background, capped at 135
+    final inkThreshold = min(135, (bgLum * 0.72).round());
+
     // Search window: central 25% to 75% of width
     final searchStartX = (width * 0.25).round();
     final searchEndX = (width * 0.75).round();
@@ -243,7 +268,7 @@ class LayoutDetectionService {
         // If transparent padding from rotation, treat as background
         if (p.a == 0) continue;
         final lum = (p.r * 299 + p.g * 587 + p.b * 114) ~/ 1000;
-        if (lum < 140) {
+        if (lum < inkThreshold) {
           ink++;
         }
       }
@@ -268,7 +293,10 @@ class LayoutDetectionService {
 
     if (bestDividerX > 0) {
       final leftBoundary = max(0, bestDividerX - (width * 0.015).round());
-      final rightBoundary = min(width - 1, bestDividerX + (width * 0.015).round());
+      final rightBoundary = min(
+        width - 1,
+        bestDividerX + (width * 0.015).round(),
+      );
       return GutterRegion(
         left: leftBoundary,
         right: rightBoundary,
@@ -281,7 +309,7 @@ class LayoutDetectionService {
 
     // 2. Check for Whitespace Gutter (Adaptive Trough Detection):
     // Smooth the profile in the central region with a moving average window
-    final windowSize = max(4, (width * 0.015).round());
+    final windowSize = max(4, min(24, (width * 0.008).round()));
     final smoothed = List<double>.filled(width, 0.0);
     for (int x = windowSize; x < width - windowSize; x++) {
       double sum = 0;
@@ -291,9 +319,9 @@ class LayoutDetectionService {
       smoothed[x] = sum / (2 * windowSize + 1);
     }
 
-    // Search for minimum ink trough in central 35% to 65% of width
-    final troughStartX = (width * 0.35).round();
-    final troughEndX = (width * 0.65).round();
+    // Search for minimum ink trough in central 38% to 62% of width
+    final troughStartX = (width * 0.38).round();
+    final troughEndX = (width * 0.62).round();
 
     double minVal = double.infinity;
     int minX = -1;
@@ -306,15 +334,19 @@ class LayoutDetectionService {
 
     if (minX == -1) return null;
 
-    // Measure peak ink in left column text zone (15% to troughStartX)
+    // Measure peak ink in left column text zone (12% to minX - windowSize)
     double leftPeak = 0;
-    for (int x = (width * 0.15).round(); x < troughStartX; x++) {
+    final leftTextStart = (width * 0.12).round();
+    final leftTextEnd = max(leftTextStart + 1, minX - windowSize);
+    for (int x = leftTextStart; x < leftTextEnd; x++) {
       if (smoothed[x] > leftPeak) leftPeak = smoothed[x];
     }
 
-    // Measure peak ink in right column text zone (troughEndX to 85%)
+    // Measure peak ink in right column text zone (minX + windowSize to 88%)
     double rightPeak = 0;
-    for (int x = troughEndX; x < (width * 0.85).round(); x++) {
+    final rightTextStart = min(width - 1, minX + windowSize);
+    final rightTextEnd = (width * 0.88).round();
+    for (int x = rightTextStart; x < rightTextEnd; x++) {
       if (smoothed[x] > rightPeak) rightPeak = smoothed[x];
     }
 
@@ -328,7 +360,10 @@ class LayoutDetectionService {
     final depthRatio = (1.0 - (minVal / avgPeak)).clamp(0.0, 1.0);
 
     // Gutter width expansion around minX
-    final threshold = min(avgPeak * 0.60, minVal + max(3.0, (avgPeak - minVal) * 0.35));
+    final threshold = min(
+      avgPeak * 0.45,
+      minVal + max(3.0, (avgPeak - minVal) * 0.25),
+    );
     int valleyLeft = minX;
     while (valleyLeft > (width * 0.25) && smoothed[valleyLeft] <= threshold) {
       valleyLeft--;
@@ -344,14 +379,18 @@ class LayoutDetectionService {
     // Both peaks must have substantial content (ratio between left and right peaks >= 0.35)
     final peakBalance = min(leftPeak, rightPeak) / max(leftPeak, rightPeak);
 
-    if (depthRatio >= 0.40 && valleyWidth >= minRequiredWidth && peakBalance >= 0.35) {
+    if (depthRatio >= 0.40 &&
+        valleyWidth >= minRequiredWidth &&
+        peakBalance >= 0.35) {
       final valleyCenter = (valleyLeft + valleyRight) ~/ 2;
 
       final widthScore = (valleyWidth / (width * 0.04)).clamp(0.0, 1.0);
-      final centerOffsetRatio = (valleyCenter - (width * 0.50)).abs() / (width * 0.25);
+      final centerOffsetRatio =
+          (valleyCenter - (width * 0.50)).abs() / (width * 0.25);
       final centralityScore = (1.0 - centerOffsetRatio).clamp(0.0, 1.0);
 
-      final confidence = (depthRatio * 0.45) +
+      final confidence =
+          (depthRatio * 0.45) +
           (widthScore * 0.25) +
           (centralityScore * 0.15) +
           (peakBalance * 0.15);
@@ -361,7 +400,9 @@ class LayoutDetectionService {
         right: valleyRight,
         center: valleyCenter,
         width: valleyWidth,
-        confidence: double.parse(confidence.clamp(0.0, 0.99).toStringAsFixed(3)),
+        confidence: double.parse(
+          confidence.clamp(0.0, 0.99).toStringAsFixed(3),
+        ),
         hasDividerLine: false,
       );
     }

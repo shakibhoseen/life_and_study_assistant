@@ -146,4 +146,28 @@ void main() {
     expect(result.columnCrops[0].existsSync(), isTrue);
     expect(result.columnCrops[1].existsSync(), isTrue);
   });
+
+  test('Benchmark 6 (Stage 3.1): Real full book page (mcq_book_page.png) detects dual-column layout', () async {
+    final bookImage = File('test/fixtures/mcq_book_page.png');
+    expect(bookImage.existsSync(), isTrue);
+
+    final result = await LayoutDetectionService.instance.analyzeLayout(bookImage, autoDeskew: true);
+
+    expect(result.layoutType, LayoutType.dualColumnWhitespace);
+    expect(result.isDualColumn, isTrue);
+    expect(result.confidence, greaterThanOrEqualTo(0.80));
+    expect(result.gutter, isNotNull);
+    // Gutter center in central spine region
+    expect(result.gutter!.center, closeTo(result.imageWidth * 0.50, result.imageWidth * 0.10));
+    expect(result.columnBoxes.length, 2);
+    expect(result.columnCrops.length, 2);
+    expect(result.columnCrops[0].existsSync(), isTrue);
+    expect(result.columnCrops[1].existsSync(), isTrue);
+
+    // Left and right column boxes span the page cleanly
+    expect(result.columnBoxes[0].left, 0);
+    expect(result.columnBoxes[0].width, equals(result.gutter!.left));
+    expect(result.columnBoxes[1].left, equals(result.gutter!.right));
+    expect(result.columnBoxes[1].width, equals(result.imageWidth - result.gutter!.right));
+  });
 }

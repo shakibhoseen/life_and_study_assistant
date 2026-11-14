@@ -24,6 +24,7 @@ import '../providers/chat_provider.dart';
 import '../../../../core/services/voice/voice_recording_service.dart';
 import '../widgets/chat_thinking_indicator.dart';
 import '../widgets/chat_user_bubble.dart';
+import '../../../../core/widgets/animated_premium_background.dart';
 
 class AiChatScreen extends ConsumerStatefulWidget {
   const AiChatScreen({super.key});
@@ -312,9 +313,16 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // 1. Dedicated Topic Thread Indicator (if active)
+          const Positioned.fill(
+            child: AnimatedGradientBackground(child: SizedBox.expand()),
+          ),
+          const FloatingOrb(top: 50, right: -40, size: 240, opacity: 0.14),
+          const FloatingOrb(bottom: 120, left: -40, size: 210, opacity: 0.12),
+          Column(
+            children: [
+              // 1. Dedicated Topic Thread Indicator (if active)
           if (currentSession != null &&
               currentSession.subject != null &&
               currentSession.subject!.isNotEmpty &&
@@ -390,6 +398,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
           // 4. Bottom text input bar
           _buildInputBar(chatState.isSending),
+        ],
+      ),
         ],
       ),
     );

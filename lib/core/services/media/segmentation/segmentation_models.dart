@@ -46,11 +46,11 @@ class TextBoundingBox {
   }
 
   Map<String, dynamic> toJson() => {
-        'left': left,
-        'top': top,
-        'width': width,
-        'height': height,
-      };
+    'left': left,
+    'top': top,
+    'width': width,
+    'height': height,
+  };
 
   factory TextBoundingBox.fromJson(Map<String, dynamic> json) =>
       TextBoundingBox(
@@ -138,9 +138,7 @@ class SegmentedQuestionBlock {
       options: options.isNotEmpty ? options : const ['ক', 'খ', 'গ', 'ঘ'],
       // Strictly -1 in Phase 2 unless dependable key is provided
       correctIndex: -1,
-      explanation: hasDiagram
-          ? 'সংযুক্ত ডায়াগ্রাম/চিত্র সংরক্ষিত রয়েছে।'
-          : '',
+      explanation: hasDiagram ? 'সংযুক্ত ডায়াগ্রাম/চিত্র সংরক্ষিত রয়েছে।' : '',
       subject: subjectHint,
       legible: !reviewRequired && options.length == 4,
       answerSource: AnswerSource.guess,
@@ -149,23 +147,23 @@ class SegmentedQuestionBlock {
   }
 
   Map<String, dynamic> toJson() => {
-        'questionNumber': questionNumber,
-        'questionText': questionText,
-        'options': options,
-        'optionMarkers': optionMarkers,
-        'boundingBox': boundingBox.toJson(),
-        'columnId': columnId,
-        'ocrConfidence': ocrConfidence,
-        'segmentationConfidence': segmentationConfidence,
-        'reviewRequired': reviewRequired,
-        'reviewReasons': reviewReasons,
-        'originalCropReference': originalCropReference,
-        'diagramCropPath': diagramCropPath,
-        'hasDiagram': hasDiagram,
-        'isOrphan': isOrphan,
-        'questionMarkerAudit': questionMarkerAudit?.toJson(),
-        'optionAudits': optionAudits.map((a) => a.toJson()).toList(),
-      };
+    'questionNumber': questionNumber,
+    'questionText': questionText,
+    'options': options,
+    'optionMarkers': optionMarkers,
+    'boundingBox': boundingBox.toJson(),
+    'columnId': columnId,
+    'ocrConfidence': ocrConfidence,
+    'segmentationConfidence': segmentationConfidence,
+    'reviewRequired': reviewRequired,
+    'reviewReasons': reviewReasons,
+    'originalCropReference': originalCropReference,
+    'diagramCropPath': diagramCropPath,
+    'hasDiagram': hasDiagram,
+    'isOrphan': isOrphan,
+    'questionMarkerAudit': questionMarkerAudit?.toJson(),
+    'optionAudits': optionAudits.map((a) => a.toJson()).toList(),
+  };
 
   SegmentedQuestionBlock copyWith({
     String? questionNumber,

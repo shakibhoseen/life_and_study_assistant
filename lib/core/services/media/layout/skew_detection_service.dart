@@ -47,7 +47,8 @@ class SkewDetectionService {
 
     // 4. Threshold check: if variance improvement over 0° is negligible (< 3%), assume no skew
     if (zeroAngleVariance > 0) {
-      final relativeGain = (maxVariance - zeroAngleVariance) / zeroAngleVariance;
+      final relativeGain =
+          (maxVariance - zeroAngleVariance) / zeroAngleVariance;
       if (relativeGain < 0.03 && bestAngle.abs() < 1.0) {
         return 0.0;
       }
@@ -68,6 +69,8 @@ class SkewDetectionService {
     if (angleDegrees.abs() < 0.3) {
       return image;
     }
+    // Set background color to white before rotation so rotated canvas corners are paper-white
+    image.backgroundColor = img.ColorRgb8(255, 255, 255);
     // copyRotate rotates clockwise by angle; to deskew we rotate by -angle
     return img.copyRotate(
       image,
@@ -78,7 +81,8 @@ class SkewDetectionService {
 
   img.Image _createAnalysisThumbnail(img.Image src) {
     final gray = img.grayscale(src);
-    if (gray.width <= _thumbnailDimension && gray.height <= _thumbnailDimension) {
+    if (gray.width <= _thumbnailDimension &&
+        gray.height <= _thumbnailDimension) {
       return gray;
     }
     return gray.width > gray.height
