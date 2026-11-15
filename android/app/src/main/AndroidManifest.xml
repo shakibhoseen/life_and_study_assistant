@@ -119,6 +119,48 @@
                 android:resource="@xml/widget_office_status_info" />
         </receiver>
 
+        <!-- Study widgets. They render preferences Dart fills in; the refresh
+             action asks Dart to recollect them. -->
+        <receiver
+            android:name=".StudyTodayWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.life_and_study_assistant.REFRESH_STUDY_WIDGET" />
+                <action android:name="com.example.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_study_today_info" />
+        </receiver>
+
+        <receiver
+            android:name=".ExamCountdownWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.life_and_study_assistant.REFRESH_STUDY_WIDGET" />
+                <action android:name="com.example.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_exam_countdown_info" />
+        </receiver>
+
+        <receiver
+            android:name=".QuestionOfDayWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.life_and_study_assistant.REFRESH_STUDY_WIDGET" />
+                <action android:name="com.example.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA" />
+                <action android:name="com.example.life_and_study_assistant.TOGGLE_QOTD_ANSWER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_question_of_day_info" />
+        </receiver>
+
         <!-- The bubble is a window, not a recording. It used to be declared a
              microphone service, which made the app claim the microphone for as
              long as the bubble was on screen, whether or not anything was

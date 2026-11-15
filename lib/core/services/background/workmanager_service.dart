@@ -4,6 +4,8 @@ import 'package:workmanager/workmanager.dart';
 
 import '../../config/notification_constants.dart';
 import '../home_widget_service.dart';
+import '../study_widget_service.dart';
+import '../../database/app_database.dart';
 import '../notification/notification_service.dart';
 import 'office_sentinel_service.dart';
 import 'wifi_monitor_service.dart';
@@ -14,6 +16,8 @@ const String backgroundTaskDailyMeal =
     'com.example.life_and_study_assistant.daily_meal';
 const String backgroundTaskWidgetSync =
     'com.example.life_and_study_assistant.widget_sync';
+const String backgroundTaskStudyWidgetSync =
+    'com.example.life_and_study_assistant.study_widget_sync';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -38,6 +42,19 @@ void callbackDispatcher() {
       case backgroundTaskWidgetSync:
         await NotificationService.instance.init();
         await HomeWidgetService.syncCurrentDataToWidget(fetchFromNetwork: true);
+        break;
+
+      case backgroundTaskStudyWidgetSync:
+        // Refreshing a study widget with the app closed. This isolate has no
+        // provider scope, so it opens the database itself and closes it again
+        // — the sync only reads, so sharing the file with a running app is
+        // safe, and SQLite serialises the rest.
+        final db = AppDatabase();
+        try {
+          await StudyWidgetService.syncStudyData(db);
+        } finally {
+          await db.close();
+        }
         break;
     }
 

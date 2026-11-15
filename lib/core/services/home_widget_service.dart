@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/notification_constants.dart';
 import 'attendance/packly_attendance_service.dart';
 import 'attendance/steadfast_lunch_service.dart';
+import 'study_widget_service.dart';
 
 class HomeWidgetService {
   static const MethodChannel _channel = MethodChannel(
@@ -19,13 +20,21 @@ class HomeWidgetService {
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 
-  /// Initializes MethodChannel listener for widget actions (such as 1-tap refresh).
+  /// Installs the one handler for this channel.
+  ///
+  /// There is a single MethodChannel for all native widget traffic, and
+  /// setMethodCallHandler replaces rather than adds. Every service that wants
+  /// a native call is routed from here; a second service calling
+  /// setMethodCallHandler on this channel would quietly unhook the others.
   static void init() {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onWidgetRefreshRequested') {
         debugPrint('HomeWidget: live refresh requested from native widget');
         await syncCurrentDataToWidget(fetchFromNetwork: true);
+        return null;
       }
+      await StudyWidgetService.handleNativeCall(call.method);
+      return null;
     });
   }
 

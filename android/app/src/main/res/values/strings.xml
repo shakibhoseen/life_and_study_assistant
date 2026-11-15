@@ -2,4 +2,13 @@
 <resources>
     <string name="widget_name">Office &amp; Lunch Sentinel</string>
     <string name="widget_description">Real-time biometric attendance and lunch serving tracker in Microsoft Fluent style.</string>
+
+    <string name="widget_study_today_name">আজ কী পড়তে হবে</string>
+    <string name="widget_study_today_description">Mistakes waiting, reviews due and your accuracy, at a glance.</string>
+
+    <string name="widget_exam_countdown_name">পরীক্ষার কাউন্টডাউন</string>
+    <string name="widget_exam_countdown_description">How long until your next scheduled exam.</string>
+
+    <string name="widget_question_of_day_name">আজকের প্রশ্ন</string>
+    <string name="widget_question_of_day_description">One question a day from your mistake notebook. Tap to see the answer.</string>
 </resources>

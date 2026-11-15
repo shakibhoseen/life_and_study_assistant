@@ -12,6 +12,9 @@ import 'core/services/background/office_sentinel_service.dart';
 import 'core/services/background/wifi_monitor_service.dart';
 import 'core/services/background/workmanager_service.dart';
 import 'core/services/home_widget_service.dart';
+import 'core/services/study_widget_service.dart';
+import 'features/live_mcq/presentation/screens/live_mcq_screen.dart';
+import 'features/mistake_notebook/presentation/screens/mistake_notebook_screen.dart';
 import 'core/services/notification/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
@@ -103,15 +106,43 @@ class LifeAndStudyApp extends ConsumerStatefulWidget {
 
 class _LifeAndStudyAppState extends ConsumerState<LifeAndStudyApp>
     with WidgetsBindingObserver {
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     unawaited(AutoBackupService.runIfDue(db: ref.read(appDatabaseProvider)));
+
+    // The study widgets read figures out of this database, so the service is
+    // handed the scope's instance rather than opening its own.
+    StudyWidgetService.attach(ref.read(appDatabaseProvider));
+    StudyWidgetService.pendingRoute.addListener(_openPendingRoute);
+  }
+
+  /// Takes a widget tap to the screen it named.
+  void _openPendingRoute() {
+    final route = StudyWidgetService.pendingRoute.value;
+    if (route == null) return;
+    StudyWidgetService.pendingRoute.value = null;
+
+    final screen = switch (route) {
+      '/mistake_notebook' => const MistakeNotebookScreen(),
+      '/live_mcq' => const LiveMcqScreen(),
+      // An unknown route is not worth guessing at; the app opens as usual.
+      _ => null,
+    };
+    if (screen == null) return;
+
+    navigatorKey.currentState?.push(
+      MaterialPageRoute<void>(builder: (_) => screen),
+    );
   }
 
   @override
   void dispose() {
+    StudyWidgetService.pendingRoute.removeListener(_openPendingRoute);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -120,6 +151,10 @@ class _LifeAndStudyAppState extends ConsumerState<LifeAndStudyApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(OfficeSentinelService.instance.checkAndTriggerSentinelIfNeeded());
+      // Coming back to the app is also when the study figures are most likely
+      // to be stale, and when a widget tap may be waiting to be honoured.
+      unawaited(StudyWidgetService.refresh());
+      unawaited(StudyWidgetService.consumePendingRoute());
     }
   }
 
@@ -130,6 +165,7 @@ class _LifeAndStudyAppState extends ConsumerState<LifeAndStudyApp>
 
     return MaterialApp(
       title: 'Life & Study Assistant',
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: darkTheme,
