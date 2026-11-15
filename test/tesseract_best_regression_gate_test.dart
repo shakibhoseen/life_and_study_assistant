@@ -6,7 +6,9 @@ library;
 //
 // Two reasons it is skipped rather than kept green:
 //   - RG-01 reads test/fixtures/tessdata_best/*.traineddata, 25MB of model
-//     data carried in the repo purely for this file.
+//     data that was carried in the repo purely for this file. It now lives on
+//     the archive/offline-ocr branch, so RG-01 fails here until you run:
+//       git checkout archive/offline-ocr -- test/fixtures/tessdata_best
 //   - RG-06 reads test_results/verified_ground_truth_inventory.json, which
 //     was a local benchmark output and was never committed. That assertion
 //     has been failing for as long as anyone has run it.

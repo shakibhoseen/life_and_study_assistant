@@ -73,7 +73,35 @@ nothing to carry except disk.
 | Image preprocessing | `lib/core/services/media/image_preprocessor_service.dart` |
 | Screen (still reachable from the dashboard) | `lib/features/image_to_text/` |
 | Models | `assets/tessdata/` (6.9 MB, shipped in the APK) |
-| Test fixture models | `test/fixtures/tessdata_best/` (25 MB, repo only) |
+| Test fixture models | **moved off this branch** — see below |
+
+### What was moved to `archive/offline-ocr`
+
+Carrying 28 MB of model fixtures and benchmark screenshots on a working branch
+was not worth it, so they live on the `archive/offline-ocr` branch instead:
+
+| | |
+|---|---|
+| `test/fixtures/tessdata_best/` | 25 MB — the `best` models RG-01 checksums |
+| `test_results/` | 2.8 MB — crop screenshots, device logcat, audit output |
+
+That branch is a full snapshot of the work at commit `4d57ffc`, before any of
+this was removed. Bring the fixtures back with:
+
+```bash
+git checkout archive/offline-ocr -- test/fixtures/tessdata_best test_results
+```
+
+`test_results/` is now in `.gitignore`, because everything in it was output a
+test writes rather than input a test reads. Restore it only if you want the
+old evidence to compare against.
+
+**Note this does not make the repository smaller.** The blobs are still in
+history and the archive branch keeps them reachable, so a fresh clone
+downloads the same ~79 MB. What it buys is a lighter checkout and a working
+branch that is about the app. Actually shrinking the repository would mean
+rewriting history on branches that are already pushed; that is a deliberate,
+separate job, not a side effect of this.
 
 **This is not the same thing as the AI OCR, which is live and unaffected:**
 `question_bank_ocr_service.dart` and `study_sheet_ocr_service.dart` send images
@@ -87,7 +115,9 @@ Tagged `offline-ocr` in `dart_test.yaml`, skipped by `flutter test`:
 flutter test --run-skipped --tags offline-ocr
 ```
 
-- `test/tesseract_best_regression_gate_test.dart` — reads the 25 MB fixture.
+- `test/tesseract_best_regression_gate_test.dart` — **RG-01 now fails on this
+  branch**: it checksums `test/fixtures/tessdata_best/`, which moved to the
+  archive branch. Restore the fixture with the command above before running.
   **RG-06 fails and has always failed:** it asserts
   `test_results/verified_ground_truth_inventory.json`, a local benchmark output
   that was never committed. Reviving the work means regenerating that file, not
@@ -119,8 +149,8 @@ page end to end, which would make walls 1–3 one problem instead of three.
 
 ## If this is ever abandoned for good
 
-Delete, in this order: `test/fixtures/tessdata_best/` (25 MB), the tagged and
-noted tests above, `packages/local_ocr/` plus its `pubspec.yaml` path
+Delete `archive/offline-ocr` (local and on origin), and on this branch: the
+tagged and noted tests above, `packages/local_ocr/` plus its `pubspec.yaml` path
 dependency, `assets/tessdata/`, `lib/core/services/media/{local_ocr_service,
 ocr,layout,segmentation,image_preprocessor_service}`, `lib/features/image_to_text/`
 and its dashboard tile, and `docs/ocr_*`. Nothing outside that list depends on it.

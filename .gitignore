@@ -52,3 +52,8 @@ test_results/
 
 # Widget Preview related
 .widget_preview/
+
+# Benchmark and audit output written by tests. Regenerated on demand;
+# never worth committing. The evidence artifacts that used to live here are
+# on the archive/offline-ocr branch — see docs/OFFLINE_OCR_PARKED.md.
+/test_results/
