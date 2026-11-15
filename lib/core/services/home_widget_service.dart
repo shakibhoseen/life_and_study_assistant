@@ -14,6 +14,14 @@ class HomeWidgetService {
     'com.example.life_and_study_assistant/system_settings',
   );
 
+  /// h:mm AM/PM, the "last synced" stamp in the widget header.
+  static String _clockLabel(DateTime now) {
+    final hour12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
+    return '${hour12.toString().padLeft(2, '0')}:'
+        '${now.minute.toString().padLeft(2, '0')} '
+        '${now.hour >= 12 ? 'PM' : 'AM'}';
+  }
+
   /// yyyy-MM-dd, matching what the native widget formats for "today".
   static String _isoDate(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
@@ -167,6 +175,50 @@ class HomeWidgetService {
   }
 
   /// Synchronizes current office & lunch data to native home screen widget
+  /// Mirrors attendance to the widget's own keys as a complete picture.
+  ///
+  /// [updateWidget] treats a null as "leave whatever is there", which is what
+  /// a caller updating one field needs. Attendance needs the opposite: the
+  /// native widget reads these mirror keys *in preference to* the source
+  /// ones, so a check-out that has been cleared has to be cleared here too,
+  /// or the widget keeps showing it.
+  static Future<void> mirrorAttendance({
+    String? checkInDate,
+    String? checkInTime,
+    bool? isLate,
+    String? checkOutDate,
+    String? checkOutTime,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      Future<void> put(String key, String? value) async {
+        if (value == null || value.isEmpty) {
+          await prefs.remove(key);
+        } else {
+          await prefs.setString(key, value);
+        }
+      }
+
+      await put('pref_last_check_in_date', checkInDate);
+      await put('pref_last_check_in_time', checkInTime);
+      await put('pref_last_check_out_date', checkOutDate);
+      await put('pref_last_check_out_time', checkOutTime);
+
+      if (isLate == null) {
+        await prefs.remove('pref_last_check_in_is_late');
+      } else {
+        await prefs.setBool('pref_last_check_in_is_late', isLate);
+      }
+
+      await prefs.setString('widget_last_sync_time', _clockLabel(DateTime.now()));
+      await _channel.invokeMethod('updateWidget');
+      debugPrint('HomeWidget: attendance mirrored');
+    } catch (e) {
+      debugPrint('HomeWidget: could not mirror attendance: $e');
+    }
+  }
+
   /// A null argument means "leave whatever is there alone", because callers
   /// such as the lunch sentinel update one field without knowing the others.
   static Future<void> updateWidget({
@@ -180,12 +232,10 @@ class HomeWidgetService {
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final now = DateTime.now();
-      final hour12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
-      final timeStr =
-          '${hour12.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
-
-      await prefs.setString('widget_last_sync_time', timeStr);
+      await prefs.setString(
+        'widget_last_sync_time',
+        _clockLabel(DateTime.now()),
+      );
 
       if (checkInTime != null) {
         await prefs.setString('pref_last_check_in_time', checkInTime);
@@ -213,7 +263,7 @@ class HomeWidgetService {
       }
 
       await _channel.invokeMethod('updateWidget');
-      debugPrint('HomeWidget: updated widget data successfully ($timeStr)');
+      debugPrint('HomeWidget: updated widget data successfully');
     } catch (e) {
       debugPrint('HomeWidget: could not update widget: $e');
     }

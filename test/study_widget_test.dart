@@ -120,6 +120,38 @@ void main() {
     });
   });
 
+  group('option markers already in the text', () {
+    test('a Bengali marker is stripped so it is not rendered twice', () {
+      // "ক) ক. ২০%" is what the widget showed before this.
+      expect(StudyWidgetService.stripOptionMarker('ক. ২০%'), '২০%');
+      expect(StudyWidgetService.stripOptionMarker('খ) ২৫%'), '২৫%');
+      expect(StudyWidgetService.stripOptionMarker('গ । ৮০%'), '৮০%');
+    });
+
+    test('Latin and numeric markers too', () {
+      expect(StudyWidgetService.stripOptionMarker('A. Dhaka'), 'Dhaka');
+      expect(StudyWidgetService.stripOptionMarker('1) Dhaka'), 'Dhaka');
+    });
+
+    test('an option with no marker is left alone', () {
+      expect(StudyWidgetService.stripOptionMarker('২০%'), '২০%');
+      expect(StudyWidgetService.stripOptionMarker('ঢাকা'), 'ঢাকা');
+    });
+
+    test('a marker that is the whole answer is not eaten', () {
+      // The answer to "which option is correct" can itself be "ক."
+      expect(StudyWidgetService.stripOptionMarker('ক.'), 'ক.');
+    });
+
+    test('text that merely starts with a Bengali word survives', () {
+      expect(
+        StudyWidgetService.stripOptionMarker('কক্সবাজার'),
+        'কক্সবাজার',
+        reason: 'only a single letter followed by a separator is a marker',
+      );
+    });
+  });
+
   group('parsing the stored options', () {
     test('a normal row comes back as four', () {
       expect(

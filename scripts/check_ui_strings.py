@@ -53,6 +53,35 @@ def user_facing(text):
     return bool(SENTENCE.match(t))
 
 
+# Log calls. Their text is for whoever is reading logcat, not for anyone
+# using the app, and rewording one is not a regression. Left in, they match
+# the sentence heuristic below and cry wolf, which is worse than useless in a
+# guard meant to be trusted.
+LOG_CALL = re.compile(r"\b(?:debugPrint|print|log|dev\.log)\s*\(", re.M)
+
+
+def strip_log_calls(source):
+    """Removes the arguments of log calls, brackets balanced."""
+    out = []
+    i = 0
+    for m in LOG_CALL.finditer(source):
+        if m.start() < i:
+            continue
+        out.append(source[i:m.end()])
+        depth = 1
+        j = m.end()
+        while j < len(source) and depth:
+            c = source[j]
+            if c == "(":
+                depth += 1
+            elif c == ")":
+                depth -= 1
+            j += 1
+        i = j - 1 if depth == 0 else len(source)
+    out.append(source[i:])
+    return "".join(out)
+
+
 def literals(source):
     """Every user-facing literal in one file, as a multiset.
 
@@ -60,6 +89,7 @@ def literals(source):
     runtime string. They are joined here too, otherwise re-wrapping a long
     sentence reads as two losses and one gain.
     """
+    source = strip_log_calls(source)
     joined = re.sub(r"'\s*\n\s*'", "", source)
     joined = re.sub(r'"\s*\n\s*"', "", joined)
     found = collections.Counter()

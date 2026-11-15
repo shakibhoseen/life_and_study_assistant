@@ -80,7 +80,8 @@ class QuestionOfDayWidgetProvider : AppWidgetProvider() {
 
             val question = prefs.getString("flutter.study_qotd_question", null)
             val options = parseOptions(prefs.getString("flutter.study_qotd_options", null))
-            val correctIndex = prefs.getInt("flutter.study_qotd_correct_index", -1)
+            val correctIndex =
+                StudyWidgetSync.int(context, "flutter.study_qotd_correct_index", -1)
             val revealed = prefs.getBoolean("flutter.study_qotd_revealed", false)
 
             views.setTextViewText(

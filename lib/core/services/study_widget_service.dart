@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../database/app_database.dart';
 import '../utils/bengali_math_sanitizer.dart';
+import 'background/workmanager_service.dart';
 
 /// What the three study home screen widgets show.
 ///
@@ -79,6 +80,9 @@ class StudyWidgetService {
     // handler and routes the study calls back to handleNativeCall below.
     unawaited(refresh());
     unawaited(consumePendingRoute());
+    // One job a day, so the countdown and the daily question turn over
+    // without the app having to be opened.
+    unawaited(WorkmanagerService.instance.scheduleDailyStudyRefresh());
   }
 
   /// The study half of the shared channel handler, called by
@@ -150,6 +154,27 @@ class StudyWidgetService {
     return 'দুর্বল: ${named.join(', ')}';
   }
 
+  /// Strips a marker the option text already carries.
+  ///
+  /// Rows come from several places — typed in, parsed out of a question bank,
+  /// returned by the AI — and some arrive as "ক. ২০%" while others are just
+  /// "২০%". The widget puts its own "ক)" in front, so leaving the stored one
+  /// renders "ক) ক. ২০%".
+  @visibleForTesting
+  static String stripOptionMarker(String option) {
+    final trimmed = option.trim();
+    // A single Bengali consonant, Latin letter or digit, then . ) : or ।
+    // and a space. The range is ক-হ, the consonants: the Bengali vowels
+    // sit *below* ক in Unicode, so a range starting at ক and ending at a
+    // vowel is backwards and will not compile.
+    final marker = RegExp(r'^([ক-হA-Ha-h০-৯0-9])\s*[.):।]\s+');
+    final match = marker.firstMatch(trimmed);
+    if (match == null) return trimmed;
+    final rest = trimmed.substring(match.end).trim();
+    // "ক." on its own is the whole answer, not a marker on something else.
+    return rest.isEmpty ? trimmed : rest;
+  }
+
   /// Which question to show today.
   ///
   /// Picked by the date so it is stable all day — a widget that showed a
@@ -210,7 +235,7 @@ class StudyWidgetService {
         await prefs.setString(keyExamCountdown, countdownLabel(daysLeft));
         await prefs.setString(
           keyExamWhen,
-          '${next.subject} • ${next.examTime}',
+          '${next.subject} • ${bn(next.examTime)}',
         );
       }
 
@@ -224,7 +249,10 @@ class StudyWidgetService {
       } else {
         final q = bank[index];
         await prefs.setString(keyQuestion, q.questionText);
-        await prefs.setString(keyOptions, q.optionsJson);
+        await prefs.setString(
+          keyOptions,
+          jsonEncode(parseOptions(q.optionsJson).map(stripOptionMarker).toList()),
+        );
         await prefs.setInt(keyCorrectIndex, q.correctIndex);
       }
 
@@ -241,11 +269,21 @@ class StudyWidgetService {
         '${now.hour >= 12 ? 'PM' : 'AM'}',
       );
 
-      await _channel.invokeMethod('updateStudyWidgets');
-      debugPrint('StudyWidget: synced');
+      debugPrint('StudyWidget: collected');
     } catch (e) {
       // A home screen widget is never worth taking the app down for.
-      debugPrint('StudyWidget: sync failed: $e');
+      debugPrint('StudyWidget: could not collect the figures: $e');
+    }
+
+    // Repainting is attempted whatever happened above, and reported
+    // separately. Collecting and repainting failing for the same reason once
+    // made a native crash read as "sync failed", which pointed at the Dart
+    // side and away from the receiver that was actually dying.
+    try {
+      await _channel.invokeMethod('updateStudyWidgets');
+      debugPrint('StudyWidget: widgets repainted');
+    } catch (e) {
+      debugPrint('StudyWidget: collected, but the widgets did not repaint: $e');
     }
   }
 

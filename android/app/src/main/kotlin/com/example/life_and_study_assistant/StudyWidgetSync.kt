@@ -26,6 +26,28 @@ object StudyWidgetSync {
         context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
 
     /**
+     * Reads a number Flutter wrote.
+     *
+     * shared_preferences stores a Dart `int` as a Java **Long**, so getInt()
+     * on one of these throws ClassCastException — and a throw inside a widget
+     * provider kills the receiver, which is what puts "Tap to open this app so
+     * your widget can refresh" on the home screen. Read it as a Long, and fall
+     * back to Int for anything the native side wrote itself.
+     */
+    fun int(context: Context, key: String, fallback: Int): Int {
+        val prefs = prefs(context)
+        return try {
+            prefs.getLong(key, fallback.toLong()).toInt()
+        } catch (_: ClassCastException) {
+            try {
+                prefs.getInt(key, fallback)
+            } catch (_: ClassCastException) {
+                fallback
+            }
+        }
+    }
+
+    /**
      * Returns true if a live engine was asked, false if the work was queued or
      * could not be started at all — in which case the caller repaints what it
      * already has rather than leaving the widget looking stuck.
@@ -57,10 +79,25 @@ object StudyWidgetSync {
         }
     }
 
-    /** Repaints every study widget on the home screen. */
+    /**
+     * Repaints every study widget on the home screen.
+     *
+     * Each one is isolated. These run inside a broadcast receiver, where an
+     * exception does not just skip a repaint — it kills the receiver and
+     * Android marks the widget as needing the app opened. One widget failing
+     * took all three down once already; it should cost only itself.
+     */
     fun updateAll(context: Context) {
-        StudyTodayWidgetProvider.refreshAll(context)
-        ExamCountdownWidgetProvider.refreshAll(context)
-        QuestionOfDayWidgetProvider.refreshAll(context)
+        for (refresh in listOf<(Context) -> Unit>(
+            StudyTodayWidgetProvider::refreshAll,
+            ExamCountdownWidgetProvider::refreshAll,
+            QuestionOfDayWidgetProvider::refreshAll
+        )) {
+            try {
+                refresh(context)
+            } catch (e: Throwable) {
+                android.util.Log.e("StudyWidget", "a widget failed to render", e)
+            }
+        }
     }
 }

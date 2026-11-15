@@ -55,6 +55,10 @@ void callbackDispatcher() {
         } finally {
           await db.close();
         }
+        // Chain the next one from here rather than using a periodic task, so
+        // it lands at a time of day rather than every N hours from whenever
+        // the app happened to start.
+        await WorkmanagerService.instance.scheduleDailyStudyRefresh();
         break;
     }
 
@@ -113,6 +117,57 @@ class WorkmanagerService {
   }
 
   /// Schedules a 15-minute fail-safe one-off task in WorkManager.
+  /// The hour the study widgets roll over, local time.
+  ///
+  /// Early enough that the countdown and the question of the day have already
+  /// changed before the phone is picked up, late enough not to be part of the
+  /// midnight crowd of jobs every app on the device schedules.
+  static const int dailyRefreshHour = 5;
+
+  /// How long from [now] until the next [dailyRefreshHour].
+  ///
+  /// Pulled out because the edges are easy to get wrong: at exactly 5 AM the
+  /// answer is tomorrow, not zero, and after 5 AM it has to cross midnight
+  /// rather than going negative.
+  @visibleForTesting
+  static Duration delayUntilNextDailyRefresh(DateTime now) {
+    var next = DateTime(now.year, now.month, now.day, dailyRefreshHour);
+    if (!next.isAfter(now)) {
+      next = DateTime(now.year, now.month, now.day + 1, dailyRefreshHour);
+    }
+    return next.difference(now);
+  }
+
+  /// Refreshes the study widgets once a day, in the background.
+  ///
+  /// Study figures move while the user is in the app, and the app already
+  /// refreshes on launch and on resume, so nothing here needs to poll. What
+  /// does need a nudge is the calendar turning over: "৩ দিন বাকি" becoming
+  /// "২ দিন বাকি", and a new question for the day, neither of which should
+  /// wait for the app to be opened.
+  ///
+  /// So: one deferrable WorkManager job a day. Not an exact alarm, which
+  /// would wake the device, and not a periodic task, which cannot be aimed at
+  /// a time of day. Android is free to batch it with other work and to hold
+  /// it back in Doze — a date rollover arriving a little late is not worth a
+  /// battery complaint.
+  Future<void> scheduleDailyStudyRefresh() async {
+    try {
+      final delay = delayUntilNextDailyRefresh(DateTime.now());
+      await Workmanager().registerOneOffTask(
+        'study-widget-daily-refresh',
+        backgroundTaskStudyWidgetSync,
+        initialDelay: delay,
+        existingWorkPolicy: ExistingWorkPolicy.replace,
+      );
+      debugPrint(
+        'Workmanager: study widget refresh in ${delay.inMinutes} minutes.',
+      );
+    } catch (e) {
+      debugPrint('Workmanager: scheduleDailyStudyRefresh error: $e');
+    }
+  }
+
   /// If the foreground sentinel is killed by the user or OS while attendance is pending,
   /// this safety task wakes up, checks status, and revives the sentinel.
   Future<void> scheduleSafetyWatchdog({Duration delay = const Duration(minutes: 15)}) async {

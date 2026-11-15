@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/notification_constants.dart';
 import '../notification/notification_service.dart';
+import '../home_widget_service.dart';
 
 class PacklyAttendanceStatus {
   final bool isCheckedIn;
@@ -515,6 +516,22 @@ class PacklyAttendanceService {
               await prefs.remove(NotificationConstants.prefLastCheckOutDate);
               await prefs.remove(NotificationConstants.prefLastCheckOutTime);
             }
+
+            // The home screen widget reads its own mirror of these keys, in
+            // preference to the ones just written, so it has to be told. Both
+            // checkIn() and checkOut() end by calling back into here, which
+            // makes this the one place that covers a punch either way as well
+            // as every status poll. Best-effort: a punch that reached Packly
+            // is not a failure because a widget could not be repainted.
+            unawaited(
+              HomeWidgetService.mirrorAttendance(
+                checkInDate: isCheckedIn ? todayIso : null,
+                checkInTime: isCheckedIn ? checkInTime : null,
+                isLate: isCheckedIn ? isLate : null,
+                checkOutDate: isCheckedOut ? todayIso : null,
+                checkOutTime: isCheckedOut ? checkOutTime : null,
+              ),
+            );
 
             return PacklyAttendanceStatus(
               isCheckedIn: isCheckedIn,
