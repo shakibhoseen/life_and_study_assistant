@@ -179,7 +179,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
             const SizedBox(width: FluentSpacing.s),
             Flexible(
               child: Text(
-                'TITLE_NOTEBOOK',
+                'স্মার্ট মিস্টেক নোটবুক',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: FluentType.subtitle.copyWith(fontSize: 17),
@@ -189,7 +189,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'TOOLTIP_NIGHT',
+            tooltip: 'রাতের ৫ মিনিটের রিভিশন',
             icon: Icon(
               Icons.nightlight_round,
               color: Theme.of(context).colorScheme.primary,
@@ -341,7 +341,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                           _copyFilteredMistakesToClipboard(filtered),
                       icon: const Icon(Icons.copy_rounded, size: 13),
                       label: Text(
-                        'COPY_LABEL',
+                        'কপি',
                         style: FluentType.caption.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -365,7 +365,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
                       onPressed: () => _batchFixFilteredMistakes(filtered),
                       icon: const Icon(Icons.auto_fix_high_rounded, size: 13),
                       label: Text(
-                        'AI_FIX_LABEL',
+                        'AI ফিক্স',
                         style: FluentType.caption.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -588,7 +588,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
               // Status filters
               _buildFilterBadge(
                 context,
-                'ST_ALL',
+                'সব ভুল',
                 'all',
                 _statusFilter,
                 (v) => setState(() => _statusFilter = v),
@@ -596,7 +596,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
               const SizedBox(width: FluentSpacing.s),
               _buildFilterBadge(
                 context,
-                'ST_PENDING',
+                'বাকি ভুল',
                 'pending',
                 _statusFilter,
                 (v) => setState(() => _statusFilter = v),
@@ -605,7 +605,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
               const SizedBox(width: FluentSpacing.s),
               _buildFilterBadge(
                 context,
-                'ST_MASTERED',
+                'আয়ত্তে এসেছে',
                 'mastered',
                 _statusFilter,
                 (v) => setState(() => _statusFilter = v),
@@ -622,7 +622,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
               // Source filters
               _buildFilterBadge(
                 context,
-                'SRC_ALL',
+                'সকল উৎস',
                 'all',
                 _sourceFilter,
                 (v) => setState(() => _sourceFilter = v),
@@ -630,7 +630,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
               const SizedBox(width: FluentSpacing.s),
               _buildFilterBadge(
                 context,
-                'SRC_VOICE',
+                '🎙️ LiveMCQ',
                 'voice',
                 _sourceFilter,
                 (v) => setState(() => _sourceFilter = v),
@@ -638,7 +638,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
               const SizedBox(width: FluentSpacing.s),
               _buildFilterBadge(
                 context,
-                'SRC_BOOK',
+                '📷 বই স্ক্যান',
                 'book',
                 _sourceFilter,
                 (v) => setState(() => _sourceFilter = v),
@@ -646,7 +646,7 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
               const SizedBox(width: FluentSpacing.s),
               _buildFilterBadge(
                 context,
-                'SRC_DRILL',
+                '📝 ড্রিল',
                 'drill',
                 _sourceFilter,
                 (v) => setState(() => _sourceFilter = v),

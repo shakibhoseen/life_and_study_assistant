@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_and_study_assistant/core/database/app_database.dart';
 import 'package:life_and_study_assistant/core/database/database_provider.dart';
+import 'package:life_and_study_assistant/core/theme/ui_style_provider.dart';
 import 'package:life_and_study_assistant/core/database/tables/weak_topics_table.dart';
 import 'package:life_and_study_assistant/features/quiz/presentation/providers/drill_history_provider.dart';
 import 'package:life_and_study_assistant/features/settings/presentation/providers/settings_provider.dart';
@@ -14,6 +15,11 @@ import 'package:life_and_study_assistant/features/topics/presentation/screens/to
 import 'package:life_and_study_assistant/features/weakness_healer/domain/models/weakness_healing_model.dart';
 import 'package:life_and_study_assistant/features/weakness_healer/presentation/widgets/weakness_healing_card.dart';
 import 'package:life_and_study_assistant/features/weakness_healer/presentation/widgets/weakness_healing_drill_modal.dart';
+
+class _ClassicUiStyle extends AppUiStyleNotifier {
+  @override
+  AppUiStyle build() => AppUiStyle.classic;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -239,6 +245,10 @@ void main() {
           ProviderScope(
             overrides: [
               appDatabaseProvider.overrideWithValue(db),
+              // Acrylic's backdrop animates for ever, so pumpAndSettle below
+              // would never return. Classic draws a still background and
+              // starts no ticker.
+              appUiStyleProvider.overrideWith(_ClassicUiStyle.new),
               weakTopicsStreamProvider.overrideWith(
                 (ref) => Stream.value([longSubjectTopic]),
               ),
