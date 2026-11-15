@@ -13,6 +13,12 @@ class HomeWidgetService {
     'com.example.life_and_study_assistant/system_settings',
   );
 
+  /// yyyy-MM-dd, matching what the native widget formats for "today".
+  static String _isoDate(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
   /// Initializes MethodChannel listener for widget actions (such as 1-tap refresh).
   static void init() {
     _channel.setMethodCallHandler((call) async {
@@ -21,6 +27,31 @@ class HomeWidgetService {
         await syncCurrentDataToWidget(fetchFromNetwork: true);
       }
     });
+  }
+
+  /// Which lunch status the widget should show, given what the refresh found.
+  ///
+  /// Pulled out as a function because this is where the widget went wrong: a
+  /// live status was fetched and then discarded in favour of notification
+  /// bookkeeping that nothing dated.
+  ///
+  /// [fetched] is this refresh's live answer and always wins. Failing that,
+  /// the sentinel's last notified status counts only if it is from today.
+  /// Otherwise the day starts where every day starts.
+  @visibleForTesting
+  static String resolveLunchStatus({
+    required String? fetched,
+    required String? notifiedStatus,
+    required String? notifiedDate,
+    required String todayIso,
+  }) {
+    if (fetched != null && fetched.isNotEmpty) return fetched;
+    if (notifiedStatus != null &&
+        notifiedStatus.isNotEmpty &&
+        notifiedDate == todayIso) {
+      return notifiedStatus;
+    }
+    return 'cooking';
   }
 
   /// Synchronizes current office & lunch data to native home screen widget.
@@ -33,6 +64,12 @@ class HomeWidgetService {
       final isSim =
           prefs.getBool(NotificationConstants.prefPacklySimulationMode) ?? false;
 
+      // getAttendanceStatus() writes prefLastCheckIn*/CheckOut* as it goes, so
+      // its return value is genuinely not needed here. getServingStatus() does
+      // not write anything — it only returns — so its result has to be carried
+      // to the widget by hand. Dropping it was why pressing refresh fetched the
+      // real lunch status and then displayed something else.
+      SteadfastServingStatus? freshServing;
       if (fetchFromNetwork && !isSim) {
         try {
           await PacklyAttendanceService.instance.getAttendanceStatus();
@@ -40,7 +77,7 @@ class HomeWidgetService {
           debugPrint('HomeWidget: live attendance fetch failed: $e');
         }
         try {
-          await SteadfastLunchService.instance.getServingStatus(
+          freshServing = await SteadfastLunchService.instance.getServingStatus(
             forceRefresh: true,
           );
         } catch (e) {
@@ -54,6 +91,9 @@ class HomeWidgetService {
       String? checkOutDate;
       String? checkOutTime;
       String? lunchStatus;
+      String? lunchStatusDate;
+
+      final todayIso = _isoDate(DateTime.now());
 
       if (isSim) {
         checkInDate =
@@ -68,6 +108,7 @@ class HomeWidgetService {
             prefs.getString(NotificationConstants.prefSimulatedCheckOutTime);
         lunchStatus =
             prefs.getString(NotificationConstants.prefSimulatedServingStatus);
+        lunchStatusDate = todayIso;
       } else {
         checkInDate =
             prefs.getString(NotificationConstants.prefLastCheckInDate);
@@ -79,8 +120,27 @@ class HomeWidgetService {
             prefs.getString(NotificationConstants.prefLastCheckOutDate);
         checkOutTime =
             prefs.getString(NotificationConstants.prefLastCheckOutTime);
-        lunchStatus =
+        // Three sources, best first.
+        //
+        // prefLastNotifiedLunchStatus is not the current status: the lunch
+        // sentinel writes it when it *sends a notification*, as bookkeeping so
+        // it does not notify twice. It is only as fresh as the last alert, and
+        // it keeps its value overnight — which is how a widget could sit on
+        // "Served" at nine the next morning. It has always had a companion
+        // date key; nothing here was reading it.
+        final notifiedStatus =
             prefs.getString(NotificationConstants.prefLastNotifiedLunchStatus);
+        final notifiedDate = prefs.getString(
+          NotificationConstants.prefLastNotifiedLunchStatusDate,
+        );
+
+        lunchStatus = resolveLunchStatus(
+          fetched: freshServing?.status,
+          notifiedStatus: notifiedStatus,
+          notifiedDate: notifiedDate,
+          todayIso: todayIso,
+        );
+        lunchStatusDate = todayIso;
       }
 
       await updateWidget(
@@ -90,6 +150,7 @@ class HomeWidgetService {
         checkOutTime: checkOutTime,
         checkOutDate: checkOutDate,
         lunchStatus: lunchStatus,
+        lunchStatusDate: lunchStatusDate,
       );
     } catch (e) {
       debugPrint('HomeWidget: syncCurrentDataToWidget error: $e');
@@ -97,6 +158,8 @@ class HomeWidgetService {
   }
 
   /// Synchronizes current office & lunch data to native home screen widget
+  /// A null argument means "leave whatever is there alone", because callers
+  /// such as the lunch sentinel update one field without knowing the others.
   static Future<void> updateWidget({
     String? checkInTime,
     String? checkInDate,
@@ -104,6 +167,7 @@ class HomeWidgetService {
     String? checkOutTime,
     String? checkOutDate,
     String? lunchStatus,
+    String? lunchStatusDate,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -131,6 +195,12 @@ class HomeWidgetService {
       }
       if (lunchStatus != null) {
         await prefs.setString('pref_last_notified_lunch_status', lunchStatus);
+        // Stamped with the day it belongs to, so the widget can tell a status
+        // it has not heard about today from one it has.
+        await prefs.setString(
+          'pref_last_lunch_status_date',
+          lunchStatusDate ?? _isoDate(DateTime.now()),
+        );
       }
 
       await _channel.invokeMethod('updateWidget');

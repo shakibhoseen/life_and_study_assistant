@@ -149,7 +149,11 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
 
             // Read Flutter's shared preferences
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            val todayIso = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            // Locale.US, not getDefault(): this is compared against an ISO date
+            // Dart writes in ASCII digits. A device locale with its own
+            // numbering system would format these digits differently and the
+            // comparison would never match, leaving every day looking blank.
+            val todayIso = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
             val timeFmt = SimpleDateFormat("h:mm a", Locale.getDefault())
 
             val isSim = prefs.getBoolean("flutter.packly_simulation_mode", false)
@@ -204,8 +208,33 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
             }
 
             // 2. Lunch Serving Status
-            val lunchStatusRaw = prefs.getString("flutter.pref_last_notified_lunch_status", "")?.takeIf { it.isNotEmpty() }
-                ?: if (isSim) prefs.getString("flutter.simulated_serving_status", "") else prefs.getString("flutter.last_notified_lunch_status", "")
+            // Attendance is date-guarded above; this was not, so a status from
+            // a previous day kept showing. "Served" at nine the next morning
+            // was the visible symptom.
+            //
+            // Both the mirror the app writes and the sentinel's own key carry
+            // a date. A status without one is from a build before this and is
+            // not trusted for today.
+            fun statusIfToday(statusKey: String, dateKey: String): String? {
+                val status = prefs.getString(statusKey, "")?.takeIf { it.isNotEmpty() }
+                    ?: return null
+                val date = prefs.getString(dateKey, "")?.takeIf { it.isNotEmpty() }
+                    ?: return null
+                return if (date == todayIso || date.startsWith(todayIso)) status else null
+            }
+
+            val lunchStatusRaw = if (isSim) {
+                prefs.getString("flutter.simulated_serving_status", "")
+                    ?.takeIf { it.isNotEmpty() }
+            } else {
+                statusIfToday(
+                    "flutter.pref_last_notified_lunch_status",
+                    "flutter.pref_last_lunch_status_date"
+                ) ?: statusIfToday(
+                    "flutter.last_notified_lunch_status",
+                    "flutter.last_notified_lunch_status_date"
+                )
+            }
             val lunchStatus = lunchStatusRaw?.lowercase()?.ifEmpty { "cooking" } ?: "cooking"
 
             val customLunchBadge = when (lunchStatus) {

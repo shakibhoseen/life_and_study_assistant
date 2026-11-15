@@ -71,7 +71,7 @@ nothing to carry except disk.
 | Layout / columns | `lib/core/services/media/layout/` |
 | Question splitting | `lib/core/services/media/segmentation/` |
 | Image preprocessing | `lib/core/services/media/image_preprocessor_service.dart` |
-| Screen (still reachable from the dashboard) | `lib/features/image_to_text/` |
+| Screen (no longer reachable) | `lib/features/image_to_text/` — the dashboard quick-action pill that opened it was removed, so nothing navigates here. Restore the pill in `dashboard_screen.dart` to bring it back. |
 | Models | `assets/tessdata/` (6.9 MB, shipped in the APK) |
 | Test fixture models | **moved off this branch** — see below |
 
