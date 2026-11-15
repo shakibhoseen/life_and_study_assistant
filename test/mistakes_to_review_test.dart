@@ -29,6 +29,8 @@ void main() {
     explanation: explanation,
     isMastered: false,
     attemptedAt: DateTime.now(),
+    attemptCount: 1,
+    wrongCount: 1,
   );
 
   // The database seeds a starter deck on creation, so these look at what
@@ -114,6 +116,8 @@ void main() {
       explanation: '',
       isMastered: false,
       attemptedAt: DateTime.now(),
+      attemptCount: 1,
+      wrongCount: 1,
     );
 
     expect(await db.addMistakesToReview([skipped]), 1);

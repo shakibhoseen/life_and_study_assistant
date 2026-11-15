@@ -42,6 +42,8 @@ void main() {
             '[উৎস: LiveMCQ 🎙️] যা থেকে উৎপন্ন বা বিচ্যুত হয় তা অপাদান কারক।',
         isMastered: false,
         attemptedAt: DateTime.now(),
+        attemptCount: 1,
+        wrongCount: 1,
       );
 
       final bookScanQuestion = DrillQuestion(
@@ -62,6 +64,8 @@ void main() {
         explanation: 'আলোর পূর্ণ অভ্যন্তরীণ প্রতিফলন নীতি ব্যবহার করা হয়।',
         isMastered: false,
         attemptedAt: DateTime.now(),
+        attemptCount: 1,
+        wrongCount: 1,
       );
 
       final modelTestQuestion = DrillQuestion(
@@ -83,6 +87,8 @@ void main() {
             '৪ নভেম্বর ১৯৭২ সংবিধান গৃহীত হয় এবং ১৬ ডিসেম্বর কার্যকর হয়।',
         isMastered: true,
         attemptedAt: DateTime.now(),
+        attemptCount: 1,
+        wrongCount: 1,
       );
 
       expect(
@@ -119,6 +125,8 @@ void main() {
           explanation: '',
           isMastered: false,
           attemptedAt: DateTime.now(),
+          attemptCount: 1,
+          wrongCount: 1,
         ),
         DrillQuestion(
           id: 2,
@@ -133,6 +141,8 @@ void main() {
           explanation: '',
           isMastered: true,
           attemptedAt: DateTime.now(),
+          attemptCount: 1,
+          wrongCount: 1,
         ),
         DrillQuestion(
           id: 3,
@@ -147,6 +157,8 @@ void main() {
           explanation: '',
           isMastered: false,
           attemptedAt: DateTime.now(),
+          attemptCount: 1,
+          wrongCount: 1,
         ),
       ];
 
@@ -243,6 +255,8 @@ void main() {
             explanation: 'অপাদান কারকের নিয়ম',
             isMastered: false,
             attemptedAt: DateTime.now(),
+            attemptCount: 1,
+            wrongCount: 1,
           ),
           DrillQuestion(
             id: 2,
@@ -257,6 +271,8 @@ void main() {
             explanation: 'Benevolent means kind.',
             isMastered: true,
             attemptedAt: DateTime.now(),
+            attemptCount: 1,
+            wrongCount: 1,
           ),
         ];
 
@@ -315,6 +331,8 @@ void main() {
             explanation: 'মুখ চাঁদের ন্যায় = চাঁদমুখ (উপমিত কর্মধারয়)।',
             isMastered: false,
             attemptedAt: DateTime.now(),
+            attemptCount: 1,
+            wrongCount: 1,
           ),
         ];
 
@@ -379,6 +397,8 @@ void main() {
           explanation: 'কূলের সমীপে = উপকূল (অব্যয়ীভাব সমাস)।',
           isMastered: false,
           attemptedAt: DateTime.now(),
+          attemptCount: 1,
+          wrongCount: 1,
         );
 
         await tester.pumpWidget(

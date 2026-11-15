@@ -46,6 +46,21 @@ class DrillQuestions extends Table {
   DateTimeColumn get attemptedAt =>
       dateTime().withDefault(currentDateAndTime)();
 
+  /// How many times this question has been answered, and how many of those
+  /// were wrong.
+  ///
+  /// There is one row per distinct question, not per attempt: re-drilling a
+  /// mistake updates the row it already has rather than adding another, so
+  /// the Mistake Bank cannot list the same question twice. These two carry
+  /// the attempt history that used to be implied by the number of rows, so
+  /// the accuracy figure still means "of every answer given, how many were
+  /// right" rather than "of the questions seen, how many do I know now".
+  ///
+  /// [wrongCount] is also the honest answer to "how many times have I got
+  /// this one wrong", which is worth showing beside a mistake.
+  IntColumn get attemptCount => integer().withDefault(const Constant(1))();
+  IntColumn get wrongCount => integer().withDefault(const Constant(0))();
+
   /// What [correctIndex] and [explanation] held before a verification
   /// correction was accepted. Null until one is.
   ///

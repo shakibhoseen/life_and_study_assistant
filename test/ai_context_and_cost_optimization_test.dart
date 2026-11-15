@@ -155,6 +155,8 @@ void main() {
           explanation: 'নীল যে উৎপল = নীলোৎপল',
           isMastered: false,
           attemptedAt: now,
+          attemptCount: 1,
+          wrongCount: 1,
         ),
       ];
 

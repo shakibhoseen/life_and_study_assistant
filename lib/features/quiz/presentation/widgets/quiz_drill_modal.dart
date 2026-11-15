@@ -1599,6 +1599,8 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
           explanation: q.explanation,
           isMastered: false,
           attemptedAt: DateTime.now(),
+          attemptCount: 1,
+          wrongCount: 1,
         ),
       );
     }

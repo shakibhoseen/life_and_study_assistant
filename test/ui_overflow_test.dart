@@ -90,6 +90,8 @@ DrillQuestion _drillQuestion({int id = 1, bool isCorrect = false}) {
         'করা হয় এবং রাষ্ট্রীয় মূলনীতি পুনঃস্থাপিত হয়।',
     isMastered: false,
     attemptedAt: DateTime.now().subtract(const Duration(days: 1)),
+    attemptCount: 2,
+    wrongCount: 2,
     originalCorrectIndex: null,
     originalExplanation: null,
     originalQuestionText: null,

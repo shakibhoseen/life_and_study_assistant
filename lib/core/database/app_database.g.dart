@@ -3519,6 +3519,30 @@ class $DrillQuestionsTable extends DrillQuestions
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _attemptCountMeta = const VerificationMeta(
+    'attemptCount',
+  );
+  @override
+  late final GeneratedColumn<int> attemptCount = GeneratedColumn<int>(
+    'attempt_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _wrongCountMeta = const VerificationMeta(
+    'wrongCount',
+  );
+  @override
+  late final GeneratedColumn<int> wrongCount = GeneratedColumn<int>(
+    'wrong_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _originalCorrectIndexMeta =
       const VerificationMeta('originalCorrectIndex');
   @override
@@ -3620,6 +3644,8 @@ class $DrillQuestionsTable extends DrillQuestions
     explanation,
     isMastered,
     attemptedAt,
+    attemptCount,
+    wrongCount,
     originalCorrectIndex,
     originalExplanation,
     originalQuestionText,
@@ -3743,6 +3769,21 @@ class $DrillQuestionsTable extends DrillQuestions
           data['attempted_at']!,
           _attemptedAtMeta,
         ),
+      );
+    }
+    if (data.containsKey('attempt_count')) {
+      context.handle(
+        _attemptCountMeta,
+        attemptCount.isAcceptableOrUnknown(
+          data['attempt_count']!,
+          _attemptCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('wrong_count')) {
+      context.handle(
+        _wrongCountMeta,
+        wrongCount.isAcceptableOrUnknown(data['wrong_count']!, _wrongCountMeta),
       );
     }
     if (data.containsKey('original_correct_index')) {
@@ -3871,6 +3912,14 @@ class $DrillQuestionsTable extends DrillQuestions
         DriftSqlType.dateTime,
         data['${effectivePrefix}attempted_at'],
       )!,
+      attemptCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempt_count'],
+      )!,
+      wrongCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}wrong_count'],
+      )!,
       originalCorrectIndex: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}original_correct_index'],
@@ -3926,6 +3975,21 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
   final bool isMastered;
   final DateTime attemptedAt;
 
+  /// How many times this question has been answered, and how many of those
+  /// were wrong.
+  ///
+  /// There is one row per distinct question, not per attempt: re-drilling a
+  /// mistake updates the row it already has rather than adding another, so
+  /// the Mistake Bank cannot list the same question twice. These two carry
+  /// the attempt history that used to be implied by the number of rows, so
+  /// the accuracy figure still means "of every answer given, how many were
+  /// right" rather than "of the questions seen, how many do I know now".
+  ///
+  /// [wrongCount] is also the honest answer to "how many times have I got
+  /// this one wrong", which is worth showing beside a mistake.
+  final int attemptCount;
+  final int wrongCount;
+
   /// What [correctIndex] and [explanation] held before a verification
   /// correction was accepted. Null until one is.
   ///
@@ -3957,6 +4021,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
     required this.explanation,
     required this.isMastered,
     required this.attemptedAt,
+    required this.attemptCount,
+    required this.wrongCount,
     this.originalCorrectIndex,
     this.originalExplanation,
     this.originalQuestionText,
@@ -3983,6 +4049,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
     map['explanation'] = Variable<String>(explanation);
     map['is_mastered'] = Variable<bool>(isMastered);
     map['attempted_at'] = Variable<DateTime>(attemptedAt);
+    map['attempt_count'] = Variable<int>(attemptCount);
+    map['wrong_count'] = Variable<int>(wrongCount);
     if (!nullToAbsent || originalCorrectIndex != null) {
       map['original_correct_index'] = Variable<int>(originalCorrectIndex);
     }
@@ -4026,6 +4094,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
       explanation: Value(explanation),
       isMastered: Value(isMastered),
       attemptedAt: Value(attemptedAt),
+      attemptCount: Value(attemptCount),
+      wrongCount: Value(wrongCount),
       originalCorrectIndex: originalCorrectIndex == null && nullToAbsent
           ? const Value.absent()
           : Value(originalCorrectIndex),
@@ -4071,6 +4141,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
       explanation: serializer.fromJson<String>(json['explanation']),
       isMastered: serializer.fromJson<bool>(json['isMastered']),
       attemptedAt: serializer.fromJson<DateTime>(json['attemptedAt']),
+      attemptCount: serializer.fromJson<int>(json['attemptCount']),
+      wrongCount: serializer.fromJson<int>(json['wrongCount']),
       originalCorrectIndex: serializer.fromJson<int?>(
         json['originalCorrectIndex'],
       ),
@@ -4107,6 +4179,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
       'explanation': serializer.toJson<String>(explanation),
       'isMastered': serializer.toJson<bool>(isMastered),
       'attemptedAt': serializer.toJson<DateTime>(attemptedAt),
+      'attemptCount': serializer.toJson<int>(attemptCount),
+      'wrongCount': serializer.toJson<int>(wrongCount),
       'originalCorrectIndex': serializer.toJson<int?>(originalCorrectIndex),
       'originalExplanation': serializer.toJson<String?>(originalExplanation),
       'originalQuestionText': serializer.toJson<String?>(originalQuestionText),
@@ -4131,6 +4205,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
     String? explanation,
     bool? isMastered,
     DateTime? attemptedAt,
+    int? attemptCount,
+    int? wrongCount,
     Value<int?> originalCorrectIndex = const Value.absent(),
     Value<String?> originalExplanation = const Value.absent(),
     Value<String?> originalQuestionText = const Value.absent(),
@@ -4154,6 +4230,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
     explanation: explanation ?? this.explanation,
     isMastered: isMastered ?? this.isMastered,
     attemptedAt: attemptedAt ?? this.attemptedAt,
+    attemptCount: attemptCount ?? this.attemptCount,
+    wrongCount: wrongCount ?? this.wrongCount,
     originalCorrectIndex: originalCorrectIndex.present
         ? originalCorrectIndex.value
         : this.originalCorrectIndex,
@@ -4205,6 +4283,12 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
       attemptedAt: data.attemptedAt.present
           ? data.attemptedAt.value
           : this.attemptedAt,
+      attemptCount: data.attemptCount.present
+          ? data.attemptCount.value
+          : this.attemptCount,
+      wrongCount: data.wrongCount.present
+          ? data.wrongCount.value
+          : this.wrongCount,
       originalCorrectIndex: data.originalCorrectIndex.present
           ? data.originalCorrectIndex.value
           : this.originalCorrectIndex,
@@ -4247,6 +4331,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
           ..write('explanation: $explanation, ')
           ..write('isMastered: $isMastered, ')
           ..write('attemptedAt: $attemptedAt, ')
+          ..write('attemptCount: $attemptCount, ')
+          ..write('wrongCount: $wrongCount, ')
           ..write('originalCorrectIndex: $originalCorrectIndex, ')
           ..write('originalExplanation: $originalExplanation, ')
           ..write('originalQuestionText: $originalQuestionText, ')
@@ -4260,7 +4346,7 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     drillRecordId,
     subject,
@@ -4273,6 +4359,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
     explanation,
     isMastered,
     attemptedAt,
+    attemptCount,
+    wrongCount,
     originalCorrectIndex,
     originalExplanation,
     originalQuestionText,
@@ -4281,7 +4369,7 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
     verificationStatus,
     verificationNote,
     verifiedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4298,6 +4386,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
           other.explanation == this.explanation &&
           other.isMastered == this.isMastered &&
           other.attemptedAt == this.attemptedAt &&
+          other.attemptCount == this.attemptCount &&
+          other.wrongCount == this.wrongCount &&
           other.originalCorrectIndex == this.originalCorrectIndex &&
           other.originalExplanation == this.originalExplanation &&
           other.originalQuestionText == this.originalQuestionText &&
@@ -4321,6 +4411,8 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
   final Value<String> explanation;
   final Value<bool> isMastered;
   final Value<DateTime> attemptedAt;
+  final Value<int> attemptCount;
+  final Value<int> wrongCount;
   final Value<int?> originalCorrectIndex;
   final Value<String?> originalExplanation;
   final Value<String?> originalQuestionText;
@@ -4342,6 +4434,8 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
     this.explanation = const Value.absent(),
     this.isMastered = const Value.absent(),
     this.attemptedAt = const Value.absent(),
+    this.attemptCount = const Value.absent(),
+    this.wrongCount = const Value.absent(),
     this.originalCorrectIndex = const Value.absent(),
     this.originalExplanation = const Value.absent(),
     this.originalQuestionText = const Value.absent(),
@@ -4364,6 +4458,8 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
     this.explanation = const Value.absent(),
     this.isMastered = const Value.absent(),
     this.attemptedAt = const Value.absent(),
+    this.attemptCount = const Value.absent(),
+    this.wrongCount = const Value.absent(),
     this.originalCorrectIndex = const Value.absent(),
     this.originalExplanation = const Value.absent(),
     this.originalQuestionText = const Value.absent(),
@@ -4392,6 +4488,8 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
     Expression<String>? explanation,
     Expression<bool>? isMastered,
     Expression<DateTime>? attemptedAt,
+    Expression<int>? attemptCount,
+    Expression<int>? wrongCount,
     Expression<int>? originalCorrectIndex,
     Expression<String>? originalExplanation,
     Expression<String>? originalQuestionText,
@@ -4414,6 +4512,8 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
       if (explanation != null) 'explanation': explanation,
       if (isMastered != null) 'is_mastered': isMastered,
       if (attemptedAt != null) 'attempted_at': attemptedAt,
+      if (attemptCount != null) 'attempt_count': attemptCount,
+      if (wrongCount != null) 'wrong_count': wrongCount,
       if (originalCorrectIndex != null)
         'original_correct_index': originalCorrectIndex,
       if (originalExplanation != null)
@@ -4442,6 +4542,8 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
     Value<String>? explanation,
     Value<bool>? isMastered,
     Value<DateTime>? attemptedAt,
+    Value<int>? attemptCount,
+    Value<int>? wrongCount,
     Value<int?>? originalCorrectIndex,
     Value<String?>? originalExplanation,
     Value<String?>? originalQuestionText,
@@ -4464,6 +4566,8 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
       explanation: explanation ?? this.explanation,
       isMastered: isMastered ?? this.isMastered,
       attemptedAt: attemptedAt ?? this.attemptedAt,
+      attemptCount: attemptCount ?? this.attemptCount,
+      wrongCount: wrongCount ?? this.wrongCount,
       originalCorrectIndex: originalCorrectIndex ?? this.originalCorrectIndex,
       originalExplanation: originalExplanation ?? this.originalExplanation,
       originalQuestionText: originalQuestionText ?? this.originalQuestionText,
@@ -4514,6 +4618,12 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
     if (attemptedAt.present) {
       map['attempted_at'] = Variable<DateTime>(attemptedAt.value);
     }
+    if (attemptCount.present) {
+      map['attempt_count'] = Variable<int>(attemptCount.value);
+    }
+    if (wrongCount.present) {
+      map['wrong_count'] = Variable<int>(wrongCount.value);
+    }
     if (originalCorrectIndex.present) {
       map['original_correct_index'] = Variable<int>(originalCorrectIndex.value);
     }
@@ -4560,6 +4670,8 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
           ..write('explanation: $explanation, ')
           ..write('isMastered: $isMastered, ')
           ..write('attemptedAt: $attemptedAt, ')
+          ..write('attemptCount: $attemptCount, ')
+          ..write('wrongCount: $wrongCount, ')
           ..write('originalCorrectIndex: $originalCorrectIndex, ')
           ..write('originalExplanation: $originalExplanation, ')
           ..write('originalQuestionText: $originalQuestionText, ')
@@ -7099,6 +7211,8 @@ typedef $$DrillQuestionsTableCreateCompanionBuilder =
       Value<String> explanation,
       Value<bool> isMastered,
       Value<DateTime> attemptedAt,
+      Value<int> attemptCount,
+      Value<int> wrongCount,
       Value<int?> originalCorrectIndex,
       Value<String?> originalExplanation,
       Value<String?> originalQuestionText,
@@ -7122,6 +7236,8 @@ typedef $$DrillQuestionsTableUpdateCompanionBuilder =
       Value<String> explanation,
       Value<bool> isMastered,
       Value<DateTime> attemptedAt,
+      Value<int> attemptCount,
+      Value<int> wrongCount,
       Value<int?> originalCorrectIndex,
       Value<String?> originalExplanation,
       Value<String?> originalQuestionText,
@@ -7198,6 +7314,16 @@ class $$DrillQuestionsTableFilterComposer
 
   ColumnFilters<DateTime> get attemptedAt => $composableBuilder(
     column: $table.attemptedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get attemptCount => $composableBuilder(
+    column: $table.attemptCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get wrongCount => $composableBuilder(
+    column: $table.wrongCount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7311,6 +7437,16 @@ class $$DrillQuestionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get attemptCount => $composableBuilder(
+    column: $table.attemptCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get wrongCount => $composableBuilder(
+    column: $table.wrongCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get originalCorrectIndex => $composableBuilder(
     column: $table.originalCorrectIndex,
     builder: (column) => ColumnOrderings(column),
@@ -7413,6 +7549,16 @@ class $$DrillQuestionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get attemptCount => $composableBuilder(
+    column: $table.attemptCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get wrongCount => $composableBuilder(
+    column: $table.wrongCount,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get originalCorrectIndex => $composableBuilder(
     column: $table.originalCorrectIndex,
     builder: (column) => column,
@@ -7499,6 +7645,8 @@ class $$DrillQuestionsTableTableManager
                 Value<String> explanation = const Value.absent(),
                 Value<bool> isMastered = const Value.absent(),
                 Value<DateTime> attemptedAt = const Value.absent(),
+                Value<int> attemptCount = const Value.absent(),
+                Value<int> wrongCount = const Value.absent(),
                 Value<int?> originalCorrectIndex = const Value.absent(),
                 Value<String?> originalExplanation = const Value.absent(),
                 Value<String?> originalQuestionText = const Value.absent(),
@@ -7520,6 +7668,8 @@ class $$DrillQuestionsTableTableManager
                 explanation: explanation,
                 isMastered: isMastered,
                 attemptedAt: attemptedAt,
+                attemptCount: attemptCount,
+                wrongCount: wrongCount,
                 originalCorrectIndex: originalCorrectIndex,
                 originalExplanation: originalExplanation,
                 originalQuestionText: originalQuestionText,
@@ -7543,6 +7693,8 @@ class $$DrillQuestionsTableTableManager
                 Value<String> explanation = const Value.absent(),
                 Value<bool> isMastered = const Value.absent(),
                 Value<DateTime> attemptedAt = const Value.absent(),
+                Value<int> attemptCount = const Value.absent(),
+                Value<int> wrongCount = const Value.absent(),
                 Value<int?> originalCorrectIndex = const Value.absent(),
                 Value<String?> originalExplanation = const Value.absent(),
                 Value<String?> originalQuestionText = const Value.absent(),
@@ -7564,6 +7716,8 @@ class $$DrillQuestionsTableTableManager
                 explanation: explanation,
                 isMastered: isMastered,
                 attemptedAt: attemptedAt,
+                attemptCount: attemptCount,
+                wrongCount: wrongCount,
                 originalCorrectIndex: originalCorrectIndex,
                 originalExplanation: originalExplanation,
                 originalQuestionText: originalQuestionText,

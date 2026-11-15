@@ -76,6 +76,8 @@ void main() {
             explanation: '',
             isMastered: false,
             attemptedAt: DateTime.now(),
+            attemptCount: 1,
+            wrongCount: 1,
           ),
         ];
 
@@ -287,6 +289,8 @@ void main() {
               'যা উপপদের সাথে কৃদন্ত পদের সমাস হয় তাকে উপপদ তৎপুরুষ বলে।',
           isMastered: false,
           attemptedAt: DateTime.now(),
+          attemptCount: 1,
+          wrongCount: 1,
         );
 
         final mistake2 = DrillQuestion(
@@ -302,6 +306,8 @@ void main() {
           explanation: 'উপমিত কর্মধারয়',
           isMastered: false,
           attemptedAt: DateTime.now(),
+          attemptCount: 1,
+          wrongCount: 1,
         );
 
         final mistake3 = DrillQuestion(
@@ -317,6 +323,8 @@ void main() {
           explanation: 'ষষ্ঠী তৎপুরুষ',
           isMastered: false,
           attemptedAt: DateTime.now(),
+          attemptCount: 1,
+          wrongCount: 1,
         );
 
         await tester.pumpWidget(

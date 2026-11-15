@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../services/ai/models/routine_import_result.dart';
 import 'tables/app_settings_table.dart';
@@ -34,7 +35,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'life_and_study_assistant');
@@ -161,6 +162,20 @@ class AppDatabase extends _$AppDatabase {
           "WHERE explanation LIKE '$capturedMistakeTagPrefix%' "
           "AND is_correct = 0 AND selected_index <> correct_index;",
         );
+      }
+      if (from < 15) {
+        // The Mistake Bank was append-only: every drill wrote a fresh row per
+        // question, so re-drilling a mistake and getting it wrong again added
+        // a second copy of the same question and pushed the count up. Getting
+        // it right added a *correct* row while the old wrong one stayed put,
+        // so a question could never leave the bank by being learnt.
+        //
+        // From here there is one row per distinct question, holding its
+        // latest state, with the attempt history in these two counters.
+        await m.addColumn(drillQuestions, drillQuestions.attemptCount);
+        await m.addColumn(drillQuestions, drillQuestions.wrongCount);
+
+        await mergeDuplicateDrillQuestions();
       }
     },
   );
@@ -1801,12 +1816,109 @@ class AppDatabase extends _$AppDatabase {
       );
 
       for (final q in questions) {
-        await into(drillQuestions)
-            .insert(q.copyWith(drillRecordId: Value(recordId)));
+        await _upsertDrillQuestion(q, recordId);
       }
 
       return recordId;
     });
+  }
+
+  /// Writes one answered question, folding it into the row that question
+  /// already has instead of adding a second one.
+  ///
+  /// The Mistake Bank serves its own stored questions back as a drill, so
+  /// without this a question the user got wrong twice appeared twice and
+  /// counted twice — and one they finally got right stayed listed as a
+  /// mistake forever, because the old wrong row was never touched.
+  ///
+  /// The question's own content is deliberately not overwritten. A stored
+  /// row may carry a verification correction, and re-answering it is not a
+  /// reason to throw that away and put the original wording back.
+  Future<void> _upsertDrillQuestion(
+    DrillQuestionsCompanion q,
+    int recordId,
+  ) async {
+    final text = q.questionText.present ? q.questionText.value.trim() : '';
+    final answeredWrong = q.isCorrect.present && !q.isCorrect.value;
+
+    final existing = text.isEmpty
+        ? null
+        : await (select(drillQuestions)
+                ..where((t) => t.questionText.trim().equals(text))
+                ..orderBy([(t) => OrderingTerm(expression: t.id)])
+                ..limit(1))
+              .getSingleOrNull();
+
+    if (existing == null) {
+      await into(drillQuestions).insert(
+        q.copyWith(
+          drillRecordId: Value(recordId),
+          attemptCount: const Value(1),
+          wrongCount: Value(answeredWrong ? 1 : 0),
+        ),
+      );
+      return;
+    }
+
+    await (update(drillQuestions)..where((t) => t.id.equals(existing.id)))
+        .write(
+          DrillQuestionsCompanion(
+            drillRecordId: Value(recordId),
+            selectedIndex: q.selectedIndex,
+            isCorrect: q.isCorrect,
+            attemptedAt: Value(DateTime.now()),
+            attemptCount: Value(existing.attemptCount + 1),
+            wrongCount: Value(existing.wrongCount + (answeredWrong ? 1 : 0)),
+            // Getting it wrong again takes back "I know this one". Getting it
+            // right does not set mastery on the user's behalf — that stays
+            // their own call.
+            isMastered: answeredWrong
+                ? const Value(false)
+                : const Value.absent(),
+          ),
+        );
+  }
+
+  /// Folds the duplicate Mistake Bank rows already on a device into one row
+  /// per question, and fills in the attempt counters behind them.
+  ///
+  /// Runs once, from the schema 15 migration. It is separate from the
+  /// migration only so a test can run the same statements the device will.
+  ///
+  /// The survivor is the newest row, which is the state the user last left
+  /// the question in. It inherits the group's totals, and stays mastered if
+  /// any copy was ever marked so — that was a decision about the question,
+  /// not about one attempt at it.
+  @visibleForTesting
+  Future<void> mergeDuplicateDrillQuestions() async {
+    await customStatement(
+      'UPDATE drill_questions SET attempt_count = 1, '
+      'wrong_count = CASE WHEN is_correct = 0 THEN 1 ELSE 0 END;',
+    );
+    await customStatement('''
+      UPDATE drill_questions SET
+        attempt_count = (
+          SELECT COUNT(*) FROM drill_questions d
+          WHERE TRIM(d.question_text) = TRIM(drill_questions.question_text)
+        ),
+        wrong_count = (
+          SELECT COUNT(*) FROM drill_questions d
+          WHERE TRIM(d.question_text) = TRIM(drill_questions.question_text)
+            AND d.is_correct = 0
+        ),
+        is_mastered = (
+          SELECT MAX(d.is_mastered) FROM drill_questions d
+          WHERE TRIM(d.question_text) = TRIM(drill_questions.question_text)
+        )
+      WHERE id IN (
+        SELECT MAX(id) FROM drill_questions GROUP BY TRIM(question_text)
+      );
+    ''');
+    await customStatement('''
+      DELETE FROM drill_questions WHERE id NOT IN (
+        SELECT MAX(id) FROM drill_questions GROUP BY TRIM(question_text)
+      );
+    ''');
   }
 
   Stream<List<DrillRecord>> watchAllDrillRecords() {
@@ -1874,9 +1986,13 @@ class AppDatabase extends _$AppDatabase {
         .toList();
 
     final totalDrills = records.length;
-    final totalAnswered = answered.length;
-    final totalCorrect = answered.where((q) => q.isCorrect).length;
-    final totalWrong = answered.where((q) => !q.isCorrect).length;
+    // Counted over attempts, not over rows. There is one row per distinct
+    // question now, so counting rows would quietly turn the accuracy figure
+    // into "of the questions I have seen, how many do I know", and a question
+    // got wrong five times would weigh the same as one got wrong once.
+    final totalAnswered = answered.fold<int>(0, (n, q) => n + q.attemptCount);
+    final totalWrong = answered.fold<int>(0, (n, q) => n + q.wrongCount);
+    final totalCorrect = totalAnswered - totalWrong;
     final accuracy = totalAnswered > 0
         ? (totalCorrect / totalAnswered) * 100
         : 0.0;
