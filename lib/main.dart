@@ -41,8 +41,8 @@ void main() async {
   // 1. Initialize Local Notifications & Create Channels
   await NotificationService.instance.init();
 
-  // 2. Schedule Daily 4:00 PM Dinner Confirmation Reminder
-  await NotificationService.instance.scheduleDailyDinnerReminder();
+  // 2. Schedule Daily 5:00 PM Steadfast Lunch Cutoff Reminder (1 hour before 6:00 PM cutoff)
+  await NotificationService.instance.scheduleDailyLunchCutoffReminder();
 
   // 2.1 Schedule Morning 9:00 AM - 9:15 AM Late Prevention Watchdogs (Exact Alarms)
   await NotificationService.instance.scheduleMorningOfficeWatchdogs();

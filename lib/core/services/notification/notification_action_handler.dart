@@ -43,26 +43,37 @@ Future<void> handleNotificationResponse(NotificationResponse response) async {
     return;
   }
 
-  if (actionId == NotificationConstants.actionMealYes) {
+  if (actionId == NotificationConstants.actionMealYes ||
+      actionId == NotificationConstants.actionMealNo) {
+    final isYes = (actionId == NotificationConstants.actionMealYes);
     await prefs.setString(
       NotificationConstants.prefLastMealResponse,
-      'Yes, Count Me In',
+      isYes ? 'Yes, Count Me In' : 'No, Skip',
     );
     await prefs.setString(
       NotificationConstants.prefLastMealResponseDate,
       todayIso,
     );
-  } else if (actionId == NotificationConstants.actionMealNo) {
-    await prefs.setString(
-      NotificationConstants.prefLastMealResponse,
-      'No, Skip',
+    final tomorrowStr = DateTime.now()
+        .add(const Duration(days: 1))
+        .toIso8601String()
+        .substring(0, 10);
+    final res = await SteadfastLunchService.instance.toggleMealDate(
+      date: tomorrowStr,
+      book: isYes,
     );
-    await prefs.setString(
-      NotificationConstants.prefLastMealResponseDate,
-      todayIso,
-    );
+    if (res.success) {
+      await NotificationService.instance.showSteadfastLunchResultNotification(
+        isBooked: res.isBooked,
+      );
+    }
   } else if (actionId == NotificationConstants.actionLunchToggleTomorrow) {
-    await SteadfastLunchService.instance.toggleTomorrowMeal();
+    final result = await SteadfastLunchService.instance.toggleTomorrowMeal();
+    if (result.success) {
+      await NotificationService.instance.showSteadfastLunchResultNotification(
+        isBooked: result.isBooked,
+      );
+    }
   } else if (actionId == NotificationConstants.actionCheckInNow) {
     final result = await PacklyAttendanceService.instance.checkIn();
     if (result.success) {
@@ -74,6 +85,7 @@ Future<void> handleNotificationResponse(NotificationResponse response) async {
         time: timeStr,
         isLate: isLate,
       );
+      await NotificationService.instance.cancelMorningOfficeWatchdogs();
       await FlutterForegroundTask.stopService();
       await WorkmanagerService.instance.cancelSafetyWatchdog();
     }
@@ -83,6 +95,7 @@ Future<void> handleNotificationResponse(NotificationResponse response) async {
       'Punched In',
     );
     await prefs.setString(NotificationConstants.prefLastCheckInDate, todayIso);
+    await NotificationService.instance.cancelMorningOfficeWatchdogs();
     await FlutterForegroundTask.stopService();
     await WorkmanagerService.instance.cancelSafetyWatchdog();
   } else if (actionId == NotificationConstants.actionCheckOutNow) {

@@ -302,8 +302,8 @@ class AutomationTestCard extends ConsumerWidget {
                 ),
                 _buildChip(
                   context: context,
-                  icon: Icons.dinner_dining,
-                  label: 'Test 4 PM Dinner Tray',
+                  icon: Icons.lunch_dining,
+                  label: 'Test 5 PM Lunch Cutoff',
                   onPressed: () async {
                     await NotificationService.instance.requestPermissions();
                     await NotificationService.instance
@@ -312,7 +312,7 @@ class AutomationTestCard extends ConsumerWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'Fired Dinner Cutoff notification with Yes/No buttons!',
+                            'Fired 5:00 PM Lunch Cutoff notification with action button!',
                           ),
                         ),
                       );

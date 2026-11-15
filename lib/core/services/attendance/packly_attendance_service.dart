@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/notification_constants.dart';
+import '../notification/notification_service.dart';
 
 class PacklyAttendanceStatus {
   final bool isCheckedIn;
@@ -739,6 +740,8 @@ class PacklyAttendanceService {
         isLate: isLate,
       );
 
+      await NotificationService.instance.cancelMorningOfficeWatchdogs();
+
       return PacklyResult(
         success: true,
         message: '[TEST MODE] Simulated Check-In at $nowTimeStr (${isLate ? 'LATE' : 'On-Time ✓'})',
@@ -874,6 +877,7 @@ class PacklyAttendanceService {
         if (checkInResp.statusCode == 302 ||
             checkInResp.statusCode == 200 ||
             newStatus.isCheckedIn) {
+          await NotificationService.instance.cancelMorningOfficeWatchdogs();
           return PacklyResult(
             success: true,
             message: isLate

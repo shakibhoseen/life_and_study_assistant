@@ -610,15 +610,23 @@ class NotificationService {
     );
   }
 
-  /// Schedules daily recurring dinner confirmation notification (Default 4:00 PM)
-  /// with actionable notification buttons in tray: [Yes, Count Me In] and [No, Skip]
-  Future<void> scheduleDailyDinnerReminder({
-    // Was 16 while tz.local was stuck on UTC, which landed at 22:00 in Dhaka.
-    // Now that the zone is real, the hour says what it means and the reminder
-    // keeps arriving at the time it always did.
-    int hour = 22,
+  /// Schedules daily recurring Steadfast Lunch Cutoff reminder (Default 5:00 PM, 1 hour before 6:00 PM cutoff).
+  /// Replaces the legacy 10:00 PM dinner reminder that was logically invalid.
+  Future<void> scheduleDailyLunchCutoffReminder({
+    int hour = 17,
     int minute = 0,
   }) async {
+    // Cancel the legacy 10:00 PM dinner notification permanently
+    await _notificationsPlugin.cancel(id: NotificationConstants.mealNotificationId);
+
+    final prefs = await SharedPreferences.getInstance();
+    final isEnabled =
+        prefs.getBool(NotificationConstants.prefLunchAutoReminderEnabled) ?? true;
+    if (!isEnabled) {
+      await cancelDailyLunchCutoffReminder();
+      return;
+    }
+
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(
       tz.local,
@@ -646,14 +654,8 @@ class NotificationService {
       sound: RawResourceAndroidNotificationSound(NotificationConstants.soundMealBell),
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
-          NotificationConstants.actionMealYes,
-          '✓ Yes, Count Me In',
-          showsUserInterface: false,
-          cancelNotification: true,
-        ),
-        AndroidNotificationAction(
-          NotificationConstants.actionMealNo,
-          '✗ No, Skip',
+          NotificationConstants.actionLunchToggleTomorrow,
+          '⚡ Toggle Tomorrow Lunch',
           showsUserInterface: false,
           cancelNotification: true,
         ),
@@ -672,26 +674,62 @@ class NotificationService {
 
     try {
       await _notificationsPlugin.zonedSchedule(
-        id: NotificationConstants.mealNotificationId,
-        title: '🍽️ Office Dinner Confirmation Cutoff',
-        body: 'Daily meal confirmation deadline is approaching! Will you have dinner at the office today?',
+        id: NotificationConstants.lunchReminderNotificationId,
+        title: '🍱 Steadfast Lunch Cutoff Reminder (Cutoff 6:00 PM)',
+        body: 'আগামীকালের লাঞ্চ বুকিং বা বাতিলের সময় সন্ধ্যা ৬:০০ টায় শেষ হবে। পরিবর্তন করতে এখনই ট্যাপ করুন!',
         scheduledDate: scheduledDate,
         notificationDetails: details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time,
       );
-      debugPrint('Daily dinner reminder scheduled for $scheduledDate');
+      debugPrint('Daily lunch cutoff reminder scheduled for $scheduledDate');
     } catch (e) {
-      debugPrint('Error scheduling dinner reminder: $e');
+      debugPrint('Error scheduling lunch cutoff reminder: $e');
     }
   }
 
-  /// Schedules precise morning alarm triggers between 9:00 AM and 9:15 AM
+  /// Cancels daily lunch cutoff reminder
+  Future<void> cancelDailyLunchCutoffReminder() async {
+    await _notificationsPlugin.cancel(id: NotificationConstants.mealNotificationId);
+    await _notificationsPlugin.cancel(id: NotificationConstants.lunchReminderNotificationId);
+    debugPrint('Daily lunch cutoff reminder cancelled.');
+  }
+
+  /// Legacy alias forwarding to [scheduleDailyLunchCutoffReminder]
+  Future<void> scheduleDailyDinnerReminder({
+    int hour = 17,
+    int minute = 0,
+  }) async {
+    // If caller passed 22 (the old flawed 10 PM), override to 17 (5 PM, 1h before 6 PM cutoff)
+    final targetHour = (hour == 22) ? 17 : hour;
+    await scheduleDailyLunchCutoffReminder(hour: targetHour, minute: minute);
+  }
+
+  /// Schedules precise morning alarm triggers before 9:15 AM late cutoff
   /// using Android's ExactAlarmManager so that even if the app was completely killed
   /// and WorkManager is sleeping, the user will be alerted before the strict 9:15 AM late cutoff.
   Future<void> scheduleMorningOfficeWatchdogs() async {
-    final now = tz.TZDateTime.now(tz.local);
+    // Cancel old alarms first to prevent duplicates
+    await cancelMorningOfficeWatchdogs();
 
+    final prefs = await SharedPreferences.getInstance();
+    final isEnabled =
+        prefs.getBool(NotificationConstants.prefLateWarningEnabled) ?? true;
+    if (!isEnabled) {
+      debugPrint('Morning watchdogs disabled in settings. Skipping.');
+      return;
+    }
+
+    final now = tz.TZDateTime.now(tz.local);
+    final today = now.toIso8601String().substring(0, 10);
+    final lastCheckInDate =
+        prefs.getString(NotificationConstants.prefLastCheckInDate);
+    final lastCheckInStatus =
+        prefs.getString(NotificationConstants.prefLastCheckInStatus);
+    final alreadyPunchedInToday =
+        (lastCheckInDate == today && lastCheckInStatus == 'Punched In');
+
+    // Streamlined: 2 clear alerts instead of 4 spammy sirens
     final watchdogs = [
       (
         id: NotificationConstants.morningArrivalAlarm850,
@@ -700,22 +738,10 @@ class NotificationService {
         minLeft: 25,
       ),
       (
-        id: NotificationConstants.morningCutoffAlarm900,
-        hour: 9,
-        minute: 0,
-        minLeft: 15,
-      ),
-      (
         id: NotificationConstants.morningCutoffAlarm906,
         hour: 9,
-        minute: 6,
-        minLeft: 9,
-      ),
-      (
-        id: NotificationConstants.morningCutoffAlarm912,
-        hour: 9,
-        minute: 12,
-        minLeft: 3,
+        minute: 8,
+        minLeft: 7,
       ),
     ];
 
@@ -759,7 +785,9 @@ class NotificationService {
         wd.minute,
       );
 
-      if (scheduledDate.isBefore(now)) {
+      // If time has already passed today OR user is already punched in today,
+      // push schedule to tomorrow so sirens don't disturb someone already at work.
+      if (scheduledDate.isBefore(now) || alreadyPunchedInToday) {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
 
@@ -878,6 +906,14 @@ class NotificationService {
   /// Schedules micro-flashcard study nudges during office break periods (1:15 PM lunch and 4:30 PM tea break)
   /// Non-intrusive (no sound, soft priority) so work is never disturbed while BCS revision continues.
   Future<void> scheduleOfficeDowntimeFlashcards() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isEnabled =
+        prefs.getBool(NotificationConstants.prefOfficeDowntimeFlashcardEnabled) ?? false;
+    if (!isEnabled) {
+      await cancelOfficeDowntimeFlashcards();
+      return;
+    }
+
     final now = tz.TZDateTime.now(tz.local);
 
     final breaks = [
@@ -1061,35 +1097,41 @@ class NotificationService {
     }
   }
 
-  /// Instant test/manual trigger for the meal reminder notification
+  /// Instant test/manual trigger for the lunch cutoff reminder notification
   Future<void> showInstantDinnerReminder() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isBooked =
+        prefs.getBool(NotificationConstants.prefLunchLastKnownTomorrowBooked) ?? false;
+    await showSteadfastLunchReminderNotification(
+      isTomorrowBooked: isBooked,
+      cutoff: '6:00 PM',
+    );
+  }
+
+  /// Instant result notification after user toggles lunch from notification action
+  Future<void> showSteadfastLunchResultNotification({
+    required bool isBooked,
+  }) async {
+    final title = isBooked
+        ? '✅ Steadfast Lunch: Tomorrow is Booked!'
+        : '❌ Steadfast Lunch: Tomorrow Cancelled';
+    final body = isBooked
+        ? 'আগামীকালের লাঞ্চ সফলভাবে বুক করা হয়েছে (Cutoff 6:00 PM)।'
+        : 'আগামীকালের লাঞ্চ সফলভাবে বাতিল করা হয়েছে।';
+
     const androidDetails = AndroidNotificationDetails(
       NotificationConstants.mealChannelId,
       NotificationConstants.mealChannelName,
       channelDescription: NotificationConstants.mealChannelDesc,
-      importance: Importance.max,
+      importance: Importance.high,
       priority: Priority.high,
-      category: AndroidNotificationCategory.reminder,
+      category: AndroidNotificationCategory.status,
       visibility: NotificationVisibility.public,
       playSound: true,
       sound: RawResourceAndroidNotificationSound(NotificationConstants.soundMealBell),
-      actions: <AndroidNotificationAction>[
-        AndroidNotificationAction(
-          NotificationConstants.actionMealYes,
-          '✓ Yes, Count Me In',
-          showsUserInterface: false,
-          cancelNotification: true,
-        ),
-        AndroidNotificationAction(
-          NotificationConstants.actionMealNo,
-          '✗ No, Skip',
-          showsUserInterface: false,
-          cancelNotification: true,
-        ),
-      ],
     );
 
-    const NotificationDetails details = NotificationDetails(
+    const details = NotificationDetails(
       android: androidDetails,
       iOS: DarwinNotificationDetails(
         presentAlert: true,
@@ -1100,9 +1142,9 @@ class NotificationService {
     );
 
     await _notificationsPlugin.show(
-      id: NotificationConstants.mealNotificationId,
-      title: '🍽️ Office Dinner Confirmation Cutoff',
-      body: 'Daily meal confirmation deadline is approaching! Will you have dinner at the office today?',
+      id: NotificationConstants.lunchReminderNotificationId,
+      title: title,
+      body: body,
       notificationDetails: details,
     );
   }

@@ -32,7 +32,7 @@ void callbackDispatcher() {
 
       case backgroundTaskDailyMeal:
         await NotificationService.instance.init();
-        await NotificationService.instance.scheduleDailyDinnerReminder();
+        await NotificationService.instance.scheduleDailyLunchCutoffReminder();
         break;
 
       case backgroundTaskWidgetSync:

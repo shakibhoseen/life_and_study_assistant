@@ -3005,6 +3005,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   val,
                 );
                 setState(() => _lunchAutoReminderEnabled = val);
+                if (val) {
+                  await NotificationService.instance.scheduleDailyLunchCutoffReminder();
+                } else {
+                  await NotificationService.instance.cancelDailyLunchCutoffReminder();
+                }
               },
             ),
             SwitchListTile(
