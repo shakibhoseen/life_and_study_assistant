@@ -1,0 +1,13 @@
+# Tests that are parked rather than deleted.
+#
+# `flutter test` skips these by default. To run them anyway — which is the
+# first thing to do when picking the work back up:
+#
+#     flutter test --run-skipped --tags offline-ocr
+#
+tags:
+  offline-ocr:
+    skip: >-
+      Offline Bengali OCR is parked, not abandoned. See
+      docs/OFFLINE_OCR_PARKED.md. Run with:
+      flutter test --run-skipped --tags offline-ocr

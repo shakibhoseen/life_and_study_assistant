@@ -1,4 +1,7 @@
 // ignore_for_file: avoid_print
+// PARKED — part of the offline Bengali OCR effort that is on hold.
+// See docs/OFFLINE_OCR_PARKED.md for why, and what reviving it takes.
+// These need a real Android device: flutter test integration_test/<file> -d <id>
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';

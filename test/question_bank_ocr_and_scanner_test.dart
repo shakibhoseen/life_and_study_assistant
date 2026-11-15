@@ -261,6 +261,13 @@ void main() {
         expect(find.text('Mistake Book'), findsOneWidget);
         expect(find.text('Test Paper'), findsOneWidget);
 
+        // The quick actions scroll horizontally, and this pill is the last of
+        // them, so on an 800px surface it sits under the right edge. Tapping
+        // its centre there lands on whatever is on top instead. This test is
+        // about the pill opening the scanner, not about it fitting unscrolled.
+        await tester.ensureVisible(find.text('Test Paper'));
+        await tester.pump();
+
         // Tap on 'Test Paper'
         await tester.tap(find.text('Test Paper'));
         await tester.pump();
@@ -406,6 +413,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              classicUiStyle,
               appDatabaseProvider.overrideWithValue(db),
               distinctTracksStreamProvider.overrideWith(
                 (ref) => Stream.value(['Self Test']),

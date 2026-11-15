@@ -1,3 +1,6 @@
+// PARKED — part of the offline Bengali OCR effort that is on hold.
+// See docs/OFFLINE_OCR_PARKED.md for why, and what reviving it takes.
+// These need a real Android device: flutter test integration_test/<file> -d <id>
 import 'dart:convert';
 import 'dart:io';
 

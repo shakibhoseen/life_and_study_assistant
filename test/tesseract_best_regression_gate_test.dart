@@ -1,3 +1,19 @@
+@Tags(['offline-ocr'])
+library;
+
+// PARKED. This gate guards the offline Tesseract pipeline, which is on hold —
+// docs/OFFLINE_OCR_PARKED.md says why, and how to pick it up again.
+//
+// Two reasons it is skipped rather than kept green:
+//   - RG-01 reads test/fixtures/tessdata_best/*.traineddata, 25MB of model
+//     data carried in the repo purely for this file.
+//   - RG-06 reads test_results/verified_ground_truth_inventory.json, which
+//     was a local benchmark output and was never committed. That assertion
+//     has been failing for as long as anyone has run it.
+//
+// Reviving the work means producing that inventory again, not deleting the
+// assertion.
+
 import 'dart:convert';
 import 'dart:io';
 

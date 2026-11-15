@@ -1,3 +1,14 @@
+@Tags(['offline-ocr'])
+library;
+
+// PARKED. See docs/OFFLINE_OCR_PARKED.md.
+//
+// This harness drives the native LocalOcr plugin, which exists only on
+// Android. Run from a desktop host it catches the missing registration,
+// prints a warning and passes anyway — so it reports success without having
+// exercised the engine. It is worth keeping for the day there is a device in
+// the loop, and worth skipping until then.
+
 // ignore_for_file: avoid_print, unused_import, unnecessary_null_comparison
 import 'dart:convert';
 import 'dart:io';

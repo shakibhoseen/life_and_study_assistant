@@ -1,3 +1,9 @@
+// PARKED. The offline OCR effort this belongs to is on hold — see
+// docs/OFFLINE_OCR_PARKED.md for what works, what does not, and what picking
+// it up again would take. The code is kept compiling on purpose.
+//
+// The app's working OCR is the cloud one, in
+// lib/core/services/ai/question_bank_ocr_service.dart. This is not that.
 import 'dart:io';
 
 import 'package:flutter/material.dart';
