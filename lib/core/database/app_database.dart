@@ -172,8 +172,22 @@ class AppDatabase extends _$AppDatabase {
         //
         // From here there is one row per distinct question, holding its
         // latest state, with the attempt history in these two counters.
-        await m.addColumn(drillQuestions, drillQuestions.attemptCount);
-        await m.addColumn(drillQuestions, drillQuestions.wrongCount);
+        // Added only if they are not already there. A database that has
+        // been through a partial upgrade — and the migration test, which
+        // builds at the current schema and then rewinds user_version — can
+        // reach this with the columns present, and addColumn would throw.
+        final columns = await customSelect(
+          'PRAGMA table_info(drill_questions);',
+        ).get();
+        final existing = columns
+            .map((row) => row.data['name'] as String)
+            .toSet();
+        if (!existing.contains('attempt_count')) {
+          await m.addColumn(drillQuestions, drillQuestions.attemptCount);
+        }
+        if (!existing.contains('wrong_count')) {
+          await m.addColumn(drillQuestions, drillQuestions.wrongCount);
+        }
 
         await mergeDuplicateDrillQuestions();
       }

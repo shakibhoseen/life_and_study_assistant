@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
 import '../providers/adaptive_planner_provider.dart';
 
 class FocusTimerDialog extends ConsumerStatefulWidget {
@@ -120,32 +121,47 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
     final progress = _totalSeconds > 0
         ? (_totalSeconds - _remainingSeconds) / _totalSeconds
         : 0.0;
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(
+        FluentSpacing.xl,
+        FluentSpacing.xl,
+        FluentSpacing.xl,
+        0,
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.xl,
+        vertical: FluentSpacing.l,
+      ),
       title: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(FluentSpacing.s),
             decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.indigo.withValues(alpha: 0.25)
-                  : Colors.indigo.shade50,
-              shape: BoxShape.circle,
+              color: FluentLayer.subtle(Colors.indigo, brightness),
+              borderRadius: FluentRadius.controlBorder,
             ),
             child: const Icon(Icons.timer, color: Colors.indigo, size: 20),
           ),
-          const SizedBox(width: 8),
-          const Expanded(
+          const SizedBox(width: FluentSpacing.s),
+          Expanded(
             child: Text(
               'Micro-Focus Timer',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: FluentType.bodyStrong.copyWith(color: onSurface),
             ),
           ),
           IconButton(
@@ -160,34 +176,37 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
           children: [
             // Task info badge
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.s,
+              ),
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xFF1E293B)
                     : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: FluentRadius.cardBorder,
+                border: Border.all(
+                  color: FluentStroke.card(brightness),
+                  width: FluentStroke.width,
+                ),
               ),
               child: Column(
                 children: [
                   Text(
                     widget.taskTitle,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
+                    style: FluentType.bodyStrong.copyWith(color: onSurface),
                   ),
                   Text(
                     widget.subject,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white70 : Colors.black54,
+                    style: FluentType.caption.copyWith(
+                      color: onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: FluentSpacing.xl),
 
             if (!_isFinished) ...[
               // Circular Progress Timer
@@ -200,9 +219,7 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
                     child: CircularProgressIndicator(
                       value: progress,
                       strokeWidth: 8,
-                      backgroundColor: isDark
-                          ? Colors.white12
-                          : Colors.grey.shade200,
+                      backgroundColor: onSurface.withValues(alpha: 0.12),
                       valueColor: AlwaysStoppedAnimation(
                         _isRunning
                             ? (isDark ? const Color(0xFF818CF8) : Colors.indigo)
@@ -215,42 +232,44 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
                     children: [
                       Text(
                         _formatTime(_remainingSeconds),
-                        style: const TextStyle(
+                        style: FluentType.title.copyWith(
                           fontSize: 36,
-                          fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
+                          color: onSurface,
                         ),
                       ),
                       Text(
                         _isRunning ? 'Focusing...' : 'Ready to start',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : Colors.grey.shade600,
+                        style: FluentType.caption.copyWith(
+                          color: onSurface.withValues(alpha: 0.65),
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: FluentSpacing.xl),
 
               // Duration selector chips (if not running)
               if (!_isRunning) ...[
                 Wrap(
-                  spacing: 6,
+                  spacing: FluentSpacing.s,
                   children: [5, 10, 15, 25].map((m) {
                     final isSelected = _totalSeconds == m * 60;
                     return ChoiceChip(
                       label: Text(
                         '${m}m',
-                        style: TextStyle(
-                          fontSize: 11,
+                        style: FluentType.caption.copyWith(
                           color: isSelected
                               ? (isDark ? Colors.white : Colors.indigo.shade900)
-                              : (isDark ? Colors.white70 : Colors.black87),
+                              : onSurface.withValues(alpha: 0.65),
                         ),
                       ),
                       selected: isSelected,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                        side: FluentStroke.side(brightness),
+                      ),
                       selectedColor: isDark
                           ? const Color(0xFF3730A3)
                           : Colors.indigo.shade100,
@@ -259,7 +278,7 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: FluentSpacing.l),
               ],
 
               // Controls
@@ -271,6 +290,10 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.amber.shade800,
                         foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: FluentRadius.controlBorder,
+                        ),
                       ),
                       icon: const Icon(Icons.pause),
                       label: const Text('Pause'),
@@ -281,19 +304,25 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1E3A8A),
                         foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: FluentRadius.controlBorder,
+                        ),
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                          horizontal: FluentSpacing.xxl,
+                          vertical: FluentSpacing.m,
                         ),
                       ),
                       icon: const Icon(Icons.play_arrow),
-                      label: const Text(
+                      label: Text(
                         'Start Focus',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: FluentType.bodyStrong.copyWith(
+                          color: Colors.white,
+                        ),
                       ),
                       onPressed: _startTimer,
                     ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: FluentSpacing.s),
                   TextButton.icon(
                     icon: const Icon(Icons.refresh, size: 18),
                     label: const Text('Reset'),
@@ -304,16 +333,17 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
             ] else ...[
               // Celebration Screen
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(FluentSpacing.l),
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF064E3B).withValues(alpha: 0.3)
                       : Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
                     color: isDark
                         ? const Color(0xFF059669).withValues(alpha: 0.3)
                         : Colors.green.shade200,
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Column(
@@ -323,31 +353,32 @@ class _FocusTimerDialogState extends ConsumerState<FocusTimerDialog> {
                       color: Colors.green,
                       size: 54,
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
+                    const SizedBox(height: FluentSpacing.m),
+                    Text(
                       'অভিনন্দন! ফোকাস সেশন সমাপ্ত!',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      textAlign: TextAlign.center,
+                      style: FluentType.bodyStrong.copyWith(color: onSurface),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
                     Text(
                       'আজকের মাইক্রো-কমিটমেন্ট টাস্কটি স্বয়ংক্রিয়ভাবে সমাপ্ত (Completed ✓) মার্ক করা হয়েছে।',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                      style: FluentType.caption.copyWith(
+                        color: onSurface.withValues(alpha: 0.65),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade700,
                   foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                   minimumSize: const Size(double.infinity, 44),
                 ),
                 onPressed: () => Navigator.pop(context),

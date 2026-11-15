@@ -4,10 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../quiz/presentation/providers/drill_history_provider.dart';
 import '../../domain/models/mistake_folder.dart';
 import 'ai_mistake_explainer_sheet.dart';
+
+/// The status palette for this feature. One value each, picked to stay
+/// readable on both the light and the dark card surface.
+const Color _correctColor = Color(0xFF10B981); // green — the right answer
+const Color _wrongColor = Color(0xFFE11D48); // red — what was answered
+const Color _hintColor = Color(0xFFD97706); // amber — explanation / revisit
 
 class NightlyReviewModal extends ConsumerStatefulWidget {
   final List<DrillQuestion> questions;
@@ -82,22 +89,25 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.nightlight_round, color: Colors.amber, size: 20),
-            SizedBox(width: 8),
+            const Icon(Icons.nightlight_round, color: _hintColor, size: 20),
+            const SizedBox(width: FluentSpacing.s),
             Flexible(
               child: Text(
                 'রাতের ৫ মিনিটের রিভিশন',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: FluentType.bodyStrong.copyWith(
+                  fontSize: 16,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
             ),
           ],
@@ -118,6 +128,10 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
   }
 
   Widget _buildReviewCardView(bool isDark) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
     final total = widget.questions.length;
     final currentQ = widget.questions[_currentIndex];
     final progress = (_currentIndex + 1) / total;
@@ -135,7 +149,10 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
       children: [
         // Top Progress Header
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: FluentSpacing.xl,
+            vertical: FluentSpacing.m,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -147,9 +164,8 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                       'কার্ড ${_currentIndex + 1} / $total',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                      style: FluentType.bodyStrong.copyWith(
+                        color: onSurface,
                       ),
                     ),
                   ),
@@ -160,14 +176,18 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                         Flexible(
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
+                              horizontal: FluentSpacing.s,
+                              vertical: FluentSpacing.xxs,
                             ),
                             decoration: BoxDecoration(
-                              color: source.color.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
+                              color: FluentLayer.subtle(
+                                source.color,
+                                brightness,
+                              ),
+                              borderRadius: FluentRadius.controlBorder,
                               border: Border.all(
                                 color: source.color.withValues(alpha: 0.3),
+                                width: FluentStroke.width,
                               ),
                             ),
                             child: Row(
@@ -178,15 +198,14 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                                   size: 12,
                                   color: source.color,
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: FluentSpacing.xs),
                                 Flexible(
                                   child: Text(
                                     source.banglaLabel,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.bold,
+                                    style: FluentType.caption.copyWith(
+                                      fontWeight: FontWeight.w600,
                                       color: source.color,
                                     ),
                                   ),
@@ -200,18 +219,14 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: FluentSpacing.s),
               ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: FluentRadius.controlBorder,
                 child: LinearProgressIndicator(
                   value: progress,
-                  minHeight: 6,
-                  backgroundColor: isDark
-                      ? Colors.white12
-                      : Colors.grey.shade300,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF8B5CF6),
-                  ),
+                  minHeight: FluentSpacing.xs + 2,
+                  backgroundColor: onSurface.withValues(alpha: 0.12),
+                  valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
                 ),
               ),
             ],
@@ -221,15 +236,21 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
         // Main Review Flashcard Body
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            padding: const EdgeInsets.fromLTRB(
+              FluentSpacing.l,
+              FluentSpacing.xs,
+              FluentSpacing.l,
+              FluentSpacing.l,
+            ),
             child: Card(
-              elevation: 3,
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: FluentRadius.cardBorder,
+                side: FluentStroke.side(brightness),
               ),
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              color: scheme.surface,
               child: Padding(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(FluentSpacing.l),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -238,29 +259,30 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: FluentSpacing.s,
+                            vertical: FluentSpacing.xs,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.indigo.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            color: FluentLayer.subtle(
+                              scheme.primary,
+                              brightness,
+                            ),
+                            borderRadius: FluentRadius.controlBorder,
                           ),
                           child: Text(
                             currentQ.subject,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.indigo,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.primary,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: Text(
                             currentQ.topic,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.white70 : Colors.black87,
+                            style: FluentType.caption.copyWith(
+                              color: onSurface.withValues(alpha: 0.65),
                               fontWeight: FontWeight.w500,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -268,18 +290,17 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: FluentSpacing.l),
 
                     // Question Text
                     Text(
                       BengaliMathSanitizer.sanitize(currentQ.questionText),
-                      style: const TextStyle(
+                      style: FluentType.bodyStrong.copyWith(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        height: 1.45,
+                        color: onSurface,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: FluentSpacing.xl),
 
                     // Unrevealed state: Tap to reveal
                     if (!_isAnswerRevealed) ...[
@@ -288,42 +309,39 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(
-                            vertical: 24,
-                            horizontal: 16,
+                            vertical: FluentSpacing.xxl,
+                            horizontal: FluentSpacing.l,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF8B5CF6)
-                                .withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(14),
+                            color: FluentLayer.subtle(
+                              scheme.primary,
+                              brightness,
+                            ),
+                            borderRadius: FluentRadius.cardBorder,
                             border: Border.all(
-                              color: const Color(0xFF8B5CF6)
-                                  .withValues(alpha: 0.3),
-                              style: BorderStyle.solid,
-                              width: 1.5,
+                              color: scheme.primary.withValues(alpha: 0.3),
+                              width: FluentStroke.width,
                             ),
                           ),
-                          child: const Column(
+                          child: Column(
                             children: [
                               Icon(
                                 Icons.touch_app_rounded,
-                                color: Color(0xFF8B5CF6),
+                                color: scheme.primary,
                                 size: 36,
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: FluentSpacing.s),
                               Text(
                                 'ট্যাপ করে সঠিক উত্তর ও ব্যাখ্যা দেখুন',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: Color(0xFF8B5CF6),
+                                style: FluentType.bodyStrong.copyWith(
+                                  color: scheme.primary,
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: FluentSpacing.xs),
                               Text(
                                 'মনে মনে সঠিক উত্তরটি আগে ভাবুন',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey,
+                                style: FluentType.caption.copyWith(
+                                  color: onSurface.withValues(alpha: 0.65),
                                 ),
                               ),
                             ],
@@ -332,76 +350,80 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                       ),
                     ] else ...[
                       // Revealed State: Options comparison
-                      const Text(
+                      Text(
                         'অপশনসমূহ:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: onSurface.withValues(alpha: 0.65),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: FluentSpacing.s),
                       ...List.generate(options.length, (idx) {
                         final isCorrectOpt = idx == currentQ.correctIndex;
                         final isSelectedOpt = idx == currentQ.selectedIndex;
 
-                        Color optBg = isDark
-                            ? const Color(0xFF0F172A)
-                            : const Color(0xFFF1F5F9);
-                        Color optBorder = Colors.transparent;
+                        Color optBg = onSurface.withValues(alpha: 0.04);
+                        Color optBorder = FluentStroke.card(brightness);
                         Widget? trailingIcon;
 
                         if (isCorrectOpt) {
-                          optBg = Colors.green.withValues(alpha: 0.15);
-                          optBorder = Colors.green;
+                          optBg = FluentLayer.subtle(_correctColor, brightness);
+                          optBorder = _correctColor;
                           trailingIcon = const Icon(
                             Icons.check_circle,
-                            color: Colors.green,
+                            color: _correctColor,
                             size: 18,
                           );
                         } else if (isSelectedOpt) {
-                          optBg = Colors.red.withValues(alpha: 0.12);
-                          optBorder = Colors.redAccent;
+                          optBg = FluentLayer.subtle(_wrongColor, brightness);
+                          optBorder = _wrongColor;
                           trailingIcon = const Icon(
                             Icons.cancel,
-                            color: Colors.redAccent,
+                            color: _wrongColor,
                             size: 18,
                           );
                         }
 
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 6),
+                          margin: const EdgeInsets.only(
+                            bottom: FluentSpacing.s,
+                          ),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                            horizontal: FluentSpacing.m,
+                            vertical: FluentSpacing.s,
                           ),
                           decoration: BoxDecoration(
                             color: optBg,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: optBorder),
+                            borderRadius: FluentRadius.controlBorder,
+                            border: Border.all(
+                              color: optBorder,
+                              width: FluentStroke.width,
+                            ),
                           ),
                           child: Row(
                             children: [
                               Text(
                                 '${String.fromCharCode(65 + idx)}. ',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                                style: FluentType.bodyStrong.copyWith(
+                                  color: onSurface,
                                 ),
                               ),
                               Expanded(
                                 child: Text(
                                   BengaliMathSanitizer.sanitize(options[idx]),
-                                  style: TextStyle(
-                                    fontSize: 13,
+                                  style: FluentType.body.copyWith(
                                     fontWeight: isCorrectOpt
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
                                     color: isCorrectOpt
-                                        ? Colors.green.shade700
+                                        ? (isDark
+                                              ? Colors.green.shade200
+                                              : Colors.green.shade900)
                                         : (isSelectedOpt
-                                              ? Colors.red.shade700
-                                              : null),
+                                              ? (isDark
+                                                    ? Colors.red.shade200
+                                                    : Colors.red.shade900)
+                                              : onSurface),
                                   ),
                                 ),
                               ),
@@ -410,78 +432,83 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                           ),
                         );
                       }),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: FluentSpacing.m),
 
                       // Explanation box
                       if (currentQ.explanation.isNotEmpty) ...[
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(FluentSpacing.m),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
+                            color: FluentLayer.subtle(_hintColor, brightness),
+                            borderRadius: FluentRadius.cardBorder,
                             border: Border.all(
-                              color: Colors.amber.withValues(alpha: 0.3),
+                              color: _hintColor.withValues(alpha: 0.3),
+                              width: FluentStroke.width,
                             ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Row(
+                              Row(
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.lightbulb,
-                                    color: Colors.amber,
+                                    color: _hintColor,
                                     size: 16,
                                   ),
-                                  SizedBox(width: 6),
+                                  const SizedBox(width: FluentSpacing.s),
                                   Flexible(
                                     child: Text(
                                       'ব্যাখ্যা ও রুল:',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        color: Colors.amber,
+                                      style: FluentType.caption.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark
+                                            ? Colors.amber.shade300
+                                            : Colors.amber.shade900,
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: FluentSpacing.s),
                               Text(
                                 BengaliMathSanitizer.sanitize(
                                   currentQ.explanation,
                                 ),
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  height: 1.45,
+                                style: FluentType.body.copyWith(
+                                  color: onSurface,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: FluentSpacing.m),
                       ],
 
                       // AI Explainer button
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: FluentRadius.controlBorder,
+                            ),
+                          ),
                           onPressed: () =>
                               AiMistakeExplainerSheet.show(context, currentQ),
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.auto_awesome,
-                            size: 15,
-                            color: Color(0xFF8B5CF6),
+                            size: 16,
+                            color: scheme.primary,
                           ),
-                          label: const Text(
+                          label: Text(
                             'AI ভুল বিশ্লেষণ ও শর্টকাট',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: Color(0xFF8B5CF6),
-                              fontWeight: FontWeight.bold,
+                            style: FluentType.caption.copyWith(
+                              color: scheme.primary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -496,14 +523,13 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
 
         // Bottom Decision Action Buttons
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: FluentSpacing.l,
+            vertical: FluentSpacing.m,
+          ),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            border: Border(
-              top: BorderSide(
-                color: isDark ? Colors.white10 : Colors.grey.shade200,
-              ),
-            ),
+            color: scheme.surface,
+            border: Border(top: FluentStroke.side(brightness)),
           ),
           child: Row(
             children: [
@@ -511,39 +537,47 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    side: const BorderSide(color: Colors.redAccent),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    foregroundColor: _wrongColor,
+                    side: const BorderSide(
+                      color: _wrongColor,
+                      width: FluentStroke.width,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: FluentSpacing.m,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   onPressed: () => _handleAnswer(false),
                   icon: const Icon(Icons.close_rounded, size: 18),
-                  label: const Text(
+                  label: Text(
                     'এখনও ট্রিকি',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: FluentType.bodyStrong,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: FluentSpacing.m),
 
               // Mastered Button
               Expanded(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: _correctColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: FluentSpacing.m,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                   ),
                   onPressed: () => _handleAnswer(true),
                   icon: const Icon(Icons.check_circle_outline, size: 18),
-                  label: const Text(
+                  label: Text(
                     'আয়ত্তে এসেছে!',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: FluentType.bodyStrong,
                   ),
                 ),
               ),
@@ -555,40 +589,44 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
   }
 
   Widget _buildCompletionScreen(bool isDark) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28.0),
+        padding: const EdgeInsets.all(FluentSpacing.xxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(FluentSpacing.xl),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+                color: FluentLayer.subtle(_correctColor, brightness),
+                borderRadius: FluentRadius.cardBorder,
               ),
               child: const Icon(
                 Icons.emoji_events_rounded,
-                color: Colors.green,
+                color: _correctColor,
                 size: 64,
               ),
             ),
-            const SizedBox(height: 20),
-            const Text(
+            const SizedBox(height: FluentSpacing.xl),
+            Text(
               'দারুণ কাজ! আজকের রিভিশন শেষ! 🎉',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: FluentType.subtitle.copyWith(color: onSurface),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
             Text(
               'ঘুমানোর আগে ভুলগুলো রিভিশন দেওয়ার কারণে আপনার দীর্ঘমেয়াদি স্মৃতিশক্তি ও রিটেনশন বহুগুণ বৃদ্ধি পাবে।',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white70 : Colors.black54,
+              style: FluentType.body.copyWith(
+                color: onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: FluentSpacing.xxl),
 
             // Summary Pills
             Row(
@@ -597,37 +635,40 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
                 _buildSummaryStat(
                   'আয়ত্তে এসেছে',
                   '$_masteredCount টি',
-                  Colors.green,
+                  _correctColor,
                   Icons.check_circle,
                   isDark,
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: FluentSpacing.l),
                 _buildSummaryStat(
                   'পুনর্বার দেখবেন',
                   '$_stillTrickyCount টি',
-                  Colors.amber.shade800,
+                  _hintColor,
                   Icons.replay,
                   isDark,
                 ),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: FluentSpacing.xxl + FluentSpacing.s),
 
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: scheme.primary,
+                  foregroundColor: scheme.onPrimary,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: FluentSpacing.m,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
+                child: Text(
                   'Mistake Notebook এ ফিরে যান',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: FluentType.bodyStrong,
                 ),
               ),
             ),
@@ -644,12 +685,21 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
     IconData icon,
     bool isDark,
   ) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.l,
+        vertical: FluentSpacing.m,
+      ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        color: FluentLayer.subtle(color, theme.brightness),
+        borderRadius: FluentRadius.cardBorder,
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: FluentStroke.width,
+        ),
       ),
       child: Column(
         children: [
@@ -657,23 +707,21 @@ class _NightlyReviewModalState extends ConsumerState<NightlyReviewModal> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, color: color, size: 16),
-              const SizedBox(width: 6),
+              const SizedBox(width: FluentSpacing.s),
               Text(
                 value,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                style: FluentType.subtitle.copyWith(
                   fontSize: 18,
                   color: color,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: FluentSpacing.xs),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white60 : Colors.black54,
+            style: FluentType.caption.copyWith(
+              color: onSurface.withValues(alpha: 0.65),
             ),
           ),
         ],

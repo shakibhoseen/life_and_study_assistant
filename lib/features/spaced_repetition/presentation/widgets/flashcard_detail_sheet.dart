@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/flashcards/flashcard_service.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../providers/spaced_repetition_provider.dart';
 
@@ -50,7 +51,9 @@ class _FlashcardDetailSheetState extends ConsumerState<FlashcardDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final card = widget.card;
     final fromReview = card.reviewItemId != null;
 
@@ -60,121 +63,121 @@ class _FlashcardDetailSheetState extends ConsumerState<FlashcardDetailSheet> {
       ),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 10),
+            margin: const EdgeInsets.only(
+              top: FluentSpacing.s,
+              bottom: FluentSpacing.s,
+            ),
             width: 44,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade400,
-              borderRadius: BorderRadius.circular(2),
+              color: scheme.onSurface.withValues(alpha: 0.3),
+              borderRadius: FluentRadius.controlBorder,
             ),
           ),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+              padding: const EdgeInsets.fromLTRB(
+                FluentSpacing.xl,
+                FluentSpacing.xs,
+                FluentSpacing.xl,
+                FluentSpacing.l,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       const Text('🧠', style: TextStyle(fontSize: 17)),
-                      const SizedBox(width: 7),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Text(
                           [
                             card.subject,
                             if (card.topic.isNotEmpty) card.topic,
                           ].join(' · '),
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
                             letterSpacing: 0.3,
-                            color: isDark ? Colors.white54 : Colors.black45,
+                            color: scheme.onSurface.withValues(alpha: 0.65),
                           ),
                         ),
                       ),
                       if (fromReview)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
+                            horizontal: FluentSpacing.s,
+                            vertical: FluentSpacing.xxs,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.indigo.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: FluentRadius.controlBorder,
                           ),
-                          child: const Text(
+                          child: Text(
                             'রিভিশন',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
                               color: Colors.indigo,
                             ),
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: FluentSpacing.m),
 
                   // Shown in full: this is the whole reason the sheet exists.
                   SelectableText(
                     BengaliMathSanitizer.sanitize(card.title),
-                    style: TextStyle(
-                      fontSize: 17,
-                      height: 1.45,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black87,
+                    style: FluentType.subtitle.copyWith(
+                      color: scheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: FluentSpacing.m),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(13),
+                    padding: const EdgeInsets.all(FluentSpacing.m),
                     decoration: BoxDecoration(
                       color: isDark
                           ? const Color(0xFF0F172A)
                           : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: FluentRadius.cardBorder,
                     ),
                     child: SelectableText(
                       BengaliMathSanitizer.sanitize(card.content),
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        height: 1.65,
-                        color: isDark ? Colors.white70 : Colors.black87,
-                      ),
+                      style: FluentType.body.copyWith(color: scheme.onSurface),
                     ),
                   ),
                   if ((card.mnemonic ?? '').isNotEmpty) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: FluentSpacing.m),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(FluentSpacing.m),
                       decoration: BoxDecoration(
                         color: Colors.amber.withValues(
                           alpha: isDark ? 0.14 : 0.1,
                         ),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: FluentRadius.cardBorder,
                         border: Border.all(
                           color: Colors.amber.withValues(alpha: 0.35),
+                          width: FluentStroke.width,
                         ),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('💡', style: TextStyle(fontSize: 14)),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: FluentSpacing.s),
                           Expanded(
                             child: SelectableText(
                               BengaliMathSanitizer.sanitize(card.mnemonic!),
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                height: 1.55,
+                              style: FluentType.body.copyWith(
                                 color: isDark
                                     ? Colors.amber.shade100
                                     : Colors.brown.shade900,
@@ -191,7 +194,12 @@ class _FlashcardDetailSheetState extends ConsumerState<FlashcardDetailSheet> {
           ),
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+            padding: const EdgeInsets.fromLTRB(
+              FluentSpacing.l,
+              FluentSpacing.s,
+              FluentSpacing.l,
+              FluentSpacing.xl,
+            ),
             child: Row(
               children: [
                 IconButton(
@@ -210,7 +218,7 @@ class _FlashcardDetailSheetState extends ConsumerState<FlashcardDetailSheet> {
                   },
                   icon: const Icon(Icons.copy_outlined, size: 19),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: FluentSpacing.xs),
                 Expanded(
                   child: _recalled != null
                       ? Row(
@@ -225,7 +233,7 @@ class _FlashcardDetailSheetState extends ConsumerState<FlashcardDetailSheet> {
                                   ? Colors.green
                                   : Colors.orange.shade700,
                             ),
-                            const SizedBox(width: 7),
+                            const SizedBox(width: FluentSpacing.s),
                             Flexible(
                               child: Text(
                                 _recalled!
@@ -233,8 +241,7 @@ class _FlashcardDetailSheetState extends ConsumerState<FlashcardDetailSheet> {
                                           ? 'পরের রিভিশন পিছিয়ে দেওয়া হলো'
                                           : 'মনে রাখা হলো')
                                     : 'কালই আবার দেখাবে',
-                                style: TextStyle(
-                                  fontSize: 12.5,
+                                style: FluentType.caption.copyWith(
                                   color: _recalled!
                                       ? Colors.green
                                       : Colors.orange.shade700,
@@ -250,34 +257,39 @@ class _FlashcardDetailSheetState extends ConsumerState<FlashcardDetailSheet> {
                                 child: OutlinedButton.icon(
                                   onPressed: () => _grade(recalled: false),
                                   icon: const Icon(Icons.refresh, size: 17),
-                                  label: const Text(
-                                    'মনে নেই',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
+                                  label: Text('মনে নেই', style: FluentType.body),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: Colors.orange.shade800,
                                     side: BorderSide(
                                       color: Colors.orange.shade300,
+                                      width: FluentStroke.width,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          FluentRadius.controlBorder,
                                     ),
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 13,
+                                      vertical: FluentSpacing.m,
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: FluentSpacing.s),
                             ],
                             Expanded(
                               child: FilledButton.icon(
                                 onPressed: () => _grade(recalled: true),
                                 icon: const Icon(Icons.done, size: 18),
-                                label: const Text(
+                                label: Text(
                                   'মনে থাকবে',
-                                  style: TextStyle(fontSize: 13),
+                                  style: FluentType.body,
                                 ),
                                 style: FilledButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: FluentRadius.controlBorder,
+                                  ),
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 13,
+                                    vertical: FluentSpacing.m,
                                   ),
                                 ),
                               ),

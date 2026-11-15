@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../theme/fluent_tokens.dart';
 import '../utils/bengali_math_sanitizer.dart';
 
 /// The category of AI operation being performed.
@@ -351,7 +352,10 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
   // COMPACT INLINE VIEW (FOR CHAT BUBBLE / INLINE STATUS)
   // ========================================================
   Widget _buildCompact(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
     final step = _currentStep;
     final title =
         widget.customStatus ??
@@ -368,23 +372,16 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: FluentSpacing.m),
         constraints: const BoxConstraints(maxWidth: 420),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: FluentRadius.cardBorder,
           border: Border.all(
-            color: isDark
-                ? const Color(0xFF334155)
-                : Colors.indigo.withValues(alpha: 0.15),
+            color: FluentStroke.card(brightness),
+            width: FluentStroke.width,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: FluentElevation.card(brightness),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -392,7 +389,10 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.s,
+              ),
               child: Row(
                 children: [
                   // Animated pulsing icon
@@ -402,15 +402,15 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       end: 1.0,
                     ).animate(_pulseController),
                     child: Container(
-                      padding: const EdgeInsets.all(5),
+                      padding: const EdgeInsets.all(FluentSpacing.xs),
                       decoration: BoxDecoration(
-                        color: Colors.indigo.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
+                        color: FluentLayer.subtle(Colors.indigo, brightness),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                       child: Icon(step.icon, size: 14, color: Colors.indigo),
                     ),
                   ),
-                  const SizedBox(width: 9),
+                  const SizedBox(width: FluentSpacing.s),
 
                   // Animated step text
                   Expanded(
@@ -419,31 +419,30 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       child: Text(
                         title,
                         key: ValueKey<String>(title),
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: FluentType.caption.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : Colors.black87,
+                          color: onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: FluentSpacing.s),
 
                   // Live Token Badge, only while there is a figure for it.
                   if (tokensStr.isNotEmpty) ...[
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
+                      horizontal: FluentSpacing.xs,
+                      vertical: FluentSpacing.xxs,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
+                      color: FluentLayer.subtle(Colors.amber, brightness),
+                      borderRadius: FluentRadius.controlBorder,
                       border: Border.all(
                         color: Colors.amber.withValues(alpha: 0.3),
-                        width: 0.5,
+                        width: FluentStroke.width,
                       ),
                     ),
                     child: Row(
@@ -457,13 +456,12 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                             color: Colors.amber,
                           ),
                         ),
-                        const SizedBox(width: 2),
+                        const SizedBox(width: FluentSpacing.xxs),
                         Flexible(
                           child: Text(
                             tokensStr,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
                               color: Colors.amber,
                             ),
                             maxLines: 1,
@@ -473,25 +471,21 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       ],
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: FluentSpacing.xs),
                   ],
 
                   // Live Timer Badge
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
+                      horizontal: FluentSpacing.xs,
+                      vertical: FluentSpacing.xxs,
                     ),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.grey.shade800
-                          : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(6),
+                      color: onSurface.withValues(alpha: 0.06),
+                      borderRadius: FluentRadius.controlBorder,
                       border: Border.all(
-                        color: isDark
-                            ? Colors.grey.shade700
-                            : Colors.grey.shade300,
-                        width: 0.5,
+                        color: FluentStroke.card(brightness),
+                        width: FluentStroke.width,
                       ),
                     ),
                     child: Row(
@@ -500,16 +494,15 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                         Icon(
                           Icons.timer_outlined,
                           size: 11,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                          color: onSurface.withValues(alpha: 0.65),
                         ),
-                        const SizedBox(width: 3),
+                        const SizedBox(width: FluentSpacing.xs),
                         Flexible(
                           child: Text(
                             '$percentBn% • ${_formatElapsed()}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white70 : Colors.black87,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: onSurface,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -541,7 +534,10 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
   // MODAL / FULL SCREEN CARD VIEW (FOR OCR / SCANNER / DRILLS)
   // ========================================================
   Widget _buildModal(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
     final currentStep = _currentStep;
     final currentIdx = _currentStepIndex;
     final title = widget.customStatus ?? currentStep.title;
@@ -555,21 +551,16 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
 
     return Center(
       child: Container(
-        margin: const EdgeInsets.all(20),
-        padding: const EdgeInsets.all(22),
+        margin: const EdgeInsets.all(FluentSpacing.xl),
+        padding: const EdgeInsets.all(FluentSpacing.xl),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: FluentRadius.cardBorder,
           border: Border.all(
-            color: isDark ? const Color(0xFF334155) : Colors.grey.shade200,
+            color: FluentStroke.card(brightness),
+            width: FluentStroke.width,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          boxShadow: FluentElevation.flyout(brightness),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -589,19 +580,12 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6366F1).withValues(alpha: 0.4),
-                      blurRadius: 16,
-                      spreadRadius: 2,
-                    ),
-                  ],
+                  borderRadius: FluentRadius.controlBorder,
                 ),
                 child: Icon(currentStep.icon, color: Colors.white, size: 30),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: FluentSpacing.l),
 
             // Active step title
             AnimatedSwitcher(
@@ -610,38 +594,37 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                 title,
                 key: ValueKey<String>(title),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: FluentType.bodyStrong.copyWith(color: onSurface),
               ),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: FluentSpacing.xs),
 
             // Subtitle
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.white60 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                color: onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             // Live Stream Pulse & Token Badge Pill
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.xs,
+              ),
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xFF6366F1).withValues(alpha: 0.15)
                     : const Color(0xFFEEF2FF),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: FluentRadius.controlBorder,
                 border: Border.all(
                   color: isDark
                       ? const Color(0xFF6366F1).withValues(alpha: 0.35)
                       : const Color(0xFFC7D2FE),
-                  width: 0.8,
+                  width: FluentStroke.width,
                 ),
               ),
               child: Row(
@@ -660,28 +643,26 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  const Flexible(
+                  const SizedBox(width: FluentSpacing.s),
+                  Flexible(
                     child: Text(
                       'Gemini Live',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF6366F1),
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF6366F1),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 5),
+                  const SizedBox(width: FluentSpacing.xs),
                   Text(
                     '•',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white38 : Colors.black38,
+                    style: FluentType.caption.copyWith(
+                      color: onSurface.withValues(alpha: 0.45),
                     ),
                   ),
-                  const SizedBox(width: 5),
+                  const SizedBox(width: FluentSpacing.xs),
                   if (tokensStr.isNotEmpty) ...[
                     FadeTransition(
                       opacity: _pulseController,
@@ -691,13 +672,12 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                         color: Colors.amber,
                       ),
                     ),
-                    const SizedBox(width: 2),
+                    const SizedBox(width: FluentSpacing.xxs),
                     Flexible(
                       child: Text(
                         tokensStr,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
                           color: Colors.amber,
                         ),
                         maxLines: 1,
@@ -708,23 +688,21 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.m),
 
             // Progress bar + Percent + Timer row
             ClipRRect(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: FluentRadius.controlBorder,
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 8,
-                backgroundColor: isDark
-                    ? Colors.grey.shade800
-                    : Colors.grey.shade200,
+                backgroundColor: onSurface.withValues(alpha: 0.12),
                 valueColor: const AlwaysStoppedAnimation<Color>(
                   Color(0xFF6366F1),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -732,10 +710,9 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                 Flexible(
                   child: Text(
                     'অগ্রগতি: $percentBn%',
-                    style: const TextStyle(
-                      fontSize: 11.5,
+                    style: FluentType.caption.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF6366F1),
+                      color: const Color(0xFF6366F1),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -748,16 +725,15 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       Icon(
                         Icons.timer_outlined,
                         size: 13,
-                        color: isDark ? Colors.white60 : Colors.black54,
+                        color: onSurface.withValues(alpha: 0.65),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: FluentSpacing.xs),
                       Flexible(
                         child: Text(
                           'সময়: ${_formatElapsed()}',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white70 : Colors.black87,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -768,18 +744,20 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
 
             // Checklist of steps
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.m,
+              ),
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.2)
-                    : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
+                color: onSurface.withValues(alpha: 0.04),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
-                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                  color: FluentStroke.card(brightness),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Column(
@@ -800,7 +778,7 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       color: Colors.green,
                     );
                   } else if (isCurrent) {
-                    textColor = isDark ? Colors.white : const Color(0xFF4338CA);
+                    textColor = isDark ? onSurface : const Color(0xFF4338CA);
                     leadIcon = const SizedBox(
                       width: 12,
                       height: 12,
@@ -810,28 +788,29 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       ),
                     );
                   } else {
-                    textColor = isDark ? Colors.white38 : Colors.black38;
+                    textColor = onSurface.withValues(alpha: 0.45);
                     leadIcon = Icon(
                       Icons.radio_button_unchecked,
                       size: 14,
-                      color: isDark ? Colors.white24 : Colors.black26,
+                      color: onSurface.withValues(alpha: 0.3),
                     );
                   }
 
                   return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: FluentSpacing.xs,
+                    ),
                     child: Row(
                       children: [
                         leadIcon,
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FluentSpacing.s),
                         Expanded(
                           child: Text(
                             s.title,
-                            style: TextStyle(
-                              fontSize: 11,
+                            style: FluentType.caption.copyWith(
                               fontWeight: isCurrent
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                               color: textColor,
                             ),
                             maxLines: 1,
@@ -847,17 +826,18 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
 
             // Slow network note
             if (isSlow) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: FluentSpacing.m),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                  horizontal: FluentSpacing.m,
+                  vertical: FluentSpacing.s,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  color: FluentLayer.subtle(Colors.amber, brightness),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
                     color: Colors.amber.withValues(alpha: 0.3),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Row(
@@ -867,12 +847,11 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       size: 15,
                       color: Colors.amber,
                     ),
-                    const SizedBox(width: 6),
-                    const Expanded(
+                    const SizedBox(width: FluentSpacing.s),
+                    Expanded(
                       child: Text(
                         'ইন্টারনেট কিছুটা ধীরগতির হতে পারে, দয়া করে অপেক্ষা করুন...',
-                        style: TextStyle(
-                          fontSize: 10.5,
+                        style: FluentType.caption.copyWith(
                           fontWeight: FontWeight.w500,
                           color: Colors.amber,
                         ),
@@ -884,7 +863,7 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
             ],
 
             if (widget.onCancel != null) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: FluentSpacing.m),
               TextButton.icon(
                 onPressed: widget.onCancel,
                 style: TextButton.styleFrom(
@@ -894,7 +873,7 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                 icon: const Icon(Icons.close, size: 14),
                 label: const Text(
                   'বাতিল করুন',
-                  style: TextStyle(fontSize: 11.5),
+                  style: FluentType.caption,
                 ),
               ),
             ],

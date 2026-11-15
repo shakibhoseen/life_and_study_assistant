@@ -165,11 +165,7 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.analytics_outlined,
-                  color: scheme.primary,
-                  size: 20,
-                ),
+                Icon(Icons.analytics_outlined, color: scheme.primary, size: 20),
                 const SizedBox(width: FluentSpacing.s),
                 // Was an unconstrained Text + Spacer(): the title and the
                 // accuracy badge both demanded their full intrinsic width,
@@ -186,22 +182,26 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                   ),
                 ),
                 const SizedBox(width: FluentSpacing.s),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: FluentSpacing.s,
-                    vertical: FluentSpacing.xxs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: FluentLayer.subtle(accuracyColor, brightness),
-                    borderRadius: FluentRadius.controlBorder,
-                  ),
-                  child: Text(
-                    '${accuracy.toStringAsFixed(1)}% Accuracy',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: FluentType.caption.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: accuracyColor,
+                // Flexible too, not just the title: at a large text scale the
+                // badge alone is wider than what is left of a 320px row.
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xxs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: FluentLayer.subtle(accuracyColor, brightness),
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
+                    child: Text(
+                      '${accuracy.toStringAsFixed(1)}% Accuracy',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: accuracyColor,
+                      ),
                     ),
                   ),
                 ),
@@ -260,10 +260,7 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: FluentType.bodyStrong.copyWith(
-                fontSize: 16,
-                color: color,
-              ),
+              style: FluentType.bodyStrong.copyWith(fontSize: 16, color: color),
             ),
             const SizedBox(height: FluentSpacing.xxs),
             Text(
@@ -312,11 +309,15 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
               children: [
                 Text(
                   '${wrongQuestions.length} Mistakes to Master',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: FluentType.bodyStrong.copyWith(color: onAccent),
                 ),
                 const SizedBox(height: FluentSpacing.xxs),
                 Text(
                   'Practice your exact wrong questions until you get 100%!',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                   style: FluentType.caption.copyWith(
                     color: onAccent.withValues(alpha: 0.80),
                   ),
@@ -325,62 +326,66 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
             ),
           ),
           const SizedBox(width: FluentSpacing.s),
-          Column(
-            children: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: onAccent,
-                  foregroundColor: scheme.primary,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: FluentSpacing.m,
-                    vertical: FluentSpacing.xs + 2,
+          Flexible(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: onAccent,
+                    foregroundColor: scheme.primary,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.m,
+                      vertical: FluentSpacing.xs + 2,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
+                    visualDensity: VisualDensity.compact,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: FluentRadius.controlBorder,
-                  ),
-                  visualDensity: VisualDensity.compact,
-                ),
-                onPressed: () => widget.onStartMistakeBankDrill(wrongQuestions),
-                child: Text(
-                  'Drill Now',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: FluentType.caption.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: FluentSpacing.xs),
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: onAccent,
-                  side: BorderSide(color: onAccent.withValues(alpha: 0.55)),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: FluentSpacing.m,
-                    vertical: FluentSpacing.xs,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: FluentRadius.controlBorder,
-                  ),
-                  visualDensity: VisualDensity.compact,
-                ),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const MistakeNotebookScreen(),
+                  onPressed: () =>
+                      widget.onStartMistakeBankDrill(wrongQuestions),
+                  child: Text(
+                    'Drill Now',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-                child: Text(
-                  'Notebook 📓',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: FluentType.caption.copyWith(
-                    fontWeight: FontWeight.w600,
+                const SizedBox(height: FluentSpacing.xs),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: onAccent,
+                    side: BorderSide(color: onAccent.withValues(alpha: 0.55)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.m,
+                      vertical: FluentSpacing.xs,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MistakeNotebookScreen(),
+                    ),
+                  ),
+                  child: Text(
+                    'Notebook 📓',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -400,9 +405,7 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
     return Container(
       padding: const EdgeInsets.all(FluentSpacing.xs),
       decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.onSurface.withValues(alpha: 0.04),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
         borderRadius: FluentRadius.controlBorder,
         border: Border.all(
           color: FluentStroke.card(brightness),
@@ -947,9 +950,8 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
               Icon(
                 Icons.history_toggle_off,
                 size: 64,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.35),
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.35),
               ),
               const SizedBox(height: FluentSpacing.m),
               Text(
@@ -965,9 +967,8 @@ class _MistakeBankAndHubTabState extends ConsumerState<MistakeBankAndHubTab> {
                 'Start a drill from Weak Topics or AI Mentor to test your skills!',
                 textAlign: TextAlign.center,
                 style: FluentType.caption.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.65),
+                  color: Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.65),
                 ),
               ),
             ],

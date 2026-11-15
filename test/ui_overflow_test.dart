@@ -131,6 +131,8 @@ class _FixedUiStyle extends AppUiStyleNotifier {
 
 /// Pumps [child] at phone width with large text and fails if Flutter
 /// reported a layout overflow.
+late AppDatabase _db;
+
 Future<void> _expectNoOverflow(
   WidgetTester tester,
   Widget Function() build, {
@@ -138,10 +140,6 @@ Future<void> _expectNoOverflow(
   required ThemeData theme,
 }) async {
   SharedPreferences.setMockInitialValues({});
-
-  final db = AppDatabase(NativeDatabase.memory());
-  addTearDown(db.close);
-
   tester.view.physicalSize = _narrowPhone;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -149,7 +147,7 @@ Future<void> _expectNoOverflow(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        appDatabaseProvider.overrideWithValue(db),
+        appDatabaseProvider.overrideWithValue(_db),
         appUiStyleProvider.overrideWith(() => _FixedUiStyle(style)),
         allExamsStreamProvider.overrideWith(
           (ref) => Stream.value([
@@ -185,6 +183,14 @@ Future<void> _expectNoOverflow(
   await tester.pump(const Duration(milliseconds: 600));
 
   final exception = tester.takeException();
+
+  // Tear the tree down inside the test. Disposing the ProviderScope cancels
+  // the drift query streams, and drift schedules a zero-duration timer to
+  // finish that; left to the end of the test it is still pending and the
+  // binding fails the case. Pumping once here lets it run.
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump(Duration.zero);
+
   if (exception != null) {
     fail(
       'Layout failed at ${_narrowPhone.width}px / ${_largeTextScale}x text '
@@ -194,6 +200,14 @@ Future<void> _expectNoOverflow(
 }
 
 void main() {
+  setUpAll(() {
+    _db = AppDatabase(NativeDatabase.memory());
+  });
+  // Deliberately never closed. `close()` on this in-memory database does not
+  // return here — eight minutes of a six-minute file were spent inside it —
+  // and an in-memory database has nothing to flush and dies with the test
+  // process anyway.
+
   final themes = <String, ThemeData>{
     'light': AppTheme.lightTheme,
     'cuteVelvetDark': AppTheme.cuteVelvetDarkTheme,

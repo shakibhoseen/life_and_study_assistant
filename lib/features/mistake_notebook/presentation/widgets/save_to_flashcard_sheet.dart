@@ -6,7 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../spaced_repetition/presentation/providers/spaced_repetition_provider.dart';
+
+/// The "correct / success" status colour for this feature. Readable on both
+/// the light and the dark card surface.
+const Color _successColor = Color(0xFF10B981);
 
 class SaveToFlashcardSheet extends ConsumerStatefulWidget {
   final DrillQuestion question;
@@ -146,15 +151,31 @@ class _SaveToFlashcardSheetState extends ConsumerState<SaveToFlashcardSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
+    final onSurface = scheme.onSurface;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111827) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: scheme.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
+        border: Border(
+          top: FluentStroke.side(brightness),
+          left: FluentStroke.side(brightness),
+          right: FluentStroke.side(brightness),
+        ),
       ),
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomInset),
+      padding: EdgeInsets.fromLTRB(
+        FluentSpacing.xl,
+        FluentSpacing.m,
+        FluentSpacing.xl,
+        FluentSpacing.xl + bottomInset,
+      ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -165,9 +186,9 @@ class _SaveToFlashcardSheetState extends ConsumerState<SaveToFlashcardSheet> {
               child: Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
+                margin: const EdgeInsets.only(bottom: FluentSpacing.l),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.grey.shade300,
+                  color: onSurface.withValues(alpha: 0.24),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -177,34 +198,33 @@ class _SaveToFlashcardSheetState extends ConsumerState<SaveToFlashcardSheet> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(FluentSpacing.s),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    color: FluentLayer.subtle(scheme.primary, brightness),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.style_rounded,
-                    color: Color(0xFF6366F1),
+                    color: scheme.primary,
                     size: 22,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'ফ্ল্যাশকার্ডে রূপান্তর',
-                        style: TextStyle(
+                        style: FluentType.bodyStrong.copyWith(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          color: onSurface,
                         ),
                       ),
                       Text(
                         'ভুল প্রশ্নের স্পেসড রিপিটেশন মেমোরি কার্ড',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                        style: FluentType.caption.copyWith(
+                          color: onSurface.withValues(alpha: 0.65),
                         ),
                       ),
                     ],
@@ -212,23 +232,27 @@ class _SaveToFlashcardSheetState extends ConsumerState<SaveToFlashcardSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
 
             // Subject & Topic Badge
             Wrap(
-              spacing: 8,
+              spacing: FluentSpacing.s,
               children: [
                 Chip(
                   label: Text(
                     widget.question.subject,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  backgroundColor: isDark
-                      ? Colors.indigo.withValues(alpha: 0.25)
-                      : Colors.indigo.shade50,
+                  backgroundColor: FluentLayer.subtle(
+                    scheme.primary,
+                    brightness,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                   side: BorderSide.none,
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
@@ -236,134 +260,145 @@ class _SaveToFlashcardSheetState extends ConsumerState<SaveToFlashcardSheet> {
                 Chip(
                   label: Text(
                     widget.question.topic,
-                    style: const TextStyle(fontSize: 11),
+                    style: FluentType.caption.copyWith(
+                      color: onSurface.withValues(alpha: 0.65),
+                    ),
                   ),
-                  backgroundColor: isDark
-                      ? Colors.white10
-                      : Colors.grey.shade100,
+                  backgroundColor: onSurface.withValues(alpha: 0.06),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                   side: BorderSide.none,
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.m),
 
             // Front (প্রশ্ন) Field
             Text(
               'কার্ডের সম্মুখভাগ (প্রশ্ন / Front):',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white70 : Colors.black87,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.xs),
             TextField(
               controller: _titleController,
               maxLines: 3,
-              style: const TextStyle(fontSize: 13),
+              style: FluentType.body.copyWith(color: onSurface),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: isDark
-                    ? const Color(0xFF1E293B)
-                    : const Color(0xFFF8FAFC),
+                fillColor: onSurface.withValues(alpha: isDark ? 0.06 : 0.03),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: isDark ? Colors.white12 : Colors.grey.shade300,
-                  ),
+                  borderRadius: FluentRadius.controlBorder,
+                  borderSide: FluentStroke.side(brightness),
                 ),
-                contentPadding: const EdgeInsets.all(12),
+                contentPadding: const EdgeInsets.all(FluentSpacing.m),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
 
             // Back (উত্তর ও ব্যাখ্যা) Field
             Text(
               'কার্ডের পেছনভাগ (উত্তর ও নিয়ম / Back):',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white70 : Colors.black87,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.xs),
             TextField(
               controller: _ruleController,
               maxLines: 4,
-              style: const TextStyle(fontSize: 13),
+              style: FluentType.body.copyWith(color: onSurface),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: isDark
-                    ? const Color(0xFF1E293B)
-                    : const Color(0xFFF8FAFC),
+                fillColor: onSurface.withValues(alpha: isDark ? 0.06 : 0.03),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: isDark ? Colors.white12 : Colors.grey.shade300,
-                  ),
+                  borderRadius: FluentRadius.controlBorder,
+                  borderSide: FluentStroke.side(brightness),
                 ),
-                contentPadding: const EdgeInsets.all(12),
+                contentPadding: const EdgeInsets.all(FluentSpacing.m),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.l),
 
             // Info note
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
-                color: const Color(0xFF10B981)
-                    .withValues(alpha: isDark ? 0.15 : 0.08),
-                borderRadius: BorderRadius.circular(8),
+                color: FluentLayer.subtle(_successColor, brightness),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                  color: _successColor.withValues(alpha: 0.3),
+                  width: FluentStroke.width,
                 ),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Color(0xFF10B981)),
-                  SizedBox(width: 8),
+                  const Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: _successColor,
+                  ),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       'জিরো টোকেন খরচ: এটি লোকাল মেমোরি কার্ডে সংরক্ষিত হবে এবং কাল ১ম রিভিশন আসবে।',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF10B981),
-                        fontWeight: FontWeight.w500,
+                      style: FluentType.caption.copyWith(
+                        color: _successColor,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: FluentSpacing.xl),
 
             // Action Buttons
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.m,
+                      ),
+                      side: FluentStroke.side(brightness),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                    ),
                     onPressed: _isSaving ? null : () => Navigator.pop(context),
                     child: const Text('বাতিল'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: FluentSpacing.m),
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6366F1),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.m,
+                      ),
                     ),
                     onPressed: _isSaving ? null : _handleSave,
                     icon: _isSaving
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
+                        ? SizedBox(
+                            width: FluentSpacing.l,
+                            height: FluentSpacing.l,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: scheme.onPrimary,
                             ),
                           )
                         : const Icon(Icons.bookmark_add_rounded, size: 18),

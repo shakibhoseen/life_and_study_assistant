@@ -12,6 +12,27 @@ import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/
 import 'package:life_and_study_assistant/features/settings/presentation/providers/settings_provider.dart';
 import 'package:life_and_study_assistant/features/settings/presentation/screens/settings_screen.dart';
 
+/// How light a colour reads once it is actually painted, 0 to 1.
+///
+/// Composited over the dark scaffold first, because the Fluent surfaces are
+/// translucent — `onSurface` at 8% is a near-white value whose own luminance
+/// says nothing about what the user sees.
+///
+/// These tests are about contrast in dark mode, so the widget-level checks
+/// assert on this rather than on a literal hex. The Fluent migration moved
+/// those plates and labels from hardcoded shades onto `colorScheme`, which
+/// is the point — pinning the old hex would mean re-editing this file after
+/// every palette change while still not checking the thing that matters.
+/// The palette itself is pinned, literally, in the theme-definition group
+/// above, which is where a literal belongs.
+double _paintedLuminance(Color? c) {
+  expect(c, isNotNull, reason: 'the colour under test was not set at all');
+  return Color.alphaBlend(
+    c!,
+    AppTheme.darkTheme.scaffoldBackgroundColor,
+  ).computeLuminance();
+}
+
 class _MockSettingsNotifier extends SettingsNotifier {
   final SettingsState _initial;
   _MockSettingsNotifier(this._initial);
@@ -144,13 +165,21 @@ void main() {
           find.byType(ActionChip),
         );
         expect(actionChips.isNotEmpty, isTrue);
-        expect(actionChips.first.backgroundColor, const Color(0xFF1E293B));
+        expect(
+          _paintedLuminance(actionChips.first.backgroundColor),
+          lessThan(0.2),
+          reason: 'a quick-prompt chip must stay a dark plate in dark mode',
+        );
 
         // Verify TextField has dark fill color
         final textFields = tester.widgetList<TextField>(find.byType(TextField));
         expect(textFields.isNotEmpty, isTrue);
         final decoration = textFields.first.decoration;
-        expect(decoration?.fillColor, const Color(0xFF1E293B));
+        expect(
+          _paintedLuminance(decoration?.fillColor),
+          lessThan(0.2),
+          reason: 'the input bar must stay a dark field in dark mode',
+        );
       },
     );
 
@@ -206,14 +235,22 @@ void main() {
         // Search field is present with dark theme text styling
         expect(find.byType(TextField), findsOneWidget);
         final searchField = tester.widget<TextField>(find.byType(TextField));
-        expect(searchField.style?.color, Colors.white);
+        expect(
+          _paintedLuminance(searchField.style?.color),
+          greaterThan(0.7),
+          reason: 'search text must stay light against the dark field',
+        );
 
         // ChoiceChips in track bar have dark styling
         final choiceChips = tester.widgetList<ChoiceChip>(
           find.byType(ChoiceChip),
         );
         expect(choiceChips.isNotEmpty, isTrue);
-        expect(choiceChips.first.backgroundColor, const Color(0xFF1E293B));
+        expect(
+          _paintedLuminance(choiceChips.first.backgroundColor),
+          lessThan(0.2),
+          reason: 'an unselected track chip must stay a dark plate',
+        );
       },
     );
   });

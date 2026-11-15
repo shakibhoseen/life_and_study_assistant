@@ -186,6 +186,6 @@ void main() {
   });
 
   test('the schema is at the version whose migration cleans the old rows', () {
-    expect(db.schemaVersion, 14);
+    expect(db.schemaVersion, 15);
   });
 }

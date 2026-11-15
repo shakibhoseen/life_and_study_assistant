@@ -87,13 +87,18 @@ void main() {
 
     // Two rows whose key was changed by the old code, which left the grade
     // behind: one where the user had in fact picked the new answer, one not.
-    Future<int> insert(int correct, int selected) => db
+    // Each row needs its own question text. Schema 15 keeps one row per
+    // distinct question, so three rows sharing one would be folded into one
+    // on the way up and there would be nothing left to assert on. The text
+    // is incidental here — this is about the re-grade, which keys off
+    // corrected_at and the indices.
+    Future<int> insert(String question, int correct, int selected) => db
         .into(db.drillQuestions)
         .insert(
           DrillQuestionsCompanion.insert(
             subject: 'Bangladesh Affairs',
             topic: 'জাতীয় প্রতীক',
-            questionText: 'প্রশ্ন?',
+            questionText: question,
             optionsJson: jsonEncode(['ক', 'খ', 'গ']),
             correctIndex: correct,
             selectedIndex: selected,
@@ -101,9 +106,9 @@ void main() {
           ),
         );
 
-    final vindicated = await insert(1, 1);
-    final stillWrong = await insert(1, 2);
-    final untouched = await insert(1, 1);
+    final vindicated = await insert('প্রশ্ন ১?', 1, 1);
+    final stillWrong = await insert('প্রশ্ন ২?', 1, 2);
+    final untouched = await insert('প্রশ্ন ৩?', 1, 1);
 
     await db.customStatement(
       'UPDATE drill_questions SET corrected_at = 1 WHERE id IN '

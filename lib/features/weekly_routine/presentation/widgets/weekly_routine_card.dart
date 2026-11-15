@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../domain/models/weekly_routine.dart';
 import '../providers/weekly_routine_provider.dart';
 
@@ -12,17 +13,23 @@ class WeeklyRoutineCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final routineAsync = ref.watch(weeklyRoutineProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
 
     return routineAsync.maybeWhen(
       data: (routine) => Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: FluentRadius.cardBorder,
+          side: FluentStroke.side(brightness),
+        ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: FluentRadius.cardBorder,
           onTap: () => WeeklyRoutineSheet.show(context),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(FluentSpacing.l),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -35,13 +42,12 @@ class WeeklyRoutineCard extends ConsumerWidget {
                           ? Colors.teal.shade200
                           : Colors.teal.shade700,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Text(
                         routine.title,
-                        style: const TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.bold,
+                        style: FluentType.bodyStrong.copyWith(
+                          color: onSurface,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -49,28 +55,26 @@ class WeeklyRoutineCard extends ConsumerWidget {
                     Icon(
                       Icons.chevron_right,
                       size: 20,
-                      color: isDark ? Colors.white38 : Colors.black38,
+                      color: onSurface.withValues(alpha: 0.45),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                  spacing: FluentSpacing.s,
+                  runSpacing: FluentSpacing.s,
                   children: routine.days
                       .map((d) => _DayChip(day: d, isDark: isDark))
                       .toList(),
                 ),
                 if (routine.principle.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: FluentSpacing.m),
                   Text(
                     routine.principle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      height: 1.5,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                    style: FluentType.caption.copyWith(
+                      color: onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                 ],
@@ -92,20 +96,23 @@ class _DayChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     final accent = day.isOffDay
         ? (isDark ? Colors.teal.shade200 : Colors.teal.shade700)
-        : (isDark ? Colors.white70 : Colors.black87);
+        : onSurface.withValues(alpha: 0.65);
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 150),
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.s,
+        vertical: FluentSpacing.s,
+      ),
       decoration: BoxDecoration(
         color: day.isOffDay
-            ? (isDark
-                  ? Colors.teal.withValues(alpha: 0.16)
-                  : Colors.teal.withValues(alpha: 0.08))
-            : (isDark ? Colors.white10 : Colors.grey.shade100),
-        borderRadius: BorderRadius.circular(8),
+            ? FluentLayer.subtle(Colors.teal, theme.brightness)
+            : onSurface.withValues(alpha: 0.06),
+        borderRadius: FluentRadius.controlBorder,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,9 +120,8 @@ class _DayChip extends StatelessWidget {
         children: [
           Text(
             day.day,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.bold,
+            style: FluentType.caption.copyWith(
+              fontWeight: FontWeight.w600,
               color: accent,
             ),
           ),
@@ -123,11 +129,7 @@ class _DayChip extends StatelessWidget {
             day.focus,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11.5,
-              height: 1.35,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
+            style: FluentType.caption.copyWith(color: onSurface),
           ),
         ],
       ),
@@ -144,6 +146,11 @@ class WeeklyRoutineSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(FluentRadius.large),
+        ),
+      ),
       builder: (_) => const WeeklyRoutineSheet(),
     );
   }
@@ -178,7 +185,9 @@ class _WeeklyRoutineSheetState extends ConsumerState<WeeklyRoutineSheet> {
   Widget build(BuildContext context) {
     final routineAsync = ref.watch(weeklyRoutineProvider);
     final state = ref.watch(weeklyRoutineNotifierProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -193,16 +202,20 @@ class _WeeklyRoutineSheetState extends ConsumerState<WeeklyRoutineSheet> {
             Expanded(
               child: ListView(
                 controller: scrollController,
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+                padding: const EdgeInsets.fromLTRB(
+                  FluentSpacing.l,
+                  FluentSpacing.l,
+                  FluentSpacing.l,
+                  FluentSpacing.s,
+                ),
                 children: [
                   Row(
                     children: [
                       Expanded(
                         child: Text(
                           routine.title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                          style: FluentType.subtitle.copyWith(
+                            color: onSurface,
                           ),
                         ),
                       ),
@@ -215,7 +228,7 @@ class _WeeklyRoutineSheetState extends ConsumerState<WeeklyRoutineSheet> {
                         icon: const Icon(Icons.restart_alt, size: 16),
                         label: const Text(
                           'ডিফল্ট',
-                          style: TextStyle(fontSize: 12.5),
+                          style: FluentType.caption,
                         ),
                       ),
                     ],
@@ -223,28 +236,25 @@ class _WeeklyRoutineSheetState extends ConsumerState<WeeklyRoutineSheet> {
                   if (routine.principle.isNotEmpty)
                     Text(
                       routine.principle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.55,
-                        color: isDark ? Colors.white70 : Colors.black54,
+                      style: FluentType.body.copyWith(
+                        color: onSurface.withValues(alpha: 0.65),
                       ),
                     ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: FluentSpacing.xl),
                   _SectionLabel('কর্মদিবসের জানালা', isDark: isDark),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: FluentSpacing.s),
                   ...routine.windows.map((w) => _WindowTile(w, isDark: isDark)),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: FluentSpacing.xl),
                   _SectionLabel('সপ্তাহ', isDark: isDark),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: FluentSpacing.s),
                   ...routine.days.map((d) => _DayRow(d, isDark: isDark)),
                   if (routine.lastCommand != null) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: FluentSpacing.l),
                     Text(
                       'সর্বশেষ নির্দেশ: "${routine.lastCommand}"',
-                      style: TextStyle(
-                        fontSize: 11.5,
+                      style: FluentType.caption.copyWith(
                         fontStyle: FontStyle.italic,
-                        color: isDark ? Colors.white38 : Colors.black45,
+                        color: onSurface.withValues(alpha: 0.45),
                       ),
                     ),
                   ],
@@ -274,9 +284,8 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: TextStyle(
-      fontSize: 11,
-      fontWeight: FontWeight.bold,
+    style: FluentType.caption.copyWith(
+      fontWeight: FontWeight.w600,
       letterSpacing: 0.6,
       color: isDark ? Colors.teal.shade200 : Colors.teal.shade700,
     ),
@@ -290,13 +299,20 @@ class _WindowTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: FluentSpacing.s),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(FluentSpacing.m),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white10 : Colors.amber.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
+          color: FluentLayer.subtle(Colors.amber, theme.brightness),
+          borderRadius: FluentRadius.cardBorder,
+          border: Border.all(
+            color: FluentStroke.card(theme.brightness),
+            width: FluentStroke.width,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,43 +322,35 @@ class _WindowTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     window.label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                       color: isDark
                           ? Colors.amber.shade200
                           : Colors.amber.shade900,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Text(
                   window.time,
-                  style: TextStyle(
-                    fontSize: 11.5,
+                  style: FluentType.caption.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white70 : Colors.black54,
+                    color: onSurface.withValues(alpha: 0.65),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               window.activity,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                height: 1.4,
-              ),
+              style: FluentType.bodyStrong.copyWith(color: onSurface),
             ),
             if (window.note.isNotEmpty) ...[
-              const SizedBox(height: 3),
+              const SizedBox(height: FluentSpacing.xxs),
               Text(
                 window.note,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.5,
-                  color: isDark ? Colors.white60 : Colors.black54,
+                style: FluentType.caption.copyWith(
+                  color: onSurface.withValues(alpha: 0.65),
                 ),
               ),
             ],
@@ -360,8 +368,10 @@ class _DayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
+      padding: const EdgeInsets.symmetric(vertical: FluentSpacing.s),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -369,12 +379,11 @@ class _DayRow extends StatelessWidget {
             width: 62,
             child: Text(
               day.day,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.bold,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
                 color: day.isOffDay
                     ? (isDark ? Colors.teal.shade200 : Colors.teal.shade700)
-                    : (isDark ? Colors.white60 : Colors.black54),
+                    : onSurface.withValues(alpha: 0.65),
               ),
             ),
           ),
@@ -384,14 +393,13 @@ class _DayRow extends StatelessWidget {
               children: [
                 Text(
                   day.focus,
-                  style: const TextStyle(fontSize: 13.5, height: 1.4),
+                  style: FluentType.body.copyWith(color: onSurface),
                 ),
                 if (day.note.isNotEmpty)
                   Text(
                     day.note,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.white38 : Colors.black45,
+                    style: FluentType.caption.copyWith(
+                      color: onSurface.withValues(alpha: 0.45),
                     ),
                   ),
               ],
@@ -422,17 +430,21 @@ class _CommandBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
-        14,
-        10,
-        14,
-        10 + MediaQuery.of(context).viewInsets.bottom,
+        FluentSpacing.l,
+        FluentSpacing.m,
+        FluentSpacing.l,
+        FluentSpacing.m + MediaQuery.of(context).viewInsets.bottom,
       ),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: isDark ? Colors.white12 : Colors.grey.shade200,
+            color: FluentStroke.divider(theme.brightness),
+            width: FluentStroke.width,
           ),
         ),
       ),
@@ -441,10 +453,12 @@ class _CommandBar extends StatelessWidget {
         children: [
           if (errorMessage != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: FluentSpacing.s),
               child: Text(
                 errorMessage!,
-                style: const TextStyle(fontSize: 12, color: Colors.redAccent),
+                style: FluentType.caption.copyWith(
+                  color: theme.colorScheme.error,
+                ),
               ),
             ),
           SizedBox(
@@ -452,17 +466,23 @@ class _CommandBar extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: suggestions.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 6),
+              separatorBuilder: (_, _) => const SizedBox(
+                width: FluentSpacing.s,
+              ),
               itemBuilder: (context, i) => ActionChip(
                 label: Text(
                   suggestions[i],
-                  style: const TextStyle(fontSize: 11.5),
+                  style: FluentType.caption.copyWith(color: onSurface),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                  side: FluentStroke.side(theme.brightness),
                 ),
                 onPressed: isRevising ? null : () => onSend(suggestions[i]),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           Row(
             children: [
               Expanded(
@@ -473,17 +493,21 @@ class _CommandBar extends StatelessWidget {
                   onSubmitted: isRevising ? null : onSend,
                   decoration: const InputDecoration(
                     hintText: 'ছকটা কীভাবে বদলাতে চান?',
-                    hintStyle: TextStyle(fontSize: 13.5),
-                    border: OutlineInputBorder(),
+                    hintStyle: FluentType.body,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(FluentRadius.control),
+                      ),
+                    ),
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 11,
+                      horizontal: FluentSpacing.m,
+                      vertical: FluentSpacing.m,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               IconButton.filled(
                 onPressed: isRevising ? null : () => onSend(controller.text),
                 icon: isRevising

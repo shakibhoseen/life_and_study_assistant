@@ -456,15 +456,20 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
       currentIdx = 0;
     }
 
+    final brightness = Theme.of(context).brightness;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Container(
-      margin: const EdgeInsets.only(top: 14),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(top: FluentSpacing.m),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
         color: isDark ? Colors.teal.shade900.withValues(alpha: 0.25) : const Color(0xFFF0FDFA),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
           color: isDark ? Colors.teal.withValues(alpha: 0.3) : const Color(0xFFCCFBF1),
+          width: FluentStroke.width,
         ),
+        boxShadow: FluentElevation.card(brightness),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,21 +480,26 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
               Row(
                 children: [
                   const Icon(Icons.lunch_dining_rounded, size: 16, color: Colors.teal),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: FluentSpacing.s),
                   Text(
                     'আজকের লাঞ্চ ট্র্যাকার: ${serving.bengaliStatusLabel}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: onSurface,
+                    ),
                   ),
                 ],
               ),
               if (serving.updatedAt != null && serving.updatedAt!.isNotEmpty)
                 Text(
                   serving.updatedAt!,
-                  style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54),
+                  style: FluentType.caption.copyWith(
+                    color: onSurface.withValues(alpha: 0.65),
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
           Row(
             children: List.generate(steps.length, (i) {
               final step = steps[i];
@@ -503,29 +513,33 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        borderRadius: FluentRadius.controlBorder,
                         color: isCurrent
                             ? Colors.teal
                             : (isDone
                                 ? Colors.teal.withValues(alpha: 0.3)
-                                : (isDark ? Colors.white10 : Colors.black12)),
-                        border: isCurrent ? Border.all(color: Colors.white, width: 2) : null,
+                                : onSurface.withValues(alpha: 0.08)),
+                        border: isCurrent
+                            ? Border.all(
+                                color: Colors.white,
+                                width: FluentStroke.width,
+                              )
+                            : null,
                       ),
                       child: Icon(
                         isDone ? Icons.check : step.icon,
                         size: 14,
                         color: isCurrent || isDone
                             ? Colors.white
-                            : (isDark ? Colors.white38 : Colors.black38),
+                            : onSurface.withValues(alpha: 0.45),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: FluentSpacing.xs),
                     Text(
                       step.label,
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                        color: isCurrent ? Colors.teal : (isDark ? Colors.white70 : Colors.black87),
+                      style: FluentType.caption.copyWith(
+                        fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                        color: isCurrent ? Colors.teal : onSurface,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -537,11 +551,10 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
             }),
           ),
           if (serving.message.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
             Text(
               serving.message,
-              style: TextStyle(
-                fontSize: 11,
+              style: FluentType.caption.copyWith(
                 fontStyle: FontStyle.italic,
                 color: isDark ? Colors.tealAccent.shade100 : Colors.teal.shade900,
               ),
@@ -640,12 +653,14 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
 
             if (state.isLoading && days.isEmpty)
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 36),
+                padding: EdgeInsets.symmetric(
+                  vertical: FluentSpacing.xxl + FluentSpacing.m,
+                ),
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (days.isEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
+                padding: const EdgeInsets.symmetric(vertical: FluentSpacing.xxl),
                 child: Center(
                   child: Column(
                     children: [

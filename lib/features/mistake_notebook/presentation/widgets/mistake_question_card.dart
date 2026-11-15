@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/ai/entity_ref.dart';
 import '../../../../core/services/ai/models/verification_mark.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../quiz/presentation/providers/drill_history_provider.dart';
 import '../../domain/models/mistake_folder.dart';
@@ -15,6 +16,13 @@ import 'ai_mistake_explainer_sheet.dart';
 import 'save_to_flashcard_sheet.dart';
 import 'edit_question_dialog.dart';
 import '../../../../core/database/database_provider.dart';
+
+/// The status palette for this feature. One value each, picked to stay
+/// readable on both the light and the dark card surface, so "right", "wrong"
+/// and "mastered" read the same wherever they appear.
+const Color _correctColor = Color(0xFF10B981); // green — the right answer
+const Color _wrongColor = Color(0xFFE11D48); // red — what was answered
+const Color _hintColor = Color(0xFFD97706); // amber — explanation / undo
 
 class MistakeQuestionCard extends ConsumerWidget {
   final DrillQuestion dq;
@@ -48,25 +56,30 @@ class MistakeQuestionCard extends ConsumerWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: FluentSpacing.s,
+        vertical: FluentSpacing.xxs,
+      ),
       decoration: BoxDecoration(
         color: colour.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colour.withValues(alpha: 0.3)),
+        borderRadius: FluentRadius.controlBorder,
+        border: Border.all(
+          color: colour.withValues(alpha: 0.3),
+          width: FluentStroke.width,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: colour),
-          const SizedBox(width: 4),
+          const SizedBox(width: FluentSpacing.xs),
           Flexible(
             child: Text(
               mark.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.bold,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
                 color: colour,
               ),
             ),
@@ -116,13 +129,21 @@ class MistakeQuestionCard extends ConsumerWidget {
         ? options[dq.correctIndex]
         : 'Unknown';
 
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+
     return Card(
-      elevation: 1.5,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
+      ),
+      color: scheme.surface,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(FluentSpacing.l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -135,52 +156,57 @@ class MistakeQuestionCard extends ConsumerWidget {
                       Flexible(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 3,
+                            horizontal: FluentSpacing.s,
+                            vertical: FluentSpacing.xxs,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.indigo.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
+                            color: FluentLayer.subtle(
+                              scheme.primary,
+                              brightness,
+                            ),
+                            borderRadius: FluentRadius.controlBorder,
                           ),
                           child: Text(
                             dq.subject,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.indigo,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.primary,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.xs),
                       Flexible(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                            horizontal: FluentSpacing.xs,
+                            vertical: FluentSpacing.xxs,
                           ),
                           decoration: BoxDecoration(
-                            color: source.color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
+                            color: FluentLayer.subtle(
+                              source.color,
+                              brightness,
+                            ),
+                            borderRadius: FluentRadius.controlBorder,
                             border: Border.all(
                               color: source.color.withValues(alpha: 0.25),
+                              width: FluentStroke.width,
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(source.icon, size: 11, color: source.color),
-                              const SizedBox(width: 3),
+                              Icon(source.icon, size: 12, color: source.color),
+                              const SizedBox(width: FluentSpacing.xs),
                               Flexible(
                                 child: Text(
                                   source.banglaLabel,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.bold,
+                                  style: FluentType.caption.copyWith(
+                                    fontWeight: FontWeight.w600,
                                     color: source.color,
                                   ),
                                 ),
@@ -193,34 +219,37 @@ class MistakeQuestionCard extends ConsumerWidget {
                   ),
                 ),
                 if (dq.isMastered) ...[
-                  const SizedBox(width: 6),
+                  const SizedBox(width: FluentSpacing.xs),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
+                      horizontal: FluentSpacing.xs,
+                      vertical: FluentSpacing.xxs,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
+                      color: FluentLayer.subtle(_correctColor, brightness),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, size: 12, color: Colors.green),
-                        SizedBox(width: 3),
+                        const Icon(
+                          Icons.check_circle,
+                          size: 12,
+                          color: _correctColor,
+                        ),
+                        const SizedBox(width: FluentSpacing.xs),
                         Text(
                           'আয়ত্তে এসেছে',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: _correctColor,
                           ),
                         ),
                       ],
                     ),
                   ),
                 ],
-                const SizedBox(width: 4),
+                const SizedBox(width: FluentSpacing.xs),
                 SizedBox(
                   width: 24,
                   height: 24,
@@ -230,7 +259,11 @@ class MistakeQuestionCard extends ConsumerWidget {
                     icon: Icon(
                       Icons.more_vert,
                       size: 18,
-                      color: isDark ? Colors.white70 : Colors.black54,
+                      color: onSurface.withValues(alpha: 0.65),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.cardBorder,
+                      side: FluentStroke.side(brightness),
                     ),
                     tooltip: 'Options',
                     onSelected: (val) {
@@ -270,10 +303,10 @@ class MistakeQuestionCard extends ConsumerWidget {
                               dq.isMastered ? Icons.replay : Icons.check_circle,
                               size: 16,
                               color: dq.isMastered
-                                  ? Colors.amber
-                                  : Colors.green,
+                                  ? _hintColor
+                                  : _correctColor,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: FluentSpacing.s),
                             Text(
                               dq.isMastered
                                   ? 'আবার ভুল হিসেবে রাখুন'
@@ -282,16 +315,16 @@ class MistakeQuestionCard extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'ai_explain',
                         child: Row(
                           children: [
                             Icon(
                               Icons.auto_awesome,
                               size: 16,
-                              color: Color(0xFF8B5CF6),
+                              color: scheme.primary,
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: FluentSpacing.s),
                             Text('AI ভুল বিশ্লেষণ ও শর্টকাট'),
                           ],
                         ),
@@ -300,12 +333,12 @@ class MistakeQuestionCard extends ConsumerWidget {
                         value: 'copy_ref',
                         child: Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.tag,
                               size: 16,
-                              color: Colors.blueGrey,
+                              color: onSurface.withValues(alpha: 0.65),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: FluentSpacing.s),
                             Text(
                               'আইডি কপি (${EntityRef(EntityKind.question, dq.id).tag})',
                             ),
@@ -320,7 +353,7 @@ class MistakeQuestionCard extends ConsumerWidget {
                         child: Row(
                           children: [
                             Icon(Icons.edit_outlined, size: 16),
-                            SizedBox(width: 8),
+                            SizedBox(width: FluentSpacing.s),
                             Text('নিজে সম্পাদনা করুন'),
                           ],
                         ),
@@ -332,12 +365,12 @@ class MistakeQuestionCard extends ConsumerWidget {
                             Icon(
                               Icons.delete_outline,
                               size: 16,
-                              color: Colors.red,
+                              color: _wrongColor,
                             ),
-                            SizedBox(width: 8),
+                            SizedBox(width: FluentSpacing.s),
                             Text(
                               'নোটবুক থেকে মুছুন',
-                              style: TextStyle(color: Colors.red),
+                              style: TextStyle(color: _wrongColor),
                             ),
                           ],
                         ),
@@ -347,47 +380,47 @@ class MistakeQuestionCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.s),
 
             // Topic name
             Text(
               'টপিক: ${dq.topic}',
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white60 : Colors.black54,
+              style: FluentType.caption.copyWith(
+                color: onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
 
             // Question Text
             Text(
               BengaliMathSanitizer.sanitize(dq.questionText),
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                height: 1.4,
-              ),
+              style: FluentType.bodyStrong.copyWith(color: onSurface),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.m),
 
             // User's wrong answer (Red)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.s,
+              ),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+                color: FluentLayer.subtle(_wrongColor, brightness),
+                borderRadius: FluentRadius.controlBorder,
+                border: Border.all(
+                  color: _wrongColor.withValues(alpha: 0.25),
+                  width: FluentStroke.width,
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.cancel, color: Colors.redAccent, size: 15),
-                  const SizedBox(width: 6),
+                  const Icon(Icons.cancel, color: _wrongColor, size: 16),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       'আপনার উত্তর: $userAns',
-                      style: TextStyle(
-                        fontSize: 11.5,
+                      style: FluentType.body.copyWith(
                         color: isDark
                             ? Colors.red.shade200
                             : Colors.red.shade900,
@@ -398,30 +431,39 @@ class MistakeQuestionCard extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.s),
 
             // Correct answer (Green)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.m,
+                vertical: FluentSpacing.s,
+              ),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.withValues(alpha: 0.25)),
+                color: FluentLayer.subtle(_correctColor, brightness),
+                borderRadius: FluentRadius.controlBorder,
+                border: Border.all(
+                  color: _correctColor.withValues(alpha: 0.25),
+                  width: FluentStroke.width,
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 15),
-                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.check_circle,
+                    color: _correctColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       'সঠিক উত্তর: $correctAns',
-                      style: TextStyle(
-                        fontSize: 11.5,
+                      style: FluentType.body.copyWith(
                         color: isDark
                             ? Colors.green.shade200
                             : Colors.green.shade900,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -430,15 +472,14 @@ class MistakeQuestionCard extends ConsumerWidget {
             ),
 
             if (dq.originalCorrectIndex != null) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: FluentSpacing.xs),
               Padding(
-                padding: const EdgeInsets.only(left: 4),
+                padding: const EdgeInsets.only(left: FluentSpacing.xs),
                 child: Text(
                   'পূর্বে সংরক্ষিত উত্তর ছিল: ${getOptionText(dq.originalOptionsJson ?? dq.optionsJson, dq.originalCorrectIndex!)}',
-                  style: TextStyle(
-                    fontSize: 10.5,
+                  style: FluentType.caption.copyWith(
                     fontStyle: FontStyle.italic,
-                    color: isDark ? Colors.white54 : Colors.black54,
+                    color: onSurface.withValues(alpha: 0.65),
                   ),
                 ),
               ),
@@ -446,17 +487,16 @@ class MistakeQuestionCard extends ConsumerWidget {
 
             // Explanation & Key rule
             if (dq.explanation.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: FluentSpacing.s),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1C2237)
-                      : Colors.amber.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
+                  color: FluentLayer.subtle(_hintColor, brightness),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
-                    color: Colors.amber.withValues(alpha: 0.25),
+                    color: _hintColor.withValues(alpha: 0.25),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Column(
@@ -466,18 +506,17 @@ class MistakeQuestionCard extends ConsumerWidget {
                       children: [
                         const Icon(
                           Icons.lightbulb_outline,
-                          size: 14,
-                          color: Colors.amber,
+                          size: 16,
+                          color: _hintColor,
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: FluentSpacing.xs),
                         Flexible(
                           child: Text(
                             'ব্যাখ্যা ও মনে রাখার ট্রিকস:',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
                               color: isDark
                                   ? Colors.amber.shade300
                                   : Colors.amber.shade900,
@@ -486,7 +525,7 @@ class MistakeQuestionCard extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: FluentSpacing.xs),
                     MarkdownBody(
                       data: BengaliMathSanitizer.sanitize(dq.explanation),
                       selectable: true,
@@ -494,17 +533,11 @@ class MistakeQuestionCard extends ConsumerWidget {
                           MarkdownStyleSheet.fromTheme(
                             Theme.of(context),
                           ).copyWith(
-                            p: TextStyle(
-                              fontSize: 11.5,
-                              height: 1.45,
-                              color: isDark ? Colors.white70 : Colors.black87,
-                            ),
-                            strong: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
+                            p: FluentType.body.copyWith(color: onSurface),
+                            strong: FluentType.bodyStrong.copyWith(
                               color: isDark
                                   ? Colors.amber.shade200
-                                  : const Color(0xFF0F172A),
+                                  : Colors.amber.shade900,
                             ),
                           ),
                     ),
@@ -512,13 +545,13 @@ class MistakeQuestionCard extends ConsumerWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: FluentSpacing.s),
 
             // Whether this answer has been checked, and by whom.
             Align(
               alignment: Alignment.centerLeft,
               child: InkWell(
-                borderRadius: BorderRadius.circular(5),
+                borderRadius: FluentRadius.controlBorder,
                 onTap: () {
                   final tag = EntityRef(EntityKind.question, dq.id).tag;
                   Clipboard.setData(ClipboardData(text: tag));
@@ -532,28 +565,27 @@ class MistakeQuestionCard extends ConsumerWidget {
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
+                    horizontal: FluentSpacing.xs,
+                    vertical: FluentSpacing.xxs,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.copy,
-                        size: 11,
-                        color: isDark ? Colors.white30 : Colors.black26,
+                        size: 12,
+                        color: onSurface.withValues(alpha: 0.45),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: FluentSpacing.xs),
                       Flexible(
                         child: Text(
                           EntityRef(EntityKind.question, dq.id).tag,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 10.5,
+                          style: FluentType.caption.copyWith(
                             fontFamily: 'monospace',
                             letterSpacing: 0.4,
-                            color: isDark ? Colors.white38 : Colors.black38,
+                            color: onSurface.withValues(alpha: 0.45),
                           ),
                         ),
                       ),
@@ -562,14 +594,14 @@ class MistakeQuestionCard extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
 
             if (VerificationMark.parse(dq.verificationStatus) !=
                 VerificationMark.none) ...[
               _buildVerificationBadge(
                 VerificationMark.parse(dq.verificationStatus),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: FluentSpacing.s),
             ],
 
             // Action Toolbar at Bottom of Card
@@ -579,48 +611,52 @@ class MistakeQuestionCard extends ConsumerWidget {
                 TextButton.icon(
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xs,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                     visualDensity: VisualDensity.compact,
                   ),
                   onPressed: () => AiMistakeExplainerSheet.show(context, dq),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.auto_awesome,
-                    size: 14,
-                    color: Color(0xFF8B5CF6),
+                    size: 16,
+                    color: scheme.primary,
                   ),
-                  label: const Text(
+                  label: Text(
                     'AI বিশ্লেষণ',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: Color(0xFF8B5CF6),
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: FluentSpacing.xs),
                 // Flashcard Save button (Zero token cost)
                 TextButton.icon(
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xs,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                     visualDensity: VisualDensity.compact,
                   ),
                   onPressed: () => SaveToFlashcardSheet.show(context, dq),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.style_outlined,
-                    size: 14,
-                    color: Color(0xFF6366F1),
+                    size: 16,
+                    color: onSurface.withValues(alpha: 0.65),
                   ),
-                  label: const Text(
+                  label: Text(
                     'ফ্ল্যাশকার্ড',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: Color(0xFF6366F1),
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      color: onSurface.withValues(alpha: 0.65),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -630,8 +666,11 @@ class MistakeQuestionCard extends ConsumerWidget {
                 TextButton.icon(
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xs,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
                     ),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -643,15 +682,14 @@ class MistakeQuestionCard extends ConsumerWidget {
                   },
                   icon: Icon(
                     dq.isMastered ? Icons.replay : Icons.check_circle_outline,
-                    size: 14,
-                    color: dq.isMastered ? Colors.amber : Colors.green,
+                    size: 16,
+                    color: dq.isMastered ? _hintColor : _correctColor,
                   ),
                   label: Text(
                     dq.isMastered ? 'আবার ভুল রাখুন' : 'আয়ত্তে এসেছে',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      color: dq.isMastered ? Colors.amber : Colors.green,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: dq.isMastered ? _hintColor : _correctColor,
                     ),
                   ),
                 ),

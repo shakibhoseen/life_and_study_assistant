@@ -448,7 +448,7 @@ class QuizBatchCorrectionSheet {
                                       text: TextSpan(
                                         style: DefaultTextStyle.of(context)
                                             .style
-                                            .copyWith(fontSize: 11.5),
+                                            .merge(FluentType.caption),
                                         children: [
                                           TextSpan(
                                             text: '"$phrase"',

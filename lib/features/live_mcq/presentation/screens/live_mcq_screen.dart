@@ -2576,10 +2576,9 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                 children: [
                   Text(
                     '${result.subject} • ${result.topic}',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF6366F1),
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -2602,7 +2601,7 @@ class _LiveMcqScreenState extends ConsumerState<LiveMcqScreen>
                   const SizedBox(height: 6),
                   Text(
                     '💡 ব্যাখ্যা: ${result.explanation}',
-                    style: const TextStyle(fontSize: 11.5),
+                    style: FluentType.caption,
                   ),
                 ],
               ),

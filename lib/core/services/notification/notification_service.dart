@@ -811,20 +811,28 @@ class NotificationService {
     }
   }
 
-  /// Cancels all scheduled morning watchdogs
+  /// Cancels all scheduled morning watchdogs.
+  ///
+  /// Best effort on purpose. This is called straight after a successful
+  /// check-in, and a punch that reached Packly must not be reported as
+  /// failed because a notification could not be withdrawn afterwards. The
+  /// worst case of swallowing it is a watchdog firing once for a user who
+  /// has already checked in; the worst case of letting it through is the
+  /// user believing they are not checked in when they are.
   Future<void> cancelMorningOfficeWatchdogs() async {
-    await _notificationsPlugin.cancel(
-      id: NotificationConstants.morningArrivalAlarm850,
-    );
-    await _notificationsPlugin.cancel(
-      id: NotificationConstants.morningCutoffAlarm900,
-    );
-    await _notificationsPlugin.cancel(
-      id: NotificationConstants.morningCutoffAlarm906,
-    );
-    await _notificationsPlugin.cancel(
-      id: NotificationConstants.morningCutoffAlarm912,
-    );
+    const ids = [
+      NotificationConstants.morningArrivalAlarm850,
+      NotificationConstants.morningCutoffAlarm900,
+      NotificationConstants.morningCutoffAlarm906,
+      NotificationConstants.morningCutoffAlarm912,
+    ];
+    for (final id in ids) {
+      try {
+        await _notificationsPlugin.cancel(id: id);
+      } catch (e) {
+        debugPrint('Could not cancel morning watchdog $id: $e');
+      }
+    }
     debugPrint('Morning office watchdogs cancelled.');
   }
 

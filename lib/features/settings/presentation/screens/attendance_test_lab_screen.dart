@@ -681,7 +681,7 @@ class _AttendanceTestLabScreenState
             children: [
               const Text(
                 'প্রতিটি নোটিফিকেশন চ্যানেলের জন্য আলাদা কাস্টম সাউন্ড টেস্ট করে শুনুন:',
-                style: TextStyle(fontSize: 11.5),
+                style: FluentType.caption,
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -767,7 +767,7 @@ class _AttendanceTestLabScreenState
             children: [
               const Text(
                 'অ্যান্ড্রয়েডের নোটিফিকেশন চ্যানেল, সাউন্ড পারমিশন ও ব্যাকগ্রাউন্ড অ্যাক্সেস স্ক্রিন ওপেন করুন:',
-                style: TextStyle(fontSize: 11.5),
+                style: FluentType.caption,
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -828,7 +828,7 @@ class _AttendanceTestLabScreenState
             children: [
               const Text(
                 'অ্যান্ড্রয়েড হোম স্ক্রিনের Microsoft Fluent 2 উইজেটের বিভিন্ন স্ট্যাটাস লাইভ টেস্ট করুন:',
-                style: TextStyle(fontSize: 11.5),
+                style: FluentType.caption,
               ),
               const SizedBox(height: 12),
               Wrap(

@@ -698,6 +698,7 @@ class _AiFlashcardGeneratorModalState
 
   Widget _buildImageTab(bool isDark) {
     final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -706,22 +707,24 @@ class _AiFlashcardGeneratorModalState
             padding: const EdgeInsets.all(FluentSpacing.l),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: FluentRadius.cardBorder,
               border: Border.all(
-                color: isDark ? Colors.white12 : Colors.grey.shade300,
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
+              boxShadow: FluentElevation.card(brightness),
             ),
             child: Column(
               children: [
                 if (_selectedImage != null) ...[
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: FluentRadius.cardBorder,
                     // contain, not cover: a page turned on its side must
                     // stay whole here rather than having its edges cut off.
                     child: Container(
                       height: 140,
                       width: double.infinity,
-                      color: isDark ? Colors.black26 : Colors.grey.shade200,
+                      color: scheme.surfaceContainerHighest,
                       child: Image.file(
                         _selectedImage!,
                         key: ValueKey(_selectedImage!.path),
@@ -732,26 +735,30 @@ class _AiFlashcardGeneratorModalState
                   const SizedBox(height: FluentSpacing.m),
                   Text(
                     'নির্বাচিত ছবি: ${_selectedImage!.path.split("/").last}',
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
+                    ),
                   ),
                   const SizedBox(height: FluentSpacing.m),
                 ] else ...[
-                  const Icon(
+                  Icon(
                     Icons.menu_book_rounded,
                     size: 44,
-                    color: Color(0xFF6366F1),
+                    color: scheme.primary,
                   ),
                   const SizedBox(height: FluentSpacing.s),
                   const Text(
                     'বইয়ের সূত্র বা নিয়মের পেজ স্ক্যান করুন',
                     style: FluentType.bodyStrong,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: FluentSpacing.xs),
-                  const Text(
+                  Text(
                     'খায়রুলস বেসিক ম্যাথ, এমপিথ্রি বা হ্যান্ডনোটের ছবি দিন',
-                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
+                    ),
                   ),
                   const SizedBox(height: FluentSpacing.l),
                 ],
@@ -816,9 +823,10 @@ class _AiFlashcardGeneratorModalState
               color: isDark
                   ? const Color(0xFF14532D).withValues(alpha: 0.35)
                   : const Color(0xFFECFDF5),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: FluentRadius.cardBorder,
               border: Border.all(
                 color: isDark ? Colors.green.shade900 : Colors.green.shade200,
+                width: FluentStroke.width,
               ),
             ),
             child: Column(
@@ -827,8 +835,7 @@ class _AiFlashcardGeneratorModalState
                 Text(
                   'যেকোনো ফরম্যাট চলবে — সাধারণ লেখা, টেবিল, নোট। '
                   'তবে JSON হলে ফোনেই পড়া হয়, কোনো টোকেন খরচ হয় না।',
-                  style: TextStyle(
-                    fontSize: 11.5,
+                  style: FluentType.caption.copyWith(
                     color: isDark
                         ? Colors.green.shade200
                         : Colors.green.shade900,
@@ -855,11 +862,13 @@ class _AiFlashcardGeneratorModalState
                     icon: const Icon(Icons.copy_all_rounded, size: 16),
                     label: const Text(
                       'বাইরের AI-এর জন্য প্রম্পট কপি করুন',
-                      style: TextStyle(fontSize: 12),
+                      style: FluentType.caption,
                     ),
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: FluentSpacing.xs),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: FluentSpacing.xs,
+                      ),
                     ),
                   ),
                 ),
@@ -926,6 +935,7 @@ class _AiFlashcardGeneratorModalState
 
   Widget _buildCardsPreview(bool isDark) {
     final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
     final cards = _generatedCards!;
     final selectedCount = cards.where((c) => c.isSelected).length;
 
@@ -938,9 +948,8 @@ class _AiFlashcardGeneratorModalState
             Expanded(
               child: Text(
                 'তৈরিকৃত কার্ড (${cards.length}টির মধ্যে $selectedCountটি নির্বাচিত)',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                style: FluentType.bodyStrong.copyWith(
+                  color: scheme.onSurface,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -961,7 +970,7 @@ class _AiFlashcardGeneratorModalState
                   },
                   child: const Text(
                     'সব নির্বাচন',
-                    style: TextStyle(fontSize: 11),
+                    style: FluentType.caption,
                   ),
                 ),
                 TextButton(
@@ -975,7 +984,7 @@ class _AiFlashcardGeneratorModalState
                   },
                   child: const Text(
                     'পুনরায় তৈরি',
-                    style: TextStyle(fontSize: 11),
+                    style: FluentType.caption,
                   ),
                 ),
               ],
@@ -994,13 +1003,14 @@ class _AiFlashcardGeneratorModalState
                 margin: const EdgeInsets.only(bottom: FluentSpacing.s),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
                     color: card.isSelected
-                        ? const Color(0xFF6366F1)
-                        : (isDark ? Colors.white12 : Colors.grey.shade300),
-                    width: card.isSelected ? 1.5 : 1,
+                        ? scheme.primary
+                        : FluentStroke.card(brightness),
+                    width: card.isSelected ? 1.5 : FluentStroke.width,
                   ),
+                  boxShadow: FluentElevation.card(brightness),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(FluentSpacing.m),
@@ -1009,7 +1019,7 @@ class _AiFlashcardGeneratorModalState
                     children: [
                       Checkbox(
                         value: card.isSelected,
-                        activeColor: const Color(0xFF6366F1),
+                        activeColor: scheme.primary,
                         visualDensity: VisualDensity.compact,
                         onChanged: (val) {
                           setState(() {
@@ -1028,20 +1038,22 @@ class _AiFlashcardGeneratorModalState
                                 Flexible(
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
+                                      horizontal: FluentSpacing.s,
+                                      vertical: FluentSpacing.xxs,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF6366F1)
-                                          .withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(6),
+                                      color: FluentLayer.subtle(
+                                        scheme.primary,
+                                        brightness,
+                                      ),
+                                      borderRadius:
+                                          FluentRadius.controlBorder,
                                     ),
                                     child: Text(
                                       '${card.subject} • ${card.topic}',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF6366F1),
+                                      style: FluentType.caption.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: scheme.primary,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -1069,8 +1081,8 @@ class _AiFlashcardGeneratorModalState
                                 Flexible(
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
-                                      vertical: 2,
+                                      horizontal: FluentSpacing.s,
+                                      vertical: FluentSpacing.xxs,
                                     ),
                                     decoration: BoxDecoration(
                                       color: switch (card.priority) {
@@ -1078,13 +1090,13 @@ class _AiFlashcardGeneratorModalState
                                         CardPriority.medium => Colors.blueGrey,
                                         CardPriority.low => Colors.grey,
                                       }.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(20),
+                                      borderRadius:
+                                          FluentRadius.controlBorder,
                                     ),
                                     child: Text(
                                       card.priority.label,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
+                                      style: FluentType.caption.copyWith(
+                                        fontWeight: FontWeight.w600,
                                         color: switch (card.priority) {
                                           CardPriority.high => Colors.green,
                                           CardPriority.medium => Colors.blueGrey,
@@ -1101,12 +1113,10 @@ class _AiFlashcardGeneratorModalState
                                   Expanded(
                                     child: Text(
                                       card.why!,
-                                      style: TextStyle(
-                                        fontSize: 10.5,
-                                        height: 1.35,
-                                        color: isDark
-                                            ? Colors.white54
-                                            : Colors.black54,
+                                      style: FluentType.caption.copyWith(
+                                        color: scheme.onSurface.withValues(
+                                          alpha: 0.65,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -1118,9 +1128,8 @@ class _AiFlashcardGeneratorModalState
                             // Front (Question / Concept)
                             Text(
                               'সামনে: ${card.front}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                              style: FluentType.bodyStrong.copyWith(
+                                color: scheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: FluentSpacing.s),
@@ -1133,13 +1142,11 @@ class _AiFlashcardGeneratorModalState
                                 color: isDark
                                     ? const Color(0xFF0F172A)
                                     : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: FluentRadius.cardBorder,
                               ),
                               child: Text(
                                 card.back,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  height: 1.4,
+                                style: FluentType.caption.copyWith(
                                   color: isDark
                                       ? Colors.indigo.shade200
                                       : Colors.indigo.shade900,

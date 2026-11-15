@@ -13,8 +13,19 @@ import '../../../../core/services/ai/models/mcq_verification.dart';
 import '../../../../core/services/ai/models/verification_mark.dart';
 import '../../../../core/services/ai/models/verification_result.dart';
 import '../../../../core/services/ai/gemini_ai_service.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../../core/widgets/ai_progress_pipeline_widget.dart';
+
+/// The status palette for this feature. One value each, picked to stay
+/// readable on both the light and the dark card surface.
+const Color _correctColor = Color(0xFF10B981); // green — the right answer
+const Color _wrongColor = Color(0xFFE11D48); // red — what was answered
+const Color _hintColor = Color(0xFFD97706); // amber — caution / explanation
+
+/// The dialog shape every confirm box in this sheet uses.
+RoundedRectangleBorder get _dialogShape =>
+    RoundedRectangleBorder(borderRadius: FluentRadius.cardBorder);
 
 class AiMistakeExplainerSheet extends ConsumerStatefulWidget {
   final DrillQuestion question;
@@ -262,13 +273,14 @@ class _AiMistakeExplainerSheetState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(
+        shape: _dialogShape,
+        title: Text(
           'পূর্বের অবস্থায় ফিরবেন?',
-          style: TextStyle(fontSize: 16),
+          style: FluentType.bodyStrong.copyWith(fontSize: 16),
         ),
-        content: const Text(
+        content: Text(
           'সংশোধনটি বাতিল করে প্রশ্ন এবং উত্তরকে এর মূল অবস্থায় ফিরিয়ে আনা হবে। আপনার পূর্বের প্রচেষ্টার ইতিহাস অপরিবর্তিত থাকবে।',
-          style: TextStyle(fontSize: 13.5),
+          style: FluentType.body,
         ),
         actions: [
           TextButton(
@@ -277,7 +289,12 @@ class _AiMistakeExplainerSheetState
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(
+              backgroundColor: _wrongColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: FluentRadius.controlBorder,
+              ),
+            ),
             child: const Text('হ্যাঁ, ফিরুন'),
           ),
         ],
@@ -324,10 +341,14 @@ class _AiMistakeExplainerSheetState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('প্রশ্নটি সরাবেন?', style: TextStyle(fontSize: 16)),
-        content: const Text(
+        shape: _dialogShape,
+        title: Text(
+          'প্রশ্নটি সরাবেন?',
+          style: FluentType.bodyStrong.copyWith(fontSize: 16),
+        ),
+        content: Text(
           'প্রশ্নটি ভুল নোটবুক থেকে স্থায়ীভাবে মুছে যাবে। এটি ফেরানো যাবে না।',
-          style: TextStyle(fontSize: 13.5),
+          style: FluentType.body,
         ),
         actions: [
           TextButton(
@@ -336,7 +357,12 @@ class _AiMistakeExplainerSheetState
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(
+              backgroundColor: _wrongColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: FluentRadius.controlBorder,
+              ),
+            ),
             child: const Text('মুছে ফেলুন'),
           ),
         ],
@@ -460,7 +486,11 @@ class _AiMistakeExplainerSheetState
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('প্রশ্ন সম্পাদনা', style: TextStyle(fontSize: 16)),
+          shape: _dialogShape,
+          title: Text(
+            'প্রশ্ন সম্পাদনা',
+            style: FluentType.bodyStrong.copyWith(fontSize: 16),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -469,31 +499,37 @@ class _AiMistakeExplainerSheetState
                 TextField(
                   controller: questionCtrl,
                   maxLines: null,
-                  style: const TextStyle(fontSize: 13.5),
-                  decoration: const InputDecoration(
+                  style: FluentType.body,
+                  decoration: InputDecoration(
                     labelText: 'প্রশ্ন',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
                     isDense: true,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: FluentSpacing.l),
                 TextField(
                   controller: explanationCtrl,
                   maxLines: null,
                   minLines: 2,
-                  style: const TextStyle(fontSize: 13),
-                  decoration: const InputDecoration(
+                  style: FluentType.body,
+                  decoration: InputDecoration(
                     labelText: 'ব্যাখ্যা',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
                     isDense: true,
                   ),
                 ),
-                const SizedBox(height: 14),
-                const Text(
+                const SizedBox(height: FluentSpacing.l),
+                Text(
                   'অপশন (রেডিওতে সঠিকটি বেছে নিন)',
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: FluentSpacing.xs),
                 RadioGroup<int>(
                   groupValue: chosen,
                   onChanged: (v) => setLocal(() => chosen = v ?? chosen),
@@ -502,7 +538,7 @@ class _AiMistakeExplainerSheetState
                     children: [
                       for (var i = 0; i < optionCtrls.length; i++)
                         Padding(
-                          padding: const EdgeInsets.only(top: 6),
+                          padding: const EdgeInsets.only(top: FluentSpacing.s),
                           child: Row(
                             children: [
                               Radio<int>(
@@ -512,10 +548,12 @@ class _AiMistakeExplainerSheetState
                               Expanded(
                                 child: TextField(
                                   controller: optionCtrls[i],
-                                  style: const TextStyle(fontSize: 13),
+                                  style: FluentType.body,
                                   decoration: InputDecoration(
                                     labelText: 'অপশন $i',
-                                    border: const OutlineInputBorder(),
+                                    border: OutlineInputBorder(
+                                      borderRadius: FluentRadius.controlBorder,
+                                    ),
                                     isDense: true,
                                   ),
                                 ),
@@ -629,6 +667,10 @@ class _AiMistakeExplainerSheetState
       return const SizedBox.shrink();
     }
 
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final onSurface = theme.colorScheme.onSurface;
+
     String origText = '(অজানা)';
     if (_originalCorrectIndex != null) {
       final opts = _originalOptions ?? _options;
@@ -644,15 +686,14 @@ class _AiMistakeExplainerSheetState
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: FluentSpacing.l),
+      padding: const EdgeInsets.all(FluentSpacing.m),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(10),
+        color: FluentLayer.subtle(_hintColor, brightness),
+        borderRadius: FluentRadius.cardBorder,
         border: Border.all(
-          color: isDark
-              ? Colors.amber.shade700.withValues(alpha: 0.3)
-              : Colors.amber.shade300,
+          color: _hintColor.withValues(alpha: 0.3),
+          width: FluentStroke.width,
         ),
       ),
       child: Column(
@@ -660,18 +701,13 @@ class _AiMistakeExplainerSheetState
         children: [
           Row(
             children: [
-              Icon(
-                Icons.history,
-                size: 16,
-                color: isDark ? Colors.amber.shade300 : Colors.amber.shade800,
-              ),
-              const SizedBox(width: 6),
+              const Icon(Icons.history, size: 16, color: _hintColor),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   'প্রশ্নটিতে পূর্বে সংশোধন প্রয়োগ করা হয়েছে',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
                     color: isDark
                         ? Colors.amber.shade200
                         : Colors.amber.shade900,
@@ -681,46 +717,50 @@ class _AiMistakeExplainerSheetState
               if (_correctedAt != null)
                 Text(
                   '${_correctedAt!.day}/${_correctedAt!.month}/${_correctedAt!.year}',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    color: isDark ? Colors.white38 : Colors.black45,
+                  style: FluentType.caption.copyWith(
+                    color: onSurface.withValues(alpha: 0.45),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           if (_originalCorrectIndex != null) ...[
             _buildAnswerLine('মূল উত্তর ছিল', origText, isDark, false),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
           ],
           _buildAnswerLine('বর্তমান উত্তর', currentText, isDark, true),
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
                   'আপনার পছন্দ ও পরীক্ষার ইতিহাস অপরিবর্তিত আছে',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? Colors.white54 : Colors.black54,
+                  style: FluentType.caption.copyWith(
+                    color: onSurface.withValues(alpha: 0.65),
                   ),
                 ),
               ),
               OutlinedButton.icon(
                 onPressed: _revertCorrection,
-                icon: const Icon(Icons.undo, size: 13),
-                label: const Text(
+                icon: const Icon(Icons.undo, size: 14),
+                label: Text(
                   'পূর্বের অবস্থায় ফিরুন',
-                  style: TextStyle(fontSize: 11.5),
+                  style: FluentType.caption,
                 ),
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
-                  foregroundColor: Colors.redAccent,
-                  side: const BorderSide(color: Colors.redAccent),
+                  foregroundColor: _wrongColor,
+                  side: const BorderSide(
+                    color: _wrongColor,
+                    width: FluentStroke.width,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
                   ),
                 ),
               ),
@@ -732,6 +772,10 @@ class _AiMistakeExplainerSheetState
   }
 
   Widget _buildVerificationSection(bool isDark) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
     final result = _verification;
 
     if (result == null) {
@@ -747,24 +791,20 @@ class _AiMistakeExplainerSheetState
             if (hasMark) ...[
               _buildMarkChip(isDark),
               if ((_markNote ?? '').isNotEmpty) ...[
-                const SizedBox(height: 7),
+                const SizedBox(height: FluentSpacing.s),
                 SelectableText(
                   _markNote!,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    height: 1.5,
-                    color: isDark ? Colors.white70 : Colors.black87,
-                  ),
+                  style: FluentType.body.copyWith(color: onSurface),
                 ),
               ],
-              const SizedBox(height: 9),
+              const SizedBox(height: FluentSpacing.s),
             ],
             OutlinedButton.icon(
               onPressed: _isVerifying ? null : _verify,
               icon: _isVerifying
                   ? const SizedBox(
-                      width: 14,
-                      height: 14,
+                      width: FluentSpacing.l,
+                      height: FluentSpacing.l,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.fact_check_outlined, size: 16),
@@ -777,56 +817,58 @@ class _AiMistakeExplainerSheetState
               ),
               style: OutlinedButton.styleFrom(
                 visualDensity: VisualDensity.compact,
+                side: FluentStroke.side(brightness),
+                shape: RoundedRectangleBorder(
+                  borderRadius: FluentRadius.controlBorder,
+                ),
               ),
             ),
             if (hasMark && _mark != VerificationMark.userVerified)
               Padding(
-                padding: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.only(top: FluentSpacing.xs),
                 child: TextButton.icon(
                   onPressed: _markVerifiedByUser,
                   icon: const Icon(Icons.how_to_reg_outlined, size: 16),
-                  label: const Text(
+                  label: Text(
                     'আমি নিশ্চিত করছি',
-                    style: TextStyle(fontSize: 12.5),
+                    style: FluentType.body,
                   ),
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FluentSpacing.s,
+                    ),
                   ),
                 ),
               ),
             if (_verifyFailed)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: FluentSpacing.s),
                 child: Text(
                   'যাচাই করা গেল না। API key বা ইন্টারনেট দেখুন।',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.redAccent.shade200,
-                  ),
+                  style: FluentType.caption.copyWith(color: _wrongColor),
                 ),
               ),
             // An edit clears the old verdict, so this is the only place left
             // to confirm that the edit was saved.
             if (_questionEdited)
               Padding(
-                padding: const EdgeInsets.only(top: 10),
+                padding: const EdgeInsets.only(top: FluentSpacing.m),
                 child: Row(
                   children: [
                     const Icon(
                       Icons.check_circle,
-                      size: 15,
-                      color: Colors.green,
+                      size: 16,
+                      color: _correctColor,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Text(
                         'প্রশ্নটি সংরক্ষিত হয়েছে। আপনার পুরনো উত্তর ও ফলাফল অপরিবর্তিত আছে।',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          height: 1.45,
-                          color: isDark ? Colors.white70 : Colors.black87,
-                        ),
+                        style: FluentType.body.copyWith(color: onSurface),
                       ),
                     ),
                   ],
@@ -840,13 +882,13 @@ class _AiMistakeExplainerSheetState
     // Green is reserved for something actually settled. Agreement between two
     // models is two opinions, and reads as grey.
     final (accent, icon) = switch (result.verdict) {
-      VerificationVerdict.supported => (Colors.green, Icons.verified_outlined),
+      VerificationVerdict.supported => (_correctColor, Icons.verified_outlined),
       VerificationVerdict.likelyIncorrect => (
-        Colors.redAccent,
+        _wrongColor,
         Icons.report_problem_outlined,
       ),
       VerificationVerdict.inconclusive => (
-        isDark ? Colors.white38 : Colors.black45,
+        onSurface.withValues(alpha: 0.45),
         result.agrees && result.solve.ambiguity == McqAmbiguity.none
             ? Icons.done_outlined
             : Icons.remove_circle_outline,
@@ -863,74 +905,66 @@ class _AiMistakeExplainerSheetState
         _buildCorrectionStatusBanner(isDark),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(13),
+          padding: const EdgeInsets.all(FluentSpacing.m),
           decoration: BoxDecoration(
-            color: accent.withValues(alpha: isDark ? 0.12 : 0.07),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: accent.withValues(alpha: 0.35)),
+            color: FluentLayer.subtle(accent, brightness),
+            borderRadius: FluentRadius.cardBorder,
+            border: Border.all(
+              color: accent.withValues(alpha: 0.35),
+              width: FluentStroke.width,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(icon, size: 17, color: accent),
-                  const SizedBox(width: 7),
+                  Icon(icon, size: 16, color: accent),
+                  const SizedBox(width: FluentSpacing.s),
                   Expanded(
                     child: Text(
                       headline,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.bold,
-                        color: accent,
-                      ),
+                      style: FluentType.bodyStrong.copyWith(color: accent),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: FluentSpacing.s),
               SelectableText(
                 result.solve.reasoning,
-                style: const TextStyle(fontSize: 13, height: 1.55),
+                style: FluentType.body.copyWith(color: onSurface),
               ),
               if (result.explanationCheck.outcome ==
                   MathCheckOutcome.fails) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: FluentSpacing.s),
                 Text(
                   '⚠ ব্যাখ্যার হিসাবে গরমিল: ${result.explanationCheck.detail}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.45,
-                    color: Colors.redAccent.shade200,
-                  ),
+                  style: FluentType.caption.copyWith(color: _wrongColor),
                 ),
               ],
               if (result.agrees && !result.independentlyVerified) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: FluentSpacing.s),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 6,
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.s,
                   ),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white10 : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(6),
+                    color: onSurface.withValues(alpha: 0.06),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.warning_amber_rounded,
-                        size: 14,
-                        color: Colors.amber.shade700,
+                        size: 16,
+                        color: _hintColor,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Text(
                           'মডেলের সম্মতি কোনো তথ্যগত প্রমাণ নয় (বহিঃস্থ উৎস যাচাই করা হয়নি)।',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? Colors.white70 : Colors.black87,
-                          ),
+                          style: FluentType.caption.copyWith(color: onSurface),
                         ),
                       ),
                     ],
@@ -940,14 +974,15 @@ class _AiMistakeExplainerSheetState
               if (result.hasProposal &&
                   !_correctionAccepted &&
                   !_proposalDismissed) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: FluentSpacing.m),
                 Container(
-                  padding: const EdgeInsets.all(11),
+                  padding: const EdgeInsets.all(FluentSpacing.m),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white10 : Colors.white,
-                    borderRadius: BorderRadius.circular(9),
+                    color: scheme.surface,
+                    borderRadius: FluentRadius.cardBorder,
                     border: Border.all(
-                      color: isDark ? Colors.white24 : Colors.grey.shade300,
+                      color: FluentStroke.card(brightness),
+                      width: FluentStroke.width,
                     ),
                   ),
                   child: Column(
@@ -955,48 +990,46 @@ class _AiMistakeExplainerSheetState
                     children: [
                       Text(
                         'সংশোধন প্রস্তাব',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
                           letterSpacing: 0.4,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                          color: onSurface.withValues(alpha: 0.65),
                         ),
                       ),
-                      const SizedBox(height: 7),
+                      const SizedBox(height: FluentSpacing.s),
                       _buildAnswerLine(
                         'বর্তমান উত্তর',
                         optionAt(result.storedIndex),
                         isDark,
                         false,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: FluentSpacing.xs),
                       _buildAnswerLine(
                         'প্রস্তাবিত উত্তর',
                         optionAt(result.proposedIndex!),
                         isDark,
                         true,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: FluentSpacing.s),
                       Row(
                         children: [
                           Icon(
                             Icons.info_outline,
                             size: 12,
-                            color: isDark ? Colors.white38 : Colors.black38,
+                            color: onSurface.withValues(alpha: 0.45),
                           ),
-                          const SizedBox(width: 5),
+                          const SizedBox(width: FluentSpacing.xs),
                           Expanded(
                             child: Text(
                               'প্রমাণের অবস্থা: ${result.independentlyVerified ? "যাচাই করা" : "উৎস পাওয়া যায়নি"}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark ? Colors.white38 : Colors.black45,
+                              style: FluentType.caption.copyWith(
+                                color: onSurface.withValues(alpha: 0.45),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: FluentSpacing.m),
                       Row(
                         children: [
                           Expanded(
@@ -1006,24 +1039,31 @@ class _AiMistakeExplainerSheetState
                               },
                               style: OutlinedButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
+                                side: FluentStroke.side(brightness),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: FluentRadius.controlBorder,
+                                ),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'আগেরটাই রাখুন',
-                                style: TextStyle(fontSize: 12.5),
+                                style: FluentType.body,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: FluentSpacing.s),
                           Expanded(
                             child: FilledButton(
                               onPressed: () =>
                                   _acceptCorrection(result.proposedIndex!),
                               style: FilledButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: FluentRadius.controlBorder,
+                                ),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'সংশোধন গ্রহণ',
-                                style: TextStyle(fontSize: 12.5),
+                                style: FluentType.body,
                               ),
                             ),
                           ),
@@ -1034,34 +1074,32 @@ class _AiMistakeExplainerSheetState
                 ),
               ],
               if (_proposalDismissed && !_correctionAccepted) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
+                    horizontal: FluentSpacing.m,
+                    vertical: FluentSpacing.s,
                   ),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white10 : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
+                    color: onSurface.withValues(alpha: 0.06),
+                    borderRadius: FluentRadius.controlBorder,
                     border: Border.all(
-                      color: isDark ? Colors.white12 : Colors.grey.shade300,
+                      color: FluentStroke.card(brightness),
+                      width: FluentStroke.width,
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.info_outline,
-                        size: 14,
-                        color: isDark ? Colors.white60 : Colors.black54,
+                        size: 16,
+                        color: onSurface.withValues(alpha: 0.65),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: Text(
                           'সংশোধন প্রস্তাব বাতিল করা হয়েছে। সংরক্ষিত উত্তরটি অপরিবর্তিত রাখা হয়েছে।',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: isDark ? Colors.white70 : Colors.black87,
-                          ),
+                          style: FluentType.body.copyWith(color: onSurface),
                         ),
                       ),
                     ],
@@ -1069,95 +1107,89 @@ class _AiMistakeExplainerSheetState
                 ),
               ],
               if (_correctionAccepted) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 Row(
                   children: [
                     const Icon(
                       Icons.check_circle,
-                      size: 15,
-                      color: Colors.green,
+                      size: 16,
+                      color: _correctColor,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Text(
                         _nowScoredCorrect
                             ? 'সংশোধন সংরক্ষিত হয়েছে। আপনি আসলে সঠিক উত্তরই দিয়েছিলেন, তাই এটি আর ভুল হিসেবে গণ্য হবে না।'
                             : 'সংশোধন সংরক্ষিত হয়েছে। আপনি যা বেছেছিলেন তা অপরিবর্তিত আছে।',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          height: 1.45,
-                          color: isDark ? Colors.white70 : Colors.black87,
-                        ),
+                        style: FluentType.body.copyWith(color: onSurface),
                       ),
                     ),
                   ],
                 ),
               ],
               if (result.reviewerDissents) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(FluentSpacing.m),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(
-                      alpha: isDark ? 0.12 : 0.07,
-                    ),
-                    borderRadius: BorderRadius.circular(9),
+                    color: FluentLayer.subtle(_hintColor, brightness),
+                    borderRadius: FluentRadius.cardBorder,
                     border: Border.all(
-                      color: Colors.orange.withValues(alpha: 0.3),
+                      color: _hintColor.withValues(alpha: 0.3),
+                      width: FluentStroke.width,
                     ),
                   ),
                   child: Text(
                     'যাচাইকারী "${optionAt(result.dissentIndex!)}" বেছেছে, '
                     'কিন্তু আপনি নিজে "${optionAt(result.storedIndex)}" ঠিক করেছেন। '
                     'আপনার সিদ্ধান্তই রাখা হয়েছে — বদলাতে চাইলে নিজে সম্পাদনা করুন।',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      height: 1.45,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
+                    style: FluentType.body.copyWith(color: onSurface),
                   ),
                 ),
               ],
               if (_mark == VerificationMark.userVerified) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 _buildMarkChip(isDark),
               ] else ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: FluentSpacing.s),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
                     onPressed: _markVerifiedByUser,
                     icon: const Icon(Icons.how_to_reg_outlined, size: 16),
-                    label: const Text(
+                    label: Text(
                       'আমি নিশ্চিত করছি',
-                      style: TextStyle(fontSize: 12.5),
+                      style: FluentType.body,
                     ),
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: FluentSpacing.s,
+                      ),
                     ),
                   ),
                 ),
               ],
-              const SizedBox(height: 4),
+              const SizedBox(height: FluentSpacing.xs),
               _buildEvidenceSection(isDark),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.info_outline,
-                    size: 13,
-                    color: isDark ? Colors.white38 : Colors.black38,
+                    size: 12,
+                    color: onSurface.withValues(alpha: 0.45),
                   ),
-                  const SizedBox(width: 5),
+                  const SizedBox(width: FluentSpacing.xs),
                   Expanded(
                     child: Text(
                       result.limitations,
-                      style: TextStyle(
-                        fontSize: 11,
-                        height: 1.45,
-                        color: isDark ? Colors.white38 : Colors.black45,
+                      style: FluentType.caption.copyWith(
+                        color: onSurface.withValues(alpha: 0.45),
                       ),
                     ),
                   ),
@@ -1175,13 +1207,14 @@ class _AiMistakeExplainerSheetState
   /// The user's own mark gets the solid tick; a model agreeing gets a quieter
   /// one, because it is a second opinion rather than a guarantee.
   Widget _buildMarkChip(bool isDark) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     final (colour, icon) = switch (_mark) {
-      VerificationMark.userVerified => (Colors.green, Icons.verified),
+      VerificationMark.userVerified => (_correctColor, Icons.verified),
       VerificationMark.modelAgreed => (
-        isDark ? Colors.white54 : Colors.black45,
+        onSurface.withValues(alpha: 0.55),
         Icons.check_circle_outline,
       ),
-      VerificationMark.flagged => (Colors.orange.shade700, Icons.flag_outlined),
+      VerificationMark.flagged => (_hintColor, Icons.flag_outlined),
       VerificationMark.none => (Colors.transparent, Icons.circle),
     };
     final when = _markedAt;
@@ -1189,30 +1222,28 @@ class _AiMistakeExplainerSheetState
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 15, color: colour),
-        const SizedBox(width: 6),
+        Icon(icon, size: 16, color: colour),
+        const SizedBox(width: FluentSpacing.s),
         Flexible(
           child: Text(
             _mark.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+            style: FluentType.caption.copyWith(
+              fontWeight: FontWeight.w600,
               color: colour,
             ),
           ),
         ),
         if (when != null) ...[
-          const SizedBox(width: 6),
+          const SizedBox(width: FluentSpacing.s),
           Flexible(
             child: Text(
               '· ${when.day}/${when.month}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white38 : Colors.black38,
+              style: FluentType.caption.copyWith(
+                color: onSurface.withValues(alpha: 0.45),
               ),
             ),
           ),
@@ -1226,6 +1257,10 @@ class _AiMistakeExplainerSheetState
   /// Offered whatever the verdict was: the user may know the verifier is
   /// wrong just as easily as they may know it is right.
   Widget _buildEvidenceSection(bool isDark) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
     final review = _review;
 
     if (!_showEvidenceBox && review == null) {
@@ -1233,14 +1268,17 @@ class _AiMistakeExplainerSheetState
         alignment: Alignment.centerLeft,
         child: TextButton.icon(
           onPressed: _openEvidenceBox,
-          icon: const Icon(Icons.edit_note_outlined, size: 17),
-          label: const Text(
+          icon: const Icon(Icons.edit_note_outlined, size: 16),
+          label: Text(
             'একমত নন? আপনার যুক্তি দিন',
-            style: TextStyle(fontSize: 12.5),
+            style: FluentType.body,
           ),
           style: TextButton.styleFrom(
             visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            shape: RoundedRectangleBorder(
+              borderRadius: FluentRadius.controlBorder,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: FluentSpacing.s),
           ),
         ),
       );
@@ -1256,18 +1294,19 @@ class _AiMistakeExplainerSheetState
             maxLines: 3,
             minLines: 2,
             textInputAction: TextInputAction.newline,
-            style: const TextStyle(fontSize: 13),
+            style: FluentType.body.copyWith(color: onSurface),
             decoration: InputDecoration(
               hintText: 'যেমন: ১০:৬ লঘিষ্ঠ করলে ৫:৩ হয়, ৩:২ নয় — তাই সংরক্ষিত উত্তরটি ভুল।',
-              hintStyle: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.white30 : Colors.black38,
+              hintStyle: FluentType.caption.copyWith(
+                color: onSurface.withValues(alpha: 0.45),
               ),
-              border: const OutlineInputBorder(),
+              border: OutlineInputBorder(
+                borderRadius: FluentRadius.controlBorder,
+              ),
               isDense: true,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: FluentSpacing.s),
           Row(
             children: [
               Expanded(
@@ -1275,51 +1314,56 @@ class _AiMistakeExplainerSheetState
                   onPressed: _isReviewing ? null : _submitEvidence,
                   icon: _isReviewing
                       ? const SizedBox(
-                          width: 13,
-                          height: 13,
+                          width: FluentSpacing.l,
+                          height: FluentSpacing.l,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.send_outlined, size: 15),
+                      : const Icon(Icons.send_outlined, size: 16),
                   label: Text(
                     _isReviewing ? 'দেখা হচ্ছে…' : 'যুক্তি পাঠান',
-                    style: const TextStyle(fontSize: 12.5),
+                    style: FluentType.body,
                   ),
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: FluentRadius.controlBorder,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: FluentSpacing.s),
               OutlinedButton(
                 onPressed: () => setState(() => _showEvidenceBox = false),
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
+                  side: FluentStroke.side(brightness),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                 ),
-                child: const Text('বাতিল', style: TextStyle(fontSize: 12.5)),
+                child: Text('বাতিল', style: FluentType.body),
               ),
             ],
           ),
           if (_reviewFailed)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: FluentSpacing.s),
               child: Text(
                 'যুক্তিটি পাঠানো গেল না। ইন্টারনেট বা API key দেখুন।',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.redAccent.shade200,
-                ),
+                style: FluentType.caption.copyWith(color: _wrongColor),
               ),
             ),
         ],
         if (review != null) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
           Container(
-            padding: const EdgeInsets.all(11),
+            padding: const EdgeInsets.all(FluentSpacing.m),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : Colors.white,
-              borderRadius: BorderRadius.circular(9),
+              color: scheme.surface,
+              borderRadius: FluentRadius.cardBorder,
               border: Border.all(
-                color: isDark ? Colors.white24 : Colors.grey.shade300,
+                color: FluentStroke.card(brightness),
+                width: FluentStroke.width,
               ),
             ),
             child: Column(
@@ -1331,86 +1375,72 @@ class _AiMistakeExplainerSheetState
                       review.verdict == EvidenceVerdict.storedLooksWrong
                           ? Icons.report_problem_outlined
                           : Icons.balance_outlined,
-                      size: 15,
+                      size: 16,
                       color: review.settled
-                          ? Colors.green
-                          : (isDark ? Colors.white60 : Colors.black54),
+                          ? _correctColor
+                          : onSurface.withValues(alpha: 0.65),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: FluentSpacing.s),
                     Expanded(
                       child: Text(
                         review.verdict.headline,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          color: review.settled
-                              ? Colors.green
-                              : (isDark ? Colors.white70 : Colors.black87),
+                        style: FluentType.bodyStrong.copyWith(
+                          color: review.settled ? _correctColor : onSurface,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: FluentSpacing.s),
                 SelectableText(
                   review.reasoning,
-                  style: const TextStyle(fontSize: 12.5, height: 1.5),
+                  style: FluentType.body.copyWith(color: onSurface),
                 ),
                 if (review.conflictsWithUserMath) ...[
-                  const SizedBox(height: 7),
+                  const SizedBox(height: FluentSpacing.s),
                   Text(
                     '⚠ আপনার হিসাব কোডে মিলে গেছে, অথচ যাচাইকারী সংরক্ষিত উত্তরেই স্থির। '
                     'দুটোর একটি ভুল, আর অ্যাপ নিজে থেকে পক্ষ নিচ্ছে না — আপনি দেখে সিদ্ধান্ত নিন।',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      height: 1.45,
-                      color: Colors.orange.shade700,
-                    ),
+                    style: FluentType.body.copyWith(color: _hintColor),
                   ),
                 ] else if (review.userArithmeticHolds) ...[
-                  const SizedBox(height: 7),
+                  const SizedBox(height: FluentSpacing.s),
                   Text(
                     '✓ আপনার হিসাব কোডেই মিলিয়ে দেখা হয়েছে: ${review.userMathCheck.detail}',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      height: 1.45,
-                      color: Colors.green,
-                    ),
+                    style: FluentType.body.copyWith(color: _correctColor),
                   ),
                 ],
                 if (review.flaw != QuestionFlaw.none) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: FluentSpacing.s),
                   Text(
                     '⚠ ${review.flaw.label}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange.shade700,
-                    ),
+                    style: FluentType.bodyStrong.copyWith(color: _hintColor),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: FluentSpacing.xxs),
                   Text(
                     review.flaw.guidance,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      height: 1.45,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                    style: FluentType.body.copyWith(
+                      color: onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                 ],
-                const SizedBox(height: 10),
+                const SizedBox(height: FluentSpacing.m),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: _openQuestionEditor,
-                        icon: const Icon(Icons.tune, size: 15),
-                        label: const Text(
+                        icon: const Icon(Icons.tune, size: 16),
+                        label: Text(
                           'প্রশ্ন সম্পাদনা',
-                          style: TextStyle(fontSize: 12.5),
+                          style: FluentType.body,
                         ),
                         style: OutlinedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
+                          side: FluentStroke.side(brightness),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: FluentRadius.controlBorder,
+                          ),
                         ),
                       ),
                     ),
@@ -1418,17 +1448,20 @@ class _AiMistakeExplainerSheetState
                         review.suggestedCorrectIndex != _correctIndex &&
                         review.suggestedOptions == null &&
                         review.suggestedQuestionText == null) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: FluentSpacing.s),
                       Expanded(
                         child: FilledButton(
                           onPressed: () =>
                               _acceptCorrection(review.suggestedCorrectIndex!),
                           style: FilledButton.styleFrom(
                             visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: FluentRadius.controlBorder,
+                            ),
                           ),
-                          child: const Text(
+                          child: Text(
                             'উত্তর বদলান',
-                            style: TextStyle(fontSize: 12.5),
+                            style: FluentType.body,
                           ),
                         ),
                       ),
@@ -1436,7 +1469,7 @@ class _AiMistakeExplainerSheetState
                   ],
                 ),
                 if (review.flaw != QuestionFlaw.none) ...[
-                  const SizedBox(height: 6),
+                  const SizedBox(height: FluentSpacing.s),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
@@ -1444,29 +1477,29 @@ class _AiMistakeExplainerSheetState
                       icon: const Icon(
                         Icons.delete_outline,
                         size: 16,
-                        color: Colors.redAccent,
+                        color: _wrongColor,
                       ),
-                      label: const Text(
+                      label: Text(
                         'প্রশ্নটিই ভুল, সরিয়ে দিন',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: Colors.redAccent,
-                        ),
+                        style: FluentType.body.copyWith(color: _wrongColor),
                       ),
                       style: TextButton.styleFrom(
                         visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: FluentRadius.controlBorder,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: FluentSpacing.s,
+                        ),
                       ),
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
+                const SizedBox(height: FluentSpacing.s),
                 Text(
                   review.limitations,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    height: 1.4,
-                    color: isDark ? Colors.white38 : Colors.black45,
+                  style: FluentType.caption.copyWith(
+                    color: onSurface.withValues(alpha: 0.45),
                   ),
                 ),
               ],
@@ -1474,19 +1507,15 @@ class _AiMistakeExplainerSheetState
           ),
         ],
         if (_questionEdited) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: FluentSpacing.m),
           Row(
             children: [
-              const Icon(Icons.check_circle, size: 15, color: Colors.green),
-              const SizedBox(width: 6),
+              const Icon(Icons.check_circle, size: 16, color: _correctColor),
+              const SizedBox(width: FluentSpacing.s),
               Expanded(
                 child: Text(
                   'প্রশ্নটি সংরক্ষিত হয়েছে। আবার যাচাই চালাতে পারেন; আপনার পুরনো উত্তর ও ফলাফল অপরিবর্তিত আছে।',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    height: 1.45,
-                    color: isDark ? Colors.white70 : Colors.black87,
-                  ),
+                  style: FluentType.body.copyWith(color: onSurface),
                 ),
               ),
             ],
@@ -1502,29 +1531,28 @@ class _AiMistakeExplainerSheetState
     bool isDark,
     bool highlight,
   ) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 86,
+          width: 88,
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 11.5,
-              color: isDark ? Colors.white54 : Colors.black54,
+            style: FluentType.caption.copyWith(
+              color: onSurface.withValues(alpha: 0.65),
             ),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: TextStyle(
-              fontSize: 12.5,
-              height: 1.4,
-              fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
+            style: FluentType.body.copyWith(
+              fontWeight: highlight ? FontWeight.w600 : FontWeight.w400,
               color: highlight
-                  ? (isDark ? Colors.green.shade200 : Colors.green.shade800)
-                  : (isDark ? Colors.white : Colors.black87),
+                  ? (isDark ? Colors.green.shade200 : Colors.green.shade900)
+                  : onSurface,
             ),
           ),
         ),
@@ -1542,8 +1570,11 @@ class _AiMistakeExplainerSheetState
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final onSurface = scheme.onSurface;
+    final isDark = brightness == Brightness.dark;
     // The sheet now has a text field in it, so it has to climb above the
     // keyboard instead of sitting under it.
     final keyboard = MediaQuery.of(context).viewInsets.bottom;
@@ -1557,64 +1588,70 @@ class _AiMistakeExplainerSheetState
           maxHeight: MediaQuery.of(context).size.height * 0.82 - keyboard * 0.4,
         ),
         decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 16,
-              offset: Offset(0, -4),
-            ),
-          ],
+          color: scheme.surface,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(FluentRadius.large),
+          ),
+          border: Border(
+            top: FluentStroke.side(brightness),
+            left: FluentStroke.side(brightness),
+            right: FluentStroke.side(brightness),
+          ),
+          boxShadow: FluentElevation.flyout(brightness),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Drag handle
             Container(
-              margin: const EdgeInsets.only(top: 10, bottom: 8),
+              margin: const EdgeInsets.only(
+                top: FluentSpacing.m,
+                bottom: FluentSpacing.s,
+              ),
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade400,
+                color: onSurface.withValues(alpha: 0.24),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
 
             // Header
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.l,
+                vertical: FluentSpacing.s,
+              ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(FluentSpacing.s),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      color: FluentLayer.subtle(scheme.primary, brightness),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.auto_awesome,
-                      color: Color(0xFF8B5CF6),
+                      color: scheme.primary,
                       size: 20,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: FluentSpacing.m),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'AI ভুল বিশ্লেষণ ও মেন্টর গাইড',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                          style: FluentType.bodyStrong.copyWith(
                             fontSize: 16,
+                            color: onSurface,
                           ),
                         ),
                         Text(
                           '${widget.question.subject} • ${widget.question.topic}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? Colors.white60 : Colors.black54,
+                          style: FluentType.caption.copyWith(
+                            color: onSurface.withValues(alpha: 0.65),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1631,7 +1668,7 @@ class _AiMistakeExplainerSheetState
                     icon: const Icon(
                       Icons.delete_outline,
                       size: 20,
-                      color: Colors.redAccent,
+                      color: _wrongColor,
                     ),
                     tooltip: 'ভুল বা অপ্রয়োজনীয় প্রশ্ন, নোটবুক থেকে মুছুন',
                     onPressed: _deleteQuestion,
@@ -1657,44 +1694,39 @@ class _AiMistakeExplainerSheetState
                     )
                   : SingleChildScrollView(
                       controller: _bodyScroll,
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(FluentSpacing.l),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Question Banner
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(FluentSpacing.m),
                             decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF0F172A)
-                                  : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(12),
+                              color: onSurface.withValues(alpha: 0.04),
+                              borderRadius: FluentRadius.cardBorder,
                               border: Border.all(
-                                color: isDark
-                                    ? Colors.white12
-                                    : Colors.grey.shade300,
+                                color: FluentStroke.card(brightness),
+                                width: FluentStroke.width,
                               ),
                             ),
                             child: Text(
                               BengaliMathSanitizer.sanitize(_questionText),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13.5,
-                                height: 1.4,
+                              style: FluentType.bodyStrong.copyWith(
+                                color: onSurface,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: FluentSpacing.l),
 
                           // Formatted AI Output
                           SelectableText(
                             _explanation,
-                            style: const TextStyle(fontSize: 13.5, height: 1.6),
+                            style: FluentType.body.copyWith(color: onSurface),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: FluentSpacing.l),
                           _buildVerificationSection(isDark),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: FluentSpacing.l),
                         ],
                       ),
                     ),
@@ -1702,14 +1734,13 @@ class _AiMistakeExplainerSheetState
 
             // Bottom Action Bar
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FluentSpacing.l,
+                vertical: FluentSpacing.m,
+              ),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : Colors.grey.shade50,
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? Colors.white10 : Colors.grey.shade200,
-                  ),
-                ),
+                color: scheme.surface,
+                border: Border(top: FluentStroke.side(brightness)),
               ),
               child: Row(
                 children: [
@@ -1719,16 +1750,21 @@ class _AiMistakeExplainerSheetState
                     label: Text(_copied ? 'কপি হয়েছে' : 'কপি করুন'),
                     style: OutlinedButton.styleFrom(
                       visualDensity: VisualDensity.compact,
-                      foregroundColor: _copied ? Colors.green : null,
+                      foregroundColor: _copied ? _correctColor : null,
+                      side: FluentStroke.side(brightness),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
                     ),
                   ),
                   const Spacer(),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF8B5CF6),
-                      foregroundColor: Colors.white,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: FluentRadius.controlBorder,
                       ),
                     ),
                     onPressed: () => Navigator.pop(context),

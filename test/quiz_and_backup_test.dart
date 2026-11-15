@@ -215,7 +215,12 @@ void main() {
           ],
           'exam_schedules': [
             {
-              'exam_date': '2026-11-10T00:00:00.000',
+              // Relative, not a fixed date: getUpcomingExams filters on now,
+              // so a literal here stops being "upcoming" and the test starts
+              // failing on a day nobody changed anything.
+              'exam_date': DateTime.now()
+                  .add(const Duration(days: 7))
+                  .toIso8601String(),
               'exam_time': '10:00 PM',
               'subject': 'General Science',
               'title': 'Optics Daily Drill',

@@ -534,10 +534,7 @@ class _PomodoroFocusScreenState extends ConsumerState<PomodoroFocusScreen> {
                           'Ambient Focus Sound',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: FluentType.bodyStrong,
                         ),
                       ),
                       const SizedBox(width: 8),

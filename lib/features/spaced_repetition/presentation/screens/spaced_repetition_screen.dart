@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../providers/spaced_repetition_provider.dart';
 import '../widgets/ai_flashcard_generator_modal.dart';
@@ -75,17 +76,22 @@ class _SpacedRepetitionScreenState
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+        padding: const EdgeInsets.fromLTRB(
+          FluentSpacing.l,
+          FluentSpacing.s,
+          FluentSpacing.l,
+          40,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 1. Ebbinghaus Forgetting Curve Science Card
             _buildForgettingCurveCard(allItems.length, dueItems.length),
-            const SizedBox(height: 14),
+            const SizedBox(height: FluentSpacing.m),
 
             // 2. Office Micro-Flashcard 5s Trigger Bar
             _buildOfficeFlashcardNudgeBar(),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.m),
 
             // 3. Segmented Filter: Due Today vs All Rules
             SegmentedButton<int>(
@@ -108,11 +114,11 @@ class _SpacedRepetitionScreenState
                 });
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: FluentSpacing.s),
 
             // Subject Filter Chip Row
             _buildSubjectFilterChips(allItems),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xxs),
 
             // 4. Content List
             if (_tabFilterIndex == 0)
@@ -132,6 +138,11 @@ class _SpacedRepetitionScreenState
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: FluentRadius.cardBorder,
+          side: FluentStroke.side(Theme.of(dialogContext).brightness),
+        ),
         title: const Text('কার্ড সম্পাদনা', style: TextStyle(fontSize: 16)),
         content: SingleChildScrollView(
           child: Column(
@@ -147,7 +158,7 @@ class _SpacedRepetitionScreenState
                 maxLines: 2,
                 minLines: 1,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: ruleController,
                 decoration: const InputDecoration(
@@ -207,7 +218,7 @@ class _SpacedRepetitionScreenState
     final subjects = counts.keys.toList();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: FluentSpacing.xs),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
@@ -218,7 +229,7 @@ class _SpacedRepetitionScreenState
                 ? 'সকল বিষয় ($count)'
                 : '$subj ($count)';
             return Padding(
-              padding: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.only(right: FluentSpacing.s),
               child: _buildSubjectFilterBadge(
                 label: label,
                 isSelected: isSelected,
@@ -240,32 +251,34 @@ class _SpacedRepetitionScreenState
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: FluentRadius.controlBorder,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(
+          horizontal: FluentSpacing.m,
+          vertical: FluentSpacing.xs,
+        ),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF6366F1).withValues(alpha: 0.18)
+              ? FluentLayer.subtle(scheme.primary, brightness)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: FluentRadius.controlBorder,
           border: Border.all(
             color: isSelected
-                ? const Color(0xFF6366F1)
-                : (isDark ? Colors.white24 : Colors.grey.shade400),
-            width: isSelected ? 1.4 : 1.0,
+                ? scheme.primary
+                : FluentStroke.card(brightness),
+            width: isSelected ? 1.4 : FluentStroke.width,
           ),
         ),
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected
-                ? const Color(0xFF6366F1)
-                : (isDark ? Colors.white70 : Colors.black87),
+          style: FluentType.caption.copyWith(
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            color: isSelected ? scheme.primary : scheme.onSurface,
           ),
         ),
       ),
@@ -273,22 +286,21 @@ class _SpacedRepetitionScreenState
   }
 
   Widget _buildForgettingCurveCard(int totalTracked, int dueCount) {
+    final brightness = Theme.of(context).brightness;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.indigo.shade800, Colors.deepPurple.shade900],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.indigo.withValues(alpha: 0.25),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        borderRadius: FluentRadius.cardBorder,
+        border: Border.all(
+          color: FluentStroke.card(brightness),
+          width: FluentStroke.width,
+        ),
+        boxShadow: FluentElevation.card(brightness),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,10 +308,10 @@ class _SpacedRepetitionScreenState
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(FluentSpacing.s),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+                  borderRadius: FluentRadius.controlBorder,
                 ),
                 child: const Icon(
                   Icons.psychology,
@@ -307,34 +319,34 @@ class _SpacedRepetitionScreenState
                   size: 22,
                 ),
               ),
-              const SizedBox(width: 10),
-              const Expanded(
+              const SizedBox(width: FluentSpacing.m),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Ebbinghaus Forgetting Curve',
-                      style: TextStyle(
+                      style: FluentType.bodyStrong.copyWith(
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14.5,
                       ),
                     ),
                     Text(
                       '১ দিন, ৩ দিন, ৭ দিন ও ১৪ দিনে রিভিশন = পার্মানেন্ট মেমরি',
-                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                      style: FluentType.caption.copyWith(
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const Text(
+          const SizedBox(height: FluentSpacing.m),
+          Text(
             'মানুষ যেকোনো নতুন তথ্য শেখার ২৪ ঘণ্টার মধ্যে প্রায় ৬০% ভুলে যায়। বিজ্ঞানসম্মত ব্যবধানে পুশ নোটিফিকেশন আপনাকে ভুলে যাওয়ার ঠিক আগেই নিয়মটি মনে করিয়ে দেয়।',
-            style: TextStyle(color: Colors.white, fontSize: 12, height: 1.35),
+            style: FluentType.caption.copyWith(color: Colors.white),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: FluentSpacing.m),
           Row(
             children: [
               _buildIntervalPill('1 Day', 'Lvl 1'),
@@ -376,16 +388,16 @@ class _SpacedRepetitionScreenState
   }) {
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(horizontal: FluentSpacing.xxs),
+        padding: const EdgeInsets.symmetric(vertical: FluentSpacing.xs),
         decoration: BoxDecoration(
           color: isMastered
               ? Colors.amber.withValues(alpha: 0.25)
               : Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: FluentRadius.controlBorder,
           border: Border.all(
             color: isMastered ? Colors.amber : Colors.white24,
-            width: 0.8,
+            width: FluentStroke.width,
           ),
         ),
         child: Column(
@@ -409,40 +421,42 @@ class _SpacedRepetitionScreenState
   }
 
   Widget _buildOfficeFlashcardNudgeBar() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
     return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(FluentSpacing.m),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(FluentSpacing.s),
               decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(8),
+                color: FluentLayer.subtle(Colors.amber, brightness),
+                borderRadius: FluentRadius.controlBorder,
               ),
               child: const Icon(Icons.flash_on, color: Colors.amber, size: 24),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: FluentSpacing.m),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Office 5-Second Flashcard',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13.5,
+                    style: FluentType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
                     ),
                   ),
                   Text(
                     'Test your memory while coding with a background push',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white70
-                          : Colors.black54,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                 ],
@@ -450,15 +464,16 @@ class _SpacedRepetitionScreenState
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
+                backgroundColor: scheme.primary,
+                foregroundColor: scheme.onPrimary,
+                elevation: 0,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                  horizontal: FluentSpacing.m,
+                  vertical: FluentSpacing.s,
                 ),
                 visualDensity: VisualDensity.compact,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
               ),
               onPressed: () async {
@@ -476,9 +491,11 @@ class _SpacedRepetitionScreenState
                   );
                 }
               },
-              child: const Text(
+              child: Text(
                 'Push Now',
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                style: FluentType.caption.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -502,28 +519,35 @@ class _SpacedRepetitionScreenState
                 size: 60,
                 color: Colors.green.shade400,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               const Text(
                 'All Caught Up for Today!',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 6),
-              const Text(
+              const SizedBox(height: FluentSpacing.s),
+              Text(
                 'None of your tracked rules are due for review right now.\nKeep taking drills or add more rules to strengthen memory.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: FluentType.caption.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: FluentSpacing.l),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF4F46E5),
-                  side: const BorderSide(color: Color(0xFF4F46E5)),
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: FluentStroke.width,
+                  ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
+                    horizontal: FluentSpacing.l,
+                    vertical: FluentSpacing.s,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                 ),
                 onPressed: () {
@@ -532,9 +556,11 @@ class _SpacedRepetitionScreenState
                   });
                 },
                 icon: const Icon(Icons.style_outlined, size: 16),
-                label: const Text(
+                label: Text(
                   'সকল সংরক্ষিত ফ্ল্যাশকার্ড দেখুন',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -547,19 +573,22 @@ class _SpacedRepetitionScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 10, left: 2, right: 2),
+          padding: const EdgeInsets.only(
+            bottom: FluentSpacing.s,
+            left: FluentSpacing.xxs,
+            right: FluentSpacing.xxs,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Flexible(
                 child: Text(
                   'Active Recall মেমোরি টেস্ট',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white70
-                        : Colors.black54,
+                  style: FluentType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.65),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -572,11 +601,11 @@ class _SpacedRepetitionScreenState
                       _revealAllByDefault = !_revealAllByDefault;
                     });
                   },
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: FluentRadius.controlBorder,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xxs,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -586,18 +615,17 @@ class _SpacedRepetitionScreenState
                               ? Icons.visibility
                               : Icons.visibility_off_outlined,
                           size: 14,
-                          color: const Color(0xFF6366F1),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: FluentSpacing.xs),
                         Flexible(
                           child: Text(
                             _revealAllByDefault
                                 ? 'সব উত্তর দৃশ্যমান'
                                 : 'উত্তর লুকানো 🔒',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF6366F1),
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -625,16 +653,22 @@ class _SpacedRepetitionScreenState
   }
 
   Widget _buildDueItemCard(SpacedReviewItem item) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
     final isRevealed =
         _revealAllByDefault || _revealedCardIds.contains(item.id);
 
     return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+      shape: RoundedRectangleBorder(
+        borderRadius: FluentRadius.cardBorder,
+        side: FluentStroke.side(brightness),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(FluentSpacing.m),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -643,33 +677,31 @@ class _SpacedRepetitionScreenState
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
                   ),
                   decoration: BoxDecoration(
                     color: isDark
                         ? Colors.indigo.withValues(alpha: 0.2)
                         : Colors.indigo.shade50,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   child: Text(
                     item.subject,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                       color: isDark
                           ? Colors.indigo.shade200
                           : Colors.indigo.shade800,
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     '• ${item.topic}',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: isDark ? Colors.white : Colors.black87,
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -677,25 +709,25 @@ class _SpacedRepetitionScreenState
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xxs,
                   ),
                   decoration: BoxDecoration(
                     color: isDark
                         ? Colors.orange.withValues(alpha: 0.2)
                         : Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: FluentRadius.controlBorder,
                     border: Border.all(
                       color: isDark
                           ? Colors.orange.withValues(alpha: 0.4)
                           : Colors.orange.shade200,
+                      width: FluentStroke.width,
                     ),
                   ),
                   child: Text(
                     'Lvl ${item.repetitionLevel} (${item.intervalDays}d)',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                       color: isDark
                           ? Colors.orange.shade200
                           : Colors.orange.shade800,
@@ -704,22 +736,19 @@ class _SpacedRepetitionScreenState
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.s),
 
             // Title (Front of Flashcard)
             Text(
               BengaliMathSanitizer.sanitize(item.title),
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.bold,
-              ),
+              style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: FluentSpacing.s),
 
             if (!isRevealed) ...[
               // Active Recall: Tap to Reveal Button
               InkWell(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: FluentRadius.controlBorder,
                 onTap: () {
                   HapticFeedback.selectionClick();
                   setState(() {
@@ -729,18 +758,17 @@ class _SpacedRepetitionScreenState
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 16,
+                    vertical: FluentSpacing.m,
+                    horizontal: FluentSpacing.l,
                   ),
                   decoration: BoxDecoration(
                     color: isDark
                         ? const Color(0xFF1E293B)
                         : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: FluentRadius.controlBorder,
                     border: Border.all(
-                      color: isDark
-                          ? const Color(0xFF334155)
-                          : const Color(0xFFCBD5E1),
+                      color: FluentStroke.card(brightness),
+                      width: FluentStroke.width,
                     ),
                   ),
                   child: Row(
@@ -749,20 +777,14 @@ class _SpacedRepetitionScreenState
                       Icon(
                         Icons.visibility_outlined,
                         size: 18,
-                        color: isDark
-                            ? const Color(0xFFA5B4FC)
-                            : const Color(0xFF4F46E5),
+                        color: scheme.primary,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: FluentSpacing.s),
                       Flexible(
                         child: Text(
                           'উত্তর দেখুন (Tap to Reveal Answer)',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? const Color(0xFFA5B4FC)
-                                : const Color(0xFF4F46E5),
+                          style: FluentType.bodyStrong.copyWith(
+                            color: scheme.primary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -776,12 +798,15 @@ class _SpacedRepetitionScreenState
               // Key Rule / Flashcard Content Container (Back of Flashcard)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(FluentSpacing.m),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(10),
+                  color: isDark
+                      ? const Color(0xFF1E293B)
+                      : const Color(0xFFFAFAFA),
+                  borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
-                    color: isDark ? Colors.white12 : Colors.grey.shade200,
+                    color: FluentStroke.card(brightness),
+                    width: FluentStroke.width,
                   ),
                 ),
                 child: Column(
@@ -793,10 +818,9 @@ class _SpacedRepetitionScreenState
                         Flexible(
                           child: Text(
                             'উত্তর ও নিয়ম:',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white54 : Colors.black45,
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurface.withValues(alpha: 0.65),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -811,9 +835,8 @@ class _SpacedRepetitionScreenState
                             },
                             child: Text(
                               'ঢাকুন 🙈',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark ? Colors.white38 : Colors.grey,
+                              style: FluentType.caption.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.65),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -822,19 +845,17 @@ class _SpacedRepetitionScreenState
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: FluentSpacing.s),
                     Text(
                       BengaliMathSanitizer.sanitize(item.keyRule),
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        height: 1.45,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                      style: FluentType.body.copyWith(
+                        color: scheme.onSurface,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
 
               // Actions: [ Forgot (Reset to 1d) ] vs [ Remembered (+Interval) ]
               Row(
@@ -843,18 +864,22 @@ class _SpacedRepetitionScreenState
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red.shade700,
-                        side: BorderSide(color: Colors.red.shade300),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        side: BorderSide(
+                          color: Colors.red.shade300,
+                          width: FluentStroke.width,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: FluentSpacing.s,
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                       ),
                       icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text(
+                      label: Text(
                         'মনে নেই',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       onPressed: () async {
@@ -878,23 +903,25 @@ class _SpacedRepetitionScreenState
                       },
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: FluentSpacing.m),
                   Expanded(
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade700,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: FluentSpacing.s,
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: FluentRadius.controlBorder,
                         ),
                       ),
                       icon: const Icon(Icons.done_all, size: 16),
-                      label: const Text(
+                      label: Text(
                         'মনে আছে',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       onPressed: () async {
@@ -937,16 +964,26 @@ class _SpacedRepetitionScreenState
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Column(
             children: [
-              Icon(Icons.layers_clear, size: 60, color: Colors.grey.shade400),
-              const SizedBox(height: 12),
+              Icon(
+                Icons.layers_clear,
+                size: 60,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.35),
+              ),
+              const SizedBox(height: FluentSpacing.m),
               const Text(
                 'No Rules Tracked Yet',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 6),
-              const Text(
+              const SizedBox(height: FluentSpacing.s),
+              Text(
                 'Add difficult rules you just learned using the + button.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: FluentType.caption.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
             ],
           ),
@@ -962,15 +999,16 @@ class _SpacedRepetitionScreenState
         final item = allItems[index];
 
         return Card(
-          elevation: 1,
-          margin: const EdgeInsets.only(bottom: 10),
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: FluentSpacing.m),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: FluentRadius.cardBorder,
+            side: FluentStroke.side(Theme.of(context).brightness),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 6,
+              horizontal: FluentSpacing.l,
+              vertical: FluentSpacing.s,
             ),
             onTap: () => _showRuleDetailModal(context, item),
             leading: CircleAvatar(
@@ -995,29 +1033,26 @@ class _SpacedRepetitionScreenState
             ),
             title: Text(
               item.title,
-              style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.bold,
+              style: FluentType.bodyStrong.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 3),
+                const SizedBox(height: FluentSpacing.xs),
                 Text(
                   '${item.subject} • ${item.topic}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white70
-                        : Colors.grey.shade700,
+                  style: FluentType.caption.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: FluentSpacing.xxs),
                 Text(
                   'Next review: ${_formatDate(item.nextReviewDate)} (Level ${item.repetitionLevel})',
-                  style: TextStyle(
-                    fontSize: 11,
+                  style: FluentType.caption.copyWith(
                     fontWeight: FontWeight.w600,
                     color: item.isMastered
                         ? (Theme.of(context).brightness == Brightness.dark
@@ -1063,16 +1098,26 @@ class _SpacedRepetitionScreenState
   }
 
   void _showRuleDetailModal(BuildContext context, SpacedReviewItem item) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final isDark = brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
+        padding: const EdgeInsets.fromLTRB(
+          FluentSpacing.xl,
+          FluentSpacing.l,
+          FluentSpacing.xl,
+          FluentSpacing.xxl,
+        ),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(FluentRadius.large),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1082,10 +1127,10 @@ class _SpacedRepetitionScreenState
               child: Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
+                margin: const EdgeInsets.only(bottom: FluentSpacing.l),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
+                  color: scheme.onSurface.withValues(alpha: 0.3),
+                  borderRadius: FluentRadius.controlBorder,
                 ),
               ),
             ),
@@ -1093,33 +1138,32 @@ class _SpacedRepetitionScreenState
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
+                    horizontal: FluentSpacing.s,
+                    vertical: FluentSpacing.xs,
                   ),
                   decoration: BoxDecoration(
                     color: isDark
                         ? Colors.indigo.withValues(alpha: 0.25)
                         : Colors.indigo.shade50,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
                   child: Text(
                     item.subject,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    style: FluentType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
                       color: isDark
                           ? Colors.indigo.shade200
                           : Colors.indigo.shade800,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     item.topic,
-                    style: const TextStyle(
-                      fontSize: 12,
+                    style: FluentType.caption.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1127,91 +1171,87 @@ class _SpacedRepetitionScreenState
                 if (item.isMastered)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
+                      horizontal: FluentSpacing.s,
+                      vertical: FluentSpacing.xs,
                     ),
                     decoration: BoxDecoration(
                       color: isDark
                           ? Colors.green.withValues(alpha: 0.2)
                           : Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: FluentRadius.controlBorder,
                     ),
-                    child: const Text(
+                    child: Text(
                       '✓ Mastered',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                      style: FluentType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
                         color: Colors.green,
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 14),
-            const Text(
+            const SizedBox(height: FluentSpacing.l),
+            Text(
               'প্রশ্ন / সূত্র (Front):',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: FluentSpacing.xs),
             Text(
               BengaliMathSanitizer.sanitize(item.title),
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              style: FluentType.bodyStrong.copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            const SizedBox(height: FluentSpacing.l),
+            Text(
               'উত্তর ও নিয়ম (Back):',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
+              style: FluentType.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: FluentSpacing.s),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(FluentSpacing.m),
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xFF0F172A)
                     : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: FluentRadius.cardBorder,
                 border: Border.all(
-                  color: isDark ? Colors.white12 : Colors.grey.shade300,
+                  color: FluentStroke.card(brightness),
+                  width: FluentStroke.width,
                 ),
               ),
               child: Text(
                 BengaliMathSanitizer.sanitize(item.keyRule),
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
-                  color: isDark ? Colors.white70 : Colors.black87,
-                ),
+                style: FluentType.body.copyWith(color: scheme.onSurface),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
             Row(
               children: [
                 Icon(
                   Icons.calendar_today,
                   size: 14,
-                  color: Colors.grey.shade500,
+                  color: scheme.onSurface.withValues(alpha: 0.5),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: FluentSpacing.s),
                 Expanded(
                   child: Text(
                     'পরবর্তী রিভিশন: ${_formatDate(item.nextReviewDate)} (লেভেল ${item.repetitionLevel}, ব্যবধান: ${item.intervalDays} দিন)',
-                    style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                    style: FluentType.caption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: FluentSpacing.l),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
@@ -1234,6 +1274,11 @@ class _SpacedRepetitionScreenState
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: FluentRadius.cardBorder,
+          side: FluentStroke.side(Theme.of(ctx).brightness),
+        ),
         title: const Text('Add Rule to Spaced Repetition'),
         content: SingleChildScrollView(
           child: Column(
@@ -1242,8 +1287,14 @@ class _SpacedRepetitionScreenState
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
-                  foregroundColor: const Color(0xFF6366F1),
-                  side: const BorderSide(color: Color(0xFF6366F1)),
+                  foregroundColor: Theme.of(ctx).colorScheme.primary,
+                  side: BorderSide(
+                    color: Theme.of(ctx).colorScheme.primary,
+                    width: FluentStroke.width,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: FluentRadius.controlBorder,
+                  ),
                 ),
                 icon: const Icon(Icons.auto_awesome, size: 16),
                 label: const Text('বা AI দিয়ে স্বয়ংক্রিয় তৈরি করুন 🪄'),
@@ -1252,7 +1303,7 @@ class _SpacedRepetitionScreenState
                   AiFlashcardGeneratorModal.show(context);
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: subjectController,
                 decoration: const InputDecoration(
@@ -1260,7 +1311,7 @@ class _SpacedRepetitionScreenState
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: topicController,
                 decoration: const InputDecoration(
@@ -1268,7 +1319,7 @@ class _SpacedRepetitionScreenState
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: titleController,
                 decoration: const InputDecoration(
@@ -1276,7 +1327,7 @@ class _SpacedRepetitionScreenState
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: FluentSpacing.m),
               TextField(
                 controller: ruleController,
                 maxLines: 3,

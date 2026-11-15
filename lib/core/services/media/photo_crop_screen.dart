@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+
+import '../../theme/fluent_tokens.dart';
 import 'package:image/image.dart' as img;
 
 import '../ai/ai_media_limits.dart';
@@ -249,11 +251,11 @@ class _PhotoCropScreenState extends State<PhotoCropScreen> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'কোণা টেনে ছোট-বড় করুন। ছবি নিজে থেকে জুম হবে না — '
                     'দুই আঙুলে চাইলে জুম করতে পারেন।',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 11.5),
+                    style: FluentType.caption.copyWith(color: Colors.white70),
                   ),
                   const SizedBox(height: 10),
                   SizedBox(
