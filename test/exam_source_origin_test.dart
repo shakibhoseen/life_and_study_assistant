@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_and_study_assistant/core/database/app_database.dart';
+import 'package:life_and_study_assistant/core/database/database_provider.dart';
 import 'package:life_and_study_assistant/core/services/ai/models/parsed_routine_item.dart';
 import 'package:life_and_study_assistant/features/chat/domain/models/chat_action.dart';
 import 'package:life_and_study_assistant/features/live_mcq/data/repositories/exam_schedule_repository_impl.dart';
 import 'package:life_and_study_assistant/features/live_mcq/domain/models/exam_source_info.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/providers/exam_schedule_provider.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/live_mcq_screen.dart';
+
+import 'support/ui_style_override.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -353,6 +356,16 @@ void main() {
   });
 
   group('LiveMcqScreen Source Badge Rendering Tests', () {
+    late AppDatabase widgetDb;
+
+    setUp(() {
+      widgetDb = AppDatabase(NativeDatabase.memory());
+    });
+
+    tearDown(() async {
+      await widgetDb.close();
+    });
+
     final sampleExams = [
       ExamSchedule(
         id: 101,
@@ -434,6 +447,8 @@ void main() {
     Widget buildTestScreen() {
       return ProviderScope(
         overrides: [
+          classicUiStyle,
+          appDatabaseProvider.overrideWithValue(widgetDb),
           distinctTracksStreamProvider.overrideWith(
             (ref) => Stream.value(['47th BCS']),
           ),
@@ -496,6 +511,8 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              classicUiStyle,
+              appDatabaseProvider.overrideWithValue(widgetDb),
               distinctTracksStreamProvider.overrideWith(
                 (ref) => Stream.value(['47th BCS']),
               ),

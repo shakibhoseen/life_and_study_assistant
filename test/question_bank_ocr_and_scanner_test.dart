@@ -14,6 +14,8 @@ import 'package:life_and_study_assistant/core/services/ai/models/quiz_question.d
 import 'package:life_and_study_assistant/core/services/ai/question_bank_ocr_service.dart';
 import 'package:life_and_study_assistant/core/services/ai/question_text_parser.dart';
 import 'package:life_and_study_assistant/features/dashboard/presentation/screens/dashboard_screen.dart';
+
+import 'support/ui_style_override.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/providers/exam_schedule_provider.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/live_mcq_screen.dart';
 import 'package:life_and_study_assistant/features/quiz/presentation/widgets/question_bank_scanner_modal.dart';
@@ -139,7 +141,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [classicUiStyle, appDatabaseProvider.overrideWithValue(db)],
           child: const MaterialApp(
             home: Scaffold(body: QuestionBankScannerModal()),
           ),
@@ -247,7 +249,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            overrides: [classicUiStyle, appDatabaseProvider.overrideWithValue(db)],
             child: const MaterialApp(home: DashboardScreen()),
           ),
         );
@@ -300,7 +302,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            overrides: [classicUiStyle, appDatabaseProvider.overrideWithValue(db)],
             child: const MaterialApp(
               home: Scaffold(
                 body: QuestionBankScannerModal(
@@ -456,7 +458,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            overrides: [classicUiStyle, appDatabaseProvider.overrideWithValue(db)],
             child: const MaterialApp(
               home: Scaffold(body: QuestionBankScannerModal()),
             ),

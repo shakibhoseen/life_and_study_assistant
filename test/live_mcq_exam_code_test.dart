@@ -9,6 +9,8 @@ import 'package:life_and_study_assistant/core/services/ai/entity_ref.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/providers/exam_schedule_provider.dart';
 import 'package:life_and_study_assistant/features/live_mcq/presentation/screens/live_mcq_screen.dart';
 
+import 'support/ui_style_override.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -62,6 +64,7 @@ void main() {
     final list = exams ?? sampleExams;
     return ProviderScope(
       overrides: [
+        classicUiStyle,
         appDatabaseProvider.overrideWithValue(db),
         distinctTracksStreamProvider.overrideWith(
           (ref) => Stream.value(['47th BCS']),
