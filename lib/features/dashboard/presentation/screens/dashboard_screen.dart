@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/widgets/premium_glass_card.dart';
 import '../../../../core/widgets/premium_ui_kit.dart';
 import '../../../../core/theme/fluent_tokens.dart';
+import '../../../syllabus_map/presentation/widgets/syllabus_coverage_card.dart';
 import '../../../../core/widgets/animated_premium_background.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -280,6 +281,20 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: FluentSpacing.s),
                   const EnergyTrackerCard(),
+                  const SizedBox(height: FluentSpacing.l),
+
+                  // 2.5. Syllabus coverage
+                  //
+                  // Above the plan because it answers a different question:
+                  // the plan says what to do today, this says how much of the
+                  // exam is still missing.
+                  PremiumSectionHeader(
+                    icon: Icons.map_outlined,
+                    label: 'সিলেবাস ম্যাপ',
+                    subtitle: 'কতটুকু শেষ হয়েছে',
+                  ),
+                  const SizedBox(height: FluentSpacing.s),
+                  const SyllabusCoverageCard(),
                   const SizedBox(height: FluentSpacing.l),
 
                   // 3. Adaptive AI Study Routine

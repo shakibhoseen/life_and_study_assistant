@@ -13,6 +13,8 @@ import 'tables/drill_questions_table.dart';
 import 'tables/drill_records_table.dart';
 import 'tables/exam_schedules_table.dart';
 import 'tables/spaced_review_items_table.dart';
+import 'tables/syllabus_nodes_table.dart';
+import 'tables/syllabus_progress_table.dart';
 import 'tables/weak_topics_table.dart';
 import '../data/study_data_cleanup.dart';
 
@@ -29,13 +31,15 @@ part 'app_database.g.dart';
     DrillRecords,
     DrillQuestions,
     SpacedReviewItems,
+    SyllabusNodes,
+    SyllabusProgress,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'life_and_study_assistant');
@@ -190,6 +194,15 @@ class AppDatabase extends _$AppDatabase {
         }
 
         await mergeDuplicateDrillQuestions();
+      }
+      if (from < 16) {
+        // The syllabus map. Nothing is seeded here: the content lives
+        // in assets and is loaded by SyllabusService, which upserts by
+        // nodeKey and so is safe to run on every launch. Creating the
+        // tables empty keeps the migration from depending on an asset
+        // bundle, which a background isolate may not have.
+        await m.createTable(syllabusNodes);
+        await m.createTable(syllabusProgress);
       }
     },
   );

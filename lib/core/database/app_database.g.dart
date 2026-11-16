@@ -5362,6 +5362,1062 @@ class SpacedReviewItemsCompanion extends UpdateCompanion<SpacedReviewItem> {
   }
 }
 
+class $SyllabusNodesTable extends SyllabusNodes
+    with TableInfo<$SyllabusNodesTable, SyllabusNode> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyllabusNodesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nodeKeyMeta = const VerificationMeta(
+    'nodeKey',
+  );
+  @override
+  late final GeneratedColumn<String> nodeKey = GeneratedColumn<String>(
+    'node_key',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 400,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _trackKeyMeta = const VerificationMeta(
+    'trackKey',
+  );
+  @override
+  late final GeneratedColumn<String> trackKey = GeneratedColumn<String>(
+    'track_key',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<SyllabusNodeKind, String> kind =
+      GeneratedColumn<String>(
+        'kind',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<SyllabusNodeKind>($SyllabusNodesTable.$converterkind);
+  static const VerificationMeta _parentIdMeta = const VerificationMeta(
+    'parentId',
+  );
+  @override
+  late final GeneratedColumn<int> parentId = GeneratedColumn<int>(
+    'parent_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 300,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mergeKeyMeta = const VerificationMeta(
+    'mergeKey',
+  );
+  @override
+  late final GeneratedColumn<String> mergeKey = GeneratedColumn<String>(
+    'merge_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _marksMeta = const VerificationMeta('marks');
+  @override
+  late final GeneratedColumn<int> marks = GeneratedColumn<int>(
+    'marks',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _weightMeta = const VerificationMeta('weight');
+  @override
+  late final GeneratedColumn<int> weight = GeneratedColumn<int>(
+    'weight',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _orderIndexMeta = const VerificationMeta(
+    'orderIndex',
+  );
+  @override
+  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
+    'order_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isCustomMeta = const VerificationMeta(
+    'isCustom',
+  );
+  @override
+  late final GeneratedColumn<bool> isCustom = GeneratedColumn<bool>(
+    'is_custom',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_custom" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    nodeKey,
+    trackKey,
+    kind,
+    parentId,
+    title,
+    mergeKey,
+    marks,
+    weight,
+    orderIndex,
+    isCustom,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'syllabus_nodes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyllabusNode> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('node_key')) {
+      context.handle(
+        _nodeKeyMeta,
+        nodeKey.isAcceptableOrUnknown(data['node_key']!, _nodeKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nodeKeyMeta);
+    }
+    if (data.containsKey('track_key')) {
+      context.handle(
+        _trackKeyMeta,
+        trackKey.isAcceptableOrUnknown(data['track_key']!, _trackKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_trackKeyMeta);
+    }
+    if (data.containsKey('parent_id')) {
+      context.handle(
+        _parentIdMeta,
+        parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta),
+      );
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('merge_key')) {
+      context.handle(
+        _mergeKeyMeta,
+        mergeKey.isAcceptableOrUnknown(data['merge_key']!, _mergeKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mergeKeyMeta);
+    }
+    if (data.containsKey('marks')) {
+      context.handle(
+        _marksMeta,
+        marks.isAcceptableOrUnknown(data['marks']!, _marksMeta),
+      );
+    }
+    if (data.containsKey('weight')) {
+      context.handle(
+        _weightMeta,
+        weight.isAcceptableOrUnknown(data['weight']!, _weightMeta),
+      );
+    }
+    if (data.containsKey('order_index')) {
+      context.handle(
+        _orderIndexMeta,
+        orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
+      );
+    }
+    if (data.containsKey('is_custom')) {
+      context.handle(
+        _isCustomMeta,
+        isCustom.isAcceptableOrUnknown(data['is_custom']!, _isCustomMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {nodeKey},
+  ];
+  @override
+  SyllabusNode map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyllabusNode(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      nodeKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}node_key'],
+      )!,
+      trackKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}track_key'],
+      )!,
+      kind: $SyllabusNodesTable.$converterkind.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}kind'],
+        )!,
+      ),
+      parentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}parent_id'],
+      ),
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      mergeKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}merge_key'],
+      )!,
+      marks: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}marks'],
+      )!,
+      weight: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}weight'],
+      )!,
+      orderIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_index'],
+      )!,
+      isCustom: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_custom'],
+      )!,
+    );
+  }
+
+  @override
+  $SyllabusNodesTable createAlias(String alias) {
+    return $SyllabusNodesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<SyllabusNodeKind, String, String> $converterkind =
+      const EnumNameConverter<SyllabusNodeKind>(SyllabusNodeKind.values);
+}
+
+class SyllabusNode extends DataClass implements Insertable<SyllabusNode> {
+  final int id;
+
+  /// Stable identity: `trackKey/subjectMergeKey` for a subject,
+  /// `trackKey/subjectMergeKey/topicMergeKey` for a topic.
+  final String nodeKey;
+  final String trackKey;
+  final SyllabusNodeKind kind;
+
+  /// Null for a subject; the owning subject's row id for a topic.
+  final int? parentId;
+  final String title;
+
+  /// `topicMergeKey(title)` — the join key against the free-text subjects and
+  /// topics that drills, weak topics and imported routines already carry.
+  final String mergeKey;
+
+  /// Exam marks for a subject. Zero on a topic.
+  final int marks;
+
+  /// Relative weight of a topic inside its subject. Ignored on a subject.
+  final int weight;
+  final int orderIndex;
+  final bool isCustom;
+  const SyllabusNode({
+    required this.id,
+    required this.nodeKey,
+    required this.trackKey,
+    required this.kind,
+    this.parentId,
+    required this.title,
+    required this.mergeKey,
+    required this.marks,
+    required this.weight,
+    required this.orderIndex,
+    required this.isCustom,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['node_key'] = Variable<String>(nodeKey);
+    map['track_key'] = Variable<String>(trackKey);
+    {
+      map['kind'] = Variable<String>(
+        $SyllabusNodesTable.$converterkind.toSql(kind),
+      );
+    }
+    if (!nullToAbsent || parentId != null) {
+      map['parent_id'] = Variable<int>(parentId);
+    }
+    map['title'] = Variable<String>(title);
+    map['merge_key'] = Variable<String>(mergeKey);
+    map['marks'] = Variable<int>(marks);
+    map['weight'] = Variable<int>(weight);
+    map['order_index'] = Variable<int>(orderIndex);
+    map['is_custom'] = Variable<bool>(isCustom);
+    return map;
+  }
+
+  SyllabusNodesCompanion toCompanion(bool nullToAbsent) {
+    return SyllabusNodesCompanion(
+      id: Value(id),
+      nodeKey: Value(nodeKey),
+      trackKey: Value(trackKey),
+      kind: Value(kind),
+      parentId: parentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentId),
+      title: Value(title),
+      mergeKey: Value(mergeKey),
+      marks: Value(marks),
+      weight: Value(weight),
+      orderIndex: Value(orderIndex),
+      isCustom: Value(isCustom),
+    );
+  }
+
+  factory SyllabusNode.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyllabusNode(
+      id: serializer.fromJson<int>(json['id']),
+      nodeKey: serializer.fromJson<String>(json['nodeKey']),
+      trackKey: serializer.fromJson<String>(json['trackKey']),
+      kind: $SyllabusNodesTable.$converterkind.fromJson(
+        serializer.fromJson<String>(json['kind']),
+      ),
+      parentId: serializer.fromJson<int?>(json['parentId']),
+      title: serializer.fromJson<String>(json['title']),
+      mergeKey: serializer.fromJson<String>(json['mergeKey']),
+      marks: serializer.fromJson<int>(json['marks']),
+      weight: serializer.fromJson<int>(json['weight']),
+      orderIndex: serializer.fromJson<int>(json['orderIndex']),
+      isCustom: serializer.fromJson<bool>(json['isCustom']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'nodeKey': serializer.toJson<String>(nodeKey),
+      'trackKey': serializer.toJson<String>(trackKey),
+      'kind': serializer.toJson<String>(
+        $SyllabusNodesTable.$converterkind.toJson(kind),
+      ),
+      'parentId': serializer.toJson<int?>(parentId),
+      'title': serializer.toJson<String>(title),
+      'mergeKey': serializer.toJson<String>(mergeKey),
+      'marks': serializer.toJson<int>(marks),
+      'weight': serializer.toJson<int>(weight),
+      'orderIndex': serializer.toJson<int>(orderIndex),
+      'isCustom': serializer.toJson<bool>(isCustom),
+    };
+  }
+
+  SyllabusNode copyWith({
+    int? id,
+    String? nodeKey,
+    String? trackKey,
+    SyllabusNodeKind? kind,
+    Value<int?> parentId = const Value.absent(),
+    String? title,
+    String? mergeKey,
+    int? marks,
+    int? weight,
+    int? orderIndex,
+    bool? isCustom,
+  }) => SyllabusNode(
+    id: id ?? this.id,
+    nodeKey: nodeKey ?? this.nodeKey,
+    trackKey: trackKey ?? this.trackKey,
+    kind: kind ?? this.kind,
+    parentId: parentId.present ? parentId.value : this.parentId,
+    title: title ?? this.title,
+    mergeKey: mergeKey ?? this.mergeKey,
+    marks: marks ?? this.marks,
+    weight: weight ?? this.weight,
+    orderIndex: orderIndex ?? this.orderIndex,
+    isCustom: isCustom ?? this.isCustom,
+  );
+  SyllabusNode copyWithCompanion(SyllabusNodesCompanion data) {
+    return SyllabusNode(
+      id: data.id.present ? data.id.value : this.id,
+      nodeKey: data.nodeKey.present ? data.nodeKey.value : this.nodeKey,
+      trackKey: data.trackKey.present ? data.trackKey.value : this.trackKey,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      parentId: data.parentId.present ? data.parentId.value : this.parentId,
+      title: data.title.present ? data.title.value : this.title,
+      mergeKey: data.mergeKey.present ? data.mergeKey.value : this.mergeKey,
+      marks: data.marks.present ? data.marks.value : this.marks,
+      weight: data.weight.present ? data.weight.value : this.weight,
+      orderIndex: data.orderIndex.present
+          ? data.orderIndex.value
+          : this.orderIndex,
+      isCustom: data.isCustom.present ? data.isCustom.value : this.isCustom,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyllabusNode(')
+          ..write('id: $id, ')
+          ..write('nodeKey: $nodeKey, ')
+          ..write('trackKey: $trackKey, ')
+          ..write('kind: $kind, ')
+          ..write('parentId: $parentId, ')
+          ..write('title: $title, ')
+          ..write('mergeKey: $mergeKey, ')
+          ..write('marks: $marks, ')
+          ..write('weight: $weight, ')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('isCustom: $isCustom')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    nodeKey,
+    trackKey,
+    kind,
+    parentId,
+    title,
+    mergeKey,
+    marks,
+    weight,
+    orderIndex,
+    isCustom,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyllabusNode &&
+          other.id == this.id &&
+          other.nodeKey == this.nodeKey &&
+          other.trackKey == this.trackKey &&
+          other.kind == this.kind &&
+          other.parentId == this.parentId &&
+          other.title == this.title &&
+          other.mergeKey == this.mergeKey &&
+          other.marks == this.marks &&
+          other.weight == this.weight &&
+          other.orderIndex == this.orderIndex &&
+          other.isCustom == this.isCustom);
+}
+
+class SyllabusNodesCompanion extends UpdateCompanion<SyllabusNode> {
+  final Value<int> id;
+  final Value<String> nodeKey;
+  final Value<String> trackKey;
+  final Value<SyllabusNodeKind> kind;
+  final Value<int?> parentId;
+  final Value<String> title;
+  final Value<String> mergeKey;
+  final Value<int> marks;
+  final Value<int> weight;
+  final Value<int> orderIndex;
+  final Value<bool> isCustom;
+  const SyllabusNodesCompanion({
+    this.id = const Value.absent(),
+    this.nodeKey = const Value.absent(),
+    this.trackKey = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.parentId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.mergeKey = const Value.absent(),
+    this.marks = const Value.absent(),
+    this.weight = const Value.absent(),
+    this.orderIndex = const Value.absent(),
+    this.isCustom = const Value.absent(),
+  });
+  SyllabusNodesCompanion.insert({
+    this.id = const Value.absent(),
+    required String nodeKey,
+    required String trackKey,
+    required SyllabusNodeKind kind,
+    this.parentId = const Value.absent(),
+    required String title,
+    required String mergeKey,
+    this.marks = const Value.absent(),
+    this.weight = const Value.absent(),
+    this.orderIndex = const Value.absent(),
+    this.isCustom = const Value.absent(),
+  }) : nodeKey = Value(nodeKey),
+       trackKey = Value(trackKey),
+       kind = Value(kind),
+       title = Value(title),
+       mergeKey = Value(mergeKey);
+  static Insertable<SyllabusNode> custom({
+    Expression<int>? id,
+    Expression<String>? nodeKey,
+    Expression<String>? trackKey,
+    Expression<String>? kind,
+    Expression<int>? parentId,
+    Expression<String>? title,
+    Expression<String>? mergeKey,
+    Expression<int>? marks,
+    Expression<int>? weight,
+    Expression<int>? orderIndex,
+    Expression<bool>? isCustom,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (nodeKey != null) 'node_key': nodeKey,
+      if (trackKey != null) 'track_key': trackKey,
+      if (kind != null) 'kind': kind,
+      if (parentId != null) 'parent_id': parentId,
+      if (title != null) 'title': title,
+      if (mergeKey != null) 'merge_key': mergeKey,
+      if (marks != null) 'marks': marks,
+      if (weight != null) 'weight': weight,
+      if (orderIndex != null) 'order_index': orderIndex,
+      if (isCustom != null) 'is_custom': isCustom,
+    });
+  }
+
+  SyllabusNodesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? nodeKey,
+    Value<String>? trackKey,
+    Value<SyllabusNodeKind>? kind,
+    Value<int?>? parentId,
+    Value<String>? title,
+    Value<String>? mergeKey,
+    Value<int>? marks,
+    Value<int>? weight,
+    Value<int>? orderIndex,
+    Value<bool>? isCustom,
+  }) {
+    return SyllabusNodesCompanion(
+      id: id ?? this.id,
+      nodeKey: nodeKey ?? this.nodeKey,
+      trackKey: trackKey ?? this.trackKey,
+      kind: kind ?? this.kind,
+      parentId: parentId ?? this.parentId,
+      title: title ?? this.title,
+      mergeKey: mergeKey ?? this.mergeKey,
+      marks: marks ?? this.marks,
+      weight: weight ?? this.weight,
+      orderIndex: orderIndex ?? this.orderIndex,
+      isCustom: isCustom ?? this.isCustom,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (nodeKey.present) {
+      map['node_key'] = Variable<String>(nodeKey.value);
+    }
+    if (trackKey.present) {
+      map['track_key'] = Variable<String>(trackKey.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(
+        $SyllabusNodesTable.$converterkind.toSql(kind.value),
+      );
+    }
+    if (parentId.present) {
+      map['parent_id'] = Variable<int>(parentId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (mergeKey.present) {
+      map['merge_key'] = Variable<String>(mergeKey.value);
+    }
+    if (marks.present) {
+      map['marks'] = Variable<int>(marks.value);
+    }
+    if (weight.present) {
+      map['weight'] = Variable<int>(weight.value);
+    }
+    if (orderIndex.present) {
+      map['order_index'] = Variable<int>(orderIndex.value);
+    }
+    if (isCustom.present) {
+      map['is_custom'] = Variable<bool>(isCustom.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyllabusNodesCompanion(')
+          ..write('id: $id, ')
+          ..write('nodeKey: $nodeKey, ')
+          ..write('trackKey: $trackKey, ')
+          ..write('kind: $kind, ')
+          ..write('parentId: $parentId, ')
+          ..write('title: $title, ')
+          ..write('mergeKey: $mergeKey, ')
+          ..write('marks: $marks, ')
+          ..write('weight: $weight, ')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('isCustom: $isCustom')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SyllabusProgressTable extends SyllabusProgress
+    with TableInfo<$SyllabusProgressTable, SyllabusProgressData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyllabusProgressTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _nodeKeyMeta = const VerificationMeta(
+    'nodeKey',
+  );
+  @override
+  late final GeneratedColumn<String> nodeKey = GeneratedColumn<String>(
+    'node_key',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 400,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<SyllabusStatus, String> status =
+      GeneratedColumn<String>(
+        'status',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<SyllabusStatus>($SyllabusProgressTable.$converterstatus);
+  @override
+  late final GeneratedColumnWithTypeConverter<SyllabusProgressSource, String>
+  source =
+      GeneratedColumn<String>(
+        'source',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<SyllabusProgressSource>(
+        $SyllabusProgressTable.$convertersource,
+      );
+  static const VerificationMeta _markedAtMeta = const VerificationMeta(
+    'markedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> markedAt = GeneratedColumn<DateTime>(
+    'marked_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    nodeKey,
+    status,
+    source,
+    markedAt,
+    note,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'syllabus_progress';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyllabusProgressData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('node_key')) {
+      context.handle(
+        _nodeKeyMeta,
+        nodeKey.isAcceptableOrUnknown(data['node_key']!, _nodeKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nodeKeyMeta);
+    }
+    if (data.containsKey('marked_at')) {
+      context.handle(
+        _markedAtMeta,
+        markedAt.isAcceptableOrUnknown(data['marked_at']!, _markedAtMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {nodeKey};
+  @override
+  SyllabusProgressData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyllabusProgressData(
+      nodeKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}node_key'],
+      )!,
+      status: $SyllabusProgressTable.$converterstatus.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}status'],
+        )!,
+      ),
+      source: $SyllabusProgressTable.$convertersource.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}source'],
+        )!,
+      ),
+      markedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}marked_at'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+    );
+  }
+
+  @override
+  $SyllabusProgressTable createAlias(String alias) {
+    return $SyllabusProgressTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<SyllabusStatus, String, String> $converterstatus =
+      const EnumNameConverter<SyllabusStatus>(SyllabusStatus.values);
+  static JsonTypeConverter2<SyllabusProgressSource, String, String>
+  $convertersource = const EnumNameConverter<SyllabusProgressSource>(
+    SyllabusProgressSource.values,
+  );
+}
+
+class SyllabusProgressData extends DataClass
+    implements Insertable<SyllabusProgressData> {
+  final String nodeKey;
+  final SyllabusStatus status;
+  final SyllabusProgressSource source;
+
+  /// When the current status was set. Doubles as the history this feature
+  /// needs: coverage on any past date is the nodes marked done on or before
+  /// it, with no separate events table to keep in step.
+  final DateTime markedAt;
+  final String? note;
+  const SyllabusProgressData({
+    required this.nodeKey,
+    required this.status,
+    required this.source,
+    required this.markedAt,
+    this.note,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['node_key'] = Variable<String>(nodeKey);
+    {
+      map['status'] = Variable<String>(
+        $SyllabusProgressTable.$converterstatus.toSql(status),
+      );
+    }
+    {
+      map['source'] = Variable<String>(
+        $SyllabusProgressTable.$convertersource.toSql(source),
+      );
+    }
+    map['marked_at'] = Variable<DateTime>(markedAt);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    return map;
+  }
+
+  SyllabusProgressCompanion toCompanion(bool nullToAbsent) {
+    return SyllabusProgressCompanion(
+      nodeKey: Value(nodeKey),
+      status: Value(status),
+      source: Value(source),
+      markedAt: Value(markedAt),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+    );
+  }
+
+  factory SyllabusProgressData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyllabusProgressData(
+      nodeKey: serializer.fromJson<String>(json['nodeKey']),
+      status: $SyllabusProgressTable.$converterstatus.fromJson(
+        serializer.fromJson<String>(json['status']),
+      ),
+      source: $SyllabusProgressTable.$convertersource.fromJson(
+        serializer.fromJson<String>(json['source']),
+      ),
+      markedAt: serializer.fromJson<DateTime>(json['markedAt']),
+      note: serializer.fromJson<String?>(json['note']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'nodeKey': serializer.toJson<String>(nodeKey),
+      'status': serializer.toJson<String>(
+        $SyllabusProgressTable.$converterstatus.toJson(status),
+      ),
+      'source': serializer.toJson<String>(
+        $SyllabusProgressTable.$convertersource.toJson(source),
+      ),
+      'markedAt': serializer.toJson<DateTime>(markedAt),
+      'note': serializer.toJson<String?>(note),
+    };
+  }
+
+  SyllabusProgressData copyWith({
+    String? nodeKey,
+    SyllabusStatus? status,
+    SyllabusProgressSource? source,
+    DateTime? markedAt,
+    Value<String?> note = const Value.absent(),
+  }) => SyllabusProgressData(
+    nodeKey: nodeKey ?? this.nodeKey,
+    status: status ?? this.status,
+    source: source ?? this.source,
+    markedAt: markedAt ?? this.markedAt,
+    note: note.present ? note.value : this.note,
+  );
+  SyllabusProgressData copyWithCompanion(SyllabusProgressCompanion data) {
+    return SyllabusProgressData(
+      nodeKey: data.nodeKey.present ? data.nodeKey.value : this.nodeKey,
+      status: data.status.present ? data.status.value : this.status,
+      source: data.source.present ? data.source.value : this.source,
+      markedAt: data.markedAt.present ? data.markedAt.value : this.markedAt,
+      note: data.note.present ? data.note.value : this.note,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyllabusProgressData(')
+          ..write('nodeKey: $nodeKey, ')
+          ..write('status: $status, ')
+          ..write('source: $source, ')
+          ..write('markedAt: $markedAt, ')
+          ..write('note: $note')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(nodeKey, status, source, markedAt, note);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyllabusProgressData &&
+          other.nodeKey == this.nodeKey &&
+          other.status == this.status &&
+          other.source == this.source &&
+          other.markedAt == this.markedAt &&
+          other.note == this.note);
+}
+
+class SyllabusProgressCompanion extends UpdateCompanion<SyllabusProgressData> {
+  final Value<String> nodeKey;
+  final Value<SyllabusStatus> status;
+  final Value<SyllabusProgressSource> source;
+  final Value<DateTime> markedAt;
+  final Value<String?> note;
+  final Value<int> rowid;
+  const SyllabusProgressCompanion({
+    this.nodeKey = const Value.absent(),
+    this.status = const Value.absent(),
+    this.source = const Value.absent(),
+    this.markedAt = const Value.absent(),
+    this.note = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyllabusProgressCompanion.insert({
+    required String nodeKey,
+    required SyllabusStatus status,
+    required SyllabusProgressSource source,
+    this.markedAt = const Value.absent(),
+    this.note = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : nodeKey = Value(nodeKey),
+       status = Value(status),
+       source = Value(source);
+  static Insertable<SyllabusProgressData> custom({
+    Expression<String>? nodeKey,
+    Expression<String>? status,
+    Expression<String>? source,
+    Expression<DateTime>? markedAt,
+    Expression<String>? note,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (nodeKey != null) 'node_key': nodeKey,
+      if (status != null) 'status': status,
+      if (source != null) 'source': source,
+      if (markedAt != null) 'marked_at': markedAt,
+      if (note != null) 'note': note,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyllabusProgressCompanion copyWith({
+    Value<String>? nodeKey,
+    Value<SyllabusStatus>? status,
+    Value<SyllabusProgressSource>? source,
+    Value<DateTime>? markedAt,
+    Value<String?>? note,
+    Value<int>? rowid,
+  }) {
+    return SyllabusProgressCompanion(
+      nodeKey: nodeKey ?? this.nodeKey,
+      status: status ?? this.status,
+      source: source ?? this.source,
+      markedAt: markedAt ?? this.markedAt,
+      note: note ?? this.note,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (nodeKey.present) {
+      map['node_key'] = Variable<String>(nodeKey.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(
+        $SyllabusProgressTable.$converterstatus.toSql(status.value),
+      );
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(
+        $SyllabusProgressTable.$convertersource.toSql(source.value),
+      );
+    }
+    if (markedAt.present) {
+      map['marked_at'] = Variable<DateTime>(markedAt.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyllabusProgressCompanion(')
+          ..write('nodeKey: $nodeKey, ')
+          ..write('status: $status, ')
+          ..write('source: $source, ')
+          ..write('markedAt: $markedAt, ')
+          ..write('note: $note, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5377,6 +6433,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DrillQuestionsTable drillQuestions = $DrillQuestionsTable(this);
   late final $SpacedReviewItemsTable spacedReviewItems =
       $SpacedReviewItemsTable(this);
+  late final $SyllabusNodesTable syllabusNodes = $SyllabusNodesTable(this);
+  late final $SyllabusProgressTable syllabusProgress = $SyllabusProgressTable(
+    this,
+  );
   late final Index idxWeakTopicsSubjectTopic = Index(
     'idx_weak_topics_subject_topic',
     'CREATE INDEX idx_weak_topics_subject_topic ON weak_topics (subject, topic_name)',
@@ -5409,6 +6469,18 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_spaced_review_next_date',
     'CREATE INDEX idx_spaced_review_next_date ON spaced_review_items (next_review_date, is_mastered)',
   );
+  late final Index idxSyllabusNodesTrack = Index(
+    'idx_syllabus_nodes_track',
+    'CREATE INDEX idx_syllabus_nodes_track ON syllabus_nodes (track_key, order_index)',
+  );
+  late final Index idxSyllabusNodesMerge = Index(
+    'idx_syllabus_nodes_merge',
+    'CREATE INDEX idx_syllabus_nodes_merge ON syllabus_nodes (merge_key)',
+  );
+  late final Index idxSyllabusProgressStatus = Index(
+    'idx_syllabus_progress_status',
+    'CREATE INDEX idx_syllabus_progress_status ON syllabus_progress (status)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5423,6 +6495,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     drillRecords,
     drillQuestions,
     spacedReviewItems,
+    syllabusNodes,
+    syllabusProgress,
     idxWeakTopicsSubjectTopic,
     idxWeakTopicsProficiency,
     idxExamSchedulesStatusDate,
@@ -5431,6 +6505,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxDrillQuestionsCorrectMastered,
     idxDrillQuestionsRecordId,
     idxSpacedReviewNextDate,
+    idxSyllabusNodesTrack,
+    idxSyllabusNodesMerge,
+    idxSyllabusProgressStatus,
   ];
 }
 
@@ -8101,6 +9178,553 @@ typedef $$SpacedReviewItemsTableProcessedTableManager =
       SpacedReviewItem,
       PrefetchHooks Function()
     >;
+typedef $$SyllabusNodesTableCreateCompanionBuilder =
+    SyllabusNodesCompanion Function({
+      Value<int> id,
+      required String nodeKey,
+      required String trackKey,
+      required SyllabusNodeKind kind,
+      Value<int?> parentId,
+      required String title,
+      required String mergeKey,
+      Value<int> marks,
+      Value<int> weight,
+      Value<int> orderIndex,
+      Value<bool> isCustom,
+    });
+typedef $$SyllabusNodesTableUpdateCompanionBuilder =
+    SyllabusNodesCompanion Function({
+      Value<int> id,
+      Value<String> nodeKey,
+      Value<String> trackKey,
+      Value<SyllabusNodeKind> kind,
+      Value<int?> parentId,
+      Value<String> title,
+      Value<String> mergeKey,
+      Value<int> marks,
+      Value<int> weight,
+      Value<int> orderIndex,
+      Value<bool> isCustom,
+    });
+
+class $$SyllabusNodesTableFilterComposer
+    extends Composer<_$AppDatabase, $SyllabusNodesTable> {
+  $$SyllabusNodesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nodeKey => $composableBuilder(
+    column: $table.nodeKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trackKey => $composableBuilder(
+    column: $table.trackKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<SyllabusNodeKind, SyllabusNodeKind, String>
+  get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<int> get parentId => $composableBuilder(
+    column: $table.parentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mergeKey => $composableBuilder(
+    column: $table.mergeKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get marks => $composableBuilder(
+    column: $table.marks,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get weight => $composableBuilder(
+    column: $table.weight,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCustom => $composableBuilder(
+    column: $table.isCustom,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyllabusNodesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyllabusNodesTable> {
+  $$SyllabusNodesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nodeKey => $composableBuilder(
+    column: $table.nodeKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get trackKey => $composableBuilder(
+    column: $table.trackKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get parentId => $composableBuilder(
+    column: $table.parentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mergeKey => $composableBuilder(
+    column: $table.mergeKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get marks => $composableBuilder(
+    column: $table.marks,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get weight => $composableBuilder(
+    column: $table.weight,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCustom => $composableBuilder(
+    column: $table.isCustom,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyllabusNodesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyllabusNodesTable> {
+  $$SyllabusNodesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get nodeKey =>
+      $composableBuilder(column: $table.nodeKey, builder: (column) => column);
+
+  GeneratedColumn<String> get trackKey =>
+      $composableBuilder(column: $table.trackKey, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<SyllabusNodeKind, String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get parentId =>
+      $composableBuilder(column: $table.parentId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get mergeKey =>
+      $composableBuilder(column: $table.mergeKey, builder: (column) => column);
+
+  GeneratedColumn<int> get marks =>
+      $composableBuilder(column: $table.marks, builder: (column) => column);
+
+  GeneratedColumn<int> get weight =>
+      $composableBuilder(column: $table.weight, builder: (column) => column);
+
+  GeneratedColumn<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isCustom =>
+      $composableBuilder(column: $table.isCustom, builder: (column) => column);
+}
+
+class $$SyllabusNodesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyllabusNodesTable,
+          SyllabusNode,
+          $$SyllabusNodesTableFilterComposer,
+          $$SyllabusNodesTableOrderingComposer,
+          $$SyllabusNodesTableAnnotationComposer,
+          $$SyllabusNodesTableCreateCompanionBuilder,
+          $$SyllabusNodesTableUpdateCompanionBuilder,
+          (
+            SyllabusNode,
+            BaseReferences<_$AppDatabase, $SyllabusNodesTable, SyllabusNode>,
+          ),
+          SyllabusNode,
+          PrefetchHooks Function()
+        > {
+  $$SyllabusNodesTableTableManager(_$AppDatabase db, $SyllabusNodesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyllabusNodesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyllabusNodesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyllabusNodesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> nodeKey = const Value.absent(),
+                Value<String> trackKey = const Value.absent(),
+                Value<SyllabusNodeKind> kind = const Value.absent(),
+                Value<int?> parentId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> mergeKey = const Value.absent(),
+                Value<int> marks = const Value.absent(),
+                Value<int> weight = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+                Value<bool> isCustom = const Value.absent(),
+              }) => SyllabusNodesCompanion(
+                id: id,
+                nodeKey: nodeKey,
+                trackKey: trackKey,
+                kind: kind,
+                parentId: parentId,
+                title: title,
+                mergeKey: mergeKey,
+                marks: marks,
+                weight: weight,
+                orderIndex: orderIndex,
+                isCustom: isCustom,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String nodeKey,
+                required String trackKey,
+                required SyllabusNodeKind kind,
+                Value<int?> parentId = const Value.absent(),
+                required String title,
+                required String mergeKey,
+                Value<int> marks = const Value.absent(),
+                Value<int> weight = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+                Value<bool> isCustom = const Value.absent(),
+              }) => SyllabusNodesCompanion.insert(
+                id: id,
+                nodeKey: nodeKey,
+                trackKey: trackKey,
+                kind: kind,
+                parentId: parentId,
+                title: title,
+                mergeKey: mergeKey,
+                marks: marks,
+                weight: weight,
+                orderIndex: orderIndex,
+                isCustom: isCustom,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SyllabusNodesTable, SyllabusNode>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $SyllabusNodesTable,
+                    SyllabusNode
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyllabusNodesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyllabusNodesTable,
+      SyllabusNode,
+      $$SyllabusNodesTableFilterComposer,
+      $$SyllabusNodesTableOrderingComposer,
+      $$SyllabusNodesTableAnnotationComposer,
+      $$SyllabusNodesTableCreateCompanionBuilder,
+      $$SyllabusNodesTableUpdateCompanionBuilder,
+      (
+        SyllabusNode,
+        BaseReferences<_$AppDatabase, $SyllabusNodesTable, SyllabusNode>,
+      ),
+      SyllabusNode,
+      PrefetchHooks Function()
+    >;
+typedef $$SyllabusProgressTableCreateCompanionBuilder =
+    SyllabusProgressCompanion Function({
+      required String nodeKey,
+      required SyllabusStatus status,
+      required SyllabusProgressSource source,
+      Value<DateTime> markedAt,
+      Value<String?> note,
+      Value<int> rowid,
+    });
+typedef $$SyllabusProgressTableUpdateCompanionBuilder =
+    SyllabusProgressCompanion Function({
+      Value<String> nodeKey,
+      Value<SyllabusStatus> status,
+      Value<SyllabusProgressSource> source,
+      Value<DateTime> markedAt,
+      Value<String?> note,
+      Value<int> rowid,
+    });
+
+class $$SyllabusProgressTableFilterComposer
+    extends Composer<_$AppDatabase, $SyllabusProgressTable> {
+  $$SyllabusProgressTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get nodeKey => $composableBuilder(
+    column: $table.nodeKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<SyllabusStatus, SyllabusStatus, String>
+  get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<
+    SyllabusProgressSource,
+    SyllabusProgressSource,
+    String
+  >
+  get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<DateTime> get markedAt => $composableBuilder(
+    column: $table.markedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyllabusProgressTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyllabusProgressTable> {
+  $$SyllabusProgressTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get nodeKey => $composableBuilder(
+    column: $table.nodeKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get markedAt => $composableBuilder(
+    column: $table.markedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyllabusProgressTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyllabusProgressTable> {
+  $$SyllabusProgressTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get nodeKey =>
+      $composableBuilder(column: $table.nodeKey, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<SyllabusStatus, String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<SyllabusProgressSource, String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get markedAt =>
+      $composableBuilder(column: $table.markedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+}
+
+class $$SyllabusProgressTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyllabusProgressTable,
+          SyllabusProgressData,
+          $$SyllabusProgressTableFilterComposer,
+          $$SyllabusProgressTableOrderingComposer,
+          $$SyllabusProgressTableAnnotationComposer,
+          $$SyllabusProgressTableCreateCompanionBuilder,
+          $$SyllabusProgressTableUpdateCompanionBuilder,
+          (
+            SyllabusProgressData,
+            BaseReferences<
+              _$AppDatabase,
+              $SyllabusProgressTable,
+              SyllabusProgressData
+            >,
+          ),
+          SyllabusProgressData,
+          PrefetchHooks Function()
+        > {
+  $$SyllabusProgressTableTableManager(
+    _$AppDatabase db,
+    $SyllabusProgressTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyllabusProgressTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyllabusProgressTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyllabusProgressTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> nodeKey = const Value.absent(),
+                Value<SyllabusStatus> status = const Value.absent(),
+                Value<SyllabusProgressSource> source = const Value.absent(),
+                Value<DateTime> markedAt = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyllabusProgressCompanion(
+                nodeKey: nodeKey,
+                status: status,
+                source: source,
+                markedAt: markedAt,
+                note: note,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String nodeKey,
+                required SyllabusStatus status,
+                required SyllabusProgressSource source,
+                Value<DateTime> markedAt = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyllabusProgressCompanion.insert(
+                nodeKey: nodeKey,
+                status: status,
+                source: source,
+                markedAt: markedAt,
+                note: note,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SyllabusProgressTable, SyllabusProgressData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $SyllabusProgressTable,
+                    SyllabusProgressData
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyllabusProgressTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyllabusProgressTable,
+      SyllabusProgressData,
+      $$SyllabusProgressTableFilterComposer,
+      $$SyllabusProgressTableOrderingComposer,
+      $$SyllabusProgressTableAnnotationComposer,
+      $$SyllabusProgressTableCreateCompanionBuilder,
+      $$SyllabusProgressTableUpdateCompanionBuilder,
+      (
+        SyllabusProgressData,
+        BaseReferences<
+          _$AppDatabase,
+          $SyllabusProgressTable,
+          SyllabusProgressData
+        >,
+      ),
+      SyllabusProgressData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8123,4 +9747,8 @@ class $AppDatabaseManager {
       $$DrillQuestionsTableTableManager(_db, _db.drillQuestions);
   $$SpacedReviewItemsTableTableManager get spacedReviewItems =>
       $$SpacedReviewItemsTableTableManager(_db, _db.spacedReviewItems);
+  $$SyllabusNodesTableTableManager get syllabusNodes =>
+      $$SyllabusNodesTableTableManager(_db, _db.syllabusNodes);
+  $$SyllabusProgressTableTableManager get syllabusProgress =>
+      $$SyllabusProgressTableTableManager(_db, _db.syllabusProgress);
 }

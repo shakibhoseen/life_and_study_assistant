@@ -1,0 +1,294 @@
+{
+  "trackKey": "primary",
+  "trackName": "প্রাথমিক সহকারী শিক্ষক",
+  "totalMarks": 80,
+  "note": "প্রাথমিক সহকারী শিক্ষক নিয়োগ পরীক্ষার প্রচলিত মানবণ্টন (৮০ নম্বর)। পিএসসির বিসিএস সিলেবাসের মতো আনুষ্ঠানিকভাবে প্রকাশিত বিষয়ভিত্তিক টপিক তালিকা এটির নেই, তাই টপিকগুলো বিগত বছরের প্রশ্নের ধারা অনুসারে সাজানো। নিজের মতো করে সম্পাদনা করে নিন।",
+  "subjects": [
+    {
+      "name": "বাংলা",
+      "marks": 20,
+      "topics": [
+        {
+          "title": "ধ্বনি, বর্ণ ও সন্ধি",
+          "weight": 2
+        },
+        {
+          "title": "শব্দ, পদ ও পদ প্রকরণ",
+          "weight": 2
+        },
+        {
+          "title": "কারক ও বিভক্তি",
+          "weight": 2
+        },
+        {
+          "title": "সমাস",
+          "weight": 2
+        },
+        {
+          "title": "প্রকৃতি ও প্রত্যয়",
+          "weight": 1
+        },
+        {
+          "title": "উপসর্গ ও অনুসর্গ",
+          "weight": 1
+        },
+        {
+          "title": "বাক্য ও বাক্য পরিবর্তন",
+          "weight": 1
+        },
+        {
+          "title": "বানান ও বানানশুদ্ধি",
+          "weight": 2
+        },
+        {
+          "title": "সমার্থক ও বিপরীতার্থক শব্দ",
+          "weight": 2
+        },
+        {
+          "title": "বাগধারা ও প্রবাদ-প্রবচন",
+          "weight": 2
+        },
+        {
+          "title": "এককথায় প্রকাশ",
+          "weight": 1
+        },
+        {
+          "title": "বাংলা সাহিত্যের যুগবিভাগ",
+          "weight": 1
+        },
+        {
+          "title": "রবীন্দ্রনাথ ঠাকুর ও কাজী নজরুল ইসলাম",
+          "weight": 2
+        },
+        {
+          "title": "বিখ্যাত কবি-সাহিত্যিক ও তাঁদের রচনা",
+          "weight": 2
+        }
+      ],
+      "aliases": [
+        "বাংলা সাহিত্য",
+        "বাংলা ব্যাকরণ",
+        "bangla",
+        "bangla literature",
+        "bangla grammar"
+      ]
+    },
+    {
+      "name": "ইংরেজি",
+      "marks": 20,
+      "topics": [
+        {
+          "title": "Parts of Speech",
+          "weight": 2
+        },
+        {
+          "title": "Articles & Determiners",
+          "weight": 1
+        },
+        {
+          "title": "Tense",
+          "weight": 2
+        },
+        {
+          "title": "Voice",
+          "weight": 2
+        },
+        {
+          "title": "Narration",
+          "weight": 2
+        },
+        {
+          "title": "Right Form of Verbs",
+          "weight": 2
+        },
+        {
+          "title": "Subject-Verb Agreement",
+          "weight": 1
+        },
+        {
+          "title": "Preposition & Appropriate Preposition",
+          "weight": 2
+        },
+        {
+          "title": "Phrases & Idioms",
+          "weight": 2
+        },
+        {
+          "title": "Correction / Error Detection",
+          "weight": 2
+        },
+        {
+          "title": "Synonyms & Antonyms",
+          "weight": 2
+        },
+        {
+          "title": "One-word Substitution",
+          "weight": 1
+        },
+        {
+          "title": "Spelling",
+          "weight": 1
+        },
+        {
+          "title": "Translation (বাংলা থেকে ইংরেজি)",
+          "weight": 1
+        },
+        {
+          "title": "Transformation of Sentences",
+          "weight": 1
+        }
+      ],
+      "aliases": [
+        "english",
+        "english grammar",
+        "english literature",
+        "english vocabulary"
+      ]
+    },
+    {
+      "name": "গণিত",
+      "marks": 20,
+      "topics": [
+        {
+          "title": "সংখ্যা পদ্ধতি",
+          "weight": 1
+        },
+        {
+          "title": "ল.সা.গু ও গ.সা.গু",
+          "weight": 1
+        },
+        {
+          "title": "শতকরা",
+          "weight": 2
+        },
+        {
+          "title": "লাভ-ক্ষতি",
+          "weight": 2
+        },
+        {
+          "title": "সুদকষা",
+          "weight": 2
+        },
+        {
+          "title": "অনুপাত ও সমানুপাত",
+          "weight": 2
+        },
+        {
+          "title": "ঐকিক নিয়ম",
+          "weight": 1
+        },
+        {
+          "title": "গড়",
+          "weight": 1
+        },
+        {
+          "title": "সময় ও কাজ",
+          "weight": 2
+        },
+        {
+          "title": "সময়, দূরত্ব ও গতি",
+          "weight": 2
+        },
+        {
+          "title": "বীজগণিতিক সূত্র ও উৎপাদকে বিশ্লেষণ",
+          "weight": 2
+        },
+        {
+          "title": "সরল ও দ্বিঘাত সমীকরণ",
+          "weight": 2
+        },
+        {
+          "title": "সূচক ও লগারিদম",
+          "weight": 1
+        },
+        {
+          "title": "অনুক্রম ও ধারা",
+          "weight": 1
+        },
+        {
+          "title": "সেট ও ভেনচিত্র",
+          "weight": 1
+        },
+        {
+          "title": "ত্রিভুজ ও কোণ (জ্যামিতি)",
+          "weight": 2
+        },
+        {
+          "title": "চতুর্ভুজ ও বৃত্ত (জ্যামিতি)",
+          "weight": 2
+        },
+        {
+          "title": "পরিমিতি (ক্ষেত্রফল ও আয়তন)",
+          "weight": 2
+        }
+      ],
+      "aliases": [
+        "গাণিতিক যুক্তি",
+        "math",
+        "maths",
+        "mathematics"
+      ]
+    },
+    {
+      "name": "সাধারণ জ্ঞান",
+      "marks": 20,
+      "topics": [
+        {
+          "title": "বাংলাদেশের ইতিহাস ও মুক্তিযুদ্ধ",
+          "weight": 3
+        },
+        {
+          "title": "বাংলাদেশের ভূগোল ও নদনদী",
+          "weight": 2
+        },
+        {
+          "title": "বাংলাদেশের সংবিধান ও সরকার ব্যবস্থা",
+          "weight": 2
+        },
+        {
+          "title": "বাংলাদেশের অর্থনীতি ও কৃষি",
+          "weight": 2
+        },
+        {
+          "title": "জাতীয় দিবস, প্রতীক ও পুরস্কার",
+          "weight": 2
+        },
+        {
+          "title": "আন্তর্জাতিক সংস্থা ও জাতিসংঘ",
+          "weight": 2
+        },
+        {
+          "title": "বিশ্ব ভূগোল, রাজধানী ও মুদ্রা",
+          "weight": 2
+        },
+        {
+          "title": "সাম্প্রতিক ঘটনাবলি",
+          "weight": 3
+        },
+        {
+          "title": "পদার্থ ও রসায়ন (সাধারণ বিজ্ঞান)",
+          "weight": 2
+        },
+        {
+          "title": "জীববিজ্ঞান ও স্বাস্থ্য (সাধারণ বিজ্ঞান)",
+          "weight": 2
+        },
+        {
+          "title": "কম্পিউটার ও তথ্যপ্রযুক্তি",
+          "weight": 2
+        },
+        {
+          "title": "খেলাধুলা ও শিল্প-সংস্কৃতি",
+          "weight": 1
+        }
+      ],
+      "aliases": [
+        "general knowledge",
+        "gk",
+        "সাধারণ বিজ্ঞান",
+        "বাংলাদেশ বিষয়াবলী",
+        "আন্তর্জাতিক বিষয়াবলী"
+      ]
+    }
+  ]
+}

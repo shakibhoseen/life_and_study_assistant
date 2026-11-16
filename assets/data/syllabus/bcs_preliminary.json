@@ -1,0 +1,768 @@
+{
+  "trackKey": "bcs_preliminary",
+  "trackName": "বিসিএস প্রিলিমিনারি",
+  "totalMarks": 200,
+  "note": "বিসিএস প্রিলিমিনারির বিষয়ভিত্তিক মানবণ্টন বিপিএসসি কর্তৃক নির্ধারিত (২০০ নম্বর)। প্রতিটি বিষয়ের ভেতরের টপিকগুলো সিলেবাস ও বিগত বছরের প্রশ্নের ধারা অনুসারে সাজানো — নিজের মতো করে সম্পাদনা করে নিন।",
+  "subjects": [
+    {
+      "name": "বাংলা ভাষা ও সাহিত্য",
+      "marks": 35,
+      "topics": [
+        {
+          "title": "ধ্বনি ও বর্ণ",
+          "weight": 1
+        },
+        {
+          "title": "সন্ধি",
+          "weight": 2
+        },
+        {
+          "title": "শব্দ ও শব্দের উৎস (তৎসম, তদ্ভব, দেশি, বিদেশি)",
+          "weight": 2
+        },
+        {
+          "title": "পদ ও পদ প্রকরণ",
+          "weight": 2
+        },
+        {
+          "title": "লিঙ্গ, বচন ও পুরুষ",
+          "weight": 1
+        },
+        {
+          "title": "কারক ও বিভক্তি",
+          "weight": 3
+        },
+        {
+          "title": "সমাস",
+          "weight": 3
+        },
+        {
+          "title": "প্রকৃতি ও প্রত্যয়",
+          "weight": 2
+        },
+        {
+          "title": "উপসর্গ ও অনুসর্গ",
+          "weight": 2
+        },
+        {
+          "title": "ক্রিয়া, কাল ও ক্রিয়ার ভাব",
+          "weight": 1
+        },
+        {
+          "title": "বাক্য ও বাক্য প্রকরণ",
+          "weight": 2
+        },
+        {
+          "title": "বাচ্য ও উক্তি পরিবর্তন",
+          "weight": 1
+        },
+        {
+          "title": "বানান ও বানানশুদ্ধি",
+          "weight": 3
+        },
+        {
+          "title": "প্রয়োগ-অপপ্রয়োগ",
+          "weight": 2
+        },
+        {
+          "title": "সমার্থক ও বিপরীতার্থক শব্দ",
+          "weight": 2
+        },
+        {
+          "title": "বাগধারা ও প্রবাদ-প্রবচন",
+          "weight": 3
+        },
+        {
+          "title": "এককথায় প্রকাশ",
+          "weight": 2
+        },
+        {
+          "title": "পরিভাষা",
+          "weight": 1
+        },
+        {
+          "title": "প্রাচীন যুগ ও চর্যাপদ",
+          "weight": 3
+        },
+        {
+          "title": "শ্রীকৃষ্ণকীর্তন ও বৈষ্ণব পদাবলি (মধ্যযুগ)",
+          "weight": 2
+        },
+        {
+          "title": "মঙ্গলকাব্য (মধ্যযুগ)",
+          "weight": 2
+        },
+        {
+          "title": "রোমান্টিক প্রণয়োপাখ্যান ও পুঁথি সাহিত্য (মধ্যযুগ)",
+          "weight": 2
+        },
+        {
+          "title": "আধুনিক যুগের সূচনা ও বাংলা গদ্যের বিকাশ",
+          "weight": 2
+        },
+        {
+          "title": "মাইকেল মধুসূদন দত্ত",
+          "weight": 2
+        },
+        {
+          "title": "বঙ্কিমচন্দ্র চট্টোপাধ্যায়",
+          "weight": 2
+        },
+        {
+          "title": "রবীন্দ্রনাথ ঠাকুর",
+          "weight": 3
+        },
+        {
+          "title": "কাজী নজরুল ইসলাম",
+          "weight": 3
+        },
+        {
+          "title": "জীবনানন্দ দাশ ও ত্রিশোত্তর কবিতা",
+          "weight": 2
+        },
+        {
+          "title": "মীর মশাররফ হোসেন ও মুসলিম সাহিত্যধারা",
+          "weight": 2
+        },
+        {
+          "title": "মুক্তিযুদ্ধভিত্তিক সাহিত্য",
+          "weight": 2
+        },
+        {
+          "title": "নাটক ও নাট্যকার",
+          "weight": 2
+        },
+        {
+          "title": "পত্র-পত্রিকা ও সাহিত্য আন্দোলন",
+          "weight": 2
+        },
+        {
+          "title": "সাহিত্য পুরস্কার ও উপাধি",
+          "weight": 2
+        },
+        {
+          "title": "ছন্দ, অলংকার ও কাব্যরীতি",
+          "weight": 1
+        }
+      ],
+      "aliases": [
+        "বাংলা",
+        "বাংলা সাহিত্য",
+        "বাংলা ব্যাকরণ",
+        "bangla",
+        "bangla literature",
+        "bangla grammar"
+      ]
+    },
+    {
+      "name": "English Language and Literature",
+      "marks": 35,
+      "topics": [
+        {
+          "title": "Parts of Speech",
+          "weight": 2
+        },
+        {
+          "title": "Articles & Determiners",
+          "weight": 2
+        },
+        {
+          "title": "Tense",
+          "weight": 2
+        },
+        {
+          "title": "Voice",
+          "weight": 2
+        },
+        {
+          "title": "Narration",
+          "weight": 2
+        },
+        {
+          "title": "Right Form of Verbs",
+          "weight": 2
+        },
+        {
+          "title": "Subject-Verb Agreement",
+          "weight": 2
+        },
+        {
+          "title": "Conditionals",
+          "weight": 1
+        },
+        {
+          "title": "Preposition & Appropriate Preposition",
+          "weight": 3
+        },
+        {
+          "title": "Phrases & Idioms",
+          "weight": 3
+        },
+        {
+          "title": "Clauses",
+          "weight": 2
+        },
+        {
+          "title": "Transformation of Sentences",
+          "weight": 2
+        },
+        {
+          "title": "Correction / Error Detection",
+          "weight": 2
+        },
+        {
+          "title": "Synonyms & Antonyms",
+          "weight": 3
+        },
+        {
+          "title": "One-word Substitution",
+          "weight": 2
+        },
+        {
+          "title": "Spelling",
+          "weight": 2
+        },
+        {
+          "title": "Translation (Bangla to English)",
+          "weight": 1
+        },
+        {
+          "title": "The Renaissance (1500–1660)",
+          "weight": 2
+        },
+        {
+          "title": "The Neo-Classical Period (1660–1798)",
+          "weight": 2
+        },
+        {
+          "title": "The Romantic Period (1798–1832)",
+          "weight": 3
+        },
+        {
+          "title": "The Victorian Period (1832–1901)",
+          "weight": 3
+        },
+        {
+          "title": "The Modern Period (1901–1939)",
+          "weight": 3
+        },
+        {
+          "title": "The Post-Modern Period (1939–present)",
+          "weight": 2
+        },
+        {
+          "title": "Shakespeare",
+          "weight": 3
+        },
+        {
+          "title": "Literary Terms & Famous Quotations",
+          "weight": 2
+        }
+      ],
+      "aliases": [
+        "ইংরেজি",
+        "english",
+        "english grammar",
+        "english literature",
+        "english vocabulary"
+      ]
+    },
+    {
+      "name": "বাংলাদেশ বিষয়াবলী",
+      "marks": 30,
+      "topics": [
+        {
+          "title": "প্রাচীন বাংলার জনপদ ও ইতিহাস",
+          "weight": 2
+        },
+        {
+          "title": "মধ্যযুগ: সুলতানি ও মোগল আমল",
+          "weight": 2
+        },
+        {
+          "title": "ব্রিটিশ শাসন ও স্বাধীনতা সংগ্রাম",
+          "weight": 3
+        },
+        {
+          "title": "পাকিস্তান আমল ও ভাষা আন্দোলন",
+          "weight": 3
+        },
+        {
+          "title": "ছয় দফা ও ঊনসত্তরের গণঅভ্যুত্থান",
+          "weight": 2
+        },
+        {
+          "title": "মুক্তিযুদ্ধ ১৯৭১",
+          "weight": 4
+        },
+        {
+          "title": "সংবিধান ও সংশোধনী",
+          "weight": 3
+        },
+        {
+          "title": "রাষ্ট্রীয় কাঠামো ও সরকার ব্যবস্থা",
+          "weight": 2
+        },
+        {
+          "title": "সংসদ ও নির্বাচন ব্যবস্থা",
+          "weight": 2
+        },
+        {
+          "title": "স্থানীয় সরকার",
+          "weight": 2
+        },
+        {
+          "title": "অর্থনীতি: কৃষি ও শিল্প",
+          "weight": 2
+        },
+        {
+          "title": "মুদ্রা, ব্যাংক ও বাজেট",
+          "weight": 2
+        },
+        {
+          "title": "জনসংখ্যা ও আদমশুমারি",
+          "weight": 2
+        },
+        {
+          "title": "শিক্ষা, স্বাস্থ্য ও জনকল্যাণ",
+          "weight": 1
+        },
+        {
+          "title": "যোগাযোগ ও অবকাঠামো",
+          "weight": 1
+        },
+        {
+          "title": "প্রাকৃতিক সম্পদ ও খনিজ",
+          "weight": 2
+        },
+        {
+          "title": "ক্ষুদ্র নৃগোষ্ঠী",
+          "weight": 2
+        },
+        {
+          "title": "জাতীয় দিবস, প্রতীক ও পুরস্কার",
+          "weight": 2
+        },
+        {
+          "title": "শিল্প, সংস্কৃতি ও ক্রীড়া",
+          "weight": 1
+        }
+      ],
+      "aliases": [
+        "বাংলাদেশ বিষয়াবলি",
+        "bangladesh affairs",
+        "bangladesh affair"
+      ]
+    },
+    {
+      "name": "আন্তর্জাতিক বিষয়াবলী",
+      "marks": 20,
+      "topics": [
+        {
+          "title": "বিশ্ব ভূগোল ও মহাদেশ পরিচিতি",
+          "weight": 2
+        },
+        {
+          "title": "জাতিসংঘ ও এর অঙ্গসংস্থা",
+          "weight": 3
+        },
+        {
+          "title": "আঞ্চলিক সংস্থা (SAARC, ASEAN, EU, OIC)",
+          "weight": 3
+        },
+        {
+          "title": "বিশ্বযুদ্ধ ও শীতল যুদ্ধ",
+          "weight": 2
+        },
+        {
+          "title": "আন্তর্জাতিক নিরাপত্তা ও কূটনীতি",
+          "weight": 2
+        },
+        {
+          "title": "বিশ্ব অর্থনীতি ও বাণিজ্য সংস্থা",
+          "weight": 2
+        },
+        {
+          "title": "আন্তর্জাতিক চুক্তি ও সনদ",
+          "weight": 2
+        },
+        {
+          "title": "নোবেল ও অন্যান্য আন্তর্জাতিক পুরস্কার",
+          "weight": 2
+        },
+        {
+          "title": "রাজধানী, মুদ্রা ও সীমারেখা",
+          "weight": 2
+        },
+        {
+          "title": "বিখ্যাত স্থান, ব্যক্তি ও ঘটনা",
+          "weight": 2
+        },
+        {
+          "title": "সাম্প্রতিক আন্তর্জাতিক ঘটনাবলি",
+          "weight": 3
+        }
+      ],
+      "aliases": [
+        "আন্তর্জাতিক বিষয়াবলি",
+        "international affairs"
+      ]
+    },
+    {
+      "name": "ভূগোল, পরিবেশ ও দুর্যোগ ব্যবস্থাপনা",
+      "marks": 10,
+      "topics": [
+        {
+          "title": "বাংলাদেশের ভূ-প্রকৃতি ও নদনদী",
+          "weight": 3
+        },
+        {
+          "title": "জলবায়ু ও ঋতু",
+          "weight": 2
+        },
+        {
+          "title": "পরিবেশ ও দূষণ",
+          "weight": 2
+        },
+        {
+          "title": "জলবায়ু পরিবর্তন",
+          "weight": 2
+        },
+        {
+          "title": "প্রাকৃতিক দুর্যোগ",
+          "weight": 3
+        },
+        {
+          "title": "দুর্যোগ ব্যবস্থাপনা",
+          "weight": 2
+        },
+        {
+          "title": "বিশ্ব ভূগোল ও মানচিত্র",
+          "weight": 2
+        },
+        {
+          "title": "টেকসই উন্নয়ন ও পরিবেশ চুক্তি",
+          "weight": 2
+        }
+      ],
+      "aliases": [
+        "ভূগোল",
+        "geography",
+        "পরিবেশ"
+      ]
+    },
+    {
+      "name": "সাধারণ বিজ্ঞান",
+      "marks": 15,
+      "topics": [
+        {
+          "title": "বল, গতি ও শক্তি (পদার্থবিজ্ঞান)",
+          "weight": 2
+        },
+        {
+          "title": "তাপ, আলো ও শব্দ (পদার্থবিজ্ঞান)",
+          "weight": 2
+        },
+        {
+          "title": "বিদ্যুৎ ও চুম্বক (পদার্থবিজ্ঞান)",
+          "weight": 2
+        },
+        {
+          "title": "পরমাণু ও পর্যায় সারণি (রসায়ন)",
+          "weight": 2
+        },
+        {
+          "title": "অম্ল, ক্ষার ও লবণ (রসায়ন)",
+          "weight": 2
+        },
+        {
+          "title": "জৈব ও অজৈব যৌগ (রসায়ন)",
+          "weight": 2
+        },
+        {
+          "title": "কোষ ও টিস্যু (জীববিজ্ঞান)",
+          "weight": 2
+        },
+        {
+          "title": "মানবদেহ ও শারীরবৃত্ত (জীববিজ্ঞান)",
+          "weight": 3
+        },
+        {
+          "title": "রোগ ও রোগ প্রতিরোধ (জীববিজ্ঞান)",
+          "weight": 3
+        },
+        {
+          "title": "উদ্ভিদ ও সালোকসংশ্লেষণ (জীববিজ্ঞান)",
+          "weight": 2
+        },
+        {
+          "title": "বংশগতি ও জীবপ্রযুক্তি",
+          "weight": 2
+        },
+        {
+          "title": "পুষ্টি ও খাদ্য",
+          "weight": 2
+        },
+        {
+          "title": "মহাকাশ ও সৌরজগৎ",
+          "weight": 2
+        },
+        {
+          "title": "আধুনিক বিজ্ঞান ও আবিষ্কার",
+          "weight": 2
+        }
+      ],
+      "aliases": [
+        "বিজ্ঞান",
+        "science",
+        "general science"
+      ]
+    },
+    {
+      "name": "কম্পিউটার ও তথ্যপ্রযুক্তি",
+      "marks": 15,
+      "topics": [
+        {
+          "title": "কম্পিউটারের ইতিহাস ও প্রজন্ম",
+          "weight": 2
+        },
+        {
+          "title": "হার্ডওয়্যার ও ইনপুট-আউটপুট ডিভাইস",
+          "weight": 2
+        },
+        {
+          "title": "মেমোরি ও স্টোরেজ",
+          "weight": 2
+        },
+        {
+          "title": "সফটওয়্যার ও অপারেটিং সিস্টেম",
+          "weight": 2
+        },
+        {
+          "title": "সংখ্যা পদ্ধতি ও কোডিং",
+          "weight": 3
+        },
+        {
+          "title": "নেটওয়ার্ক ও টপোলজি",
+          "weight": 3
+        },
+        {
+          "title": "ইন্টারনেট ও ওয়েব",
+          "weight": 3
+        },
+        {
+          "title": "ডেটাবেজ ও ডেটা ব্যবস্থাপনা",
+          "weight": 2
+        },
+        {
+          "title": "সাইবার নিরাপত্তা",
+          "weight": 2
+        },
+        {
+          "title": "মোবাইল ও ওয়্যারলেস প্রযুক্তি",
+          "weight": 2
+        },
+        {
+          "title": "ই-গভর্ন্যান্স ও ডিজিটাল বাংলাদেশ",
+          "weight": 2
+        },
+        {
+          "title": "কৃত্রিম বুদ্ধিমত্তা ও নতুন প্রযুক্তি",
+          "weight": 2
+        }
+      ],
+      "aliases": [
+        "কম্পিউটার",
+        "আইসিটি",
+        "computer",
+        "ict",
+        "information technology"
+      ]
+    },
+    {
+      "name": "গাণিতিক যুক্তি",
+      "marks": 15,
+      "topics": [
+        {
+          "title": "বাস্তব সংখ্যা ও সংখ্যা পদ্ধতি",
+          "weight": 2
+        },
+        {
+          "title": "ল.সা.গু ও গ.সা.গু",
+          "weight": 2
+        },
+        {
+          "title": "শতকরা",
+          "weight": 2
+        },
+        {
+          "title": "লাভ-ক্ষতি",
+          "weight": 2
+        },
+        {
+          "title": "সুদকষা",
+          "weight": 2
+        },
+        {
+          "title": "অনুপাত ও সমানুপাত",
+          "weight": 2
+        },
+        {
+          "title": "ঐকিক নিয়ম",
+          "weight": 1
+        },
+        {
+          "title": "গড়",
+          "weight": 2
+        },
+        {
+          "title": "সময় ও কাজ",
+          "weight": 2
+        },
+        {
+          "title": "সময়, দূরত্ব ও গতি",
+          "weight": 2
+        },
+        {
+          "title": "বীজগণিতিক সূত্র ও উৎপাদকে বিশ্লেষণ",
+          "weight": 3
+        },
+        {
+          "title": "সরল ও দ্বিঘাত সমীকরণ",
+          "weight": 2
+        },
+        {
+          "title": "সূচক ও লগারিদম",
+          "weight": 2
+        },
+        {
+          "title": "অনুক্রম ও ধারা",
+          "weight": 2
+        },
+        {
+          "title": "সেট ও ভেনচিত্র",
+          "weight": 2
+        },
+        {
+          "title": "রেখা ও কোণ (জ্যামিতি)",
+          "weight": 2
+        },
+        {
+          "title": "ত্রিভুজ ও চতুর্ভুজ (জ্যামিতি)",
+          "weight": 3
+        },
+        {
+          "title": "বৃত্ত (জ্যামিতি)",
+          "weight": 2
+        },
+        {
+          "title": "পরিমিতি (ক্ষেত্রফল ও আয়তন)",
+          "weight": 2
+        },
+        {
+          "title": "বিন্যাস ও সমাবেশ",
+          "weight": 2
+        },
+        {
+          "title": "সম্ভাব্যতা",
+          "weight": 2
+        }
+      ],
+      "aliases": [
+        "গণিত",
+        "math",
+        "maths",
+        "mathematics"
+      ]
+    },
+    {
+      "name": "মানসিক দক্ষতা",
+      "marks": 15,
+      "topics": [
+        {
+          "title": "ভাষাগত যৌক্তিক বিচার",
+          "weight": 3
+        },
+        {
+          "title": "সমস্যা সমাধান",
+          "weight": 3
+        },
+        {
+          "title": "বানান ও ভাষা",
+          "weight": 2
+        },
+        {
+          "title": "যান্ত্রিক দক্ষতা",
+          "weight": 2
+        },
+        {
+          "title": "স্থানাঙ্ক সম্পর্ক (Space Relation)",
+          "weight": 3
+        },
+        {
+          "title": "সংখ্যাগত ক্ষমতা",
+          "weight": 3
+        },
+        {
+          "title": "ঘড়ি, ক্যালেন্ডার ও দিক নির্ণয়",
+          "weight": 2
+        },
+        {
+          "title": "সাদৃশ্য ও শ্রেণিবিন্যাস",
+          "weight": 2
+        },
+        {
+          "title": "সংকেত ও ধারাবাহিকতা",
+          "weight": 2
+        }
+      ],
+      "aliases": [
+        "mental ability"
+      ]
+    },
+    {
+      "name": "নৈতিকতা, মূল্যবোধ ও সুশাসন",
+      "marks": 10,
+      "topics": [
+        {
+          "title": "মূল্যবোধের ধারণা ও উৎস",
+          "weight": 2
+        },
+        {
+          "title": "নৈতিকতা ও নৈতিক আচরণ",
+          "weight": 2
+        },
+        {
+          "title": "সুশাসনের ধারণা ও উপাদান",
+          "weight": 3
+        },
+        {
+          "title": "সুশাসন প্রতিষ্ঠায় বাধা",
+          "weight": 2
+        },
+        {
+          "title": "আইনের শাসন ও জবাবদিহিতা",
+          "weight": 2
+        },
+        {
+          "title": "দুর্নীতি ও দুর্নীতি দমন",
+          "weight": 2
+        },
+        {
+          "title": "মানবাধিকার",
+          "weight": 2
+        },
+        {
+          "title": "সুশাসন ও উন্নয়ন",
+          "weight": 2
+        }
+      ],
+      "aliases": [
+        "নৈতিকতা",
+        "সুশাসন",
+        "ethics",
+        "good governance"
+      ]
+    }
+  ]
+}

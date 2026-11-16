@@ -112,6 +112,7 @@ flutter:
     - assets/tessdata_config.json
     - assets/tessdata/
     - assets/data/
+    - assets/data/syllabus/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

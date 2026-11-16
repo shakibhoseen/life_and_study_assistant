@@ -185,7 +185,12 @@ void main() {
     expect(stats['total_answered'], 1);
   });
 
-  test('the schema is at the version whose migration cleans the old rows', () {
-    expect(db.schemaVersion, 15);
+  test('the schema is past the version whose migration cleans the old rows', () {
+    // Pinned to an exact version this broke on every later schema bump while
+    // guarding nothing about the cleanup itself. What has to hold is that a
+    // database reaching the current version has run the `from < 14` step,
+    // which is what stops a captured mistake counting as an answered
+    // question.
+    expect(db.schemaVersion, greaterThanOrEqualTo(14));
   });
 }
