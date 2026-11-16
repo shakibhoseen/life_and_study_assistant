@@ -5,6 +5,7 @@ import 'package:workmanager/workmanager.dart';
 import '../../config/notification_constants.dart';
 import '../home_widget_service.dart';
 import '../study_widget_service.dart';
+import 'sentinel_log.dart';
 import '../../database/app_database.dart';
 import '../notification/notification_service.dart';
 import 'office_sentinel_service.dart';
@@ -24,10 +25,45 @@ void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     debugPrint('Native background WorkManager task triggered: $task');
 
+    // Nothing here used to be wrapped, so anything that threw took the whole
+    // task down and WorkManager logged a bare FAILURE with no reason. The
+    // widget sync had been dying seventy-five milliseconds in, every time,
+    // and the only visible symptom was a widget whose "last synced" never
+    // moved. A failure is written down now, and one task's failure is not
+    // allowed to look like the task never ran.
+    try {
+      await _runBackgroundTask(task);
+    } catch (e, stack) {
+      debugPrint('Background task $task failed: $e');
+      debugPrint('$stack');
+      await SentinelLog.write('background task failed: $task - $e');
+    }
+
+    return Future.value(true);
+  });
+}
+
+/// Starts the notification stack without letting it take the task with it.
+///
+/// NotificationService.init() throws in a background isolate — it is what was
+/// killing the widget sync, which did not even need it. The attendance
+/// watchdog does need notifications, and cannot be given up on just because
+/// they are unavailable: checking the Wi-Fi and reviving the sentinel still
+/// matter without them. A failure is recorded rather than swallowed.
+Future<void> _initNotificationsBestEffort(String task) async {
+  try {
+    await NotificationService.instance.init();
+  } catch (e) {
+    debugPrint('Background task $task: notifications unavailable: $e');
+    await SentinelLog.write('background $task: notifications unavailable');
+  }
+}
+
+Future<void> _runBackgroundTask(String task) async {
     switch (task) {
       case backgroundTaskWifiCheck:
         // Initialize notifications and check Wi-Fi & attendance cutoff in background
-        await NotificationService.instance.init();
+        await _initNotificationsBestEffort(task);
         await WifiMonitorService.instance.checkCurrentWifiStatus();
         await WifiMonitorService.instance.checkLateCutoffWarning();
         await OfficeSentinelService.instance.init();
@@ -35,12 +71,14 @@ void callbackDispatcher() {
         break;
 
       case backgroundTaskDailyMeal:
-        await NotificationService.instance.init();
+        await _initNotificationsBestEffort(task);
         await NotificationService.instance.scheduleDailyLunchCutoffReminder();
         break;
 
       case backgroundTaskWidgetSync:
-        await NotificationService.instance.init();
+        // No NotificationService here. Repainting a widget shows nothing and
+        // schedules nothing, so starting the notification stack was work this
+        // task never needed — and it is where the task was dying.
         await HomeWidgetService.syncCurrentDataToWidget(fetchFromNetwork: true);
         break;
 
@@ -61,9 +99,6 @@ void callbackDispatcher() {
         await WorkmanagerService.instance.scheduleDailyStudyRefresh();
         break;
     }
-
-    return Future.value(true);
-  });
 }
 
 class WorkmanagerService {
