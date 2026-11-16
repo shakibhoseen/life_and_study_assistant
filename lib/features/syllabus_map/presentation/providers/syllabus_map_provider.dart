@@ -123,18 +123,71 @@ class SyllabusMapNotifier extends Notifier<void> {
       setStatus(nodeKey: proposal.nodeKey, status: proposal.suggested);
 
   /// Marks every topic in a subject at once.
+  ///
+  /// Topics the user has hidden are left out: "পুরো বিষয় শেষ" is a claim
+  /// about the syllabus they kept, and sweeping a removed topic back in would
+  /// undo a decision they made deliberately.
   Future<void> setSubject({
     required CoverageSubject subject,
     required SyllabusStatus status,
   }) async {
     final db = ref.read(appDatabaseProvider);
     for (final topic in subject.topics) {
+      if (topic.status == SyllabusStatus.hidden) continue;
       await SyllabusService.instance.setStatus(
         db,
         nodeKey: topic.nodeKey,
         status: status,
       );
     }
+    ref.read(syllabusRevisionProvider.notifier).bump();
+  }
+
+  /// Adds a topic of the user's own. False if the name is empty or already
+  /// used in that subject.
+  Future<bool> addTopic({
+    required String subjectNodeKey,
+    required String title,
+    int weight = 2,
+  }) async {
+    final key = await SyllabusService.instance.addCustomTopic(
+      ref.read(appDatabaseProvider),
+      subjectNodeKey: subjectNodeKey,
+      title: title,
+      weight: weight,
+    );
+    if (key != null) ref.read(syllabusRevisionProvider.notifier).bump();
+    return key != null;
+  }
+
+  Future<bool> editTopic({
+    required String nodeKey,
+    String? title,
+    int? weight,
+  }) async {
+    final ok = await SyllabusService.instance.editTopic(
+      ref.read(appDatabaseProvider),
+      nodeKey: nodeKey,
+      title: title,
+      weight: weight,
+    );
+    if (ok) ref.read(syllabusRevisionProvider.notifier).bump();
+    return ok;
+  }
+
+  Future<void> removeTopic(String nodeKey) async {
+    await SyllabusService.instance.removeTopic(
+      ref.read(appDatabaseProvider),
+      nodeKey: nodeKey,
+    );
+    ref.read(syllabusRevisionProvider.notifier).bump();
+  }
+
+  Future<void> restoreTopic(String nodeKey) async {
+    await SyllabusService.instance.restoreTopic(
+      ref.read(appDatabaseProvider),
+      nodeKey: nodeKey,
+    );
     ref.read(syllabusRevisionProvider.notifier).bump();
   }
 }

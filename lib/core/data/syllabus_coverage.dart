@@ -105,7 +105,16 @@ CoverageTally tallySubject(CoverageSubject subject) {
   var done = 0;
   var reading = 0;
 
+  var counted = 0;
+
   for (final topic in subject.topics) {
+    // A hidden topic is one the user says is not in their syllabus, so it
+    // leaves the sums completely — its weight never reaches the denominator
+    // and it is not among the topics reported. Anything less and removing a
+    // topic would leave a hole the subject could never fill.
+    if (topic.status == SyllabusStatus.hidden) continue;
+    counted++;
+
     // A weight of zero or less would silently drop the topic from the
     // denominator and make the subject look complete without it.
     final weight = topic.weight > 0 ? topic.weight : 1;
@@ -118,6 +127,7 @@ CoverageTally tallySubject(CoverageSubject subject) {
         readingWeight += weight;
         reading++;
       case SyllabusStatus.notStarted:
+      case SyllabusStatus.hidden:
         break;
     }
   }
@@ -140,7 +150,7 @@ CoverageTally tallySubject(CoverageSubject subject) {
     readingFraction: readingWeight / totalWeight,
     doneTopics: done,
     readingTopics: reading,
-    totalTopics: subject.topics.length,
+    totalTopics: counted,
     marksCovered: subject.marks * doneFraction,
     marksTotal: subject.marks,
   );

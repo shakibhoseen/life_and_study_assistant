@@ -89,6 +89,11 @@ SyllabusProposal? proposeForTopic({
   // chapter.
   if (current == SyllabusStatus.done) return null;
 
+  // A topic the user has taken out of their syllabus is not a topic to ask
+  // about. Asking anyway would be the app arguing with a decision it was
+  // just told about.
+  if (current == SyllabusStatus.hidden) return null;
+
   // A topic the user is struggling with should not be proposed as finished
   // however many questions they have seen.
   if (evidence.isWeakTopic) return null;

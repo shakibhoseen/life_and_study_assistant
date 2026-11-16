@@ -8,6 +8,7 @@ import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../providers/syllabus_map_provider.dart';
 import '../widgets/coverage_bar.dart';
+import '../widgets/topic_edit_sheet.dart';
 
 String _bn(int value) => BengaliMathSanitizer.toBengaliDigits('$value');
 
@@ -280,13 +281,26 @@ class _SubjectTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final tally = tallySubject(subject);
+    final visible = subject.topics
+        .where((t) => t.status != SyllabusStatus.hidden)
+        .toList();
+    final hidden = subject.topics
+        .where((t) => t.status == SyllabusStatus.hidden)
+        .toList();
 
     return Card(
       margin: const EdgeInsets.only(bottom: FluentSpacing.s),
       child: ExpansionTile(
+        // Every tick refetches the provider and rebuilds this list, which
+        // without a stable key closed the subject the user was working in —
+        // most obviously after removing a topic, where the sheet closing and
+        // the rebuild landed together.
+        key: PageStorageKey<String>(subject.nodeKey),
         shape: const Border(),
         collapsedShape: const Border(),
         title: Text(subject.name, style: FluentType.bodyStrong),
+        // Hidden topics are listed apart rather than dropped from the widget
+        // tree: a removal the user cannot see is a removal they cannot undo.
         subtitle: Padding(
           padding: const EdgeInsets.only(top: FluentSpacing.xs),
           child: Column(
@@ -299,9 +313,23 @@ class _SubjectTile extends ConsumerWidget {
           ),
         ),
         children: [
-          ...subject.topics.map(
-            (topic) => _TopicRow(topic: topic),
+          ...visible.map(
+            (topic) => _TopicRow(topic: topic, subjectNodeKey: subject.nodeKey),
           ),
+          ListTile(
+            dense: true,
+            leading: Icon(Icons.add, size: 20, color: scheme.primary),
+            title: Text(
+              'টপিক যোগ করুন',
+              style: FluentType.body.copyWith(color: scheme.primary),
+            ),
+            onTap: () => TopicEditSheet.show(
+              context,
+              subjectNodeKey: subject.nodeKey,
+            ),
+          ),
+          if (hidden.isNotEmpty)
+            _HiddenTopics(topics: hidden),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               FluentSpacing.l,
@@ -343,13 +371,18 @@ class _SubjectTile extends ConsumerWidget {
 /// One topic, cycling notStarted → reading → done → notStarted on tap.
 class _TopicRow extends ConsumerWidget {
   final CoverageTopic topic;
+  final String subjectNodeKey;
 
-  const _TopicRow({required this.topic});
+  const _TopicRow({required this.topic, required this.subjectNodeKey});
 
+  /// Tapping cycles a topic. Hidden is not in the cycle — it is reached and
+  /// left from the edit sheet, so a stray tap cannot drop a topic out of the
+  /// syllabus, and a hidden row is not drawn here anyway.
   static SyllabusStatus _next(SyllabusStatus current) => switch (current) {
     SyllabusStatus.notStarted => SyllabusStatus.reading,
     SyllabusStatus.reading => SyllabusStatus.done,
     SyllabusStatus.done => SyllabusStatus.notStarted,
+    SyllabusStatus.hidden => SyllabusStatus.notStarted,
   };
 
   @override
@@ -366,7 +399,7 @@ class _TopicRow extends ConsumerWidget {
         scheme.tertiary,
         'পড়ছি',
       ),
-      SyllabusStatus.notStarted => (
+      SyllabusStatus.notStarted || SyllabusStatus.hidden => (
         Icons.circle_outlined,
         scheme.outline,
         '',
@@ -384,15 +417,89 @@ class _TopicRow extends ConsumerWidget {
               : scheme.onSurface,
         ),
       ),
-      trailing: label.isEmpty
-          ? null
-          : Text(
-              label,
-              style: FluentType.caption.copyWith(color: color),
+      // Editing gets its own control rather than a long press: tapping the
+      // row is the common action and has to stay instant, and a gesture
+      // nobody discovers is the same as no way to rename a topic at all.
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (label.isNotEmpty)
+            Text(label, style: FluentType.caption.copyWith(color: color)),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            color: scheme.onSurfaceVariant,
+            tooltip: 'সম্পাদনা',
+            onPressed: () => TopicEditSheet.show(
+              context,
+              subjectNodeKey: subjectNodeKey,
+              topic: topic,
             ),
+          ),
+        ],
+      ),
       onTap: () => ref
           .read(syllabusMapNotifierProvider.notifier)
           .setStatus(nodeKey: topic.nodeKey, status: _next(topic.status)),
+    );
+  }
+}
+
+/// Topics the user has taken out, kept within reach.
+///
+/// Collapsed by default so a removed topic does not go on competing for
+/// attention with the syllabus the user kept, but present, because a removal
+/// with no way back is a trap rather than a setting.
+class _HiddenTopics extends ConsumerWidget {
+  final List<CoverageTopic> topics;
+
+  const _HiddenTopics({required this.topics});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return ExpansionTile(
+      // Its own storage key, or it inherits the context-derived path of the
+      // subject tile it sits inside and opens itself because that tile is
+      // open. Two unkeyed ExpansionTiles in a rebuilt list is exactly the
+      // collision PageStorageKey exists to prevent.
+      key: PageStorageKey<String>('hidden/${topics.first.nodeKey}'),
+      shape: const Border(),
+      collapsedShape: const Border(),
+      tilePadding: const EdgeInsets.symmetric(horizontal: FluentSpacing.l),
+      leading: Icon(
+        Icons.visibility_off_outlined,
+        size: 20,
+        color: scheme.onSurfaceVariant,
+      ),
+      title: Text(
+        'সরানো হয়েছে — ${_bn(topics.length)}টি',
+        style: FluentType.caption.copyWith(color: scheme.onSurfaceVariant),
+      ),
+      children: topics
+          .map(
+            (topic) => ListTile(
+              dense: true,
+              contentPadding: const EdgeInsets.only(
+                left: FluentSpacing.xxl + FluentSpacing.l,
+                right: FluentSpacing.l,
+              ),
+              title: Text(
+                topic.title,
+                style: FluentType.body.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  decoration: TextDecoration.lineThrough,
+                ),
+              ),
+              trailing: TextButton(
+                onPressed: () => ref
+                    .read(syllabusMapNotifierProvider.notifier)
+                    .restoreTopic(topic.nodeKey),
+                child: const Text('ফেরত আনুন'),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }

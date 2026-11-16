@@ -1,11 +1,23 @@
 import 'package:drift/drift.dart';
 
-/// How far through a topic the user is.
+/// Where the user has put a topic.
 ///
-/// Three states rather than a tick, because "I am reading this" and "this is
-/// done" are not the same claim and a half-read topic reported as covered is
-/// the one lie this feature cannot afford to tell.
-enum SyllabusStatus { notStarted, reading, done }
+/// [reading] exists separately from [done] because "I am reading this" and
+/// "this is finished" are not the same claim, and a half-read topic reported
+/// as covered is the one lie this feature cannot afford to tell.
+///
+/// [hidden] is a topic the user says is not part of their syllabus. It is a
+/// status rather than a deleted row because the bundled map is re-seeded on
+/// every launch, and a deleted row would simply come back; this way the
+/// removal is the user's and outlasts any content update. A hidden topic
+/// leaves the coverage sums entirely — denominator included — so removing a
+/// topic the user will never sit raises the percentage honestly instead of
+/// leaving a hole that can never be filled.
+///
+/// Being an enum, adding to it makes the compiler find every reader, which is
+/// the point: a status silently handled as "not started" somewhere would put
+/// hidden topics back into the denominator.
+enum SyllabusStatus { notStarted, reading, done, hidden }
 
 /// Who decided the status.
 ///

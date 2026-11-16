@@ -155,4 +155,93 @@ void main() {
 
     expect(find.text('২৫%'), findsOneWidget);
   });
+
+  testWidgets('adds a topic through the sheet', (tester) async {
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('গণিত'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('টপিক যোগ করুন'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'সুদকষা');
+    await tester.tap(find.text('যোগ করুন'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('সুদকষা'), findsOneWidget);
+  });
+
+  testWidgets('refuses a topic that is already there', (tester) async {
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('গণিত'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('টপিক যোগ করুন'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'শতকরা');
+    await tester.tap(find.text('যোগ করুন'));
+    await tester.pumpAndSettle();
+
+    // The sheet stays open and says why rather than closing on a no-op.
+    expect(find.text('এই নামে একটি টপিক আগে থেকেই আছে।'), findsOneWidget);
+  });
+
+  testWidgets('renames a topic through the edit sheet', (tester) async {
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('বাংলা'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'সমাস ও সন্ধি');
+    await tester.tap(find.text('সংরক্ষণ'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('সমাস ও সন্ধি'), findsOneWidget);
+    expect(find.text('সমাস'), findsNothing);
+  });
+
+  testWidgets('removing a topic takes it out of the sums, and it can come back', (
+    tester,
+  ) async {
+    // The subject stays expanded across the rebuild now, so the default 800
+    // by 600 surface leaves the restore button below the viewport — and a
+    // ListView does not build what it does not show, so the finder would
+    // miss a button that is really there.
+    await tester.binding.setSurfaceSize(const Size(800, 2000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('বাংলা'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('সিলেবাস থেকে সরান'));
+    await tester.pumpAndSettle();
+
+    // বাংলা has only that one topic, so the subject now has nothing left to
+    // finish — and that must not read as finished.
+    expect(find.text('সরানো হয়েছে — ১টি'), findsOneWidget);
+    expect(find.text('০%'), findsWidgets);
+
+    // Collapsed until asked for: a removed topic should not go on competing
+    // with the syllabus the user kept.
+    expect(find.text('ফেরত আনুন'), findsNothing);
+
+    await tester.tap(find.text('সরানো হয়েছে — ১টি'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ফেরত আনুন'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('সমাস'), findsOneWidget);
+  });
 }

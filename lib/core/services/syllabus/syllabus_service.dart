@@ -199,6 +199,13 @@ class SyllabusService {
     required int weight,
     required int orderIndex,
   }) async {
+    // Once the user has edited a node it is theirs, and the seed stops
+    // writing to it. Without this, re-seeding on every launch would undo a
+    // renamed topic or a reweighted one within seconds of the edit, and the
+    // user would have no way to tell why their change kept vanishing.
+    final existing = await _nodeByKey(db, nodeKey);
+    if (existing != null && existing.isCustom) return;
+
     await db
         .into(db.syllabusNodes)
         .insert(
@@ -325,6 +332,127 @@ class SyllabusService {
         )
         .toList();
   }
+
+  /// Adds a topic of the user's own to a subject.
+  ///
+  /// Marked [SyllabusNodes.isCustom], so neither the seed nor the prune will
+  /// touch it. Its key carries a `custom/` segment: two topics the user adds
+  /// with names that reduce to the same merge key are still separate rows,
+  /// where bundled content deliberately collapses them.
+  ///
+  /// Returns the new node's key, or null if the subject is unknown or a
+  /// topic with that name is already there.
+  Future<String?> addCustomTopic(
+    AppDatabase db, {
+    required String subjectNodeKey,
+    required String title,
+    int weight = 2,
+  }) async {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) return null;
+
+    final subject = await _nodeByKey(db, subjectNodeKey);
+    if (subject == null || subject.kind != SyllabusNodeKind.subject) {
+      return null;
+    }
+
+    final mergeKey = topicMergeKey(trimmed);
+    if (mergeKey.isEmpty) return null;
+
+    final siblings =
+        await (db.select(db.syllabusNodes)
+              ..where((t) => t.parentId.equals(subject.id)))
+            .get();
+    if (siblings.any((s) => s.mergeKey == mergeKey)) return null;
+
+    final key = '$subjectNodeKey/custom/$mergeKey';
+    final order = siblings.fold<int>(
+      0,
+      (max, s) => s.orderIndex > max ? s.orderIndex : max,
+    );
+
+    await db
+        .into(db.syllabusNodes)
+        .insert(
+          SyllabusNodesCompanion.insert(
+            nodeKey: key,
+            trackKey: subject.trackKey,
+            kind: SyllabusNodeKind.topic,
+            parentId: Value(subject.id),
+            title: trimmed,
+            mergeKey: mergeKey,
+            weight: Value(weight < 1 ? 1 : weight),
+            orderIndex: Value(order + 1),
+            isCustom: const Value(true),
+          ),
+        );
+    return key;
+  }
+
+  /// Renames a topic or changes its weight.
+  ///
+  /// The node keeps its key, so progress recorded against it survives a
+  /// rename; the merge key does move, so evidence from drills joins on the
+  /// new name. Editing a bundled topic claims it: the row becomes custom and
+  /// the seed leaves it alone from then on.
+  Future<bool> editTopic(
+    AppDatabase db, {
+    required String nodeKey,
+    String? title,
+    int? weight,
+  }) async {
+    final node = await _nodeByKey(db, nodeKey);
+    if (node == null || node.kind != SyllabusNodeKind.topic) return false;
+
+    final trimmed = title?.trim();
+    if (trimmed != null && trimmed.isEmpty) return false;
+    final mergeKey = trimmed == null ? null : topicMergeKey(trimmed);
+    if (mergeKey != null && mergeKey.isEmpty) return false;
+
+    await (db.update(db.syllabusNodes)..where((t) => t.id.equals(node.id)))
+        .write(
+          SyllabusNodesCompanion(
+            title: trimmed == null ? const Value.absent() : Value(trimmed),
+            mergeKey: mergeKey == null ? const Value.absent() : Value(mergeKey),
+            weight: weight == null
+                ? const Value.absent()
+                : Value(weight < 1 ? 1 : weight),
+            isCustom: const Value(true),
+          ),
+        );
+    return true;
+  }
+
+  /// Takes a topic out of the user's syllabus.
+  ///
+  /// A topic the user added is deleted outright. A bundled one is marked
+  /// [SyllabusStatus.hidden] instead, because the seed would put a deleted
+  /// row straight back on the next launch — and because the user may want it
+  /// again, which [restoreTopic] gives them.
+  Future<void> removeTopic(AppDatabase db, {required String nodeKey}) async {
+    final node = await _nodeByKey(db, nodeKey);
+    if (node == null) return;
+
+    // A node the user made is theirs to unmake, whatever state it is in. Its
+    // progress row goes with it, or it would sit in the table keyed to a
+    // node that no longer exists and quietly keep a later topic of the same
+    // name from starting fresh.
+    if (node.isCustom && node.nodeKey.contains('/custom/')) {
+      await (db.delete(
+        db.syllabusProgress,
+      )..where((t) => t.nodeKey.equals(nodeKey))).go();
+      await (db.delete(
+        db.syllabusNodes,
+      )..where((t) => t.id.equals(node.id))).go();
+      return;
+    }
+
+    await setStatus(db, nodeKey: nodeKey, status: SyllabusStatus.hidden);
+  }
+
+  /// Puts a hidden topic back, untouched rather than finished.
+  Future<void> restoreTopic(AppDatabase db, {required String nodeKey}) =>
+      setStatus(db, nodeKey: nodeKey, status: SyllabusStatus.notStarted);
 
   /// Records where the user has put a topic.
   ///
