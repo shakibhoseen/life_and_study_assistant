@@ -15,6 +15,30 @@ import 'sentinel_log.dart';
 import 'wifi_monitor_service.dart';
 import 'workmanager_service.dart';
 
+/// Whether another location fix is worth taking.
+///
+/// Pulled out to be tested: the sentinel's own clock can be moved by the test
+/// lab, so [now] is not guaranteed to be later than [lastAt], and a backwards
+/// jump must not pin the cache in place for good.
+@visibleForTesting
+bool shouldRefreshPosition(
+  DateTime? lastAt,
+  DateTime now,
+  Duration freshness,
+) {
+  if (lastAt == null) return true;
+  final age = now.difference(lastAt);
+  return age.isNegative || age >= freshness;
+}
+
+/// Whether a pass still marked in progress should be given up on.
+@visibleForTesting
+bool isPassAbandoned(DateTime? since, DateTime now, Duration limit) {
+  if (since == null) return true;
+  final age = now.difference(since);
+  return age.isNegative || age >= limit;
+}
+
 @pragma('vm:entry-point')
 void startSentinelCallback() {
   FlutterForegroundTask.setTaskHandler(OfficeSentinelTaskHandler());
@@ -29,6 +53,33 @@ class OfficeSentinelTaskHandler extends TaskHandler {
   String? _lastNotifTitle;
   String? _lastNotifText;
   bool _isProcessing = false;
+  DateTime? _processingSince;
+
+  /// After this long, a pass still marked "in progress" is treated as lost.
+  ///
+  /// The guard below is single-entry, so one pass that never finishes silences
+  /// every five-second tick after it — the sentinel keeps running, keeps its
+  /// notification up, and does nothing. Every request now has a timeout, which
+  /// should make that impossible; this is here because "should be impossible"
+  /// is what the last version of this assumed too, and a missed punch is an
+  /// expensive way to find out otherwise.
+  static const Duration _passTimeout = Duration(minutes: 2);
+
+  Position? _lastPosition;
+  DateTime? _lastPositionAt;
+
+  /// How stale a location fix may be before another one is worth taking.
+  ///
+  /// The sentinel wakes every five seconds, and this used to take a fresh GPS
+  /// fix on every one of them: roughly a thousand fixes across one 8:40-10:00
+  /// window. The portal call next to it has been throttled to forty-five
+  /// seconds all along; the location never was.
+  ///
+  /// Nothing here needs a fresher one. It is used to tell "inside the office"
+  /// from "not" at 150 metres, and "walking away" at 300. Neither changes
+  /// meaningfully in forty-five seconds, and the cost of pretending otherwise
+  /// is the battery of a phone sitting in a pocket.
+  static const Duration _positionFreshness = Duration(seconds: 45);
 
   void _updateForegroundNotification({
     required String title,
@@ -70,8 +121,18 @@ class OfficeSentinelTaskHandler extends TaskHandler {
   }
 
   Future<void> _checkSentinelCondition() async {
-    if (_isProcessing) return;
+    final startedAt = DateTime.now();
+    if (_isProcessing) {
+      if (!isPassAbandoned(_processingSince, startedAt, _passTimeout)) return;
+      final since = _processingSince;
+      // The previous pass is past saving. Its own finally will clear the flag
+      // whenever it unblocks; carrying on now is better than another silent
+      // morning.
+      debugPrint('OfficeSentinel: previous pass stuck since $since; going on.');
+      await SentinelLog.write('previous pass stuck since $since - carrying on');
+    }
     _isProcessing = true;
+    _processingSince = startedAt;
     try {
       final prefs = await SharedPreferences.getInstance();
       // Reads the pretend clock when the test lab has set one, so the
@@ -137,20 +198,29 @@ class OfficeSentinelTaskHandler extends TaskHandler {
       try {
         final perm = await Geolocator.checkPermission();
         if (perm == LocationPermission.always || perm == LocationPermission.whileInUse) {
-          pos = await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.medium,
-              timeLimit: Duration(seconds: 5),
-            ),
-          );
-          final officeLat = prefs.getDouble(NotificationConstants.prefOfficeLatitude) ?? 23.7925;
-          final officeLng = prefs.getDouble(NotificationConstants.prefOfficeLongitude) ?? 90.4078;
-          distance = Geolocator.distanceBetween(
-            pos.latitude,
-            pos.longitude,
-            officeLat,
-            officeLng,
-          );
+          if (shouldRefreshPosition(_lastPositionAt, now, _positionFreshness)) {
+            pos = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.medium,
+                timeLimit: Duration(seconds: 5),
+              ),
+            );
+            _lastPosition = pos;
+            _lastPositionAt = now;
+          } else {
+            pos = _lastPosition;
+          }
+          final fix = pos;
+          if (fix != null) {
+            final officeLat = prefs.getDouble(NotificationConstants.prefOfficeLatitude) ?? 23.7925;
+            final officeLng = prefs.getDouble(NotificationConstants.prefOfficeLongitude) ?? 90.4078;
+            distance = Geolocator.distanceBetween(
+              fix.latitude,
+              fix.longitude,
+              officeLat,
+              officeLng,
+            );
+          }
         }
       } catch (_) {}
 

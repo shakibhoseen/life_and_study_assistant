@@ -248,6 +248,17 @@ class PacklyAttendanceService {
   }
 
   /// Log in to Packly portal and store session
+  /// How long any one request to the portal may take.
+  ///
+  /// There was no timeout on any of these. A stalled request simply never
+  /// returned, and the office sentinel polls on a single-entry guard, so one
+  /// hung call left it running, notification and all, doing nothing at all
+  /// for the rest of the morning.
+  ///
+  /// Generous on purpose: a punch is worth waiting half a minute for on a bad
+  /// connection. What it is not worth is waiting forever.
+  static const Duration _requestTimeout = Duration(seconds: 30);
+
   Future<bool> login({String? email, String? password, bool forceRefresh = false}) async {
     // If logged in recently (within 4 hours), reuse session unless forced
     if (!forceRefresh &&
@@ -272,7 +283,7 @@ class PacklyAttendanceService {
         final getResp = await client.get(
           Uri.parse('$baseUrl/login'),
           headers: _buildHeaders(),
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(getResp);
 
         final token = _extractCsrf(getResp.body);
@@ -294,7 +305,7 @@ class PacklyAttendanceService {
             'login': loginEmail,
             'password': loginPassword,
           },
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(postResp);
 
         if (postResp.statusCode == 302 ||
@@ -352,7 +363,7 @@ class PacklyAttendanceService {
         final resp = await client.get(
           Uri.parse('$baseUrl/api/get-ip'),
           headers: _buildHeaders(),
-        );
+        ).timeout(_requestTimeout);
         if (resp.statusCode == 200) {
           final data = jsonDecode(resp.body);
           if (data is Map && data['ip'] != null) {
@@ -379,7 +390,7 @@ class PacklyAttendanceService {
         final resp = await client.get(
           url,
           headers: {'User-Agent': 'PacklyApp/1.0 (info@packly.com)'},
-        );
+        ).timeout(_requestTimeout);
         if (resp.statusCode == 200) {
           final data = jsonDecode(resp.body);
           if (data is Map) {
@@ -454,7 +465,7 @@ class PacklyAttendanceService {
         final histResp = await client.get(
           Uri.parse('$baseUrl/attendance/history'),
           headers: _buildHeaders(),
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(histResp);
 
         final html = histResp.body;
@@ -549,7 +560,7 @@ class PacklyAttendanceService {
         final dashResp = await client.get(
           Uri.parse('$baseUrl/dashboard'),
           headers: _buildHeaders(),
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(dashResp);
 
         final dashHtml = dashResp.body;
@@ -640,7 +651,7 @@ class PacklyAttendanceService {
         final resp = await client.get(
           Uri.parse('$baseUrl/holidays'),
           headers: _buildHeaders(),
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(resp);
 
         final html = resp.body;
@@ -843,7 +854,7 @@ class PacklyAttendanceService {
         final pageResp = await client.get(
           Uri.parse('$baseUrl/dashboard'),
           headers: _buildHeaders(),
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(pageResp);
         final token = _extractCsrf(pageResp.body) ?? _csrfToken;
         if (token == null) {
@@ -876,7 +887,7 @@ class PacklyAttendanceService {
             'device_fingerprint': fpHash,
             'deviceFingerprint': fpHash,
           },
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(checkInResp);
 
         final now = DateTime.now();
@@ -1019,7 +1030,7 @@ class PacklyAttendanceService {
         final pageResp = await client.get(
           Uri.parse('$baseUrl/dashboard'),
           headers: _buildHeaders(),
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(pageResp);
         final token = _extractCsrf(pageResp.body) ?? _csrfToken;
         if (token == null) {
@@ -1046,7 +1057,7 @@ class PacklyAttendanceService {
             'longitude': lng.toStringAsFixed(8),
             'location_name': locName,
           },
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(checkOutResp);
 
         final now = DateTime.now();

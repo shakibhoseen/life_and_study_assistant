@@ -288,6 +288,17 @@ class SteadfastLunchService {
   }
 
   /// Logs in to Steadfast Lunch Portal using Inertia protocol
+  /// How long any one request to the portal may take.
+  ///
+  /// There was no timeout on any of these. A stalled request simply never
+  /// returned, and the office sentinel polls on a single-entry guard, so one
+  /// hung call left it running, notification and all, doing nothing at all
+  /// for the rest of the morning.
+  ///
+  /// Generous on purpose: a punch is worth waiting half a minute for on a bad
+  /// connection. What it is not worth is waiting forever.
+  static const Duration _requestTimeout = Duration(seconds: 30);
+
   Future<bool> login({
     String? email,
     String? password,
@@ -318,7 +329,7 @@ class SteadfastLunchService {
             'User-Agent':
                 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
           },
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(getResp);
 
         final pageHtml = getResp.body;
@@ -354,7 +365,7 @@ class SteadfastLunchService {
             'password': loginPassword,
             'remember': true,
           }),
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(postResp);
 
         if (postResp.statusCode == 200 ||
@@ -482,7 +493,7 @@ class SteadfastLunchService {
           headers: _buildHeaders({
             'Content-Type': 'application/json',
           }),
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(resp);
 
         if (resp.statusCode == 200) {
@@ -736,7 +747,7 @@ class SteadfastLunchService {
         final resp = await client.get(
           uri,
           headers: _buildHeaders(reqHeaders),
-        );
+        ).timeout(_requestTimeout);
         _extractCookies(resp);
 
         if (resp.statusCode == 200) {
