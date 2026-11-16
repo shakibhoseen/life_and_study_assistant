@@ -15,6 +15,7 @@ import 'tables/exam_schedules_table.dart';
 import 'tables/spaced_review_items_table.dart';
 import 'tables/syllabus_nodes_table.dart';
 import 'tables/syllabus_progress_table.dart';
+import 'tables/syllabus_tracks_table.dart';
 import 'tables/weak_topics_table.dart';
 import '../data/study_data_cleanup.dart';
 
@@ -33,13 +34,14 @@ part 'app_database.g.dart';
     SpacedReviewItems,
     SyllabusNodes,
     SyllabusProgress,
+    SyllabusTracks,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'life_and_study_assistant');
@@ -203,6 +205,12 @@ class AppDatabase extends _$AppDatabase {
         // bundle, which a background isolate may not have.
         await m.createTable(syllabusNodes);
         await m.createTable(syllabusProgress);
+      }
+      if (from < 17) {
+        // Tracks became rows so the user can add an exam of their own. Empty
+        // here for the same reason as 16: SyllabusService fills it from the
+        // asset bundle, which a background isolate may not have.
+        await m.createTable(syllabusTracks);
       }
     },
   );

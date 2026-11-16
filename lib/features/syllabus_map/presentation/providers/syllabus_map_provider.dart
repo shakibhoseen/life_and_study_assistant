@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/data/syllabus_coverage.dart';
 import '../../../../core/data/syllabus_proposals.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../../../core/database/tables/syllabus_progress_table.dart';
 import '../../../../core/services/syllabus/syllabus_evidence_service.dart';
+import '../../../../core/services/syllabus/syllabus_draft_service.dart';
 import '../../../../core/services/syllabus/syllabus_service.dart';
 
 /// Which track the map is showing. Remembered only for the session; the
@@ -14,7 +16,9 @@ class SelectedSyllabusTrackNotifier extends Notifier<String?> {
   @override
   String? build() => null;
 
-  void select(String trackKey) => state = trackKey;
+  /// Null goes back to whichever track the list shows first — what the
+  /// screen needs after the selected track is deleted.
+  void select(String? trackKey) => state = trackKey;
 }
 
 final selectedSyllabusTrackProvider =
@@ -27,6 +31,14 @@ final selectedSyllabusTrackProvider =
 class SyllabusMapState {
   final String trackKey;
   final String trackName;
+
+  /// Where the mark distribution came from, or that it is an unchecked draft.
+  final String note;
+
+  /// A track the user made: its subjects can be added to and removed, and the
+  /// track itself renamed or deleted.
+  final bool isCustom;
+
   final List<CoverageSubject> subjects;
   final CoverageTally tally;
   final List<SyllabusProposal> proposals;
@@ -34,27 +46,29 @@ class SyllabusMapState {
   const SyllabusMapState({
     required this.trackKey,
     required this.trackName,
+    required this.note,
+    required this.isCustom,
     required this.subjects,
     required this.tally,
     required this.proposals,
   });
 }
 
-/// Display names, kept beside the keys so a track with no bundled asset
-/// still reads as something.
-const Map<String, String> syllabusTrackNames = {
-  'primary': 'প্রাথমিক সহকারী শিক্ষক',
-  'bcs_preliminary': 'বিসিএস প্রিলিমিনারি',
-};
-
-/// The track keys present in the map, seeded on first read.
-final syllabusTracksProvider = FutureProvider<List<String>>((ref) async {
+/// Every track, bundled and the user's own.
+///
+/// Names used to live in a const map here, which worked only while every
+/// track shipped with the app. They come from the database now, so a track
+/// the user adds is a track like any other.
+final syllabusTracksProvider = FutureProvider<List<SyllabusTrackRow>>((
+  ref,
+) async {
   final db = ref.watch(appDatabaseProvider);
+  ref.watch(syllabusRevisionProvider);
   // Seeding is an upsert keyed by nodeKey, so running it whenever the map is
   // opened costs a few writes and keeps a reinstalled or restored database in
   // step with whatever syllabus the installed build ships.
   await SyllabusService.instance.seed(db);
-  return SyllabusService.instance.trackKeys(db);
+  return SyllabusService.instance.tracks(db);
 });
 
 /// One track's map, its coverage and the questions worth asking about it.
@@ -69,10 +83,13 @@ final syllabusMapProvider = FutureProvider.family<SyllabusMapState, String>((
   final subjects = await SyllabusService.instance.loadCoverage(db, trackKey);
   final statuses = await SyllabusService.instance.statusMap(db);
   final evidence = await SyllabusEvidenceService.instance.gather(db, trackKey);
+  final row = await SyllabusService.instance.trackByKey(db, trackKey);
 
   return SyllabusMapState(
     trackKey: trackKey,
-    trackName: syllabusTrackNames[trackKey] ?? trackKey,
+    trackName: row?.name ?? trackKey,
+    note: row?.note ?? '',
+    isCustom: row?.isCustom ?? false,
     subjects: subjects,
     tally: tallyTrack(subjects),
     proposals: proposeForTopics(evidence: evidence, current: statuses),
@@ -189,6 +206,112 @@ class SyllabusMapNotifier extends Notifier<void> {
       nodeKey: nodeKey,
     );
     ref.read(syllabusRevisionProvider.notifier).bump();
+  }
+
+  /// Creates an exam of the user's own, empty.
+  Future<String?> createTrack({required String name}) async {
+    final key = await SyllabusService.instance.createTrack(
+      ref.read(appDatabaseProvider),
+      name: name,
+    );
+    if (key != null) ref.read(syllabusRevisionProvider.notifier).bump();
+    return key;
+  }
+
+  /// Creates one from another track's subjects and topics, without its ticks.
+  Future<String?> copyTrack({
+    required String sourceTrackKey,
+    required String name,
+  }) async {
+    final key = await SyllabusService.instance.copyTrack(
+      ref.read(appDatabaseProvider),
+      sourceTrackKey: sourceTrackKey,
+      name: name,
+    );
+    if (key != null) ref.read(syllabusRevisionProvider.notifier).bump();
+    return key;
+  }
+
+  /// Asks the model for a syllabus and creates the track from it.
+  ///
+  /// Throws [SyllabusDraftException] with something sayable when the draft
+  /// cannot be produced. The track is created only once a usable draft is in
+  /// hand, so a failure leaves nothing behind to clean up.
+  Future<String?> draftTrack({required String name}) async {
+    final draft = await SyllabusDraftService.instance.draft(name);
+    final key = await SyllabusService.instance.createTrackFrom(
+      ref.read(appDatabaseProvider),
+      name: draft.trackName.trim().isEmpty ? name : draft.trackName,
+      note: SyllabusDraftService.draftNote,
+      subjects: draft.subjects,
+    );
+    if (key != null) ref.read(syllabusRevisionProvider.notifier).bump();
+    return key;
+  }
+
+  Future<bool> renameTrack({
+    required String trackKey,
+    required String name,
+  }) async {
+    final ok = await SyllabusService.instance.renameTrack(
+      ref.read(appDatabaseProvider),
+      trackKey: trackKey,
+      name: name,
+    );
+    if (ok) ref.read(syllabusRevisionProvider.notifier).bump();
+    return ok;
+  }
+
+  Future<bool> deleteTrack(String trackKey) async {
+    final ok = await SyllabusService.instance.deleteTrack(
+      ref.read(appDatabaseProvider),
+      trackKey: trackKey,
+    );
+    if (ok) {
+      // The screen is showing a track that no longer exists.
+      ref.read(selectedSyllabusTrackProvider.notifier).select(null);
+      ref.read(syllabusRevisionProvider.notifier).bump();
+    }
+    return ok;
+  }
+
+  Future<bool> addSubject({
+    required String trackKey,
+    required String name,
+    required int marks,
+  }) async {
+    final key = await SyllabusService.instance.addSubject(
+      ref.read(appDatabaseProvider),
+      trackKey: trackKey,
+      name: name,
+      marks: marks,
+    );
+    if (key != null) ref.read(syllabusRevisionProvider.notifier).bump();
+    return key != null;
+  }
+
+  Future<bool> editSubject({
+    required String nodeKey,
+    String? name,
+    int? marks,
+  }) async {
+    final ok = await SyllabusService.instance.editSubject(
+      ref.read(appDatabaseProvider),
+      nodeKey: nodeKey,
+      name: name,
+      marks: marks,
+    );
+    if (ok) ref.read(syllabusRevisionProvider.notifier).bump();
+    return ok;
+  }
+
+  Future<bool> removeSubject(String nodeKey) async {
+    final ok = await SyllabusService.instance.removeSubject(
+      ref.read(appDatabaseProvider),
+      nodeKey: nodeKey,
+    );
+    if (ok) ref.read(syllabusRevisionProvider.notifier).bump();
+    return ok;
   }
 }
 

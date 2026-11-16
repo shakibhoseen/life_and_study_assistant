@@ -1,0 +1,103 @@
+{
+  "trackKey": "ntrca_preliminary",
+  "trackName": "শিক্ষক নিবন্ধন (প্রিলিমিনারি)",
+  "totalMarks": 100,
+  "note": "বেসরকারি শিক্ষক নিবন্ধন (NTRCA) প্রিলিমিনারি পরীক্ষার মানবণ্টন — ১০০ নম্বর, চারটি বিষয়ে ২৫ করে। স্কুল ও কলেজ দুই পর্যায়েই প্রিলিমিনারির মানবণ্টন একই। ভেতরের টপিকগুলো বিগত বছরের প্রশ্নের ধারা অনুসারে সাজানো — নিজের মতো করে সম্পাদনা করে নিন।",
+  "subjects": [
+    {
+      "name": "বাংলা",
+      "marks": 25,
+      "aliases": ["বাংলা সাহিত্য", "বাংলা ব্যাকরণ", "bangla", "bangla literature", "bangla grammar"],
+      "topics": [
+        {"title": "ধ্বনি, বর্ণ ও সন্ধি", "weight": 2},
+        {"title": "শব্দ ও শব্দের উৎস", "weight": 2},
+        {"title": "পদ ও পদ প্রকরণ", "weight": 2},
+        {"title": "কারক ও বিভক্তি", "weight": 3},
+        {"title": "সমাস", "weight": 3},
+        {"title": "প্রকৃতি ও প্রত্যয়", "weight": 2},
+        {"title": "উপসর্গ ও অনুসর্গ", "weight": 2},
+        {"title": "বাক্য ও বাক্য পরিবর্তন", "weight": 2},
+        {"title": "বাচ্য ও উক্তি", "weight": 1},
+        {"title": "বানান ও বানানশুদ্ধি", "weight": 3},
+        {"title": "প্রয়োগ-অপপ্রয়োগ", "weight": 2},
+        {"title": "সমার্থক ও বিপরীতার্থক শব্দ", "weight": 2},
+        {"title": "বাগধারা ও প্রবাদ-প্রবচন", "weight": 3},
+        {"title": "এককথায় প্রকাশ", "weight": 2},
+        {"title": "বাংলা সাহিত্যের যুগবিভাগ", "weight": 2},
+        {"title": "রবীন্দ্রনাথ ঠাকুর", "weight": 2},
+        {"title": "কাজী নজরুল ইসলাম", "weight": 2},
+        {"title": "বিখ্যাত কবি-সাহিত্যিক ও তাঁদের রচনা", "weight": 3}
+      ]
+    },
+    {
+      "name": "ইংরেজি",
+      "marks": 25,
+      "aliases": ["english", "english grammar", "english literature", "english vocabulary"],
+      "topics": [
+        {"title": "Parts of Speech", "weight": 2},
+        {"title": "Articles & Determiners", "weight": 2},
+        {"title": "Tense", "weight": 2},
+        {"title": "Voice", "weight": 2},
+        {"title": "Narration", "weight": 2},
+        {"title": "Right Form of Verbs", "weight": 3},
+        {"title": "Subject-Verb Agreement", "weight": 2},
+        {"title": "Preposition & Appropriate Preposition", "weight": 3},
+        {"title": "Phrases & Idioms", "weight": 3},
+        {"title": "Clauses", "weight": 2},
+        {"title": "Transformation of Sentences", "weight": 2},
+        {"title": "Correction / Error Detection", "weight": 3},
+        {"title": "Synonyms & Antonyms", "weight": 3},
+        {"title": "One-word Substitution", "weight": 2},
+        {"title": "Spelling", "weight": 2},
+        {"title": "Translation", "weight": 1},
+        {"title": "Literature: Writers & Works", "weight": 2}
+      ]
+    },
+    {
+      "name": "গণিত",
+      "marks": 25,
+      "aliases": ["গাণিতিক যুক্তি", "math", "maths", "mathematics"],
+      "topics": [
+        {"title": "সংখ্যা পদ্ধতি", "weight": 2},
+        {"title": "ল.সা.গু ও গ.সা.গু", "weight": 2},
+        {"title": "শতকরা", "weight": 3},
+        {"title": "লাভ-ক্ষতি", "weight": 3},
+        {"title": "সুদকষা", "weight": 3},
+        {"title": "অনুপাত ও সমানুপাত", "weight": 3},
+        {"title": "ঐকিক নিয়ম", "weight": 2},
+        {"title": "গড়", "weight": 2},
+        {"title": "সময় ও কাজ", "weight": 3},
+        {"title": "সময়, দূরত্ব ও গতি", "weight": 3},
+        {"title": "বীজগণিতিক সূত্র ও উৎপাদকে বিশ্লেষণ", "weight": 3},
+        {"title": "সরল ও দ্বিঘাত সমীকরণ", "weight": 2},
+        {"title": "সূচক ও লগারিদম", "weight": 2},
+        {"title": "অনুক্রম ও ধারা", "weight": 2},
+        {"title": "সেট ও ভেনচিত্র", "weight": 2},
+        {"title": "রেখা ও কোণ (জ্যামিতি)", "weight": 2},
+        {"title": "ত্রিভুজ ও চতুর্ভুজ (জ্যামিতি)", "weight": 3},
+        {"title": "বৃত্ত (জ্যামিতি)", "weight": 2},
+        {"title": "পরিমিতি (ক্ষেত্রফল ও আয়তন)", "weight": 3}
+      ]
+    },
+    {
+      "name": "সাধারণ জ্ঞান",
+      "marks": 25,
+      "aliases": ["general knowledge", "gk", "সাধারণ বিজ্ঞান", "বাংলাদেশ বিষয়াবলী", "আন্তর্জাতিক বিষয়াবলী"],
+      "topics": [
+        {"title": "বাংলাদেশের ইতিহাস ও মুক্তিযুদ্ধ", "weight": 3},
+        {"title": "বাংলাদেশের ভূগোল ও নদনদী", "weight": 2},
+        {"title": "বাংলাদেশের সংবিধান ও সরকার ব্যবস্থা", "weight": 3},
+        {"title": "বাংলাদেশের অর্থনীতি ও কৃষি", "weight": 2},
+        {"title": "জাতীয় দিবস, প্রতীক ও পুরস্কার", "weight": 2},
+        {"title": "শিক্ষা ব্যবস্থা ও শিক্ষানীতি", "weight": 2},
+        {"title": "আন্তর্জাতিক সংস্থা ও জাতিসংঘ", "weight": 3},
+        {"title": "বিশ্ব ভূগোল, রাজধানী ও মুদ্রা", "weight": 2},
+        {"title": "সাম্প্রতিক ঘটনাবলি", "weight": 3},
+        {"title": "পদার্থ ও রসায়ন (সাধারণ বিজ্ঞান)", "weight": 2},
+        {"title": "জীববিজ্ঞান ও স্বাস্থ্য (সাধারণ বিজ্ঞান)", "weight": 3},
+        {"title": "কম্পিউটার ও তথ্যপ্রযুক্তি", "weight": 3},
+        {"title": "খেলাধুলা ও শিল্প-সংস্কৃতি", "weight": 1}
+      ]
+    }
+  ]
+}

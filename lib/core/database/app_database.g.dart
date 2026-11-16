@@ -6418,6 +6418,466 @@ class SyllabusProgressCompanion extends UpdateCompanion<SyllabusProgressData> {
   }
 }
 
+class $SyllabusTracksTable extends SyllabusTracks
+    with TableInfo<$SyllabusTracksTable, SyllabusTrackRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyllabusTracksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _trackKeyMeta = const VerificationMeta(
+    'trackKey',
+  );
+  @override
+  late final GeneratedColumn<String> trackKey = GeneratedColumn<String>(
+    'track_key',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 200,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _isCustomMeta = const VerificationMeta(
+    'isCustom',
+  );
+  @override
+  late final GeneratedColumn<bool> isCustom = GeneratedColumn<bool>(
+    'is_custom',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_custom" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _orderIndexMeta = const VerificationMeta(
+    'orderIndex',
+  );
+  @override
+  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
+    'order_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    trackKey,
+    name,
+    note,
+    isCustom,
+    orderIndex,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'syllabus_tracks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyllabusTrackRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('track_key')) {
+      context.handle(
+        _trackKeyMeta,
+        trackKey.isAcceptableOrUnknown(data['track_key']!, _trackKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_trackKeyMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('is_custom')) {
+      context.handle(
+        _isCustomMeta,
+        isCustom.isAcceptableOrUnknown(data['is_custom']!, _isCustomMeta),
+      );
+    }
+    if (data.containsKey('order_index')) {
+      context.handle(
+        _orderIndexMeta,
+        orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {trackKey},
+  ];
+  @override
+  SyllabusTrackRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyllabusTrackRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      trackKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}track_key'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+      isCustom: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_custom'],
+      )!,
+      orderIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_index'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SyllabusTracksTable createAlias(String alias) {
+    return $SyllabusTracksTable(attachedDatabase, alias);
+  }
+}
+
+class SyllabusTrackRow extends DataClass
+    implements Insertable<SyllabusTrackRow> {
+  final int id;
+
+  /// Stable identity, and what every node's `trackKey` points at. For a
+  /// custom track this is generated once at creation and never derived from
+  /// the name, so renaming an exam cannot orphan its syllabus.
+  final String trackKey;
+  final String name;
+
+  /// Free text shown under the track: where the mark distribution came from,
+  /// or a warning that a draft has not been checked.
+  final String note;
+  final bool isCustom;
+  final int orderIndex;
+  final DateTime createdAt;
+  const SyllabusTrackRow({
+    required this.id,
+    required this.trackKey,
+    required this.name,
+    required this.note,
+    required this.isCustom,
+    required this.orderIndex,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['track_key'] = Variable<String>(trackKey);
+    map['name'] = Variable<String>(name);
+    map['note'] = Variable<String>(note);
+    map['is_custom'] = Variable<bool>(isCustom);
+    map['order_index'] = Variable<int>(orderIndex);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  SyllabusTracksCompanion toCompanion(bool nullToAbsent) {
+    return SyllabusTracksCompanion(
+      id: Value(id),
+      trackKey: Value(trackKey),
+      name: Value(name),
+      note: Value(note),
+      isCustom: Value(isCustom),
+      orderIndex: Value(orderIndex),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory SyllabusTrackRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyllabusTrackRow(
+      id: serializer.fromJson<int>(json['id']),
+      trackKey: serializer.fromJson<String>(json['trackKey']),
+      name: serializer.fromJson<String>(json['name']),
+      note: serializer.fromJson<String>(json['note']),
+      isCustom: serializer.fromJson<bool>(json['isCustom']),
+      orderIndex: serializer.fromJson<int>(json['orderIndex']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'trackKey': serializer.toJson<String>(trackKey),
+      'name': serializer.toJson<String>(name),
+      'note': serializer.toJson<String>(note),
+      'isCustom': serializer.toJson<bool>(isCustom),
+      'orderIndex': serializer.toJson<int>(orderIndex),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  SyllabusTrackRow copyWith({
+    int? id,
+    String? trackKey,
+    String? name,
+    String? note,
+    bool? isCustom,
+    int? orderIndex,
+    DateTime? createdAt,
+  }) => SyllabusTrackRow(
+    id: id ?? this.id,
+    trackKey: trackKey ?? this.trackKey,
+    name: name ?? this.name,
+    note: note ?? this.note,
+    isCustom: isCustom ?? this.isCustom,
+    orderIndex: orderIndex ?? this.orderIndex,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  SyllabusTrackRow copyWithCompanion(SyllabusTracksCompanion data) {
+    return SyllabusTrackRow(
+      id: data.id.present ? data.id.value : this.id,
+      trackKey: data.trackKey.present ? data.trackKey.value : this.trackKey,
+      name: data.name.present ? data.name.value : this.name,
+      note: data.note.present ? data.note.value : this.note,
+      isCustom: data.isCustom.present ? data.isCustom.value : this.isCustom,
+      orderIndex: data.orderIndex.present
+          ? data.orderIndex.value
+          : this.orderIndex,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyllabusTrackRow(')
+          ..write('id: $id, ')
+          ..write('trackKey: $trackKey, ')
+          ..write('name: $name, ')
+          ..write('note: $note, ')
+          ..write('isCustom: $isCustom, ')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, trackKey, name, note, isCustom, orderIndex, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyllabusTrackRow &&
+          other.id == this.id &&
+          other.trackKey == this.trackKey &&
+          other.name == this.name &&
+          other.note == this.note &&
+          other.isCustom == this.isCustom &&
+          other.orderIndex == this.orderIndex &&
+          other.createdAt == this.createdAt);
+}
+
+class SyllabusTracksCompanion extends UpdateCompanion<SyllabusTrackRow> {
+  final Value<int> id;
+  final Value<String> trackKey;
+  final Value<String> name;
+  final Value<String> note;
+  final Value<bool> isCustom;
+  final Value<int> orderIndex;
+  final Value<DateTime> createdAt;
+  const SyllabusTracksCompanion({
+    this.id = const Value.absent(),
+    this.trackKey = const Value.absent(),
+    this.name = const Value.absent(),
+    this.note = const Value.absent(),
+    this.isCustom = const Value.absent(),
+    this.orderIndex = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  SyllabusTracksCompanion.insert({
+    this.id = const Value.absent(),
+    required String trackKey,
+    required String name,
+    this.note = const Value.absent(),
+    this.isCustom = const Value.absent(),
+    this.orderIndex = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : trackKey = Value(trackKey),
+       name = Value(name);
+  static Insertable<SyllabusTrackRow> custom({
+    Expression<int>? id,
+    Expression<String>? trackKey,
+    Expression<String>? name,
+    Expression<String>? note,
+    Expression<bool>? isCustom,
+    Expression<int>? orderIndex,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (trackKey != null) 'track_key': trackKey,
+      if (name != null) 'name': name,
+      if (note != null) 'note': note,
+      if (isCustom != null) 'is_custom': isCustom,
+      if (orderIndex != null) 'order_index': orderIndex,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  SyllabusTracksCompanion copyWith({
+    Value<int>? id,
+    Value<String>? trackKey,
+    Value<String>? name,
+    Value<String>? note,
+    Value<bool>? isCustom,
+    Value<int>? orderIndex,
+    Value<DateTime>? createdAt,
+  }) {
+    return SyllabusTracksCompanion(
+      id: id ?? this.id,
+      trackKey: trackKey ?? this.trackKey,
+      name: name ?? this.name,
+      note: note ?? this.note,
+      isCustom: isCustom ?? this.isCustom,
+      orderIndex: orderIndex ?? this.orderIndex,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (trackKey.present) {
+      map['track_key'] = Variable<String>(trackKey.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (isCustom.present) {
+      map['is_custom'] = Variable<bool>(isCustom.value);
+    }
+    if (orderIndex.present) {
+      map['order_index'] = Variable<int>(orderIndex.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyllabusTracksCompanion(')
+          ..write('id: $id, ')
+          ..write('trackKey: $trackKey, ')
+          ..write('name: $name, ')
+          ..write('note: $note, ')
+          ..write('isCustom: $isCustom, ')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6437,6 +6897,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SyllabusProgressTable syllabusProgress = $SyllabusProgressTable(
     this,
   );
+  late final $SyllabusTracksTable syllabusTracks = $SyllabusTracksTable(this);
   late final Index idxWeakTopicsSubjectTopic = Index(
     'idx_weak_topics_subject_topic',
     'CREATE INDEX idx_weak_topics_subject_topic ON weak_topics (subject, topic_name)',
@@ -6497,6 +6958,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     spacedReviewItems,
     syllabusNodes,
     syllabusProgress,
+    syllabusTracks,
     idxWeakTopicsSubjectTopic,
     idxWeakTopicsProficiency,
     idxExamSchedulesStatusDate,
@@ -9725,6 +10187,255 @@ typedef $$SyllabusProgressTableProcessedTableManager =
       SyllabusProgressData,
       PrefetchHooks Function()
     >;
+typedef $$SyllabusTracksTableCreateCompanionBuilder =
+    SyllabusTracksCompanion Function({
+      Value<int> id,
+      required String trackKey,
+      required String name,
+      Value<String> note,
+      Value<bool> isCustom,
+      Value<int> orderIndex,
+      Value<DateTime> createdAt,
+    });
+typedef $$SyllabusTracksTableUpdateCompanionBuilder =
+    SyllabusTracksCompanion Function({
+      Value<int> id,
+      Value<String> trackKey,
+      Value<String> name,
+      Value<String> note,
+      Value<bool> isCustom,
+      Value<int> orderIndex,
+      Value<DateTime> createdAt,
+    });
+
+class $$SyllabusTracksTableFilterComposer
+    extends Composer<_$AppDatabase, $SyllabusTracksTable> {
+  $$SyllabusTracksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trackKey => $composableBuilder(
+    column: $table.trackKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCustom => $composableBuilder(
+    column: $table.isCustom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyllabusTracksTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyllabusTracksTable> {
+  $$SyllabusTracksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get trackKey => $composableBuilder(
+    column: $table.trackKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCustom => $composableBuilder(
+    column: $table.isCustom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyllabusTracksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyllabusTracksTable> {
+  $$SyllabusTracksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get trackKey =>
+      $composableBuilder(column: $table.trackKey, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCustom =>
+      $composableBuilder(column: $table.isCustom, builder: (column) => column);
+
+  GeneratedColumn<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$SyllabusTracksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyllabusTracksTable,
+          SyllabusTrackRow,
+          $$SyllabusTracksTableFilterComposer,
+          $$SyllabusTracksTableOrderingComposer,
+          $$SyllabusTracksTableAnnotationComposer,
+          $$SyllabusTracksTableCreateCompanionBuilder,
+          $$SyllabusTracksTableUpdateCompanionBuilder,
+          (
+            SyllabusTrackRow,
+            BaseReferences<
+              _$AppDatabase,
+              $SyllabusTracksTable,
+              SyllabusTrackRow
+            >,
+          ),
+          SyllabusTrackRow,
+          PrefetchHooks Function()
+        > {
+  $$SyllabusTracksTableTableManager(
+    _$AppDatabase db,
+    $SyllabusTracksTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyllabusTracksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyllabusTracksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyllabusTracksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> trackKey = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<bool> isCustom = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => SyllabusTracksCompanion(
+                id: id,
+                trackKey: trackKey,
+                name: name,
+                note: note,
+                isCustom: isCustom,
+                orderIndex: orderIndex,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String trackKey,
+                required String name,
+                Value<String> note = const Value.absent(),
+                Value<bool> isCustom = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => SyllabusTracksCompanion.insert(
+                id: id,
+                trackKey: trackKey,
+                name: name,
+                note: note,
+                isCustom: isCustom,
+                orderIndex: orderIndex,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SyllabusTracksTable, SyllabusTrackRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $SyllabusTracksTable,
+                    SyllabusTrackRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyllabusTracksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyllabusTracksTable,
+      SyllabusTrackRow,
+      $$SyllabusTracksTableFilterComposer,
+      $$SyllabusTracksTableOrderingComposer,
+      $$SyllabusTracksTableAnnotationComposer,
+      $$SyllabusTracksTableCreateCompanionBuilder,
+      $$SyllabusTracksTableUpdateCompanionBuilder,
+      (
+        SyllabusTrackRow,
+        BaseReferences<_$AppDatabase, $SyllabusTracksTable, SyllabusTrackRow>,
+      ),
+      SyllabusTrackRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9751,4 +10462,6 @@ class $AppDatabaseManager {
       $$SyllabusNodesTableTableManager(_db, _db.syllabusNodes);
   $$SyllabusProgressTableTableManager get syllabusProgress =>
       $$SyllabusProgressTableTableManager(_db, _db.syllabusProgress);
+  $$SyllabusTracksTableTableManager get syllabusTracks =>
+      $$SyllabusTracksTableTableManager(_db, _db.syllabusTracks);
 }

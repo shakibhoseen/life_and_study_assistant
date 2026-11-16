@@ -58,8 +58,11 @@ void main() {
       classicUiStyle,
       appDatabaseProvider.overrideWithValue(db),
       // The real provider seeds from the asset bundle, which a widget test
-      // has no business loading; the tracks are already in the database.
-      syllabusTracksProvider.overrideWith((ref) async => ['primary']),
+      // has no business loading; setUp has already seeded this track, row
+      // included, so the list comes straight from the database.
+      syllabusTracksProvider.overrideWith(
+        (ref) async => SyllabusService.instance.tracks(db),
+      ),
     ],
     child: const MaterialApp(home: SyllabusMapScreen()),
   );

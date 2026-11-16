@@ -21,10 +21,15 @@ class SyllabusCoverageCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tracks = ref.watch(syllabusTracksProvider);
-    final keys = tracks.value;
-    if (keys == null || keys.isEmpty) return const SizedBox.shrink();
+    final rows = tracks.value;
+    if (rows == null || rows.isEmpty) return const SizedBox.shrink();
 
-    final trackKey = ref.watch(selectedSyllabusTrackProvider) ?? keys.first;
+    // The track the user last opened, falling back to the first — and back
+    // to the first again if the one they chose has since been deleted.
+    final chosen = ref.watch(selectedSyllabusTrackProvider);
+    final trackKey = rows.any((t) => t.trackKey == chosen)
+        ? chosen!
+        : rows.first.trackKey;
     final map = ref.watch(syllabusMapProvider(trackKey));
     final state = map.value;
     if (state == null) return const SizedBox.shrink();

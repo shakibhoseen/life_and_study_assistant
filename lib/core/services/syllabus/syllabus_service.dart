@@ -14,6 +14,7 @@ import '../../database/tables/syllabus_progress_table.dart';
 const List<String> bundledSyllabusAssets = [
   'assets/data/syllabus/primary.json',
   'assets/data/syllabus/bcs_preliminary.json',
+  'assets/data/syllabus/ntrca_preliminary.json',
 ];
 
 /// A track as the bundled JSON describes it, before it reaches the database.
@@ -134,8 +135,18 @@ class SyllabusService {
     final loaded = tracks ?? await loadBundledTracks();
     if (loaded.isEmpty) return;
 
-    for (final track in loaded) {
+    for (var index = 0; index < loaded.length; index++) {
+      final track = loaded[index];
       if (track.trackKey.isEmpty) continue;
+
+      await _upsertTrackRow(
+        db,
+        trackKey: track.trackKey,
+        name: track.trackName,
+        note: track.note,
+        orderIndex: index,
+      );
+
       final seenKeys = <String>{};
 
       for (var s = 0; s < track.subjects.length; s++) {
@@ -331,6 +342,308 @@ class SyllabusService {
           ),
         )
         .toList();
+  }
+
+  /// Writes a bundled track's row, leaving a track the user made alone.
+  Future<void> _upsertTrackRow(
+    AppDatabase db, {
+    required String trackKey,
+    required String name,
+    required String note,
+    required int orderIndex,
+  }) async {
+    final existing = await trackByKey(db, trackKey);
+    if (existing != null && existing.isCustom) return;
+
+    await db
+        .into(db.syllabusTracks)
+        .insert(
+          SyllabusTracksCompanion.insert(
+            trackKey: trackKey,
+            name: name,
+            note: Value(note),
+            orderIndex: Value(orderIndex),
+          ),
+          onConflict: DoUpdate(
+            (_) => SyllabusTracksCompanion(
+              name: Value(name),
+              note: Value(note),
+              orderIndex: Value(orderIndex),
+            ),
+            target: [db.syllabusTracks.trackKey],
+          ),
+        );
+  }
+
+  Future<SyllabusTrackRow?> trackByKey(AppDatabase db, String trackKey) =>
+      (db.select(db.syllabusTracks)
+            ..where((t) => t.trackKey.equals(trackKey))
+            ..limit(1))
+          .getSingleOrNull();
+
+  /// Every track, bundled first in seed order, then the user's by age.
+  Future<List<SyllabusTrackRow>> tracks(AppDatabase db) =>
+      (db.select(db.syllabusTracks)..orderBy([
+            (t) => OrderingTerm(expression: t.isCustom),
+            (t) => OrderingTerm(expression: t.orderIndex),
+            (t) => OrderingTerm(expression: t.createdAt),
+          ]))
+          .get();
+
+  /// Creates an exam of the user's own.
+  ///
+  /// The key is generated from the clock rather than the name: an exam the
+  /// user renames later must keep the syllabus they built under it, and two
+  /// exams with names that reduce to the same merge key must still be two
+  /// exams.
+  ///
+  /// Returns the new track's key, or null if the name is empty or taken.
+  Future<String?> createTrack(
+    AppDatabase db, {
+    required String name,
+    String note = '',
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return null;
+
+    final existing = await tracks(db);
+    if (existing.any((t) => t.name.trim() == trimmed)) return null;
+
+    final key = 'custom_${DateTime.now().microsecondsSinceEpoch}';
+    await db
+        .into(db.syllabusTracks)
+        .insert(
+          SyllabusTracksCompanion.insert(
+            trackKey: key,
+            name: trimmed,
+            note: Value(note),
+            isCustom: const Value(true),
+            orderIndex: Value(existing.length),
+          ),
+        );
+    return key;
+  }
+
+  /// Creates a track from another one's subjects and topics.
+  ///
+  /// Nothing of the source's progress comes with it. The exams overlap, but
+  /// what the user has covered for one is a claim about that syllabus, and
+  /// copying ticks across would hand them a percentage they never earned.
+  Future<String?> copyTrack(
+    AppDatabase db, {
+    required String sourceTrackKey,
+    required String name,
+    String note = '',
+  }) async {
+    final source = await loadCoverage(db, sourceTrackKey);
+    return createTrackFrom(
+      db,
+      name: name,
+      note: note,
+      subjects: source
+          .map(
+            (subject) => SyllabusTrackSubject(
+              name: subject.name,
+              marks: subject.marks,
+              aliases: const [],
+              topics: subject.topics
+                  // A topic the user had removed from the source is not part
+                  // of the syllabus they are copying.
+                  .where((t) => t.status != SyllabusStatus.hidden)
+                  .map(
+                    (t) => SyllabusTrackTopic(
+                      title: t.title,
+                      weight: t.weight,
+                    ),
+                  )
+                  .toList(),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  /// Creates a track of the user's own from a ready-made list of subjects.
+  ///
+  /// Shared by copying an existing track and by accepting an AI draft: both
+  /// arrive with the same shape, and both must land as ordinary custom rows
+  /// the user can then edit, with no trace of where they came from beyond
+  /// the note.
+  Future<String?> createTrackFrom(
+    AppDatabase db, {
+    required String name,
+    required List<SyllabusTrackSubject> subjects,
+    String note = '',
+  }) async {
+    final key = await createTrack(db, name: name, note: note);
+    if (key == null) return null;
+
+    for (final subject in subjects) {
+      final subjectKey = await addSubject(
+        db,
+        trackKey: key,
+        name: subject.name,
+        marks: subject.marks,
+      );
+      if (subjectKey == null) continue;
+
+      for (final topic in subject.topics) {
+        await addCustomTopic(
+          db,
+          subjectNodeKey: subjectKey,
+          title: topic.title,
+          weight: topic.weight,
+        );
+      }
+    }
+    return key;
+  }
+
+  Future<bool> renameTrack(
+    AppDatabase db, {
+    required String trackKey,
+    required String name,
+    String? note,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return false;
+
+    final row = await trackByKey(db, trackKey);
+    if (row == null) return false;
+
+    await (db.update(db.syllabusTracks)..where((t) => t.id.equals(row.id)))
+        .write(
+          SyllabusTracksCompanion(
+            name: Value(trimmed),
+            note: note == null ? const Value.absent() : Value(note),
+          ),
+        );
+    return true;
+  }
+
+  /// Deletes a track the user made, with its syllabus and its progress.
+  ///
+  /// A bundled track is refused: the seed would rebuild its nodes on the next
+  /// launch and leave a track row missing beneath them.
+  Future<bool> deleteTrack(AppDatabase db, {required String trackKey}) async {
+    final row = await trackByKey(db, trackKey);
+    if (row == null || !row.isCustom) return false;
+
+    final nodes = await (db.select(
+      db.syllabusNodes,
+    )..where((t) => t.trackKey.equals(trackKey))).get();
+    for (final node in nodes) {
+      await (db.delete(
+        db.syllabusProgress,
+      )..where((t) => t.nodeKey.equals(node.nodeKey))).go();
+    }
+    await (db.delete(
+      db.syllabusNodes,
+    )..where((t) => t.trackKey.equals(trackKey))).go();
+    await (db.delete(
+      db.syllabusTracks,
+    )..where((t) => t.id.equals(row.id))).go();
+    return true;
+  }
+
+  /// Adds a subject to a track, with the marks it carries in that exam.
+  ///
+  /// Returns the new subject's node key, or null if the name is empty or
+  /// already used in the track.
+  Future<String?> addSubject(
+    AppDatabase db, {
+    required String trackKey,
+    required String name,
+    required int marks,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return null;
+
+    final mergeKey = topicMergeKey(trimmed);
+    if (mergeKey.isEmpty) return null;
+
+    final siblings = await (db.select(
+      db.syllabusNodes,
+    )..where(
+          (t) =>
+              t.trackKey.equals(trackKey) &
+              t.kind.equalsValue(SyllabusNodeKind.subject),
+        ))
+        .get();
+    if (siblings.any((s) => s.mergeKey == mergeKey)) return null;
+
+    final key = subjectNodeKey(trackKey, trimmed);
+    await db
+        .into(db.syllabusNodes)
+        .insert(
+          SyllabusNodesCompanion.insert(
+            nodeKey: key,
+            trackKey: trackKey,
+            kind: SyllabusNodeKind.subject,
+            title: trimmed,
+            mergeKey: mergeKey,
+            marks: Value(marks < 0 ? 0 : marks),
+            orderIndex: Value(siblings.length),
+            isCustom: const Value(true),
+          ),
+        );
+    return key;
+  }
+
+  Future<bool> editSubject(
+    AppDatabase db, {
+    required String nodeKey,
+    String? name,
+    int? marks,
+  }) async {
+    final node = await _nodeByKey(db, nodeKey);
+    if (node == null || node.kind != SyllabusNodeKind.subject) return false;
+
+    final trimmed = name?.trim();
+    if (trimmed != null && trimmed.isEmpty) return false;
+    final mergeKey = trimmed == null ? null : topicMergeKey(trimmed);
+    if (mergeKey != null && mergeKey.isEmpty) return false;
+
+    await (db.update(db.syllabusNodes)..where((t) => t.id.equals(node.id)))
+        .write(
+          SyllabusNodesCompanion(
+            title: trimmed == null ? const Value.absent() : Value(trimmed),
+            mergeKey: mergeKey == null ? const Value.absent() : Value(mergeKey),
+            marks: marks == null
+                ? const Value.absent()
+                : Value(marks < 0 ? 0 : marks),
+            isCustom: const Value(true),
+          ),
+        );
+    return true;
+  }
+
+  /// Removes a subject and everything under it.
+  ///
+  /// Only from a track the user made. A bundled track's subjects are the
+  /// exam's own mark distribution, and the seed would rebuild them anyway.
+  Future<bool> removeSubject(
+    AppDatabase db, {
+    required String nodeKey,
+  }) async {
+    final node = await _nodeByKey(db, nodeKey);
+    if (node == null || node.kind != SyllabusNodeKind.subject) return false;
+
+    final track = await trackByKey(db, node.trackKey);
+    if (track == null || !track.isCustom) return false;
+
+    final children = await (db.select(
+      db.syllabusNodes,
+    )..where((t) => t.parentId.equals(node.id))).get();
+    for (final child in [...children, node]) {
+      await (db.delete(
+        db.syllabusProgress,
+      )..where((t) => t.nodeKey.equals(child.nodeKey))).go();
+      await (db.delete(
+        db.syllabusNodes,
+      )..where((t) => t.id.equals(child.id))).go();
+    }
+    return true;
   }
 
   /// Adds a topic of the user's own to a subject.
