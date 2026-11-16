@@ -27,7 +27,10 @@ class StudyTodayWidgetProvider : AppWidgetProvider() {
                 val mgr = AppWidgetManager.getInstance(context)
                 for (id in ids(context)) {
                     val views = RemoteViews(context.packageName, R.layout.widget_study_today)
-                    views.setTextViewText(R.id.study_sync_time, "⟳")
+                    views.setTextViewText(
+                        R.id.study_sync_time,
+                        StudyWidgetSync.busyHeader(context)
+                    )
                     mgr.partiallyUpdateAppWidget(id, views)
                 }
                 // Dart recollects and calls back through updateStudyWidgets. If

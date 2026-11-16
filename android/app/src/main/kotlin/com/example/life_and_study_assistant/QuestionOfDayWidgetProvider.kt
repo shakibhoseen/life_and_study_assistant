@@ -61,8 +61,18 @@ class QuestionOfDayWidgetProvider : AppWidgetProvider() {
                 }
                 refreshAll(context)
             }
-            StudyWidgetSync.ACTION_REFRESH ->
+            StudyWidgetSync.ACTION_REFRESH -> {
+                val mgr = AppWidgetManager.getInstance(context)
+                for (id in ids(context)) {
+                    val views = RemoteViews(context.packageName, R.layout.widget_question_of_day)
+                    views.setTextViewText(
+                        R.id.qotd_sync_time,
+                        StudyWidgetSync.busyHeader(context)
+                    )
+                    mgr.partiallyUpdateAppWidget(id, views)
+                }
                 if (!StudyWidgetSync.request(context)) refreshAll(context)
+            }
             StudyWidgetSync.ACTION_UPDATE_DATA -> refreshAll(context)
         }
     }

@@ -80,7 +80,6 @@ object StudyWidgetSync {
                 )
                 .then(repaintRequest())
                 .enqueue()
-            queueRepaintAfterSync(context)
             true
         } catch (_: Throwable) {
             false
@@ -92,25 +91,23 @@ object StudyWidgetSync {
         OneTimeWorkRequest.Builder(WidgetRepaintWorker::class.java).build()
 
     /**
-     * A repaint far enough out to catch a sync that never reported back.
+     * The header mark shown while a refresh is in flight.
      *
-     * The chain below handles the normal case. This is for when the sync
-     * worker dies outright: a chained job does not run after a failed parent,
-     * and a widget left saying "Syncing..." is the thing being prevented.
+     * Deliberately placed *beside* the last-synced time rather than replacing
+     * it. Replacing it meant the widget stopped telling the truth the moment
+     * it was tapped: it no longer said when the figures were from, and if the
+     * repaint never arrived it never said again. Whatever happens now, the
+     * widget still shows the time of the figures it is displaying.
      */
-    fun queueRepaintAfterSync(context: Context) {
-        try {
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                "widget_repaint_backstop",
-                ExistingWorkPolicy.REPLACE,
-                OneTimeWorkRequest.Builder(WidgetRepaintWorker::class.java)
-                    .setInitialDelay(45, java.util.concurrent.TimeUnit.SECONDS)
-                    .build()
-            )
-        } catch (_: Throwable) {
-            // Then the next tap or app launch repaints instead.
-        }
-    }
+    const val BUSY_MARK = "⟳ "
+
+    /** When the study figures on screen were last collected. */
+    fun lastSyncTime(context: Context): String =
+        prefs(context).getString("flutter.study_widget_sync_time", "") ?: ""
+
+    /** The busy header: the mark, then the time the figures are from. */
+    fun busyHeader(context: Context): String = BUSY_MARK + lastSyncTime(context)
+
 
     /**
      * Repaints every study widget on the home screen.

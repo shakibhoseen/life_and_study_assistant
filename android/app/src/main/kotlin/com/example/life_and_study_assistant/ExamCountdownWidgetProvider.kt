@@ -28,7 +28,10 @@ class ExamCountdownWidgetProvider : AppWidgetProvider() {
                 val mgr = AppWidgetManager.getInstance(context)
                 for (id in ids(context)) {
                     val views = RemoteViews(context.packageName, R.layout.widget_exam_countdown)
-                    views.setTextViewText(R.id.exam_sync_time, "⟳")
+                    views.setTextViewText(
+                        R.id.exam_sync_time,
+                        StudyWidgetSync.busyHeader(context)
+                    )
                     mgr.partiallyUpdateAppWidget(id, views)
                 }
                 if (!StudyWidgetSync.request(context)) refreshAll(context)

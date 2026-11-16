@@ -39,21 +39,20 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
         val appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget)
 
         if (intent.action == ACTION_REFRESH_WIDGET) {
-            // 1. Immediately provide visual feedback on all widgets
+            // 1. Immediately provide visual feedback on all widgets.
+            // The mark goes next to the time, not over it: "Syncing..." on
+            // its own hid when the figures were from, and stayed forever if
+            // the repaint never came.
+            val lastSynced = StudyWidgetSync.prefs(context)
+                .getString("flutter.widget_last_sync_time", "") ?: ""
             for (appWidgetId in appWidgetIds) {
                 val views = RemoteViews(context.packageName, R.layout.widget_office_status)
-                views.setTextViewText(R.id.widget_sync_time, "Syncing... ⏳")
+                views.setTextViewText(
+                    R.id.widget_sync_time,
+                    StudyWidgetSync.BUSY_MARK + lastSynced
+                )
                 appWidgetManager.partiallyUpdateAppWidget(appWidgetId, views)
             }
-
-            // However this refresh is served, make sure something paints over
-            // the "Syncing..." afterwards. A Dart background isolate cannot:
-            // the MethodChannel it would repaint through belongs to
-            // MainActivity, so from there the request goes nowhere and the
-            // widget kept saying "Syncing... ⏳" for good. Even the live path
-            // can fail before it repaints. This is the backstop for a sync
-            // that dies outright, where the chained repaint below never runs.
-            StudyWidgetSync.queueRepaintAfterSync(context)
 
             // 2. If app engine is active in memory, perform immediate sub-second Flutter sync
             if (MainActivity.activeChannel != null) {
