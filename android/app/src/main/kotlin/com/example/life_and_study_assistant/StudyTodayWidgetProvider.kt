@@ -126,4 +126,26 @@ object WidgetIntents {
         val intent = Intent(context, target).apply { this.action = action }
         return PendingIntent.getBroadcast(context, requestCode, intent, flags())
     }
+
+    /**
+     * As [broadcast], carrying one int.
+     *
+     * Each needs its own requestCode: PendingIntents that match on everything
+     * but their extras are the same PendingIntent to Android, so four options
+     * sharing a code would all deliver whichever extra was registered last.
+     */
+    fun broadcastWithExtra(
+        context: Context,
+        target: Class<*>,
+        action: String,
+        extraName: String,
+        extraValue: Int,
+        requestCode: Int
+    ): PendingIntent {
+        val intent = Intent(context, target).apply {
+            this.action = action
+            putExtra(extraName, extraValue)
+        }
+        return PendingIntent.getBroadcast(context, requestCode, intent, flags())
+    }
 }

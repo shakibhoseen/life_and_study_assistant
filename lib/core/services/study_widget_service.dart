@@ -47,6 +47,10 @@ class StudyWidgetService {
   static const String keyQotdDate = 'study_qotd_date';
   static const String keyQotdRevealed = 'study_qotd_revealed';
   static const String keyQotdQuestionId = 'study_qotd_question_id';
+  // A short run of questions, so tapping "next" on the widget does not have
+  // to wake the Flutter engine to fetch one.
+  static const String keyQotdQueue = 'study_qotd_queue';
+  static const String keyQotdCursor = 'study_qotd_cursor';
 
   static const String keySyncTime = 'study_widget_sync_time';
 
@@ -280,6 +284,43 @@ class StudyWidgetService {
     return upcoming.first;
   }
 
+  /// How many questions to leave ready for the widget.
+  ///
+  /// Enough to keep tapping through for a while; small enough that it is not
+  /// a weight in the preferences file, which Android reads in full at launch.
+  static const int questionQueueLength = 12;
+
+  /// The bank, rotated so [startId] comes first, trimmed to [limit].
+  ///
+  /// The widget answers and advances entirely on its own, with no Flutter
+  /// engine running — on a home screen a tap has to land immediately, and
+  /// waking an engine to fetch the next question would make it feel broken.
+  /// So the questions are handed over in advance, in the order they will be
+  /// used.
+  @visibleForTesting
+  static List<Map<String, Object?>> buildQuestionQueue({
+    required List<DrillQuestion> bank,
+    required int? startId,
+    int limit = questionQueueLength,
+  }) {
+    if (bank.isEmpty) return const [];
+    var start = bank.indexWhere((q) => q.id == startId);
+    if (start < 0) start = 0;
+
+    return List.generate(
+      bank.length < limit ? bank.length : limit,
+      (i) {
+        final q = bank[(start + i) % bank.length];
+        return {
+          'id': q.id,
+          'q': q.questionText,
+          'o': parseOptions(q.optionsJson).map(stripOptionMarker).toList(),
+          'c': q.correctIndex,
+        };
+      },
+    );
+  }
+
   // --- collection ---------------------------------------------------------
 
   /// Reads the study figures and leaves them where the widgets can find them.
@@ -344,6 +385,9 @@ class StudyWidgetService {
         day: now,
       );
 
+      final queue = buildQuestionQueue(bank: bank, startId: chosenId);
+      await prefs.setString(keyQotdQueue, jsonEncode(queue));
+
       if (chosenId == null) {
         await prefs.setString(keyQuestion, 'ভুলের খাতা খালি — চমৎকার!');
         await prefs.setString(keyOptions, '[]');
@@ -360,9 +404,14 @@ class StudyWidgetService {
         await prefs.setInt(keyQotdQuestionId, chosenId);
       }
 
-      // A new day's question starts hidden again. So does a replacement one:
-      // the answer showing belongs to the question it was revealed for.
-      if (!wasSameDay || chosenId != previousId) {
+      // A new day starts at the top of the queue with nothing answered. Within
+      // a day the cursor is the widget's own: it moves as questions are
+      // tapped through, and a sync must not drag it back to the start under
+      // someone who is part-way along.
+      if (!wasSameDay) {
+        await prefs.setInt(keyQotdCursor, 0);
+        await prefs.setBool(keyQotdRevealed, false);
+      } else if (chosenId != previousId) {
         await prefs.setBool(keyQotdRevealed, false);
       }
       await prefs.setString(keyQotdDate, today);

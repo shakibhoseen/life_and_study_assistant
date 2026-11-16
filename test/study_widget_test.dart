@@ -314,6 +314,83 @@ void main() {
     });
   });
 
+  group('the queue the widget answers from', () {
+    DrillQuestion q(int id, String text) => DrillQuestion(
+          id: id,
+          subject: 'বাংলা',
+          topic: 'সংবিধান',
+          questionText: text,
+          optionsJson: '["ক. ২০%","খ. ২৫%","গ. ৮০%","ঘ. ১৫%"]',
+          correctIndex: 1,
+          selectedIndex: 0,
+          isCorrect: false,
+          isMastered: false,
+          attemptCount: 1,
+          wrongCount: 1,
+          attemptedAt: DateTime(2026, 11, 16),
+          explanation: 'ব্যাখ্যা',
+        );
+
+    final bank = [q(1, 'এক'), q(2, 'দুই'), q(3, 'তিন'), q(4, 'চার')];
+
+    test('it starts at the question chosen for the day', () {
+      final queue = StudyWidgetService.buildQuestionQueue(
+        bank: bank,
+        startId: 3,
+      );
+      expect(queue.first['id'], 3);
+      expect(queue.first['q'], 'তিন');
+    });
+
+    test('it wraps, so tapping next keeps working past the end', () {
+      final queue = StudyWidgetService.buildQuestionQueue(
+        bank: bank,
+        startId: 3,
+      );
+      expect(queue.map((e) => e['id']).toList(), [3, 4, 1, 2]);
+    });
+
+    test('markers already in the text are not sent twice', () {
+      final queue = StudyWidgetService.buildQuestionQueue(
+        bank: bank,
+        startId: 1,
+      );
+      expect(queue.first['o'], ['২০%', '২৫%', '৮০%', '১৫%']);
+    });
+
+    test('it carries which option is right', () {
+      final queue = StudyWidgetService.buildQuestionQueue(
+        bank: bank,
+        startId: 1,
+      );
+      expect(queue.first['c'], 1);
+    });
+
+    test('it is capped rather than handing over the whole bank', () {
+      final big = List.generate(40, (i) => q(i + 1, 'প্রশ্ন $i'));
+      final queue = StudyWidgetService.buildQuestionQueue(
+        bank: big,
+        startId: 1,
+      );
+      expect(queue.length, StudyWidgetService.questionQueueLength);
+    });
+
+    test('a start that is no longer in the bank begins at the top', () {
+      final queue = StudyWidgetService.buildQuestionQueue(
+        bank: bank,
+        startId: 99,
+      );
+      expect(queue.first['id'], 1);
+    });
+
+    test('an empty bank hands over nothing', () {
+      expect(
+        StudyWidgetService.buildQuestionQueue(bank: const [], startId: 1),
+        isEmpty,
+      );
+    });
+  });
+
   group('parsing the stored options', () {
     test('a normal row comes back as four', () {
       expect(

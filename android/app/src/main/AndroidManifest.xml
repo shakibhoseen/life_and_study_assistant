@@ -164,6 +164,8 @@
                 <action android:name="com.example.life_and_study_assistant.REFRESH_STUDY_WIDGET" />
                 <action android:name="com.example.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA" />
                 <action android:name="com.example.life_and_study_assistant.TOGGLE_QOTD_ANSWER" />
+                <action android:name="com.example.life_and_study_assistant.QOTD_ANSWER" />
+                <action android:name="com.example.life_and_study_assistant.QOTD_NEXT" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
