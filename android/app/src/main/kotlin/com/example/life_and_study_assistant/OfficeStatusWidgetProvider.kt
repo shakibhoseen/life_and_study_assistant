@@ -51,8 +51,8 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
             // the MethodChannel it would repaint through belongs to
             // MainActivity, so from there the request goes nowhere and the
             // widget kept saying "Syncing... ⏳" for good. Even the live path
-            // can fail before it repaints. This lands a little later and
-            // paints whatever is in preferences by then.
+            // can fail before it repaints. This is the backstop for a sync
+            // that dies outright, where the chained repaint below never runs.
             StudyWidgetSync.queueRepaintAfterSync(context)
 
             // 2. If app engine is active in memory, perform immediate sub-second Flutter sync
@@ -76,11 +76,18 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
                         .setInputData(data)
                         .build()
 
-                    WorkManager.getInstance(context).enqueueUniqueWork(
-                        "widget_refresh_task",
-                        ExistingWorkPolicy.REPLACE,
-                        syncRequest
-                    )
+                    // The repaint is chained to the sync, so it runs the
+                    // moment the sync finishes rather than after a guessed
+                    // wait. Measured, the sync itself takes about two
+                    // seconds; the first version of this waited twenty.
+                    WorkManager.getInstance(context)
+                        .beginUniqueWork(
+                            "widget_refresh_task",
+                            ExistingWorkPolicy.REPLACE,
+                            syncRequest
+                        )
+                        .then(StudyWidgetSync.repaintRequest())
+                        .enqueue()
                 } catch (e: Throwable) {
                     // Fallback to repaint cached values
                     for (appWidgetId in appWidgetIds) {

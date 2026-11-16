@@ -66,13 +66,20 @@ object StudyWidgetSync {
                 )
                 .build()
 
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                "study_widget_refresh_task",
-                ExistingWorkPolicy.REPLACE,
-                OneTimeWorkRequest.Builder(BackgroundWorker::class.java)
-                    .setInputData(data)
-                    .build()
-            )
+            // Chained, not timed: the repaint runs the moment the sync
+            // worker finishes, however long that takes. A fixed delay was
+            // guesswork — the first one was twenty seconds for a sync that
+            // measured two, so most of the wait was the guess.
+            WorkManager.getInstance(context)
+                .beginUniqueWork(
+                    "study_widget_refresh_task",
+                    ExistingWorkPolicy.REPLACE,
+                    OneTimeWorkRequest.Builder(BackgroundWorker::class.java)
+                        .setInputData(data)
+                        .build()
+                )
+                .then(repaintRequest())
+                .enqueue()
             queueRepaintAfterSync(context)
             true
         } catch (_: Throwable) {
@@ -80,20 +87,24 @@ object StudyWidgetSync {
         }
     }
 
+    /** A repaint that runs as soon as whatever it is chained to finishes. */
+    fun repaintRequest(): OneTimeWorkRequest =
+        OneTimeWorkRequest.Builder(WidgetRepaintWorker::class.java).build()
+
     /**
-     * Queues a repaint a little after a background sync was asked for.
+     * A repaint far enough out to catch a sync that never reported back.
      *
-     * The Dart side cannot repaint from a background isolate, so without this
-     * a widget that said "Syncing..." would keep saying it. Deferred work, so
-     * it costs a scheduled job and no wakeups of its own.
+     * The chain below handles the normal case. This is for when the sync
+     * worker dies outright: a chained job does not run after a failed parent,
+     * and a widget left saying "Syncing..." is the thing being prevented.
      */
     fun queueRepaintAfterSync(context: Context) {
         try {
             WorkManager.getInstance(context).enqueueUniqueWork(
-                "widget_repaint_after_sync",
+                "widget_repaint_backstop",
                 ExistingWorkPolicy.REPLACE,
                 OneTimeWorkRequest.Builder(WidgetRepaintWorker::class.java)
-                    .setInitialDelay(20, java.util.concurrent.TimeUnit.SECONDS)
+                    .setInitialDelay(45, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
             )
         } catch (_: Throwable) {
