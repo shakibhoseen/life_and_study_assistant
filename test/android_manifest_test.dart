@@ -56,9 +56,24 @@ void main() {
   test('background location is not asked for', () {
     final xml = manifest.readAsStringSync();
     // Nothing requests it: the Wi-Fi monitor asks for the foreground
-    // permission only. Declaring it put every build in front of Play's
-    // background-location review for a capability the app never uses.
-    expect(xml, isNot(contains('ACCESS_BACKGROUND_LOCATION')));
+    // permission only, and the sentinel reads the SSID under its
+    // location-type foreground service, which counts as "in use". Declaring
+    // it put every build in front of Play's background-location review for a
+    // capability the app never uses.
+    //
+    // Matched as a declaration rather than as the bare name. The name has to
+    // be sayable in a comment: forbidding the string meant the manifest could
+    // not explain why the permission is absent, and an unexplained absence is
+    // one someone adds back the next time "background" appears in a trace.
+    final declaration = RegExp(
+      r'<uses-permission[^>]*ACCESS_BACKGROUND_LOCATION',
+      dotAll: true,
+    );
+    expect(
+      declaration.hasMatch(xml),
+      isFalse,
+      reason: 'the manifest declares background location',
+    );
   });
 
   test('the backup leaves the stored API key behind', () {

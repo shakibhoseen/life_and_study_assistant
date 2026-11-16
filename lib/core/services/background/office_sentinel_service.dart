@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/notification_constants.dart';
 import '../attendance/packly_attendance_service.dart';
 import '../notification/notification_service.dart';
+import 'sentinel_clock.dart';
+import 'sentinel_log.dart';
 import 'wifi_monitor_service.dart';
 import 'workmanager_service.dart';
 
@@ -71,9 +73,12 @@ class OfficeSentinelTaskHandler extends TaskHandler {
     if (_isProcessing) return;
     _isProcessing = true;
     try {
-      final now = DateTime.now();
-      final today = now.toIso8601String().substring(0, 10);
       final prefs = await SharedPreferences.getInstance();
+      // Reads the pretend clock when the test lab has set one, so the
+      // morning and evening windows can be exercised at any hour. It expires
+      // by itself; see SentinelClock.
+      final now = SentinelClock.now(prefs);
+      final today = now.toIso8601String().substring(0, 10);
 
       // Check weekly off-day or holiday
       final isClosed = await WifiMonitorService.instance.isOfficeClosedToday(now);
@@ -179,6 +184,11 @@ class OfficeSentinelTaskHandler extends TaskHandler {
         }
       }
 
+      await SentinelLog.write(
+        'saw wifi=$isWifi ssid=${ssid ?? "(hidden)"} '
+        'office=$isConnectedToOffice distance=${distance.round()}m',
+      );
+
       // =========================================================================
       // 1. MORNING CRITICAL ARRIVAL WINDOW (8:40 AM - 10:00 AM)
       // Active strictly UNTIL check-in is complete!
@@ -222,8 +232,12 @@ class OfficeSentinelTaskHandler extends TaskHandler {
         // When connected to Office Wi-Fi:
         if (isConnectedToOffice) {
           debugPrint('OfficeSentinel: Office Wi-Fi detected ($ssid)! Performing Check-In...');
+          await SentinelLog.write('office wifi matched, auto check-in: $autoIn');
           if (autoIn) {
             final res = await PacklyAttendanceService.instance.checkIn();
+            await SentinelLog.write(
+              'check-in ${res.success ? "OK" : "FAILED"}: ${res.message}',
+            );
             if (res.success) {
               final timeStr =
                   '${(now.hour % 12 == 0 ? 12 : now.hour % 12).toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
@@ -247,6 +261,8 @@ class OfficeSentinelTaskHandler extends TaskHandler {
               );
             }
           }
+        } else {
+          await SentinelLog.write('morning window, but office wifi not matched');
         }
         return;
       }
@@ -375,6 +391,10 @@ class OfficeSentinelTaskHandler extends TaskHandler {
       // Keep phone clean and battery saved.
       // =========================================================================
       debugPrint('OfficeSentinel: Outside arrival/departure windows. Stopping sentinel.');
+      await SentinelLog.write(
+        'outside both windows at ${now.hour}:'
+        '${now.minute.toString().padLeft(2, '0')} - stopping',
+      );
       await FlutterForegroundTask.stopService();
     } finally {
       _isProcessing = false;
@@ -502,12 +522,14 @@ class OfficeSentinelService {
 
   /// Evaluates current state and launches sentinel if check-in or check-out is pending
   Future<void> checkAndTriggerSentinelIfNeeded() async {
-    final now = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    final now = SentinelClock.now(prefs);
 
     // Check if off-day or holiday
-    if (await WifiMonitorService.instance.isOfficeClosedToday(now)) return;
-
-    final prefs = await SharedPreferences.getInstance();
+    if (await WifiMonitorService.instance.isOfficeClosedToday(now)) {
+      await SentinelLog.write('trigger: skipped, office closed today');
+      return;
+    }
     final autoIn = prefs.getBool(NotificationConstants.prefAutoCheckInEnabled) ?? true;
     final autoOut = prefs.getBool(NotificationConstants.prefAutoCheckOutEnabled) ?? true;
 
@@ -530,10 +552,12 @@ class OfficeSentinelService {
     if (autoIn && isMorningTime) {
       if (isCheckedIn) {
         debugPrint('OfficeSentinel: Morning punch already completed. Ensuring watchdog cancelled.');
+        await SentinelLog.write('trigger: morning window, already punched today');
         await stopSentinel();
         await WorkmanagerService.instance.cancelSafetyWatchdog();
         return;
       }
+      await SentinelLog.write('starting morning sentinel');
       await startMorningSentinel();
       unawaited(WorkmanagerService.instance.scheduleSafetyWatchdog(delay: const Duration(minutes: 15)));
       return;
@@ -546,13 +570,24 @@ class OfficeSentinelService {
     if (autoOut && isEveningTime) {
       if (isCheckedOut) {
         debugPrint('OfficeSentinel: Evening checkout already completed. Ensuring watchdog cancelled.');
+        await SentinelLog.write('trigger: evening window, already checked out');
         await stopSentinel();
         await WorkmanagerService.instance.cancelSafetyWatchdog();
         return;
       }
+      await SentinelLog.write('starting evening sentinel');
       await startEveningSentinel();
       unawaited(WorkmanagerService.instance.scheduleSafetyWatchdog(delay: const Duration(minutes: 15)));
       return;
     }
+
+    // Reaching here means nothing starts. Worth a line: "the sentinel never
+    // ran" and "the sentinel ran and decided not to act" look identical from
+    // the outside, and they have completely different causes.
+    await SentinelLog.write(
+      'trigger: no window at ${now.hour}:'
+      '${now.minute.toString().padLeft(2, '0')} - nothing started '
+      '(autoIn=$autoIn autoOut=$autoOut)',
+    );
   }
 }

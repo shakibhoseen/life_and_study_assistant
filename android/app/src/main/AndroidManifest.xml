@@ -8,12 +8,19 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- FOREGROUND_SERVICE_LOCATION, and the "location" type on the sentinel
+         service below, are what let it read the Wi-Fi SSID while the phone is
+         in a pocket: a running location-type foreground service counts as "in
+         use", so the ordinary foreground location permission is enough.
+         ACCESS_BACKGROUND_LOCATION is deliberately NOT here. It would add
+         nothing — nothing in lib/ ever requests it, so it could never be
+         granted — and declaring it puts every build in front of Play's
+         background-location review. android_manifest_test.dart guards this. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
 
     <!-- Notification and Alarm permissions -->

@@ -8,6 +8,8 @@ import '../../../../core/services/attendance/packly_attendance_service.dart';
 import '../../../../core/services/attendance/steadfast_lunch_service.dart';
 import '../../../../core/services/background/lunch_sentinel_service.dart';
 import '../../../../core/services/background/office_sentinel_service.dart';
+import '../../../../core/services/background/sentinel_clock.dart';
+import '../../../../core/services/background/sentinel_log.dart';
 import '../../../../core/services/home_widget_service.dart';
 import '../../../../core/services/notification/notification_service.dart';
 import '../../../../core/services/system_settings_helper.dart';
@@ -25,6 +27,7 @@ class AttendanceTestLabScreen extends ConsumerStatefulWidget {
 
 class _AttendanceTestLabScreenState
     extends ConsumerState<AttendanceTestLabScreen> {
+  List<String> _diary = const [];
   bool _simulationMode = false;
   bool _isLoading = false;
 
@@ -32,6 +35,12 @@ class _AttendanceTestLabScreenState
   void initState() {
     super.initState();
     _loadState();
+    _refreshDiary();
+  }
+
+  Future<void> _refreshDiary() async {
+    final entries = await SentinelLog.read();
+    if (mounted) setState(() => _diary = entries);
   }
 
   Future<void> _loadState() async {
@@ -207,6 +216,143 @@ class _AttendanceTestLabScreenState
           const SizedBox(height: FluentSpacing.l),
 
           // 2. Mock Attendance Punch Triggers
+          _buildSectionCard(
+            context: context,
+            icon: Icons.fact_check_outlined,
+            title: '🕵️ Sentinel Diary & Pretend Clock',
+            children: [
+              Text(
+                'অটো চেক-ইন ফোন পকেটে থাকা অবস্থায় হয় — তখন কী ঘটল তা পরে '
+                'আর দেখা যায় না। সেন্টিনেল এখন প্রতিটি সিদ্ধান্ত এখানে লিখে '
+                'রাখে। সকালে চেক-ইন না হলে পরে এসে এখানেই কারণ পাওয়া যাবে।',
+                style: FluentType.caption.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: FluentSpacing.m),
+              Wrap(
+                spacing: FluentSpacing.s,
+                runSpacing: FluentSpacing.s,
+                children: [
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                    ),
+                    icon: const Icon(Icons.schedule, size: 16),
+                    label: const Text('Pretend it is 8:45 AM'),
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      await SentinelClock.pretendItIs(
+                        DateTime(now.year, now.month, now.day, 8, 45),
+                      );
+                      await SentinelLog.write('test lab: pretending 8:45 AM');
+                      await OfficeSentinelService.instance
+                          .checkAndTriggerSentinelIfNeeded();
+                      await _refreshDiary();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              '⏰ ৩০ মিনিটের জন্য ৮:৪৫ AM ধরা হচ্ছে। '
+                              'এরপর নিজে থেকেই আসল সময়ে ফিরে যাবে।',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                    ),
+                    icon: const Icon(Icons.restore, size: 16),
+                    label: const Text('Back to real time'),
+                    onPressed: () async {
+                      await SentinelClock.clear();
+                      await SentinelLog.write('test lab: back to real time');
+                      await _refreshDiary();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('🕐 আসল সময়ে ফেরত আনা হয়েছে।'),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                    ),
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Reload diary'),
+                    onPressed: _refreshDiary,
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                    ),
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('Clear diary'),
+                    onPressed: () async {
+                      await SentinelLog.clear();
+                      await _refreshDiary();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: FluentSpacing.m),
+              Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxHeight: 260),
+                padding: const EdgeInsets.all(FluentSpacing.m),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: FluentRadius.controlBorder,
+                  border: Border.all(
+                    color: FluentStroke.card(Theme.of(context).brightness),
+                    width: FluentStroke.width,
+                  ),
+                ),
+                child: _diary.isEmpty
+                    ? Text(
+                        'এখনো কিছু লেখা হয়নি।',
+                        style: FluentType.caption.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _diary.length,
+                        itemBuilder: (_, i) => Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: FluentSpacing.xxs,
+                          ),
+                          child: Text(
+                            _diary[i],
+                            style: FluentType.caption.copyWith(
+                              fontFamily: 'monospace',
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+          const SizedBox(height: FluentSpacing.l),
           _buildSectionCard(
             title: '🏢 Zavisoft Packly Attendance Triggers',
             icon: Icons.badge_outlined,

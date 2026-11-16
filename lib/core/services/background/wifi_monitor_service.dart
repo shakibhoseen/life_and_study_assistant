@@ -11,6 +11,7 @@ import '../../config/notification_constants.dart';
 import '../attendance/packly_attendance_service.dart';
 import '../notification/notification_service.dart';
 import 'office_sentinel_service.dart';
+import 'sentinel_log.dart';
 
 enum OfficeConnectionState { connected, disconnected, unknown }
 
@@ -410,6 +411,7 @@ class WifiMonitorService {
 
     if (isAlreadyPunched) {
       debugPrint('Already punched in today ($today). Skipping auto check-in.');
+      await SentinelLog.write('app isolate: already punched today, skipping');
       return;
     }
 
@@ -418,7 +420,15 @@ class WifiMonitorService {
 
     if (isAutoCheckInEnabled) {
       debugPrint('Office Wi-Fi connected ($ssid). Performing Auto Check-In...');
+      // The app's own isolate saw the network change. Written down next to
+      // the sentinel's entries so the two paths can be told apart afterwards:
+      // this one only runs while the app is alive.
+      await SentinelLog.write('app isolate: office wifi ($ssid), checking in');
       final result = await PacklyAttendanceService.instance.checkIn();
+      await SentinelLog.write(
+        'app isolate: check-in ${result.success ? "OK" : "FAILED"}: '
+        '${result.message}',
+      );
       if (result.success) {
         final now = DateTime.now();
         final timeStr =
