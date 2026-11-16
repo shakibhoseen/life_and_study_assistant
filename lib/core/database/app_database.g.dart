@@ -6878,6 +6878,1032 @@ class SyllabusTracksCompanion extends UpdateCompanion<SyllabusTrackRow> {
   }
 }
 
+class $ReferenceSheetsTable extends ReferenceSheets
+    with TableInfo<$ReferenceSheetsTable, ReferenceSheet> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReferenceSheetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sheetKeyMeta = const VerificationMeta(
+    'sheetKey',
+  );
+  @override
+  late final GeneratedColumn<String> sheetKey = GeneratedColumn<String>(
+    'sheet_key',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 200,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 250,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 150,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subjectMeta = const VerificationMeta(
+    'subject',
+  );
+  @override
+  late final GeneratedColumn<String> subject = GeneratedColumn<String>(
+    'subject',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _columnsJsonMeta = const VerificationMeta(
+    'columnsJson',
+  );
+  @override
+  late final GeneratedColumn<String> columnsJson = GeneratedColumn<String>(
+    'columns_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isCustomMeta = const VerificationMeta(
+    'isCustom',
+  );
+  @override
+  late final GeneratedColumn<bool> isCustom = GeneratedColumn<bool>(
+    'is_custom',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_custom" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _orderIndexMeta = const VerificationMeta(
+    'orderIndex',
+  );
+  @override
+  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
+    'order_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sheetKey,
+    title,
+    category,
+    subject,
+    note,
+    columnsJson,
+    isCustom,
+    orderIndex,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reference_sheets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReferenceSheet> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('sheet_key')) {
+      context.handle(
+        _sheetKeyMeta,
+        sheetKey.isAcceptableOrUnknown(data['sheet_key']!, _sheetKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sheetKeyMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
+    }
+    if (data.containsKey('subject')) {
+      context.handle(
+        _subjectMeta,
+        subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('columns_json')) {
+      context.handle(
+        _columnsJsonMeta,
+        columnsJson.isAcceptableOrUnknown(
+          data['columns_json']!,
+          _columnsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_columnsJsonMeta);
+    }
+    if (data.containsKey('is_custom')) {
+      context.handle(
+        _isCustomMeta,
+        isCustom.isAcceptableOrUnknown(data['is_custom']!, _isCustomMeta),
+      );
+    }
+    if (data.containsKey('order_index')) {
+      context.handle(
+        _orderIndexMeta,
+        orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {sheetKey},
+  ];
+  @override
+  ReferenceSheet map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReferenceSheet(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      sheetKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sheet_key'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      subject: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+      columnsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}columns_json'],
+      )!,
+      isCustom: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_custom'],
+      )!,
+      orderIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_index'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReferenceSheetsTable createAlias(String alias) {
+    return $ReferenceSheetsTable(attachedDatabase, alias);
+  }
+}
+
+class ReferenceSheet extends DataClass implements Insertable<ReferenceSheet> {
+  final int id;
+
+  /// Stable identity, so re-seeding the bundled content never orphans the
+  /// rows a user added to a bundled sheet.
+  final String sheetKey;
+  final String title;
+
+  /// The group it appears under: পরিমাপ ও একক, গাণিতিক সূত্র, and so on.
+  final String category;
+
+  /// Which exam subject it belongs to, for matching against weak topics.
+  final String subject;
+
+  /// Caveats or a reading tip, shown under the title.
+  final String note;
+
+  /// JSON list of column headers.
+  final String columnsJson;
+  final bool isCustom;
+  final int orderIndex;
+  final DateTime createdAt;
+  const ReferenceSheet({
+    required this.id,
+    required this.sheetKey,
+    required this.title,
+    required this.category,
+    required this.subject,
+    required this.note,
+    required this.columnsJson,
+    required this.isCustom,
+    required this.orderIndex,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['sheet_key'] = Variable<String>(sheetKey);
+    map['title'] = Variable<String>(title);
+    map['category'] = Variable<String>(category);
+    map['subject'] = Variable<String>(subject);
+    map['note'] = Variable<String>(note);
+    map['columns_json'] = Variable<String>(columnsJson);
+    map['is_custom'] = Variable<bool>(isCustom);
+    map['order_index'] = Variable<int>(orderIndex);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ReferenceSheetsCompanion toCompanion(bool nullToAbsent) {
+    return ReferenceSheetsCompanion(
+      id: Value(id),
+      sheetKey: Value(sheetKey),
+      title: Value(title),
+      category: Value(category),
+      subject: Value(subject),
+      note: Value(note),
+      columnsJson: Value(columnsJson),
+      isCustom: Value(isCustom),
+      orderIndex: Value(orderIndex),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ReferenceSheet.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReferenceSheet(
+      id: serializer.fromJson<int>(json['id']),
+      sheetKey: serializer.fromJson<String>(json['sheetKey']),
+      title: serializer.fromJson<String>(json['title']),
+      category: serializer.fromJson<String>(json['category']),
+      subject: serializer.fromJson<String>(json['subject']),
+      note: serializer.fromJson<String>(json['note']),
+      columnsJson: serializer.fromJson<String>(json['columnsJson']),
+      isCustom: serializer.fromJson<bool>(json['isCustom']),
+      orderIndex: serializer.fromJson<int>(json['orderIndex']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'sheetKey': serializer.toJson<String>(sheetKey),
+      'title': serializer.toJson<String>(title),
+      'category': serializer.toJson<String>(category),
+      'subject': serializer.toJson<String>(subject),
+      'note': serializer.toJson<String>(note),
+      'columnsJson': serializer.toJson<String>(columnsJson),
+      'isCustom': serializer.toJson<bool>(isCustom),
+      'orderIndex': serializer.toJson<int>(orderIndex),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ReferenceSheet copyWith({
+    int? id,
+    String? sheetKey,
+    String? title,
+    String? category,
+    String? subject,
+    String? note,
+    String? columnsJson,
+    bool? isCustom,
+    int? orderIndex,
+    DateTime? createdAt,
+  }) => ReferenceSheet(
+    id: id ?? this.id,
+    sheetKey: sheetKey ?? this.sheetKey,
+    title: title ?? this.title,
+    category: category ?? this.category,
+    subject: subject ?? this.subject,
+    note: note ?? this.note,
+    columnsJson: columnsJson ?? this.columnsJson,
+    isCustom: isCustom ?? this.isCustom,
+    orderIndex: orderIndex ?? this.orderIndex,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ReferenceSheet copyWithCompanion(ReferenceSheetsCompanion data) {
+    return ReferenceSheet(
+      id: data.id.present ? data.id.value : this.id,
+      sheetKey: data.sheetKey.present ? data.sheetKey.value : this.sheetKey,
+      title: data.title.present ? data.title.value : this.title,
+      category: data.category.present ? data.category.value : this.category,
+      subject: data.subject.present ? data.subject.value : this.subject,
+      note: data.note.present ? data.note.value : this.note,
+      columnsJson: data.columnsJson.present
+          ? data.columnsJson.value
+          : this.columnsJson,
+      isCustom: data.isCustom.present ? data.isCustom.value : this.isCustom,
+      orderIndex: data.orderIndex.present
+          ? data.orderIndex.value
+          : this.orderIndex,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceSheet(')
+          ..write('id: $id, ')
+          ..write('sheetKey: $sheetKey, ')
+          ..write('title: $title, ')
+          ..write('category: $category, ')
+          ..write('subject: $subject, ')
+          ..write('note: $note, ')
+          ..write('columnsJson: $columnsJson, ')
+          ..write('isCustom: $isCustom, ')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    sheetKey,
+    title,
+    category,
+    subject,
+    note,
+    columnsJson,
+    isCustom,
+    orderIndex,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReferenceSheet &&
+          other.id == this.id &&
+          other.sheetKey == this.sheetKey &&
+          other.title == this.title &&
+          other.category == this.category &&
+          other.subject == this.subject &&
+          other.note == this.note &&
+          other.columnsJson == this.columnsJson &&
+          other.isCustom == this.isCustom &&
+          other.orderIndex == this.orderIndex &&
+          other.createdAt == this.createdAt);
+}
+
+class ReferenceSheetsCompanion extends UpdateCompanion<ReferenceSheet> {
+  final Value<int> id;
+  final Value<String> sheetKey;
+  final Value<String> title;
+  final Value<String> category;
+  final Value<String> subject;
+  final Value<String> note;
+  final Value<String> columnsJson;
+  final Value<bool> isCustom;
+  final Value<int> orderIndex;
+  final Value<DateTime> createdAt;
+  const ReferenceSheetsCompanion({
+    this.id = const Value.absent(),
+    this.sheetKey = const Value.absent(),
+    this.title = const Value.absent(),
+    this.category = const Value.absent(),
+    this.subject = const Value.absent(),
+    this.note = const Value.absent(),
+    this.columnsJson = const Value.absent(),
+    this.isCustom = const Value.absent(),
+    this.orderIndex = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ReferenceSheetsCompanion.insert({
+    this.id = const Value.absent(),
+    required String sheetKey,
+    required String title,
+    required String category,
+    this.subject = const Value.absent(),
+    this.note = const Value.absent(),
+    required String columnsJson,
+    this.isCustom = const Value.absent(),
+    this.orderIndex = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : sheetKey = Value(sheetKey),
+       title = Value(title),
+       category = Value(category),
+       columnsJson = Value(columnsJson);
+  static Insertable<ReferenceSheet> custom({
+    Expression<int>? id,
+    Expression<String>? sheetKey,
+    Expression<String>? title,
+    Expression<String>? category,
+    Expression<String>? subject,
+    Expression<String>? note,
+    Expression<String>? columnsJson,
+    Expression<bool>? isCustom,
+    Expression<int>? orderIndex,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sheetKey != null) 'sheet_key': sheetKey,
+      if (title != null) 'title': title,
+      if (category != null) 'category': category,
+      if (subject != null) 'subject': subject,
+      if (note != null) 'note': note,
+      if (columnsJson != null) 'columns_json': columnsJson,
+      if (isCustom != null) 'is_custom': isCustom,
+      if (orderIndex != null) 'order_index': orderIndex,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ReferenceSheetsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? sheetKey,
+    Value<String>? title,
+    Value<String>? category,
+    Value<String>? subject,
+    Value<String>? note,
+    Value<String>? columnsJson,
+    Value<bool>? isCustom,
+    Value<int>? orderIndex,
+    Value<DateTime>? createdAt,
+  }) {
+    return ReferenceSheetsCompanion(
+      id: id ?? this.id,
+      sheetKey: sheetKey ?? this.sheetKey,
+      title: title ?? this.title,
+      category: category ?? this.category,
+      subject: subject ?? this.subject,
+      note: note ?? this.note,
+      columnsJson: columnsJson ?? this.columnsJson,
+      isCustom: isCustom ?? this.isCustom,
+      orderIndex: orderIndex ?? this.orderIndex,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (sheetKey.present) {
+      map['sheet_key'] = Variable<String>(sheetKey.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (subject.present) {
+      map['subject'] = Variable<String>(subject.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (columnsJson.present) {
+      map['columns_json'] = Variable<String>(columnsJson.value);
+    }
+    if (isCustom.present) {
+      map['is_custom'] = Variable<bool>(isCustom.value);
+    }
+    if (orderIndex.present) {
+      map['order_index'] = Variable<int>(orderIndex.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceSheetsCompanion(')
+          ..write('id: $id, ')
+          ..write('sheetKey: $sheetKey, ')
+          ..write('title: $title, ')
+          ..write('category: $category, ')
+          ..write('subject: $subject, ')
+          ..write('note: $note, ')
+          ..write('columnsJson: $columnsJson, ')
+          ..write('isCustom: $isCustom, ')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReferenceRowsTable extends ReferenceRows
+    with TableInfo<$ReferenceRowsTable, ReferenceRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReferenceRowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sheetKeyMeta = const VerificationMeta(
+    'sheetKey',
+  );
+  @override
+  late final GeneratedColumn<String> sheetKey = GeneratedColumn<String>(
+    'sheet_key',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 200,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cellsJsonMeta = const VerificationMeta(
+    'cellsJson',
+  );
+  @override
+  late final GeneratedColumn<String> cellsJson = GeneratedColumn<String>(
+    'cells_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _isCustomMeta = const VerificationMeta(
+    'isCustom',
+  );
+  @override
+  late final GeneratedColumn<bool> isCustom = GeneratedColumn<bool>(
+    'is_custom',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_custom" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _orderIndexMeta = const VerificationMeta(
+    'orderIndex',
+  );
+  @override
+  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
+    'order_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sheetKey,
+    cellsJson,
+    note,
+    isCustom,
+    orderIndex,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reference_rows';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReferenceRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('sheet_key')) {
+      context.handle(
+        _sheetKeyMeta,
+        sheetKey.isAcceptableOrUnknown(data['sheet_key']!, _sheetKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sheetKeyMeta);
+    }
+    if (data.containsKey('cells_json')) {
+      context.handle(
+        _cellsJsonMeta,
+        cellsJson.isAcceptableOrUnknown(data['cells_json']!, _cellsJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cellsJsonMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('is_custom')) {
+      context.handle(
+        _isCustomMeta,
+        isCustom.isAcceptableOrUnknown(data['is_custom']!, _isCustomMeta),
+      );
+    }
+    if (data.containsKey('order_index')) {
+      context.handle(
+        _orderIndexMeta,
+        orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReferenceRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReferenceRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      sheetKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sheet_key'],
+      )!,
+      cellsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cells_json'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+      isCustom: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_custom'],
+      )!,
+      orderIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_index'],
+      )!,
+    );
+  }
+
+  @override
+  $ReferenceRowsTable createAlias(String alias) {
+    return $ReferenceRowsTable(attachedDatabase, alias);
+  }
+}
+
+class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
+  final int id;
+  final String sheetKey;
+
+  /// JSON list of cell values, one per column of the owning sheet.
+  final String cellsJson;
+
+  /// An aside for this line: a mnemonic, or the condition it holds under.
+  final String note;
+  final bool isCustom;
+  final int orderIndex;
+  const ReferenceRow({
+    required this.id,
+    required this.sheetKey,
+    required this.cellsJson,
+    required this.note,
+    required this.isCustom,
+    required this.orderIndex,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['sheet_key'] = Variable<String>(sheetKey);
+    map['cells_json'] = Variable<String>(cellsJson);
+    map['note'] = Variable<String>(note);
+    map['is_custom'] = Variable<bool>(isCustom);
+    map['order_index'] = Variable<int>(orderIndex);
+    return map;
+  }
+
+  ReferenceRowsCompanion toCompanion(bool nullToAbsent) {
+    return ReferenceRowsCompanion(
+      id: Value(id),
+      sheetKey: Value(sheetKey),
+      cellsJson: Value(cellsJson),
+      note: Value(note),
+      isCustom: Value(isCustom),
+      orderIndex: Value(orderIndex),
+    );
+  }
+
+  factory ReferenceRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReferenceRow(
+      id: serializer.fromJson<int>(json['id']),
+      sheetKey: serializer.fromJson<String>(json['sheetKey']),
+      cellsJson: serializer.fromJson<String>(json['cellsJson']),
+      note: serializer.fromJson<String>(json['note']),
+      isCustom: serializer.fromJson<bool>(json['isCustom']),
+      orderIndex: serializer.fromJson<int>(json['orderIndex']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'sheetKey': serializer.toJson<String>(sheetKey),
+      'cellsJson': serializer.toJson<String>(cellsJson),
+      'note': serializer.toJson<String>(note),
+      'isCustom': serializer.toJson<bool>(isCustom),
+      'orderIndex': serializer.toJson<int>(orderIndex),
+    };
+  }
+
+  ReferenceRow copyWith({
+    int? id,
+    String? sheetKey,
+    String? cellsJson,
+    String? note,
+    bool? isCustom,
+    int? orderIndex,
+  }) => ReferenceRow(
+    id: id ?? this.id,
+    sheetKey: sheetKey ?? this.sheetKey,
+    cellsJson: cellsJson ?? this.cellsJson,
+    note: note ?? this.note,
+    isCustom: isCustom ?? this.isCustom,
+    orderIndex: orderIndex ?? this.orderIndex,
+  );
+  ReferenceRow copyWithCompanion(ReferenceRowsCompanion data) {
+    return ReferenceRow(
+      id: data.id.present ? data.id.value : this.id,
+      sheetKey: data.sheetKey.present ? data.sheetKey.value : this.sheetKey,
+      cellsJson: data.cellsJson.present ? data.cellsJson.value : this.cellsJson,
+      note: data.note.present ? data.note.value : this.note,
+      isCustom: data.isCustom.present ? data.isCustom.value : this.isCustom,
+      orderIndex: data.orderIndex.present
+          ? data.orderIndex.value
+          : this.orderIndex,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceRow(')
+          ..write('id: $id, ')
+          ..write('sheetKey: $sheetKey, ')
+          ..write('cellsJson: $cellsJson, ')
+          ..write('note: $note, ')
+          ..write('isCustom: $isCustom, ')
+          ..write('orderIndex: $orderIndex')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, sheetKey, cellsJson, note, isCustom, orderIndex);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReferenceRow &&
+          other.id == this.id &&
+          other.sheetKey == this.sheetKey &&
+          other.cellsJson == this.cellsJson &&
+          other.note == this.note &&
+          other.isCustom == this.isCustom &&
+          other.orderIndex == this.orderIndex);
+}
+
+class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
+  final Value<int> id;
+  final Value<String> sheetKey;
+  final Value<String> cellsJson;
+  final Value<String> note;
+  final Value<bool> isCustom;
+  final Value<int> orderIndex;
+  const ReferenceRowsCompanion({
+    this.id = const Value.absent(),
+    this.sheetKey = const Value.absent(),
+    this.cellsJson = const Value.absent(),
+    this.note = const Value.absent(),
+    this.isCustom = const Value.absent(),
+    this.orderIndex = const Value.absent(),
+  });
+  ReferenceRowsCompanion.insert({
+    this.id = const Value.absent(),
+    required String sheetKey,
+    required String cellsJson,
+    this.note = const Value.absent(),
+    this.isCustom = const Value.absent(),
+    this.orderIndex = const Value.absent(),
+  }) : sheetKey = Value(sheetKey),
+       cellsJson = Value(cellsJson);
+  static Insertable<ReferenceRow> custom({
+    Expression<int>? id,
+    Expression<String>? sheetKey,
+    Expression<String>? cellsJson,
+    Expression<String>? note,
+    Expression<bool>? isCustom,
+    Expression<int>? orderIndex,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sheetKey != null) 'sheet_key': sheetKey,
+      if (cellsJson != null) 'cells_json': cellsJson,
+      if (note != null) 'note': note,
+      if (isCustom != null) 'is_custom': isCustom,
+      if (orderIndex != null) 'order_index': orderIndex,
+    });
+  }
+
+  ReferenceRowsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? sheetKey,
+    Value<String>? cellsJson,
+    Value<String>? note,
+    Value<bool>? isCustom,
+    Value<int>? orderIndex,
+  }) {
+    return ReferenceRowsCompanion(
+      id: id ?? this.id,
+      sheetKey: sheetKey ?? this.sheetKey,
+      cellsJson: cellsJson ?? this.cellsJson,
+      note: note ?? this.note,
+      isCustom: isCustom ?? this.isCustom,
+      orderIndex: orderIndex ?? this.orderIndex,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (sheetKey.present) {
+      map['sheet_key'] = Variable<String>(sheetKey.value);
+    }
+    if (cellsJson.present) {
+      map['cells_json'] = Variable<String>(cellsJson.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (isCustom.present) {
+      map['is_custom'] = Variable<bool>(isCustom.value);
+    }
+    if (orderIndex.present) {
+      map['order_index'] = Variable<int>(orderIndex.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceRowsCompanion(')
+          ..write('id: $id, ')
+          ..write('sheetKey: $sheetKey, ')
+          ..write('cellsJson: $cellsJson, ')
+          ..write('note: $note, ')
+          ..write('isCustom: $isCustom, ')
+          ..write('orderIndex: $orderIndex')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6898,6 +7924,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $SyllabusTracksTable syllabusTracks = $SyllabusTracksTable(this);
+  late final $ReferenceSheetsTable referenceSheets = $ReferenceSheetsTable(
+    this,
+  );
+  late final $ReferenceRowsTable referenceRows = $ReferenceRowsTable(this);
   late final Index idxWeakTopicsSubjectTopic = Index(
     'idx_weak_topics_subject_topic',
     'CREATE INDEX idx_weak_topics_subject_topic ON weak_topics (subject, topic_name)',
@@ -6942,6 +7972,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_syllabus_progress_status',
     'CREATE INDEX idx_syllabus_progress_status ON syllabus_progress (status)',
   );
+  late final Index idxReferenceSheetsCategory = Index(
+    'idx_reference_sheets_category',
+    'CREATE INDEX idx_reference_sheets_category ON reference_sheets (category)',
+  );
+  late final Index idxReferenceRowsSheet = Index(
+    'idx_reference_rows_sheet',
+    'CREATE INDEX idx_reference_rows_sheet ON reference_rows (sheet_key, order_index)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6959,6 +7997,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     syllabusNodes,
     syllabusProgress,
     syllabusTracks,
+    referenceSheets,
+    referenceRows,
     idxWeakTopicsSubjectTopic,
     idxWeakTopicsProficiency,
     idxExamSchedulesStatusDate,
@@ -6970,6 +8010,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxSyllabusNodesTrack,
     idxSyllabusNodesMerge,
     idxSyllabusProgressStatus,
+    idxReferenceSheetsCategory,
+    idxReferenceRowsSheet,
   ];
 }
 
@@ -10436,6 +11478,538 @@ typedef $$SyllabusTracksTableProcessedTableManager =
       SyllabusTrackRow,
       PrefetchHooks Function()
     >;
+typedef $$ReferenceSheetsTableCreateCompanionBuilder =
+    ReferenceSheetsCompanion Function({
+      Value<int> id,
+      required String sheetKey,
+      required String title,
+      required String category,
+      Value<String> subject,
+      Value<String> note,
+      required String columnsJson,
+      Value<bool> isCustom,
+      Value<int> orderIndex,
+      Value<DateTime> createdAt,
+    });
+typedef $$ReferenceSheetsTableUpdateCompanionBuilder =
+    ReferenceSheetsCompanion Function({
+      Value<int> id,
+      Value<String> sheetKey,
+      Value<String> title,
+      Value<String> category,
+      Value<String> subject,
+      Value<String> note,
+      Value<String> columnsJson,
+      Value<bool> isCustom,
+      Value<int> orderIndex,
+      Value<DateTime> createdAt,
+    });
+
+class $$ReferenceSheetsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReferenceSheetsTable> {
+  $$ReferenceSheetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sheetKey => $composableBuilder(
+    column: $table.sheetKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subject => $composableBuilder(
+    column: $table.subject,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get columnsJson => $composableBuilder(
+    column: $table.columnsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCustom => $composableBuilder(
+    column: $table.isCustom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ReferenceSheetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReferenceSheetsTable> {
+  $$ReferenceSheetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sheetKey => $composableBuilder(
+    column: $table.sheetKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subject => $composableBuilder(
+    column: $table.subject,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get columnsJson => $composableBuilder(
+    column: $table.columnsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCustom => $composableBuilder(
+    column: $table.isCustom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReferenceSheetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReferenceSheetsTable> {
+  $$ReferenceSheetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get sheetKey =>
+      $composableBuilder(column: $table.sheetKey, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get subject =>
+      $composableBuilder(column: $table.subject, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get columnsJson => $composableBuilder(
+    column: $table.columnsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isCustom =>
+      $composableBuilder(column: $table.isCustom, builder: (column) => column);
+
+  GeneratedColumn<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ReferenceSheetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReferenceSheetsTable,
+          ReferenceSheet,
+          $$ReferenceSheetsTableFilterComposer,
+          $$ReferenceSheetsTableOrderingComposer,
+          $$ReferenceSheetsTableAnnotationComposer,
+          $$ReferenceSheetsTableCreateCompanionBuilder,
+          $$ReferenceSheetsTableUpdateCompanionBuilder,
+          (
+            ReferenceSheet,
+            BaseReferences<
+              _$AppDatabase,
+              $ReferenceSheetsTable,
+              ReferenceSheet
+            >,
+          ),
+          ReferenceSheet,
+          PrefetchHooks Function()
+        > {
+  $$ReferenceSheetsTableTableManager(
+    _$AppDatabase db,
+    $ReferenceSheetsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReferenceSheetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReferenceSheetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReferenceSheetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> sheetKey = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<String> subject = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<String> columnsJson = const Value.absent(),
+                Value<bool> isCustom = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ReferenceSheetsCompanion(
+                id: id,
+                sheetKey: sheetKey,
+                title: title,
+                category: category,
+                subject: subject,
+                note: note,
+                columnsJson: columnsJson,
+                isCustom: isCustom,
+                orderIndex: orderIndex,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String sheetKey,
+                required String title,
+                required String category,
+                Value<String> subject = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                required String columnsJson,
+                Value<bool> isCustom = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ReferenceSheetsCompanion.insert(
+                id: id,
+                sheetKey: sheetKey,
+                title: title,
+                category: category,
+                subject: subject,
+                note: note,
+                columnsJson: columnsJson,
+                isCustom: isCustom,
+                orderIndex: orderIndex,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ReferenceSheetsTable, ReferenceSheet>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $ReferenceSheetsTable,
+                    ReferenceSheet
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ReferenceSheetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReferenceSheetsTable,
+      ReferenceSheet,
+      $$ReferenceSheetsTableFilterComposer,
+      $$ReferenceSheetsTableOrderingComposer,
+      $$ReferenceSheetsTableAnnotationComposer,
+      $$ReferenceSheetsTableCreateCompanionBuilder,
+      $$ReferenceSheetsTableUpdateCompanionBuilder,
+      (
+        ReferenceSheet,
+        BaseReferences<_$AppDatabase, $ReferenceSheetsTable, ReferenceSheet>,
+      ),
+      ReferenceSheet,
+      PrefetchHooks Function()
+    >;
+typedef $$ReferenceRowsTableCreateCompanionBuilder =
+    ReferenceRowsCompanion Function({
+      Value<int> id,
+      required String sheetKey,
+      required String cellsJson,
+      Value<String> note,
+      Value<bool> isCustom,
+      Value<int> orderIndex,
+    });
+typedef $$ReferenceRowsTableUpdateCompanionBuilder =
+    ReferenceRowsCompanion Function({
+      Value<int> id,
+      Value<String> sheetKey,
+      Value<String> cellsJson,
+      Value<String> note,
+      Value<bool> isCustom,
+      Value<int> orderIndex,
+    });
+
+class $$ReferenceRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReferenceRowsTable> {
+  $$ReferenceRowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sheetKey => $composableBuilder(
+    column: $table.sheetKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cellsJson => $composableBuilder(
+    column: $table.cellsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCustom => $composableBuilder(
+    column: $table.isCustom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ReferenceRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReferenceRowsTable> {
+  $$ReferenceRowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sheetKey => $composableBuilder(
+    column: $table.sheetKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cellsJson => $composableBuilder(
+    column: $table.cellsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCustom => $composableBuilder(
+    column: $table.isCustom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReferenceRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReferenceRowsTable> {
+  $$ReferenceRowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get sheetKey =>
+      $composableBuilder(column: $table.sheetKey, builder: (column) => column);
+
+  GeneratedColumn<String> get cellsJson =>
+      $composableBuilder(column: $table.cellsJson, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCustom =>
+      $composableBuilder(column: $table.isCustom, builder: (column) => column);
+
+  GeneratedColumn<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => column,
+  );
+}
+
+class $$ReferenceRowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReferenceRowsTable,
+          ReferenceRow,
+          $$ReferenceRowsTableFilterComposer,
+          $$ReferenceRowsTableOrderingComposer,
+          $$ReferenceRowsTableAnnotationComposer,
+          $$ReferenceRowsTableCreateCompanionBuilder,
+          $$ReferenceRowsTableUpdateCompanionBuilder,
+          (
+            ReferenceRow,
+            BaseReferences<_$AppDatabase, $ReferenceRowsTable, ReferenceRow>,
+          ),
+          ReferenceRow,
+          PrefetchHooks Function()
+        > {
+  $$ReferenceRowsTableTableManager(_$AppDatabase db, $ReferenceRowsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReferenceRowsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReferenceRowsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReferenceRowsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> sheetKey = const Value.absent(),
+                Value<String> cellsJson = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<bool> isCustom = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+              }) => ReferenceRowsCompanion(
+                id: id,
+                sheetKey: sheetKey,
+                cellsJson: cellsJson,
+                note: note,
+                isCustom: isCustom,
+                orderIndex: orderIndex,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String sheetKey,
+                required String cellsJson,
+                Value<String> note = const Value.absent(),
+                Value<bool> isCustom = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+              }) => ReferenceRowsCompanion.insert(
+                id: id,
+                sheetKey: sheetKey,
+                cellsJson: cellsJson,
+                note: note,
+                isCustom: isCustom,
+                orderIndex: orderIndex,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ReferenceRowsTable, ReferenceRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $ReferenceRowsTable,
+                    ReferenceRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ReferenceRowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReferenceRowsTable,
+      ReferenceRow,
+      $$ReferenceRowsTableFilterComposer,
+      $$ReferenceRowsTableOrderingComposer,
+      $$ReferenceRowsTableAnnotationComposer,
+      $$ReferenceRowsTableCreateCompanionBuilder,
+      $$ReferenceRowsTableUpdateCompanionBuilder,
+      (
+        ReferenceRow,
+        BaseReferences<_$AppDatabase, $ReferenceRowsTable, ReferenceRow>,
+      ),
+      ReferenceRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10464,4 +12038,8 @@ class $AppDatabaseManager {
       $$SyllabusProgressTableTableManager(_db, _db.syllabusProgress);
   $$SyllabusTracksTableTableManager get syllabusTracks =>
       $$SyllabusTracksTableTableManager(_db, _db.syllabusTracks);
+  $$ReferenceSheetsTableTableManager get referenceSheets =>
+      $$ReferenceSheetsTableTableManager(_db, _db.referenceSheets);
+  $$ReferenceRowsTableTableManager get referenceRows =>
+      $$ReferenceRowsTableTableManager(_db, _db.referenceRows);
 }

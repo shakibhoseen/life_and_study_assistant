@@ -12,6 +12,8 @@ import 'tables/daily_energy_logs_table.dart';
 import 'tables/drill_questions_table.dart';
 import 'tables/drill_records_table.dart';
 import 'tables/exam_schedules_table.dart';
+import 'tables/reference_rows_table.dart';
+import 'tables/reference_sheets_table.dart';
 import 'tables/spaced_review_items_table.dart';
 import 'tables/syllabus_nodes_table.dart';
 import 'tables/syllabus_progress_table.dart';
@@ -35,13 +37,15 @@ part 'app_database.g.dart';
     SyllabusNodes,
     SyllabusProgress,
     SyllabusTracks,
+    ReferenceSheets,
+    ReferenceRows,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'life_and_study_assistant');
@@ -211,6 +215,13 @@ class AppDatabase extends _$AppDatabase {
         // here for the same reason as 16: SyllabusService fills it from the
         // asset bundle, which a background isolate may not have.
         await m.createTable(syllabusTracks);
+      }
+      if (from < 18) {
+        // Reference tables. Empty here as with 16 and 17: ReferenceService
+        // fills them from the asset bundle, which a background isolate may
+        // not have.
+        await m.createTable(referenceSheets);
+        await m.createTable(referenceRows);
       }
     },
   );

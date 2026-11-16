@@ -7,6 +7,7 @@ import '../../../../core/widgets/premium_glass_card.dart';
 import '../../../../core/widgets/premium_ui_kit.dart';
 import '../../../../core/theme/fluent_tokens.dart';
 import '../../../syllabus_map/presentation/widgets/syllabus_coverage_card.dart';
+import '../../../reference/presentation/screens/reference_screen.dart';
 import '../../../../core/widgets/animated_premium_background.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -521,7 +522,23 @@ class DashboardScreen extends ConsumerWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          // 0. LiveMCQ Voice Mistake Note & Floating Bubble
+          // 0. Reference tables — the things that only make sense whole.
+          _buildQuickActionPill(
+            context,
+            icon: Icons.table_chart_outlined,
+            iconColor: scheme.primary,
+            label: 'সূত্র ও পরিমাপ',
+            badge: 'Tables 📐',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => const ReferenceScreen(),
+              ),
+            ),
+          ),
+          const SizedBox(width: FluentSpacing.s),
+
+          // 0.5. LiveMCQ Voice Mistake Note & Floating Bubble
           _buildQuickActionPill(
             context,
             icon: Icons.mic_external_on_rounded,

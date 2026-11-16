@@ -1,0 +1,64 @@
+[
+  {
+    "sheetKey": "samas_types",
+    "title": "সমাসের প্রকার",
+    "category": "বাংলা ও ইংরেজির নিয়ম",
+    "subject": "বাংলা ভাষা ও সাহিত্য",
+    "note": "কোন পদ প্রধান — সেটিই সমাস চেনার মূল চাবি।",
+    "columns": ["সমাস", "কোন পদ প্রধান", "উদাহরণ"],
+    "rows": [
+      {"cells": ["দ্বন্দ্ব", "উভয় পদ", "মাতা-পিতা, দম্পতি"]},
+      {"cells": ["কর্মধারয়", "পরপদ", "নীলপদ্ম, মহারাজ"]},
+      {"cells": ["তৎপুরুষ", "পরপদ", "বিস্ময়াপন্ন, রাজপুত্র"]},
+      {"cells": ["দ্বিগু", "পরপদ (সংখ্যাবাচক পূর্বপদ)", "ত্রিভুজ, চৌরাস্তা"]},
+      {"cells": ["বহুব্রীহি", "অন্য পদ (কোনোটিই নয়)", "দশানন, বীণাপাণি"]},
+      {"cells": ["অব্যয়ীভাব", "পূর্বপদ (অব্যয়)", "উপকণ্ঠ, প্রতিদিন"]}
+    ]
+  },
+  {
+    "sheetKey": "karok_guide",
+    "title": "কারক চেনার প্রশ্ন",
+    "category": "বাংলা ও ইংরেজির নিয়ম",
+    "subject": "বাংলা ভাষা ও সাহিত্য",
+    "note": "ক্রিয়াকে প্রশ্ন করলেই কারক বেরিয়ে আসে।",
+    "columns": ["কারক", "যে প্রশ্নে পাওয়া যায়", "উদাহরণ"],
+    "rows": [
+      {"cells": ["কর্তৃ", "কে? কারা?", "রহিম বই পড়ে"]},
+      {"cells": ["কর্ম", "কী? কাকে?", "রহিম বই পড়ে"]},
+      {"cells": ["করণ", "কী দিয়ে? কীসের দ্বারা?", "কলম দিয়ে লিখি"]},
+      {"cells": ["সম্প্রদান", "কাকে (স্বত্ব ত্যাগ করে)?", "ভিক্ষুককে ভিক্ষা দাও"]},
+      {"cells": ["অপাদান", "কোথা থেকে? কী থেকে?", "গাছ থেকে ফল পড়ে"]},
+      {"cells": ["অধিকরণ", "কোথায়? কখন?", "পুকুরে মাছ আছে"]}
+    ]
+  },
+  {
+    "sheetKey": "english_tense",
+    "title": "Tense — গঠনের ছক",
+    "category": "বাংলা ও ইংরেজির নিয়ম",
+    "subject": "English Language and Literature",
+    "columns": ["Tense", "Indefinite", "Continuous", "Perfect", "Perfect Continuous"],
+    "rows": [
+      {"cells": ["Present", "V1 / V1+s", "am/is/are + V-ing", "have/has + V3", "have/has been + V-ing"]},
+      {"cells": ["Past", "V2", "was/were + V-ing", "had + V3", "had been + V-ing"]},
+      {"cells": ["Future", "shall/will + V1", "shall/will be + V-ing", "shall/will have + V3", "shall/will have been + V-ing"]}
+    ]
+  },
+  {
+    "sheetKey": "english_rules",
+    "title": "Voice, Narration ও Subject-Verb Agreement",
+    "category": "বাংলা ও ইংরেজির নিয়ম",
+    "subject": "English Language and Literature",
+    "columns": ["নিয়ম", "প্রয়োগ"],
+    "rows": [
+      {"cells": ["Passive গঠন", "Object + be verb (tense অনুযায়ী) + V3 + by + subject"]},
+      {"cells": ["Each / Every / Everyone", "সর্বদা singular verb"]},
+      {"cells": ["Either…or / Neither…nor", "verb কাছের subject অনুসারে"]},
+      {"cells": ["Both…and", "সর্বদা plural verb"]},
+      {"cells": ["The number of", "singular verb; A number of → plural verb"]},
+      {"cells": ["Narration: say → ", "tell (object থাকলে); says to → tells"]},
+      {"cells": ["Narration: this / here / now", "that / there / then"]},
+      {"cells": ["Narration: tomorrow / yesterday", "the next day / the previous day"]},
+      {"cells": ["Universal truth", "Reported speech-এ tense বদলায় না"]}
+    ]
+  }
+]
