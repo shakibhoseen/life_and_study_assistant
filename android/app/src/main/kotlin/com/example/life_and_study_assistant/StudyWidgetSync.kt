@@ -73,9 +73,31 @@ object StudyWidgetSync {
                     .setInputData(data)
                     .build()
             )
+            queueRepaintAfterSync(context)
             true
         } catch (_: Throwable) {
             false
+        }
+    }
+
+    /**
+     * Queues a repaint a little after a background sync was asked for.
+     *
+     * The Dart side cannot repaint from a background isolate, so without this
+     * a widget that said "Syncing..." would keep saying it. Deferred work, so
+     * it costs a scheduled job and no wakeups of its own.
+     */
+    fun queueRepaintAfterSync(context: Context) {
+        try {
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                "widget_repaint_after_sync",
+                ExistingWorkPolicy.REPLACE,
+                OneTimeWorkRequest.Builder(WidgetRepaintWorker::class.java)
+                    .setInitialDelay(20, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+            )
+        } catch (_: Throwable) {
+            // Then the next tap or app launch repaints instead.
         }
     }
 

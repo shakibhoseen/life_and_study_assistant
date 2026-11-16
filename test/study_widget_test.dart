@@ -152,6 +152,168 @@ void main() {
     });
   });
 
+  group('holding the day\'s question still', () {
+    test('it does not move while the bank changes under it', () {
+      // Drilling renumbers the bank. Picking by index alone would swap the
+      // question on the home screen mid-morning.
+      final held = StudyWidgetService.dailyQuestionId(
+        bankIds: const [11, 12, 13, 14],
+        heldId: 12,
+        isSameDay: true,
+        day: DateTime(2026, 11, 16),
+      );
+      expect(held, 12);
+
+      final afterOneWasLearnt = StudyWidgetService.dailyQuestionId(
+        bankIds: const [11, 12, 14],
+        heldId: 12,
+        isSameDay: true,
+        day: DateTime(2026, 11, 16),
+      );
+      expect(afterOneWasLearnt, 12, reason: 'still in the bank, still today');
+    });
+
+    test('a new day picks again', () {
+      final id = StudyWidgetService.dailyQuestionId(
+        bankIds: const [11, 12, 13, 14],
+        heldId: 12,
+        isSameDay: false,
+        day: DateTime(2026, 11, 17),
+      );
+      expect(id, isNot(12));
+      expect(const [11, 12, 13, 14], contains(id));
+    });
+
+    test('a question that was finally learnt is replaced, not held', () {
+      final id = StudyWidgetService.dailyQuestionId(
+        bankIds: const [11, 13, 14],
+        heldId: 12,
+        isSameDay: true,
+        day: DateTime(2026, 11, 16),
+      );
+      expect(id, isNot(12));
+      expect(const [11, 13, 14], contains(id));
+    });
+
+    test('an empty bank holds nothing', () {
+      expect(
+        StudyWidgetService.dailyQuestionId(
+          bankIds: const [],
+          heldId: 12,
+          isSameDay: true,
+          day: DateTime(2026, 11, 16),
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('reading an exam time', () {
+    test('12-hour times with and without a space', () {
+      expect(StudyWidgetService.minutesOfDay('10:00 PM'), 22 * 60);
+      expect(StudyWidgetService.minutesOfDay('9:30AM'), 9 * 60 + 30);
+      expect(StudyWidgetService.minutesOfDay('10.15 am'), 10 * 60 + 15);
+    });
+
+    test('midnight and noon do not swap', () {
+      expect(StudyWidgetService.minutesOfDay('12:00 AM'), 0);
+      expect(StudyWidgetService.minutesOfDay('12:00 PM'), 12 * 60);
+    });
+
+    test('24-hour times pass through', () {
+      expect(StudyWidgetService.minutesOfDay('18:45'), 18 * 60 + 45);
+    });
+
+    test('nonsense reads as unknown rather than as midnight', () {
+      expect(StudyWidgetService.minutesOfDay('সকালে'), isNull);
+      expect(StudyWidgetService.minutesOfDay(null), isNull);
+      expect(StudyWidgetService.minutesOfDay('25:00'), isNull);
+    });
+  });
+
+  group('which exam the countdown names', () {
+    ExamSchedule exam({
+      required int id,
+      required DateTime date,
+      required String time,
+      String title = 'পরীক্ষা',
+    }) {
+      return ExamSchedule(
+        id: id,
+        examDate: date,
+        examTime: time,
+        subject: 'বাংলা',
+        title: title,
+        topicsCovered: '',
+        examType: 'Self Test',
+        trackName: 'Self Test',
+        resourceSummary: null,
+        rawReference: null,
+        completedStatus: false,
+        score: null,
+        createdAt: DateTime(2026, 1, 1),
+      );
+    }
+
+    final now = DateTime(2026, 11, 16, 10, 0);
+
+    test('two exams on one day: the earlier one is next', () {
+      // The database query orders by date alone, so these come back in
+      // whatever order SQLite chose. Only the time tells them apart.
+      final picked = StudyWidgetService.pickNextExam([
+        exam(id: 2, date: DateTime(2026, 11, 16), time: '10:00 PM', title: 'রাত'),
+        exam(id: 1, date: DateTime(2026, 11, 16), time: '11:00 AM', title: 'সকাল'),
+      ], now);
+
+      expect(picked?.title, 'সকাল');
+    });
+
+    test('an exam that has already gone is not named at all', () {
+      // getUpcomingExams falls back to *past* uncompleted exams when nothing
+      // is upcoming. Counted as days, one of those is negative, and the
+      // countdown would have called it "আজ".
+      final picked = StudyWidgetService.pickNextExam([
+        exam(id: 1, date: DateTime(2026, 9, 1), time: '10:00 AM'),
+      ], now);
+
+      expect(picked, isNull);
+    });
+
+    test("today's exam counts as upcoming, even later in the day", () {
+      final picked = StudyWidgetService.pickNextExam([
+        exam(id: 1, date: DateTime(2026, 11, 16), time: '9:00 AM'),
+      ], now);
+
+      expect(picked, isNotNull, reason: 'the day is what the countdown shows');
+    });
+
+    test('a nearer day wins over an earlier hour on a later day', () {
+      final picked = StudyWidgetService.pickNextExam([
+        exam(id: 1, date: DateTime(2026, 11, 20), time: '6:00 AM', title: 'পরে'),
+        exam(id: 2, date: DateTime(2026, 11, 17), time: '11:00 PM', title: 'আগে'),
+      ], now);
+
+      expect(picked?.title, 'আগে');
+    });
+
+    test('an unreadable time sorts after one that can be read', () {
+      final picked = StudyWidgetService.pickNextExam([
+        exam(id: 1, date: DateTime(2026, 11, 17), time: 'সকালে', title: 'অজানা'),
+        exam(id: 2, date: DateTime(2026, 11, 17), time: '9:00 PM', title: 'জানা'),
+      ], now);
+
+      expect(
+        picked?.title,
+        'জানা',
+        reason: 'an unknown time should not jump the queue at midnight',
+      );
+    });
+
+    test('nothing scheduled at all', () {
+      expect(StudyWidgetService.pickNextExam([], now), isNull);
+    });
+  });
+
   group('parsing the stored options', () {
     test('a normal row comes back as four', () {
       expect(

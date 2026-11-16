@@ -46,6 +46,15 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
                 appWidgetManager.partiallyUpdateAppWidget(appWidgetId, views)
             }
 
+            // However this refresh is served, make sure something paints over
+            // the "Syncing..." afterwards. A Dart background isolate cannot:
+            // the MethodChannel it would repaint through belongs to
+            // MainActivity, so from there the request goes nowhere and the
+            // widget kept saying "Syncing... ⏳" for good. Even the live path
+            // can fail before it repaints. This lands a little later and
+            // paints whatever is in preferences by then.
+            StudyWidgetSync.queueRepaintAfterSync(context)
+
             // 2. If app engine is active in memory, perform immediate sub-second Flutter sync
             if (MainActivity.activeChannel != null) {
                 MainActivity.requestWidgetRefresh()

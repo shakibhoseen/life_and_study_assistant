@@ -22,6 +22,13 @@ class HomeWidgetService {
         '${now.hour >= 12 ? 'PM' : 'AM'}';
   }
 
+  /// How long one half of a widget refresh may take before it is abandoned.
+  ///
+  /// Long enough for a log-in and a fetch on a slow connection; short enough
+  /// that the pair of them cannot hold the widget on "Syncing..." past the
+  /// point where anyone would still believe it.
+  static const Duration _refreshBudget = Duration(seconds: 12);
+
   /// yyyy-MM-dd, matching what the native widget formats for "today".
   static String _isoDate(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
@@ -88,15 +95,27 @@ class HomeWidgetService {
       // real lunch status and then displayed something else.
       SteadfastServingStatus? freshServing;
       if (fetchFromNetwork && !isSim) {
+        // Both of these log in and then fetch, and neither service sets a
+        // timeout on any of its requests. A refresh is two of those in a row,
+        // which is why the widget could sit on "Syncing..." for a minute on a
+        // weak network, with nothing to say whether it was working or stuck.
+        //
+        // Bounded here rather than inside the services on purpose: a punch
+        // that takes forty seconds and succeeds is better than one cut off at
+        // ten. Repainting a widget is not, so only the widget's own refresh
+        // gives up early. Giving up leaves the previous figures on screen,
+        // which are stale but true, instead of a spinner that never ends.
         try {
-          await PacklyAttendanceService.instance.getAttendanceStatus();
+          await PacklyAttendanceService.instance
+              .getAttendanceStatus()
+              .timeout(_refreshBudget);
         } catch (e) {
           debugPrint('HomeWidget: live attendance fetch failed: $e');
         }
         try {
-          freshServing = await SteadfastLunchService.instance.getServingStatus(
-            forceRefresh: true,
-          );
+          freshServing = await SteadfastLunchService.instance
+              .getServingStatus(forceRefresh: true)
+              .timeout(_refreshBudget);
         } catch (e) {
           debugPrint('HomeWidget: live lunch status fetch failed: $e');
         }

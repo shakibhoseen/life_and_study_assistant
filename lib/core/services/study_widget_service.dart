@@ -46,6 +46,7 @@ class StudyWidgetService {
   static const String keyCorrectIndex = 'study_qotd_correct_index';
   static const String keyQotdDate = 'study_qotd_date';
   static const String keyQotdRevealed = 'study_qotd_revealed';
+  static const String keyQotdQuestionId = 'study_qotd_question_id';
 
   static const String keySyncTime = 'study_widget_sync_time';
 
@@ -188,6 +189,97 @@ class StudyWidgetService {
     return ordinal.remainder(count).abs();
   }
 
+  /// Which question today's is, given what was chosen earlier today.
+  ///
+  /// [questionIndexForDay] alone is not stable within a day: it indexes into
+  /// the mistake bank, and the bank changes size as soon as any drilling
+  /// happens. Getting one question right could renumber the rest and swap the
+  /// question on the home screen at eleven in the morning — mid-thought, for
+  /// someone who had been looking at it.
+  ///
+  /// So the chosen one is held by id for the rest of the day. It only moves on
+  /// when the day does, or when that question leaves the bank because it was
+  /// finally learnt — in which case holding it would be worse.
+  @visibleForTesting
+  static int? dailyQuestionId({
+    required List<int> bankIds,
+    required int? heldId,
+    required bool isSameDay,
+    required DateTime day,
+  }) {
+    if (bankIds.isEmpty) return null;
+    if (isSameDay && heldId != null && bankIds.contains(heldId)) {
+      return heldId;
+    }
+    final index = questionIndexForDay(bankIds.length, day);
+    return index < 0 ? null : bankIds[index];
+  }
+
+  /// Minutes past midnight for an exam time like "10:00 PM", or null if it
+  /// cannot be read.
+  ///
+  /// examTime is free text on the row, not a stored time, so it arrives in
+  /// whatever shape it was typed or imported in.
+  @visibleForTesting
+  static int? minutesOfDay(String? examTime) {
+    if (examTime == null) return null;
+    final m = RegExp(
+      r'(\d{1,2})\s*[:.]\s*(\d{2})\s*([AaPp])?\.?\s*[Mm]?',
+    ).firstMatch(examTime.trim());
+    if (m == null) return null;
+
+    var hour = int.tryParse(m.group(1)!);
+    final minute = int.tryParse(m.group(2)!);
+    if (hour == null || minute == null) return null;
+    if (minute > 59) return null;
+
+    final meridiem = m.group(3)?.toLowerCase();
+    if (meridiem == 'p' && hour < 12) hour += 12;
+    if (meridiem == 'a' && hour == 12) hour = 0;
+    if (hour > 23) return null;
+
+    return hour * 60 + minute;
+  }
+
+  /// The exam the countdown should name.
+  ///
+  /// Two things the database query does not do. It orders by date alone, so
+  /// several exams on one day come back in whatever order SQLite feels like —
+  /// the countdown would name an arbitrary one rather than the next. And when
+  /// nothing is upcoming it falls back to *past* uncompleted exams, which
+  /// arrive with a negative day count and would have been labelled "আজ".
+  ///
+  /// Anything already past is dropped, and same-day exams are ordered by the
+  /// time written on them. An exam with no readable time sorts after those
+  /// that have one, rather than jumping the queue at midnight.
+  @visibleForTesting
+  static ExamSchedule? pickNextExam(List<ExamSchedule> exams, DateTime now) {
+    final today = DateTime(now.year, now.month, now.day);
+    final upcoming = exams
+        .where((e) => !DateTime(
+              e.examDate.year,
+              e.examDate.month,
+              e.examDate.day,
+            ).isBefore(today))
+        .toList();
+    if (upcoming.isEmpty) return null;
+
+    upcoming.sort((a, b) {
+      final byDate = DateTime(a.examDate.year, a.examDate.month, a.examDate.day)
+          .compareTo(
+            DateTime(b.examDate.year, b.examDate.month, b.examDate.day),
+          );
+      if (byDate != 0) return byDate;
+      final at = minutesOfDay(a.examTime);
+      final bt = minutesOfDay(b.examTime);
+      if (at == null && bt == null) return a.id.compareTo(b.id);
+      if (at == null) return 1;
+      if (bt == null) return -1;
+      return at.compareTo(bt);
+    });
+    return upcoming.first;
+  }
+
   // --- collection ---------------------------------------------------------
 
   /// Reads the study figures and leaves them where the widgets can find them.
@@ -220,7 +312,8 @@ class StudyWidgetService {
       // 2. The next exam. getUpcomingExams already drops the ones that have
       // been and gone, so the first is the next.
       final exams = await db.getUpcomingExams();
-      if (exams.isEmpty) {
+      final next = pickNextExam(exams, now);
+      if (next == null) {
         // Cleared rather than left behind, so a widget added after the last
         // exam passed does not show one that is over.
         await prefs.remove(keyExamTitle);
@@ -228,7 +321,6 @@ class StudyWidgetService {
         await prefs.remove(keyExamWhen);
         await prefs.remove(keyExamCountdown);
       } else {
-        final next = exams.first;
         final daysLeft = daysUntil(next.examDate, now);
         await prefs.setString(keyExamTitle, next.title);
         await prefs.setString(keyExamSubject, next.subject);
@@ -241,26 +333,39 @@ class StudyWidgetService {
 
       // 3. Today's question, drawn from what the user has got wrong.
       final bank = await db.watchWrongDrillQuestions().first;
-      final index = questionIndexForDay(bank.length, now);
-      if (index < 0) {
+      final wasSameDay = prefs.getString(keyQotdDate) == today;
+      // Read before anything overwrites it: the reveal has to be cleared when
+      // the question changes, and after the write the two always match.
+      final previousId = prefs.getInt(keyQotdQuestionId);
+      final chosenId = dailyQuestionId(
+        bankIds: bank.map((q) => q.id).toList(),
+        heldId: previousId,
+        isSameDay: wasSameDay,
+        day: now,
+      );
+
+      if (chosenId == null) {
         await prefs.setString(keyQuestion, 'ভুলের খাতা খালি — চমৎকার!');
         await prefs.setString(keyOptions, '[]');
         await prefs.setInt(keyCorrectIndex, -1);
+        await prefs.remove(keyQotdQuestionId);
       } else {
-        final q = bank[index];
+        final q = bank.firstWhere((e) => e.id == chosenId);
         await prefs.setString(keyQuestion, q.questionText);
         await prefs.setString(
           keyOptions,
           jsonEncode(parseOptions(q.optionsJson).map(stripOptionMarker).toList()),
         );
         await prefs.setInt(keyCorrectIndex, q.correctIndex);
+        await prefs.setInt(keyQotdQuestionId, chosenId);
       }
 
-      // A new day's question starts hidden again.
-      if (prefs.getString(keyQotdDate) != today) {
-        await prefs.setString(keyQotdDate, today);
+      // A new day's question starts hidden again. So does a replacement one:
+      // the answer showing belongs to the question it was revealed for.
+      if (!wasSameDay || chosenId != previousId) {
         await prefs.setBool(keyQotdRevealed, false);
       }
+      await prefs.setString(keyQotdDate, today);
 
       final hour12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
       await prefs.setString(
