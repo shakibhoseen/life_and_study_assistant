@@ -142,7 +142,42 @@ class WifiMonitorService {
 
       final isMatch = _matchesOfficeSsid(ssid, configuredSsid);
 
-      if (isMatch) {
+      // Gateway IP inspection: Android NEVER masks Gateway IP even in background!
+      String? gatewayIp;
+      try {
+        gatewayIp = await _networkInfo.getWifiGatewayIP();
+      } catch (_) {}
+      final savedGateway =
+          prefs.getString(NotificationConstants.prefOfficeGatewayIp);
+      final isGatewayMatch = (gatewayIp != null &&
+          gatewayIp.isNotEmpty &&
+          savedGateway != null &&
+          savedGateway.isNotEmpty &&
+          gatewayIp == savedGateway);
+
+      final isOfficeConnected = isMatch || isGatewayMatch;
+
+      if (isOfficeConnected) {
+        // Cache office router fingerprints for future background recognition
+        if (gatewayIp != null && gatewayIp.isNotEmpty) {
+          await prefs.setString(
+            NotificationConstants.prefOfficeGatewayIp,
+            gatewayIp,
+          );
+        }
+        try {
+          final bssid = await _networkInfo.getWifiBSSID();
+          if (bssid != null &&
+              bssid.isNotEmpty &&
+              bssid != '02:00:00:00:00:00') {
+            await prefs.setString(NotificationConstants.prefOfficeBssid, bssid);
+          }
+        } catch (_) {}
+        await prefs.setBool(
+          NotificationConstants.prefIsOfficeWifiConnected,
+          true,
+        );
+
         // Cancel any pending disconnection debounce grace timer immediately
         if (_disconnectionDebounceTimer != null &&
             _disconnectionDebounceTimer!.isActive) {
@@ -166,6 +201,10 @@ class WifiMonitorService {
         // Hardware Wi-Fi is still connected, but Android hid SSID string (common in background or screen off).
         // Since user was ALREADY connected to office Wi-Fi, they are still on the same office network!
         // Cancel any pending timer and preserve connected state so overtime is never broken.
+        await prefs.setBool(
+          NotificationConstants.prefIsOfficeWifiConnected,
+          true,
+        );
         if (_disconnectionDebounceTimer != null &&
             _disconnectionDebounceTimer!.isActive) {
           _disconnectionDebounceTimer!.cancel();
@@ -174,10 +213,18 @@ class WifiMonitorService {
         _currentState = OfficeConnectionState.connected;
         _officeStateController.add(OfficeConnectionState.connected);
       } else {
+        await prefs.setBool(
+          NotificationConstants.prefIsOfficeWifiConnected,
+          false,
+        );
         _handleOfficeDisconnection();
       }
     } else {
       _currentSsid = null;
+      await prefs.setBool(
+        NotificationConstants.prefIsOfficeWifiConnected,
+        false,
+      );
       _handleOfficeDisconnection();
     }
   }
@@ -381,6 +428,26 @@ class WifiMonitorService {
           time: timeStr,
           isLate: isLate,
         );
+        // Calibrate real coordinates and router Gateway
+        try {
+          final gw = await _networkInfo.getWifiGatewayIP();
+          if (gw != null && gw.isNotEmpty) {
+            await prefs.setString(NotificationConstants.prefOfficeGatewayIp, gw);
+          }
+          final perm = await Geolocator.checkPermission();
+          if (perm == LocationPermission.always || perm == LocationPermission.whileInUse) {
+            final pos = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.medium,
+                timeLimit: Duration(seconds: 4),
+              ),
+            );
+            if (pos.latitude != 0.0 && pos.longitude != 0.0 && pos.latitude != 23.7925) {
+              await prefs.setDouble(NotificationConstants.prefOfficeLatitude, pos.latitude);
+              await prefs.setDouble(NotificationConstants.prefOfficeLongitude, pos.longitude);
+            }
+          }
+        } catch (_) {}
         await OfficeSentinelService.instance.stopSentinel();
         return;
       } else {

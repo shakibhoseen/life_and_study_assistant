@@ -830,11 +830,13 @@ class PacklyAttendanceService {
               await reverseGeocode(lat, lng);
         }
 
-        // Save office coordinates if not already saved
-        if (prefs.getDouble(NotificationConstants.prefOfficeLatitude) == null && lat != 0.0) {
+        // Save real office coordinates if authentic GPS fix was obtained
+        if (lat != 0.0 && lat != 23.7925) {
           await prefs.setDouble(NotificationConstants.prefOfficeLatitude, lat);
           await prefs.setDouble(NotificationConstants.prefOfficeLongitude, lng);
-          await prefs.setString(NotificationConstants.prefOfficeAddress, locName);
+          if (locName.isNotEmpty) {
+            await prefs.setString(NotificationConstants.prefOfficeAddress, locName);
+          }
         }
 
         // 2. Fetch fresh page to get CSRF token

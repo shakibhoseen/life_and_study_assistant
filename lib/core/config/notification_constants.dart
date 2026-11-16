@@ -175,6 +175,9 @@ class NotificationConstants {
   static const String prefOfficeLongitude = 'office_longitude';
   static const String prefOfficeAddress = 'office_address';
   static const String prefOfficeRadiusMeters = 'office_radius_meters';
+  static const String prefOfficeGatewayIp = 'office_gateway_ip';
+  static const String prefOfficeBssid = 'office_bssid';
+  static const String prefIsOfficeWifiConnected = 'is_office_wifi_connected';
   static const String prefLastCheckInTime = 'packly_last_checkin_time';
   static const String prefLastCheckOutTime = 'packly_last_checkout_time';
   static const String prefLastCheckInIsLate = 'packly_last_checkin_is_late';

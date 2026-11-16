@@ -152,11 +152,28 @@ class OfficeSentinelTaskHandler extends TaskHandler {
       // Robust Office Wi-Fi detection (handles Android background SSID masking)
       bool isConnectedToOffice = false;
       if (isWifi) {
-        if (WifiMonitorService.isOfficeNetwork(ssid, configuredSsid)) {
+        String? gatewayIp;
+        try {
+          gatewayIp = await _networkInfo.getWifiGatewayIP();
+        } catch (_) {}
+        final savedGateway =
+            prefs.getString(NotificationConstants.prefOfficeGatewayIp);
+        final isGatewayMatch = (gatewayIp != null &&
+            gatewayIp.isNotEmpty &&
+            savedGateway != null &&
+            savedGateway.isNotEmpty &&
+            gatewayIp == savedGateway);
+
+        final isMonitorConnected =
+            prefs.getBool(NotificationConstants.prefIsOfficeWifiConnected) ??
+            false;
+
+        if (WifiMonitorService.isOfficeNetwork(ssid, configuredSsid) ||
+            isGatewayMatch) {
           isConnectedToOffice = true;
         } else if (ssid == null || ssid.isEmpty) {
           // If SSID is masked by Android, but user is inside office (< 150m) or monitor confirmed connected:
-          if (distance <= 150.0 || WifiMonitorService.instance.isOfficeConnected) {
+          if ((distance > 0.0 && distance <= 150.0) || isMonitorConnected) {
             isConnectedToOffice = true;
           }
         }
