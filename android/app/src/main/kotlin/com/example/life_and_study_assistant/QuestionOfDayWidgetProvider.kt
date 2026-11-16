@@ -33,8 +33,15 @@ class QuestionOfDayWidgetProvider : AppWidgetProvider() {
                 prefs.edit().putBoolean("flutter.study_qotd_revealed", !revealed).apply()
                 refreshAll(context)
             }
-            StudyWidgetSync.ACTION_REFRESH ->
+            StudyWidgetSync.ACTION_REFRESH -> {
+                val mgr = AppWidgetManager.getInstance(context)
+                for (id in ids(context)) {
+                    val views = RemoteViews(context.packageName, R.layout.widget_question_of_day)
+                    views.setTextViewText(R.id.qotd_sync_time, "⟳")
+                    mgr.partiallyUpdateAppWidget(id, views)
+                }
                 if (!StudyWidgetSync.request(context)) refreshAll(context)
+            }
             StudyWidgetSync.ACTION_UPDATE_DATA -> refreshAll(context)
         }
     }
@@ -113,6 +120,11 @@ class QuestionOfDayWidgetProvider : AppWidgetProvider() {
                     R.drawable.widget_reveal_button
                 )
             }
+
+            views.setTextViewText(
+                R.id.qotd_sync_time,
+                prefs.getString("flutter.study_widget_sync_time", null) ?: ""
+            )
 
             views.setOnClickPendingIntent(
                 R.id.qotd_answer,

@@ -21,8 +21,18 @@ class ExamCountdownWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         when (intent.action) {
-            StudyWidgetSync.ACTION_REFRESH ->
+            StudyWidgetSync.ACTION_REFRESH -> {
+                // Something has to change the instant it is tapped, or the
+                // refresh reads as broken: collecting is fast and usually
+                // produces the same figures, so the repaint looks identical.
+                val mgr = AppWidgetManager.getInstance(context)
+                for (id in ids(context)) {
+                    val views = RemoteViews(context.packageName, R.layout.widget_exam_countdown)
+                    views.setTextViewText(R.id.exam_sync_time, "⟳")
+                    mgr.partiallyUpdateAppWidget(id, views)
+                }
                 if (!StudyWidgetSync.request(context)) refreshAll(context)
+            }
             StudyWidgetSync.ACTION_UPDATE_DATA -> refreshAll(context)
         }
     }
@@ -63,6 +73,11 @@ class ExamCountdownWidgetProvider : AppWidgetProvider() {
                     prefs.getString("flutter.study_exam_when", null) ?: ""
                 )
             }
+
+            views.setTextViewText(
+                R.id.exam_sync_time,
+                prefs.getString("flutter.study_widget_sync_time", null) ?: ""
+            )
 
             views.setOnClickPendingIntent(
                 R.id.exam_root,
