@@ -160,25 +160,52 @@ class _PairRow extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(left, style: FluentType.bodyStrong),
-            if (right.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: FluentSpacing.xxs),
-                child: Text(
-                  right,
-                  style: FluentType.body.copyWith(color: scheme.primary),
-                ),
-              ),
-            if (row.note.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: FluentSpacing.xxs),
-                child: Text(
-                  row.note,
-                  style: FluentType.caption.copyWith(
-                    color: scheme.onSurfaceVariant,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(left, style: FluentType.bodyStrong),
+                      if (right.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: FluentSpacing.xxs,
+                          ),
+                          child: Text(
+                            right,
+                            style: FluentType.body.copyWith(
+                              color: scheme.primary,
+                            ),
+                          ),
+                        ),
+                      if (row.note.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: FluentSpacing.xxs,
+                          ),
+                          child: Text(
+                            row.note,
+                            style: FluentType.caption.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              ),
+                // A long press is the wrong only way in: nobody finds it. A
+                // row added by hand was reported as impossible to remove,
+                // and it was — for anyone who had not guessed the gesture.
+                IconButton(
+                  icon: const Icon(Icons.more_vert, size: 18),
+                  color: scheme.onSurfaceVariant,
+                  tooltip: 'সারির অপশন',
+                  onPressed: () => _showActions(context, ref),
+                ),
+              ],
+            ),
             const SizedBox(height: FluentSpacing.s),
             Divider(height: 1, color: scheme.outlineVariant),
           ],
@@ -187,7 +214,24 @@ class _PairRow extends ConsumerWidget {
     );
   }
 
-  void _showActions(BuildContext context, WidgetRef ref) {
+  void _showActions(BuildContext context, WidgetRef ref) =>
+      showRowActions(context, ref, sheet: sheet, row: row, columns: columns);
+}
+
+/// What can be done with one line of a table.
+///
+/// Shared by both layouts. It used to live inside the two-column one, which
+/// meant a table of three columns or more — a tense chart, the SI units —
+/// had no way to edit, remove or revise a row at all. The long press is the
+/// only affordance either layout has, so leaving it out of one left those
+/// rows permanently stuck.
+void showRowActions(
+  BuildContext context,
+  WidgetRef ref, {
+  required ReferenceSheet sheet,
+  required ReferenceRow row,
+  required List<String> columns,
+}) {
     showModalBottomSheet<void>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -237,7 +281,6 @@ class _PairRow extends ConsumerWidget {
         ),
       ),
     );
-  }
 }
 
 class _WideTable extends ConsumerWidget {
@@ -254,31 +297,57 @@ class _WideTable extends ConsumerWidget {
       child: DataTable(
         headingRowHeight: 40,
         columnSpacing: FluentSpacing.xl,
-        columns: view.columns
-            .map(
-              (c) => DataColumn(
-                label: Text(
-                  c,
-                  style: FluentType.caption.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+        columns: [
+          ...view.columns.map(
+            (c) => DataColumn(
+              label: Text(
+                c,
+                style: FluentType.caption.copyWith(
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
-            )
-            .toList(),
+            ),
+          ),
+          // Unlabelled, and last, so it reads as a control rather than part
+          // of the table's own content.
+          const DataColumn(label: Text('')),
+        ],
         rows: view.rows.map((row) {
           final cells = decodeStringList(row.cellsJson);
           return DataRow(
-            cells: List.generate(view.columns.length, (i) {
-              return DataCell(
-                Text(
-                  i < cells.length ? cells[i] : '',
-                  style: i == 0
-                      ? FluentType.bodyStrong
-                      : FluentType.body,
+            // The same long press the two-column layout has. Without it a
+            // row in a wide table could be added and never taken back.
+            onLongPress: () => showRowActions(
+              context,
+              ref,
+              sheet: view.sheet,
+              row: row,
+              columns: view.columns,
+            ),
+            cells: [
+              ...List.generate(view.columns.length, (i) {
+                return DataCell(
+                  Text(
+                    i < cells.length ? cells[i] : '',
+                    style: i == 0 ? FluentType.bodyStrong : FluentType.body,
+                  ),
+                );
+              }),
+              DataCell(
+                IconButton(
+                  icon: const Icon(Icons.more_vert, size: 18),
+                  color: scheme.onSurfaceVariant,
+                  tooltip: 'সারির অপশন',
+                  onPressed: () => showRowActions(
+                    context,
+                    ref,
+                    sheet: view.sheet,
+                    row: row,
+                    columns: view.columns,
+                  ),
                 ),
-              );
-            }),
+              ),
+            ],
           );
         }).toList(),
       ),
