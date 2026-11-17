@@ -74,7 +74,9 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
     super.initState();
     _isExpanded = false;
     unawaited(_refreshPendingCount());
-    unawaited(_ensureReferenceSeeded());
+    unawaited(_ensureReferenceSeeded().then((_) {
+      unawaited(_searchFormulas(''));
+    }));
     WidgetsBinding.instance.addObserver(this);
     _overlaySub = FlutterOverlayWindow.overlayListener.listen((data) async {
       if (data == 'reset_to_collapsed' || data == 'reopen') {
@@ -201,26 +203,22 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
     }
   }
 
-  /// Searches formulas across all reference tables in SQLite
+  /// Searches formulas or returns all formulas if query is empty
   Future<void> _searchFormulas(String query) async {
     await _ensureReferenceSeeded();
     final trimmed = query.trim();
-    if (trimmed.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _formulaHits = [];
-          _isSearchingFormulas = false;
-        });
-      }
-      return;
-    }
 
     setState(() {
       _isSearchingFormulas = true;
     });
 
     try {
-      final hits = await ReferenceService.instance.search(_db, trimmed);
+      final List<ReferenceHit> hits;
+      if (trimmed.isEmpty) {
+        hits = await _getAllFormulas();
+      } else {
+        hits = await ReferenceService.instance.search(_db, trimmed);
+      }
       if (!mounted) return;
       setState(() {
         _formulaHits = hits;
@@ -233,6 +231,28 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
         _isSearchingFormulas = false;
       });
     }
+  }
+
+  /// Fetches all formulas across all tables, prioritizing laws & diagrams first
+  Future<List<ReferenceHit>> _getAllFormulas() async {
+    final sheets = await ReferenceService.instance.sheets(_db);
+    final hits = <ReferenceHit>[];
+    for (final sheet in sheets) {
+      final rows = await ReferenceService.instance.rows(_db, sheet.sheetKey);
+      for (final row in rows) {
+        hits.add(ReferenceHit(sheet: sheet, row: row));
+      }
+    }
+
+    hits.sort((a, b) {
+      final aHasDetail = (a.row.detail ?? '').trim().isNotEmpty;
+      final bHasDetail = (b.row.detail ?? '').trim().isNotEmpty;
+      if (aHasDetail && !bHasDetail) return -1;
+      if (!aHasDetail && bHasDetail) return 1;
+      return 0;
+    });
+
+    return hits;
   }
 
   void _toggleExpand() async {
@@ -1375,57 +1395,77 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
         ),
         const SizedBox(height: FluentSpacing.s),
 
-        // Quick tags when search query is empty
+        // Quick horizontal tags when search query is empty
         if (_formulaSearchController.text.trim().isEmpty) ...[
-          Text(
-            'কুইক সার্চ টপিক:',
-            style: FluentType.caption.copyWith(
-              color: Colors.white54,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: FluentSpacing.xs),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final tag in [
-                'বৃত্ত',
-                'পিথাগোরাস',
-                'ঘনক',
-                'গতি',
-                'ত্বরণ',
-                'মাইল',
-                'ত্রিভুজ',
-              ])
-                InkWell(
-                  onTap: () {
-                    _formulaSearchController.text = tag;
-                    _searchFormulas(tag);
-                  },
-                  borderRadius: FluentRadius.controlBorder,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final tag in [
+                  'সব',
+                  'বৃত্ত',
+                  'পিথাগোরাস',
+                  'ত্রিভুজ',
+                  'ঘনক',
+                  'গতি',
+                  'ত্বরণ',
+                  'মাইল',
+                  'পরিমাপ',
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: InkWell(
+                      onTap: () {
+                        if (tag == 'সব') {
+                          _formulaSearchController.clear();
+                          _searchFormulas('');
+                        } else {
+                          _formulaSearchController.text = tag;
+                          _searchFormulas(tag);
+                        }
+                      },
                       borderRadius: FluentRadius.controlBorder,
-                      border: Border.all(color: const Color(0xFF334155)),
-                    ),
-                    child: Text(
-                      tag,
-                      style: FluentType.caption.copyWith(
-                        color: const Color(0xFFA5B4FC),
-                        fontSize: 11,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: FluentRadius.controlBorder,
+                          border: Border.all(color: const Color(0xFF334155)),
+                        ),
+                        child: Text(
+                          tag,
+                          style: FluentType.caption.copyWith(
+                            color: const Color(0xFFA5B4FC),
+                            fontSize: 11,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: FluentSpacing.m),
+          const SizedBox(height: FluentSpacing.s),
+        ],
+
+        // Formula list count indicator
+        if (_formulaHits.isNotEmpty && !_isSearchingFormulas) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              _formulaSearchController.text.trim().isEmpty
+                  ? 'সকল সূত্র (${_formulaHits.length}টি)'
+                  : 'অনুসন্ধান ফলাফল (${_formulaHits.length}টি)',
+              style: FluentType.caption.copyWith(
+                color: Colors.white54,
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+              ),
+            ),
+          ),
         ],
 
         // Loading indicator
@@ -1456,7 +1496,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
           ),
         ] else if (_formulaHits.isNotEmpty) ...[
           Container(
-            constraints: const BoxConstraints(maxHeight: 260),
+            constraints: const BoxConstraints(maxHeight: 300),
             child: ListView.separated(
               shrinkWrap: true,
               padding: EdgeInsets.zero,
