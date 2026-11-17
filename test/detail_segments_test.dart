@@ -64,6 +64,52 @@ $svg
     });
   });
 
+  group('a drawing written straight in, with no fence', () {
+    test('is drawn anyway', () {
+      // What an agent actually produces when asked for a fenced block:
+      // a heading, then the svg, and no fence anywhere.
+      final parts = splitDetail('### চিত্র\n\n$svg\n');
+
+      expect(parts.length, 2);
+      expect((parts[0] as ProseSegment).markdown, contains('চিত্র'));
+      expect(parts[1], isA<FigureSegment>());
+    });
+
+    test('the heading above it stays where it is', () {
+      final parts = splitDetail('### চিত্র\n\n$svg');
+      // No caption invented from the heading: it is already on screen.
+      expect((parts[1] as FigureSegment).caption, '');
+    });
+
+    test('prose after it is still prose', () {
+      final parts = splitDetail('আগে।\n\n$svg\n\nপরে।');
+      expect(parts.length, 3);
+      expect((parts[2] as ProseSegment).markdown, 'পরে।');
+    });
+
+    test('a fenced drawing is not also counted as a bare one', () {
+      final parts = splitDetail('```svg ছবি\n$svg\n```');
+      expect(parts.whereType<FigureSegment>().length, 1);
+      expect((parts.single as FigureSegment).caption, 'ছবি');
+    });
+
+    test('two bare drawings both come through', () {
+      final parts = splitDetail('$svg\nমাঝে।\n$svg');
+      expect(parts.whereType<FigureSegment>().length, 2);
+    });
+
+    test('an svg with attributes across lines is still found', () {
+      final parts = splitDetail('''
+<svg viewBox="0 0 240 150"
+     xmlns="http://www.w3.org/2000/svg">
+  <polygon points="65,35 175,35 215,115 25,115" fill="white"
+           stroke="black"/>
+</svg>
+''');
+      expect(parts.single, isA<FigureSegment>());
+    });
+  });
+
   group('what is not a figure', () {
     test('a fence holding prose stays prose', () {
       // A half-pasted answer must show up as the code it is, not vanish.

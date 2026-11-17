@@ -3,7 +3,7 @@
 /// A triangle, a cube, a circle with a chord — some rules cannot be read at
 /// all without seeing the shape, and until now the detail field could only
 /// hold words. Rather than a second column and a second paste, a figure
-/// lives inside the same text as a fenced block:
+/// lives inside the same text — either fenced, or written straight in:
 ///
 /// ```text
 /// ```svg চিত্র: সমকোণী ত্রিভুজ
@@ -34,8 +34,19 @@ class FigureSegment extends DetailSegment {
   const FigureSegment({required this.svg, this.caption = ''});
 }
 
-final _fence = RegExp(
-  r'^[ \t]*```[ \t]*svg[ \t]*([^\n]*)\n(.*?)^[ \t]*```[ \t]*$',
+/// A fenced block, or a drawing written straight into the text.
+///
+/// Both, because an agent asked for a fenced block will often just write
+/// the `<svg>` — which is what happened the first time this was used, and
+/// the figure came out as a wall of code. Relying on a model to wrap its
+/// answer correctly is relying on the one thing it is least careful about.
+///
+/// The fenced form is listed first, so a fence containing a drawing is
+/// consumed whole rather than matched twice.
+final _figure = RegExp(
+  r'^[ \t]*```[ \t]*svg[ \t]*([^\n]*)\n(.*?)^[ \t]*```[ \t]*$'
+  r'|'
+  r'(<svg[\s>][\s\S]*?</svg\s*>)',
   multiLine: true,
   dotAll: true,
 );
@@ -56,13 +67,20 @@ List<DetailSegment> splitDetail(String detail) {
     segments.add(ProseSegment(text.trim()));
   }
 
-  for (final match in _fence.allMatches(detail)) {
-    final body = match.group(2) ?? '';
+  for (final match in _figure.allMatches(detail)) {
+    // Group 2 is a fenced body, group 3 a drawing written straight in.
+    final fenced = match.group(2);
+    final body = fenced ?? match.group(3) ?? '';
     if (!looksLikeSvg(body)) continue;
 
     addProse(detail.substring(cursor, match.start));
     segments.add(
-      FigureSegment(svg: body.trim(), caption: (match.group(1) ?? '').trim()),
+      FigureSegment(
+        svg: body.trim(),
+        // Only a fence can carry a caption. A bare drawing usually has a
+        // heading above it already, which stays where it is as prose.
+        caption: fenced == null ? '' : (match.group(1) ?? '').trim(),
+      ),
     );
     cursor = match.end;
   }

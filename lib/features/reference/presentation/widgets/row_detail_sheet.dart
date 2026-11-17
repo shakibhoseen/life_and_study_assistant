@@ -170,13 +170,50 @@ class _RowDetailSheetState extends ConsumerState<RowDetailSheet> {
                         controller: _detail,
                         enabled: !_busy,
                         maxLines: 14,
-                        minLines: 8,
+                        minLines: 6,
+                        onChanged: (_) => setState(() {}),
                         decoration: const InputDecoration(
                           labelText: 'বিস্তারিত',
-                          helperText: 'Markdown চলবে',
+                          helperText: 'Markdown ও SVG ছবি চলবে',
                           border: OutlineInputBorder(),
                         ),
                       ),
+                      // Shown while typing rather than after saving. The
+                      // first figure pasted in came out as a wall of code,
+                      // and there was no way to know until it was already
+                      // stored — a preview is how that gets caught in the
+                      // second it happens.
+                      if (_detail.text.trim().isNotEmpty) ...[
+                        const SizedBox(height: FluentSpacing.l),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.visibility_outlined,
+                              size: 14,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: FluentSpacing.xs),
+                            Text(
+                              'প্রিভিউ',
+                              style: FluentType.caption.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: FluentSpacing.s),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(FluentSpacing.m),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(
+                              FluentRadius.card,
+                            ),
+                            border: Border.all(color: scheme.outlineVariant),
+                          ),
+                          child: DetailBody(detail: _detail.text),
+                        ),
+                      ],
                     ] else
                       DetailBody(detail: widget.row.detail ?? ''),
                   ],

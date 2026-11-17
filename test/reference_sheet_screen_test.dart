@@ -207,6 +207,51 @@ void main() {
       expect(find.textContaining('ব্যাখ্যা'), findsWidgets);
     });
 
+    testWidgets('the preview draws the figure while still typing', (
+      tester,
+    ) async {
+      await open(tester, 'length', size: const Size(1000, 2600));
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('প্রিভিউ'), findsNothing);
+
+      // Written straight in, with no fence — which is what an agent
+      // actually produces.
+      await tester.enterText(
+        find.byType(TextField),
+        '### চিত্র\n\n<svg viewBox="0 0 10 10"><rect width="10" '
+        'height="10"/></svg>',
+      );
+      await tester.pumpAndSettle();
+
+      // Drawn before anything is saved, so a paste that will not render is
+      // caught in the second it happens rather than after it is stored.
+      expect(find.text('প্রিভিউ'), findsOneWidget);
+      expect(find.byType(SvgPicture), findsOneWidget);
+    });
+
+    testWidgets('a figure written with no fence is kept and drawn', (
+      tester,
+    ) async {
+      await open(tester, 'length', size: const Size(1000, 2600));
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField),
+        '### চিত্র\n\n<svg viewBox="0 0 10 10"><rect width="10" '
+        'height="10"/></svg>',
+      );
+      await tapIn(tester, 'সংরক্ষণ');
+
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SvgPicture), findsOneWidget);
+      expect(find.textContaining('চিত্র'), findsWidgets);
+    });
+
     testWidgets('a mangled figure degrades to code, not to nothing', (
       tester,
     ) async {
