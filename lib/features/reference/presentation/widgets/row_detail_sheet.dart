@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/reference/reference_service.dart';
 import '../../../../core/theme/fluent_tokens.dart';
-import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../providers/reference_provider.dart';
+import 'detail_body.dart';
 
 /// Where a rule comes from, at length.
 ///
@@ -179,17 +178,7 @@ class _RowDetailSheetState extends ConsumerState<RowDetailSheet> {
                         ),
                       ),
                     ] else
-                      MarkdownBody(
-                        // The same sanitiser the AI explanations use: a derivation
-                        // arrives full of LaTeX whatever the prompt asked for.
-                        data: BengaliMathSanitizer.sanitize(
-                          widget.row.detail ?? '',
-                        ),
-                        selectable: true,
-                        styleSheet: MarkdownStyleSheet.fromTheme(
-                          Theme.of(context),
-                        ).copyWith(p: FluentType.body),
-                      ),
+                      DetailBody(detail: widget.row.detail ?? ''),
                   ],
                 ),
               ),

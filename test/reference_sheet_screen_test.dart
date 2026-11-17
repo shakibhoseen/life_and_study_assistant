@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_and_study_assistant/core/database/app_database.dart';
@@ -179,6 +180,53 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('সম্পাদনা'), findsOneWidget);
       expect(find.text('প্রম্পট কপি করুন'), findsNothing);
+    });
+
+    testWidgets('a figure in the text is drawn, not shown as code', (
+      tester,
+    ) async {
+      await open(tester, 'length', size: const Size(1000, 2600));
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '''
+ব্যাখ্যা।
+
+```svg চিত্র: বর্গ
+<svg viewBox="0 0 10 10"><rect width="10" height="10"/></svg>
+```
+''');
+      await tapIn(tester, 'সংরক্ষণ');
+
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SvgPicture), findsOneWidget);
+      expect(find.text('চিত্র: বর্গ'), findsOneWidget);
+      // The prose around it is still prose.
+      expect(find.textContaining('ব্যাখ্যা'), findsWidgets);
+    });
+
+    testWidgets('a mangled figure degrades to code, not to nothing', (
+      tester,
+    ) async {
+      await open(tester, 'length', size: const Size(1000, 2600));
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '''
+```svg
+দুঃখিত, আঁকতে পারিনি।
+```
+''');
+      await tapIn(tester, 'সংরক্ষণ');
+
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+
+      // Nothing drawn, and nothing silently dropped either.
+      expect(find.byType(SvgPicture), findsNothing);
+      expect(find.textContaining('দুঃখিত'), findsWidgets);
     });
 
     testWidgets('the copied prompt carries the row and the table', (

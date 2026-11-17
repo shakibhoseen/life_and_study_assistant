@@ -96,6 +96,11 @@ class ReferenceHit {
 /// teaches a method that will fail in the exam. So the app does not generate
 /// these. It writes the prompt, the user takes it to whatever they already
 /// use, and the answer is pasted back unaltered.
+///
+/// Every section is conditional, and says so. An earlier version demanded a
+/// proof, a condition, a trap and a mnemonic for every row — which for most
+/// rows means asking a model to invent three of them. A heading with nothing
+/// real under it is worse than a missing heading: it reads as fact.
 String derivationPrompt({
   required String sheetTitle,
   required List<String> columns,
@@ -116,13 +121,39 @@ String derivationPrompt({
 টেবিল: $sheetTitle
 সারি: ${pairs.join(' | ')}${note.trim().isEmpty ? '' : '\nনোট: ${note.trim()}'}
 
-এটি কোথা থেকে এলো, ধাপে ধাপে লিখুন:
-১. কোন ধারণা বা উপপাদ্য থেকে এটি আসে
-২. সংক্ষিপ্ত প্রমাণ বা উৎপত্তি
-৩. কোন শর্তে এটি খাটে, আর কোথায় খাটে না
-৪. পরীক্ষায় যে ফাঁদটি পাতা হয়
+এটি কোথা থেকে এলো, সেটি বুঝিয়ে লিখুন।
 
-নিয়ম:
+যেগুলো **সত্যিই আছে কেবল সেগুলোই** লিখবেন:
+- কোন ধারণা বা উপপাদ্য থেকে এটি আসে
+- সংক্ষিপ্ত উৎপত্তি বা প্রমাণ
+- কোন শর্তে এটি খাটে, আর কোথায় খাটে না
+- পরীক্ষায় পাতা কোনো নির্দিষ্ট ফাঁদ
+- মনে রাখার কোনো কৌশল
+
+গুরুত্বপূর্ণ: উপরের সব কটি প্রতিটি নিয়মের ক্ষেত্রে থাকে না। যেটি নেই,
+সেটি বানিয়ে লিখবেন না — শিরোনামটিই বাদ দিন। অনেক রূপান্তরের কোনো ফাঁদ
+থাকে না, অনেক সূত্রের কোনো কৌশলের দরকার হয় না। খালি শিরোনামের চেয়ে
+অনুপস্থিত শিরোনাম ভালো।
+
+ছবি: জ্যামিতি, ঘনবস্তু বা যেকোনো আকৃতির ক্ষেত্রে — যেখানে **না দেখলে বোঝা
+যায় না** — একটি সরল SVG ছবি দিন, এভাবে:
+
+```svg চিত্র: সমকোণী ত্রিভুজ
+<svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="10,80 110,80 10,10" fill="none" stroke="black"
+           stroke-width="2"/>
+  <text x="55" y="88" font-size="9">ভূমি</text>
+</svg>
+```
+
+ছবির নিয়ম:
+- viewBox দেবেন, width/height নয়।
+- কালো রেখা ও সাদা পটভূমি ধরে আঁকুন।
+- বাইরের কোনো লিংক, ছবি বা ফন্ট ব্যবহার করবেন না।
+- বাংলা লেখা <text>-এ দিতে পারেন, ছোট রাখুন।
+- আকৃতি না থাকলে ছবি দেবেন না।
+
+লেখার নিয়ম:
 - বাংলায় লিখুন (ইংরেজি পরিভাষা থাকলে থাকুক)।
 - Markdown ব্যবহার করুন — শিরোনাম, তালিকা, **গুরুত্বপূর্ণ** অংশ।
 - গণিত ইউনিকোডে লিখুন: π, √, ², ×, ÷, ≤, ° — LaTeX সিনট্যাক্স নয়।
