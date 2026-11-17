@@ -1,8 +1,13 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/data/table_drill.dart';
+import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/reference/reference_service.dart';
+import '../../../../features/quiz/presentation/widgets/quiz_drill_modal.dart';
 import '../../../../core/theme/fluent_tokens.dart';
 import '../providers/reference_provider.dart';
 import '../widgets/reference_row_sheet.dart';
@@ -46,6 +51,47 @@ class ReferenceSheetScreen extends ConsumerWidget {
     if (context.mounted) Navigator.of(context).pop();
   }
 
+  /// Whether this table can produce questions worth asking.
+  ///
+  /// Checked before the button is offered rather than after it is pressed:
+  /// a drill button that opens an empty drill is worse than no button.
+  bool _canDrill(ReferenceSheetView view) =>
+      _questionsFor(view).isNotEmpty;
+
+  List<QuizQuestion> _questionsFor(ReferenceSheetView view, {Random? random}) {
+    return buildDrillFromTable(
+      sheetTitle: view.sheet.title,
+      subject: view.sheet.subject.trim().isEmpty
+          ? view.sheet.category
+          : view.sheet.subject,
+      columns: view.columns,
+      rows: [
+        for (final row in view.rows)
+          (cells: decodeStringList(row.cellsJson), note: row.note),
+      ],
+      random: random,
+    );
+  }
+
+  Future<void> _startDrill(
+    BuildContext context,
+    ReferenceSheetView view,
+  ) async {
+    // A fresh Random each time, so the same table does not give the same
+    // drill twice running.
+    final questions = _questionsFor(view);
+    if (questions.isEmpty) return;
+
+    await QuizDrillModal.show(
+      context,
+      subject: view.sheet.subject.trim().isEmpty
+          ? view.sheet.category
+          : view.sheet.subject,
+      topic: view.sheet.title,
+      customQuestions: questions,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
@@ -66,14 +112,33 @@ class ReferenceSheetScreen extends ConsumerWidget {
       ),
       floatingActionButton: async.value == null
           ? null
-          : FloatingActionButton.extended(
-              onPressed: () => ReferenceRowSheet.show(
-                context,
-                sheetKey: sheetKey,
-                columns: async.value!.columns,
-              ),
-              icon: const Icon(Icons.add),
-              label: const Text('সারি যোগ'),
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // The table is already a set of questions and their
+                // plausible wrong answers; this just asks them.
+                if (_canDrill(async.value!))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: FluentSpacing.s),
+                    child: FloatingActionButton.extended(
+                      heroTag: 'reference-drill',
+                      onPressed: () => _startDrill(context, async.value!),
+                      icon: const Icon(Icons.quiz_outlined),
+                      label: const Text('এই টেবিল থেকে পরীক্ষা'),
+                    ),
+                  ),
+                FloatingActionButton.extended(
+                  heroTag: 'reference-add-row',
+                  onPressed: () => ReferenceRowSheet.show(
+                    context,
+                    sheetKey: sheetKey,
+                    columns: async.value!.columns,
+                  ),
+                  icon: const Icon(Icons.add),
+                  label: const Text('সারি যোগ'),
+                ),
+              ],
             ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),

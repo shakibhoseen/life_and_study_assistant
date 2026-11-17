@@ -32,6 +32,7 @@ class AiProgressPipelineWidget extends StatefulWidget {
   final String? customInitialTitle;
   final String? customStatus;
   final String? customSubtitle;
+
   /// The figure the model itself reported, or null while it has reported
   /// none.
   ///
@@ -432,46 +433,46 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
 
                   // Live Token Badge, only while there is a figure for it.
                   if (tokensStr.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: FluentSpacing.xs,
-                      vertical: FluentSpacing.xxs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: FluentLayer.subtle(Colors.amber, brightness),
-                      borderRadius: FluentRadius.controlBorder,
-                      border: Border.all(
-                        color: Colors.amber.withValues(alpha: 0.3),
-                        width: FluentStroke.width,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: FluentSpacing.xs,
+                        vertical: FluentSpacing.xxs,
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        FadeTransition(
-                          opacity: _pulseController,
-                          child: const Icon(
-                            Icons.bolt,
-                            size: 11,
-                            color: Colors.amber,
-                          ),
+                      decoration: BoxDecoration(
+                        color: FluentLayer.subtle(Colors.amber, brightness),
+                        borderRadius: FluentRadius.controlBorder,
+                        border: Border.all(
+                          color: Colors.amber.withValues(alpha: 0.3),
+                          width: FluentStroke.width,
                         ),
-                        const SizedBox(width: FluentSpacing.xxs),
-                        Flexible(
-                          child: Text(
-                            tokensStr,
-                            style: FluentType.caption.copyWith(
-                              fontWeight: FontWeight.w600,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FadeTransition(
+                            opacity: _pulseController,
+                            child: const Icon(
+                              Icons.bolt,
+                              size: 11,
                               color: Colors.amber,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: FluentSpacing.xxs),
+                          Flexible(
+                            child: Text(
+                              tokensStr,
+                              style: FluentType.caption.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.amber,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: FluentSpacing.xs),
+                    const SizedBox(width: FluentSpacing.xs),
                   ],
 
                   // Live Timer Badge
@@ -550,103 +551,172 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
     final tokensStr = _formatTokens();
 
     return Center(
-      child: Container(
-        margin: const EdgeInsets.all(FluentSpacing.xl),
-        padding: const EdgeInsets.all(FluentSpacing.xl),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: FluentRadius.cardBorder,
-          border: Border.all(
-            color: FluentStroke.card(brightness),
-            width: FluentStroke.width,
+      // Scrollable so a short viewport cannot clip the card. Its contents
+      // are a fixed height — icon, title, steps, token count — and on a
+      // short screen, or a sheet that has not finished opening, the column
+      // overflowed by a few dozen pixels. With room it is sized to the
+      // child and centred exactly as before.
+      child: SingleChildScrollView(
+        child: Container(
+          margin: const EdgeInsets.all(FluentSpacing.xl),
+          padding: const EdgeInsets.all(FluentSpacing.xl),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: FluentRadius.cardBorder,
+            border: Border.all(
+              color: FluentStroke.card(brightness),
+              width: FluentStroke.width,
+            ),
+            boxShadow: FluentElevation.flyout(brightness),
           ),
-          boxShadow: FluentElevation.flyout(brightness),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Glowing pulsing top icon
-            ScaleTransition(
-              scale: Tween<double>(
-                begin: 0.94,
-                end: 1.06,
-              ).animate(_pulseController),
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Glowing pulsing top icon
+              ScaleTransition(
+                scale: Tween<double>(
+                  begin: 0.94,
+                  end: 1.06,
+                ).animate(_pulseController),
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: FluentRadius.controlBorder,
                   ),
-                  borderRadius: FluentRadius.controlBorder,
+                  child: Icon(currentStep.icon, color: Colors.white, size: 30),
                 ),
-                child: Icon(currentStep.icon, color: Colors.white, size: 30),
               ),
-            ),
-            const SizedBox(height: FluentSpacing.l),
+              const SizedBox(height: FluentSpacing.l),
 
-            // Active step title
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Text(
-                title,
-                key: ValueKey<String>(title),
+              // Active step title
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  title,
+                  key: ValueKey<String>(title),
+                  textAlign: TextAlign.center,
+                  style: FluentType.bodyStrong.copyWith(color: onSurface),
+                ),
+              ),
+              const SizedBox(height: FluentSpacing.xs),
+
+              // Subtitle
+              Text(
+                subtitle,
                 textAlign: TextAlign.center,
-                style: FluentType.bodyStrong.copyWith(color: onSurface),
-              ),
-            ),
-            const SizedBox(height: FluentSpacing.xs),
-
-            // Subtitle
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: FluentType.caption.copyWith(
-                color: onSurface.withValues(alpha: 0.65),
-              ),
-            ),
-            const SizedBox(height: FluentSpacing.m),
-
-            // Live Stream Pulse & Token Badge Pill
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: FluentSpacing.m,
-                vertical: FluentSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF6366F1).withValues(alpha: 0.15)
-                    : const Color(0xFFEEF2FF),
-                borderRadius: FluentRadius.controlBorder,
-                border: Border.all(
-                  color: isDark
-                      ? const Color(0xFF6366F1).withValues(alpha: 0.35)
-                      : const Color(0xFFC7D2FE),
-                  width: FluentStroke.width,
+                style: FluentType.caption.copyWith(
+                  color: onSurface.withValues(alpha: 0.65),
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FadeTransition(
-                    opacity: _pulseController,
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        color: Color(
-                          0xFF10B981,
-                        ), // Emerald green live indicator
-                        shape: BoxShape.circle,
+              const SizedBox(height: FluentSpacing.m),
+
+              // Live Stream Pulse & Token Badge Pill
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: FluentSpacing.m,
+                  vertical: FluentSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF6366F1).withValues(alpha: 0.15)
+                      : const Color(0xFFEEF2FF),
+                  borderRadius: FluentRadius.controlBorder,
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFF6366F1).withValues(alpha: 0.35)
+                        : const Color(0xFFC7D2FE),
+                    width: FluentStroke.width,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FadeTransition(
+                      opacity: _pulseController,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: const BoxDecoration(
+                          color: Color(
+                            0xFF10B981,
+                          ), // Emerald green live indicator
+                          shape: BoxShape.circle,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: FluentSpacing.s),
+                    Flexible(
+                      child: Text(
+                        'Gemini Live',
+                        style: FluentType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF6366F1),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: FluentSpacing.xs),
+                    Text(
+                      '•',
+                      style: FluentType.caption.copyWith(
+                        color: onSurface.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    const SizedBox(width: FluentSpacing.xs),
+                    if (tokensStr.isNotEmpty) ...[
+                      FadeTransition(
+                        opacity: _pulseController,
+                        child: const Icon(
+                          Icons.bolt,
+                          size: 12,
+                          color: Colors.amber,
+                        ),
+                      ),
+                      const SizedBox(width: FluentSpacing.xxs),
+                      Flexible(
+                        child: Text(
+                          tokensStr,
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.amber,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: FluentSpacing.m),
+
+              // Progress bar + Percent + Timer row
+              ClipRRect(
+                borderRadius: FluentRadius.controlBorder,
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8,
+                  backgroundColor: onSurface.withValues(alpha: 0.12),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF6366F1),
                   ),
-                  const SizedBox(width: FluentSpacing.s),
+                ),
+              ),
+              const SizedBox(height: FluentSpacing.s),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                   Flexible(
                     child: Text(
-                      'Gemini Live',
+                      'অগ্রগতি: $percentBn%',
                       style: FluentType.caption.copyWith(
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF6366F1),
@@ -655,163 +725,22 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: FluentSpacing.xs),
-                  Text(
-                    '•',
-                    style: FluentType.caption.copyWith(
-                      color: onSurface.withValues(alpha: 0.45),
-                    ),
-                  ),
-                  const SizedBox(width: FluentSpacing.xs),
-                  if (tokensStr.isNotEmpty) ...[
-                    FadeTransition(
-                      opacity: _pulseController,
-                      child: const Icon(
-                        Icons.bolt,
-                        size: 12,
-                        color: Colors.amber,
-                      ),
-                    ),
-                    const SizedBox(width: FluentSpacing.xxs),
-                    Flexible(
-                      child: Text(
-                        tokensStr,
-                        style: FluentType.caption.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.amber,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: FluentSpacing.m),
-
-            // Progress bar + Percent + Timer row
-            ClipRRect(
-              borderRadius: FluentRadius.controlBorder,
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: onSurface.withValues(alpha: 0.12),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0xFF6366F1),
-                ),
-              ),
-            ),
-            const SizedBox(height: FluentSpacing.s),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Text(
-                    'অগ্রগতি: $percentBn%',
-                    style: FluentType.caption.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF6366F1),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Flexible(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.timer_outlined,
-                        size: 13,
-                        color: onSurface.withValues(alpha: 0.65),
-                      ),
-                      const SizedBox(width: FluentSpacing.xs),
-                      Flexible(
-                        child: Text(
-                          'সময়: ${_formatElapsed()}',
-                          style: FluentType.caption.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: onSurface,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: FluentSpacing.l),
-
-            // Checklist of steps
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: FluentSpacing.m,
-                vertical: FluentSpacing.m,
-              ),
-              decoration: BoxDecoration(
-                color: onSurface.withValues(alpha: 0.04),
-                borderRadius: FluentRadius.cardBorder,
-                border: Border.all(
-                  color: FluentStroke.card(brightness),
-                  width: FluentStroke.width,
-                ),
-              ),
-              child: Column(
-                children: _steps.asMap().entries.map((entry) {
-                  final idx = entry.key;
-                  final s = entry.value;
-                  final isDone = idx < currentIdx;
-                  final isCurrent = idx == currentIdx;
-
-                  Color textColor;
-                  Widget leadIcon;
-
-                  if (isDone) {
-                    textColor = Colors.green;
-                    leadIcon = const Icon(
-                      Icons.check_circle,
-                      size: 14,
-                      color: Colors.green,
-                    );
-                  } else if (isCurrent) {
-                    textColor = isDark ? onSurface : const Color(0xFF4338CA);
-                    leadIcon = const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFF6366F1),
-                      ),
-                    );
-                  } else {
-                    textColor = onSurface.withValues(alpha: 0.45);
-                    leadIcon = Icon(
-                      Icons.radio_button_unchecked,
-                      size: 14,
-                      color: onSurface.withValues(alpha: 0.3),
-                    );
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: FluentSpacing.xs,
-                    ),
+                  Flexible(
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        leadIcon,
-                        const SizedBox(width: FluentSpacing.s),
-                        Expanded(
+                        Icon(
+                          Icons.timer_outlined,
+                          size: 13,
+                          color: onSurface.withValues(alpha: 0.65),
+                        ),
+                        const SizedBox(width: FluentSpacing.xs),
+                        Flexible(
                           child: Text(
-                            s.title,
+                            'সময়: ${_formatElapsed()}',
                             style: FluentType.caption.copyWith(
-                              fontWeight: isCurrent
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              color: textColor,
+                              fontWeight: FontWeight.w600,
+                              color: onSurface,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -819,65 +748,141 @@ class _AiProgressPipelineWidgetState extends State<AiProgressPipelineWidget>
                         ),
                       ],
                     ),
-                  );
-                }).toList(),
+                  ),
+                ],
               ),
-            ),
+              const SizedBox(height: FluentSpacing.l),
 
-            // Slow network note
-            if (isSlow) ...[
-              const SizedBox(height: FluentSpacing.m),
+              // Checklist of steps
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: FluentSpacing.m,
-                  vertical: FluentSpacing.s,
+                  vertical: FluentSpacing.m,
                 ),
                 decoration: BoxDecoration(
-                  color: FluentLayer.subtle(Colors.amber, brightness),
+                  color: onSurface.withValues(alpha: 0.04),
                   borderRadius: FluentRadius.cardBorder,
                   border: Border.all(
-                    color: Colors.amber.withValues(alpha: 0.3),
+                    color: FluentStroke.card(brightness),
                     width: FluentStroke.width,
                   ),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.wifi_tethering_error_rounded,
-                      size: 15,
-                      color: Colors.amber,
+                child: Column(
+                  children: _steps.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final s = entry.value;
+                    final isDone = idx < currentIdx;
+                    final isCurrent = idx == currentIdx;
+
+                    Color textColor;
+                    Widget leadIcon;
+
+                    if (isDone) {
+                      textColor = Colors.green;
+                      leadIcon = const Icon(
+                        Icons.check_circle,
+                        size: 14,
+                        color: Colors.green,
+                      );
+                    } else if (isCurrent) {
+                      textColor = isDark ? onSurface : const Color(0xFF4338CA);
+                      leadIcon = const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF6366F1),
+                        ),
+                      );
+                    } else {
+                      textColor = onSurface.withValues(alpha: 0.45);
+                      leadIcon = Icon(
+                        Icons.radio_button_unchecked,
+                        size: 14,
+                        color: onSurface.withValues(alpha: 0.3),
+                      );
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: FluentSpacing.xs,
+                      ),
+                      child: Row(
+                        children: [
+                          leadIcon,
+                          const SizedBox(width: FluentSpacing.s),
+                          Expanded(
+                            child: Text(
+                              s.title,
+                              style: FluentType.caption.copyWith(
+                                fontWeight: isCurrent
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: textColor,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+
+              // Slow network note
+              if (isSlow) ...[
+                const SizedBox(height: FluentSpacing.m),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FluentSpacing.m,
+                    vertical: FluentSpacing.s,
+                  ),
+                  decoration: BoxDecoration(
+                    color: FluentLayer.subtle(Colors.amber, brightness),
+                    borderRadius: FluentRadius.cardBorder,
+                    border: Border.all(
+                      color: Colors.amber.withValues(alpha: 0.3),
+                      width: FluentStroke.width,
                     ),
-                    const SizedBox(width: FluentSpacing.s),
-                    Expanded(
-                      child: Text(
-                        'ইন্টারনেট কিছুটা ধীরগতির হতে পারে, দয়া করে অপেক্ষা করুন...',
-                        style: FluentType.caption.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: Colors.amber,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.wifi_tethering_error_rounded,
+                        size: 15,
+                        color: Colors.amber,
+                      ),
+                      const SizedBox(width: FluentSpacing.s),
+                      Expanded(
+                        child: Text(
+                          'ইন্টারনেট কিছুটা ধীরগতির হতে পারে, দয়া করে অপেক্ষা করুন...',
+                          style: FluentType.caption.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.amber,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
 
-            if (widget.onCancel != null) ...[
-              const SizedBox(height: FluentSpacing.m),
-              TextButton.icon(
-                onPressed: widget.onCancel,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  visualDensity: VisualDensity.compact,
+              if (widget.onCancel != null) ...[
+                const SizedBox(height: FluentSpacing.m),
+                TextButton.icon(
+                  onPressed: widget.onCancel,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.close, size: 14),
+                  label: const Text('বাতিল করুন', style: FluentType.caption),
                 ),
-                icon: const Icon(Icons.close, size: 14),
-                label: const Text(
-                  'বাতিল করুন',
-                  style: FluentType.caption,
-                ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -6,6 +6,7 @@ import 'package:life_and_study_assistant/core/database/app_database.dart';
 import 'package:life_and_study_assistant/core/database/database_provider.dart';
 import 'package:life_and_study_assistant/core/services/reference/reference_service.dart';
 import 'package:life_and_study_assistant/features/reference/presentation/screens/reference_sheet_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/ui_style_override.dart';
 
@@ -51,13 +52,20 @@ void main() {
   );
 
   setUp(() async {
+    // The drill sheet reads its remembered size from preferences before it
+    // loads any questions, so without this it never gets past loading.
+    SharedPreferences.setMockInitialValues({});
     db = AppDatabase(NativeDatabase.memory());
     await ReferenceService.instance.seed(db, sheets: const [narrow, wide]);
   });
   tearDown(() => db.close());
 
-  Future<void> open(WidgetTester tester, String sheetKey) async {
-    await tester.binding.setSurfaceSize(const Size(1000, 1600));
+  Future<void> open(
+    WidgetTester tester,
+    String sheetKey, {
+    Size size = const Size(1000, 1600),
+  }) async {
+    await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ProviderScope(
@@ -67,6 +75,55 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('a table big enough offers a drill, and it opens', (
+    tester,
+  ) async {
+    await ReferenceService.instance.seed(
+      db,
+      sheets: const [
+        ReferenceSheetData(
+          sheetKey: 'units',
+          title: 'দৈর্ঘ্য',
+          category: 'পরিমাপ ও একক',
+          subject: 'গাণিতিক যুক্তি',
+          note: '',
+          columns: ['একক', 'সমান'],
+          rows: [
+            ReferenceRowData(cells: ['১ মাইল', '১.৬১ কিলোমিটার']),
+            ReferenceRowData(cells: ['১ গজ', '৩ ফুট']),
+            ReferenceRowData(cells: ['১ ইঞ্চি', '২.৫৪ সেন্টিমিটার']),
+            ReferenceRowData(cells: ['১ হাত', '১৮ ইঞ্চি']),
+          ],
+        ),
+      ],
+    );
+
+    // Taller than the default: the drill modal is a full-height sheet and
+    // a short surface overflows widgets that have nothing to do with this.
+    await open(tester, 'units', size: const Size(1000, 2400));
+
+    await tester.tap(find.text('এই টেবিল থেকে পরীক্ষা'));
+    // Not pumpAndSettle: the drill sheet runs a repeating animation, so
+    // settling is the one thing it never does.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // A real question built from the table, with its wrong options taken
+    // from the table's own other rows.
+    expect(find.textContaining('= কত?'), findsOneWidget);
+  });
+
+  testWidgets('a table too small to ask about offers no drill', (
+    tester,
+  ) async {
+    // Two rows cannot make three plausible wrong answers, and a drill
+    // button that opens an empty drill is worse than no button.
+    await open(tester, 'length');
+
+    expect(find.text('এই টেবিল থেকে পরীক্ষা'), findsNothing);
+    expect(find.text('সারি যোগ'), findsOneWidget);
+  });
 
   for (final shape in [
     (name: 'two columns', key: 'length', cell: '১ মাইল'),
