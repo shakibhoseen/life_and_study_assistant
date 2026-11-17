@@ -89,6 +89,48 @@ class ReferenceHit {
   const ReferenceHit({required this.sheet, required this.row});
 }
 
+/// The instruction to hand a stronger model elsewhere, for one row.
+///
+/// A derivation is exactly the kind of thing the cheap model this app can
+/// afford gets confidently wrong, and a wrong proof is worse than none: it
+/// teaches a method that will fail in the exam. So the app does not generate
+/// these. It writes the prompt, the user takes it to whatever they already
+/// use, and the answer is pasted back unaltered.
+String derivationPrompt({
+  required String sheetTitle,
+  required List<String> columns,
+  required List<String> cells,
+  String note = '',
+}) {
+  final pairs = <String>[];
+  for (var i = 0; i < cells.length; i++) {
+    final label = i < columns.length ? columns[i] : '';
+    final value = cells[i].trim();
+    if (value.isEmpty) continue;
+    pairs.add(label.isEmpty ? value : '$label: $value');
+  }
+
+  return '''
+আপনি একজন বিসিএস/নিয়োগ পরীক্ষার্থীকে একটি সূত্র বা নিয়ম বোঝাচ্ছেন।
+
+টেবিল: $sheetTitle
+সারি: ${pairs.join(' | ')}${note.trim().isEmpty ? '' : '\nনোট: ${note.trim()}'}
+
+এটি কোথা থেকে এলো, ধাপে ধাপে লিখুন:
+১. কোন ধারণা বা উপপাদ্য থেকে এটি আসে
+২. সংক্ষিপ্ত প্রমাণ বা উৎপত্তি
+৩. কোন শর্তে এটি খাটে, আর কোথায় খাটে না
+৪. পরীক্ষায় যে ফাঁদটি পাতা হয়
+
+নিয়ম:
+- বাংলায় লিখুন (ইংরেজি পরিভাষা থাকলে থাকুক)।
+- Markdown ব্যবহার করুন — শিরোনাম, তালিকা, **গুরুত্বপূর্ণ** অংশ।
+- গণিত ইউনিকোডে লিখুন: π, √, ², ×, ÷, ≤, ° — LaTeX সিনট্যাক্স নয়।
+- নিশ্চিত না হলে অনুমান না করে লিখুন "এ অংশটি যাচাই করে নিন"।
+- শুধু ব্যাখ্যাটুকু দিন, ভূমিকা বা উপসংহার নয়।
+''';
+}
+
 /// Decodes a stored JSON list, tolerating anything that is not one.
 ///
 /// Rows come from an asset, from the user and from a model reading a
@@ -389,6 +431,30 @@ class ReferenceService {
                     ? const Value.absent()
                     : Value(jsonEncode(cells)),
                 note: note == null ? const Value.absent() : Value(note),
+                isCustom: const Value(true),
+              ),
+            );
+    return count > 0;
+  }
+
+  /// Attaches a derivation to a row, or clears it with null.
+  ///
+  /// Editing a bundled row's detail makes the row custom, as editing its
+  /// cells does, or the next content update would replace the row and take
+  /// the explanation with it.
+  Future<bool> setRowDetail(
+    AppDatabase db, {
+    required int rowId,
+    required String? detail,
+  }) async {
+    final trimmed = detail?.trim();
+    final count =
+        await (db.update(db.referenceRows)..where((t) => t.id.equals(rowId)))
+            .write(
+              ReferenceRowsCompanion(
+                detail: Value(
+                  trimmed == null || trimmed.isEmpty ? null : trimmed,
+                ),
                 isCustom: const Value(true),
               ),
             );

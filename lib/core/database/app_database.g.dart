@@ -7705,6 +7705,15 @@ class $ReferenceRowsTable extends ReferenceRows
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _detailMeta = const VerificationMeta('detail');
+  @override
+  late final GeneratedColumn<String> detail = GeneratedColumn<String>(
+    'detail',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -7713,6 +7722,7 @@ class $ReferenceRowsTable extends ReferenceRows
     note,
     isCustom,
     orderIndex,
+    detail,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -7763,6 +7773,12 @@ class $ReferenceRowsTable extends ReferenceRows
         orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
       );
     }
+    if (data.containsKey('detail')) {
+      context.handle(
+        _detailMeta,
+        detail.isAcceptableOrUnknown(data['detail']!, _detailMeta),
+      );
+    }
     return context;
   }
 
@@ -7796,6 +7812,10 @@ class $ReferenceRowsTable extends ReferenceRows
         DriftSqlType.int,
         data['${effectivePrefix}order_index'],
       )!,
+      detail: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}detail'],
+      ),
     );
   }
 
@@ -7816,6 +7836,19 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
   final String note;
   final bool isCustom;
   final int orderIndex;
+
+  /// Where the rule comes from, at length.
+  ///
+  /// [note] is one line — a mnemonic, or the condition a formula holds
+  /// under. This is the other thing: the derivation. হেরনের সূত্র is four
+  /// symbols to memorise and a page to understand, and the page is what
+  /// makes it stay. Markdown, rendered the same way the AI explanations
+  /// already are.
+  ///
+  /// Null on almost every row, and meant to be: a conversion table needs no
+  /// proof. It is for the handful of rules that are worth understanding
+  /// rather than memorising.
+  final String? detail;
   const ReferenceRow({
     required this.id,
     required this.sheetKey,
@@ -7823,6 +7856,7 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
     required this.note,
     required this.isCustom,
     required this.orderIndex,
+    this.detail,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7833,6 +7867,9 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
     map['note'] = Variable<String>(note);
     map['is_custom'] = Variable<bool>(isCustom);
     map['order_index'] = Variable<int>(orderIndex);
+    if (!nullToAbsent || detail != null) {
+      map['detail'] = Variable<String>(detail);
+    }
     return map;
   }
 
@@ -7844,6 +7881,9 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
       note: Value(note),
       isCustom: Value(isCustom),
       orderIndex: Value(orderIndex),
+      detail: detail == null && nullToAbsent
+          ? const Value.absent()
+          : Value(detail),
     );
   }
 
@@ -7859,6 +7899,7 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
       note: serializer.fromJson<String>(json['note']),
       isCustom: serializer.fromJson<bool>(json['isCustom']),
       orderIndex: serializer.fromJson<int>(json['orderIndex']),
+      detail: serializer.fromJson<String?>(json['detail']),
     );
   }
   @override
@@ -7871,6 +7912,7 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
       'note': serializer.toJson<String>(note),
       'isCustom': serializer.toJson<bool>(isCustom),
       'orderIndex': serializer.toJson<int>(orderIndex),
+      'detail': serializer.toJson<String?>(detail),
     };
   }
 
@@ -7881,6 +7923,7 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
     String? note,
     bool? isCustom,
     int? orderIndex,
+    Value<String?> detail = const Value.absent(),
   }) => ReferenceRow(
     id: id ?? this.id,
     sheetKey: sheetKey ?? this.sheetKey,
@@ -7888,6 +7931,7 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
     note: note ?? this.note,
     isCustom: isCustom ?? this.isCustom,
     orderIndex: orderIndex ?? this.orderIndex,
+    detail: detail.present ? detail.value : this.detail,
   );
   ReferenceRow copyWithCompanion(ReferenceRowsCompanion data) {
     return ReferenceRow(
@@ -7899,6 +7943,7 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
       orderIndex: data.orderIndex.present
           ? data.orderIndex.value
           : this.orderIndex,
+      detail: data.detail.present ? data.detail.value : this.detail,
     );
   }
 
@@ -7910,14 +7955,15 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
           ..write('cellsJson: $cellsJson, ')
           ..write('note: $note, ')
           ..write('isCustom: $isCustom, ')
-          ..write('orderIndex: $orderIndex')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('detail: $detail')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode =>
-      Object.hash(id, sheetKey, cellsJson, note, isCustom, orderIndex);
+      Object.hash(id, sheetKey, cellsJson, note, isCustom, orderIndex, detail);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -7927,7 +7973,8 @@ class ReferenceRow extends DataClass implements Insertable<ReferenceRow> {
           other.cellsJson == this.cellsJson &&
           other.note == this.note &&
           other.isCustom == this.isCustom &&
-          other.orderIndex == this.orderIndex);
+          other.orderIndex == this.orderIndex &&
+          other.detail == this.detail);
 }
 
 class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
@@ -7937,6 +7984,7 @@ class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
   final Value<String> note;
   final Value<bool> isCustom;
   final Value<int> orderIndex;
+  final Value<String?> detail;
   const ReferenceRowsCompanion({
     this.id = const Value.absent(),
     this.sheetKey = const Value.absent(),
@@ -7944,6 +7992,7 @@ class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
     this.note = const Value.absent(),
     this.isCustom = const Value.absent(),
     this.orderIndex = const Value.absent(),
+    this.detail = const Value.absent(),
   });
   ReferenceRowsCompanion.insert({
     this.id = const Value.absent(),
@@ -7952,6 +8001,7 @@ class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
     this.note = const Value.absent(),
     this.isCustom = const Value.absent(),
     this.orderIndex = const Value.absent(),
+    this.detail = const Value.absent(),
   }) : sheetKey = Value(sheetKey),
        cellsJson = Value(cellsJson);
   static Insertable<ReferenceRow> custom({
@@ -7961,6 +8011,7 @@ class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
     Expression<String>? note,
     Expression<bool>? isCustom,
     Expression<int>? orderIndex,
+    Expression<String>? detail,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -7969,6 +8020,7 @@ class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
       if (note != null) 'note': note,
       if (isCustom != null) 'is_custom': isCustom,
       if (orderIndex != null) 'order_index': orderIndex,
+      if (detail != null) 'detail': detail,
     });
   }
 
@@ -7979,6 +8031,7 @@ class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
     Value<String>? note,
     Value<bool>? isCustom,
     Value<int>? orderIndex,
+    Value<String?>? detail,
   }) {
     return ReferenceRowsCompanion(
       id: id ?? this.id,
@@ -7987,6 +8040,7 @@ class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
       note: note ?? this.note,
       isCustom: isCustom ?? this.isCustom,
       orderIndex: orderIndex ?? this.orderIndex,
+      detail: detail ?? this.detail,
     );
   }
 
@@ -8011,6 +8065,9 @@ class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
     if (orderIndex.present) {
       map['order_index'] = Variable<int>(orderIndex.value);
     }
+    if (detail.present) {
+      map['detail'] = Variable<String>(detail.value);
+    }
     return map;
   }
 
@@ -8022,7 +8079,8 @@ class ReferenceRowsCompanion extends UpdateCompanion<ReferenceRow> {
           ..write('cellsJson: $cellsJson, ')
           ..write('note: $note, ')
           ..write('isCustom: $isCustom, ')
-          ..write('orderIndex: $orderIndex')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('detail: $detail')
           ..write(')'))
         .toString();
   }
@@ -11960,6 +12018,7 @@ typedef $$ReferenceRowsTableCreateCompanionBuilder =
       Value<String> note,
       Value<bool> isCustom,
       Value<int> orderIndex,
+      Value<String?> detail,
     });
 typedef $$ReferenceRowsTableUpdateCompanionBuilder =
     ReferenceRowsCompanion Function({
@@ -11969,6 +12028,7 @@ typedef $$ReferenceRowsTableUpdateCompanionBuilder =
       Value<String> note,
       Value<bool> isCustom,
       Value<int> orderIndex,
+      Value<String?> detail,
     });
 
 class $$ReferenceRowsTableFilterComposer
@@ -12007,6 +12067,11 @@ class $$ReferenceRowsTableFilterComposer
 
   ColumnFilters<int> get orderIndex => $composableBuilder(
     column: $table.orderIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get detail => $composableBuilder(
+    column: $table.detail,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12049,6 +12114,11 @@ class $$ReferenceRowsTableOrderingComposer
     column: $table.orderIndex,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get detail => $composableBuilder(
+    column: $table.detail,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ReferenceRowsTableAnnotationComposer
@@ -12079,6 +12149,9 @@ class $$ReferenceRowsTableAnnotationComposer
     column: $table.orderIndex,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get detail =>
+      $composableBuilder(column: $table.detail, builder: (column) => column);
 }
 
 class $$ReferenceRowsTableTableManager
@@ -12118,6 +12191,7 @@ class $$ReferenceRowsTableTableManager
                 Value<String> note = const Value.absent(),
                 Value<bool> isCustom = const Value.absent(),
                 Value<int> orderIndex = const Value.absent(),
+                Value<String?> detail = const Value.absent(),
               }) => ReferenceRowsCompanion(
                 id: id,
                 sheetKey: sheetKey,
@@ -12125,6 +12199,7 @@ class $$ReferenceRowsTableTableManager
                 note: note,
                 isCustom: isCustom,
                 orderIndex: orderIndex,
+                detail: detail,
               ),
           createCompanionCallback:
               ({
@@ -12134,6 +12209,7 @@ class $$ReferenceRowsTableTableManager
                 Value<String> note = const Value.absent(),
                 Value<bool> isCustom = const Value.absent(),
                 Value<int> orderIndex = const Value.absent(),
+                Value<String?> detail = const Value.absent(),
               }) => ReferenceRowsCompanion.insert(
                 id: id,
                 sheetKey: sheetKey,
@@ -12141,6 +12217,7 @@ class $$ReferenceRowsTableTableManager
                 note: note,
                 isCustom: isCustom,
                 orderIndex: orderIndex,
+                detail: detail,
               ),
           withReferenceMapper: (p0) => p0
               .map(

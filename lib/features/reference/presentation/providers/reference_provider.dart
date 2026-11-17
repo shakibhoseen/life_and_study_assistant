@@ -141,6 +141,19 @@ class ReferenceNotifier extends Notifier<void> {
     return ok;
   }
 
+  Future<bool> setRowDetail({
+    required int rowId,
+    required String? detail,
+  }) async {
+    final ok = await ReferenceService.instance.setRowDetail(
+      _db,
+      rowId: rowId,
+      detail: detail,
+    );
+    if (ok) _bump();
+    return ok;
+  }
+
   Future<void> deleteRow(int rowId) async {
     await ReferenceService.instance.deleteRow(_db, rowId: rowId);
     _bump();

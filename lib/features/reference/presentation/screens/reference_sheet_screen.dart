@@ -11,6 +11,7 @@ import '../../../../features/quiz/presentation/widgets/quiz_drill_modal.dart';
 import '../../../../core/theme/fluent_tokens.dart';
 import '../providers/reference_provider.dart';
 import '../widgets/reference_row_sheet.dart';
+import '../widgets/row_detail_sheet.dart';
 
 /// One reference table.
 ///
@@ -195,21 +196,19 @@ class ReferenceSheetScreen extends ConsumerWidget {
     ReferenceSheetView view,
   ) {
     return view.rows.map((row) {
-      return _PairRow(sheet: view.sheet, row: row, columns: view.columns);
+      return _PairRow(view: view, row: row);
     }).toList();
   }
 }
 
 class _PairRow extends ConsumerWidget {
-  final ReferenceSheet sheet;
+  final ReferenceSheetView view;
   final ReferenceRow row;
-  final List<String> columns;
 
-  const _PairRow({
-    required this.sheet,
-    required this.row,
-    required this.columns,
-  });
+  const _PairRow({required this.view, required this.row});
+
+  ReferenceSheet get sheet => view.sheet;
+  List<String> get columns => view.columns;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -219,13 +218,26 @@ class _PairRow extends ConsumerWidget {
     final right = cells.length > 1 ? cells[1] : '';
 
     return InkWell(
+      onTap: () => RowDetailSheet.show(context, view: view, row: row),
       onLongPress: () => _showActions(context, ref),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: FluentSpacing.s),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(left, style: FluentType.bodyStrong),
+            Row(
+              children: [
+                Expanded(child: Text(left, style: FluentType.bodyStrong)),
+                // Quiet, because most rows will never have one and a louder
+                // marker would read as something missing from the rest.
+                if ((row.detail ?? '').trim().isNotEmpty)
+                  Icon(
+                    Icons.article_outlined,
+                    size: 14,
+                    color: scheme.onSurfaceVariant,
+                  ),
+              ],
+            ),
             if (right.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: FluentSpacing.xxs),
@@ -350,6 +362,11 @@ class _WideTable extends ConsumerWidget {
         rows: view.rows.map((row) {
           final cells = decodeStringList(row.cellsJson);
           return DataRow(
+            // Tapping opens the derivation, exactly as in the other
+            // layout. Leaving it out of one of the two is how the row
+            // actions came to be missing here in the first place.
+            onSelectChanged: (_) =>
+                RowDetailSheet.show(context, view: view, row: row),
             // The same long press the two-column layout has. Without it a
             // row in a wide table could be added and never taken back.
             onLongPress: () => showRowActions(

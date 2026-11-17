@@ -48,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'life_and_study_assistant');
@@ -252,6 +252,19 @@ class AppDatabase extends _$AppDatabase {
             .toSet();
         if (!existing.contains('source_exam')) {
           await m.addColumn(drillQuestions, drillQuestions.sourceExam);
+        }
+      }
+      if (from < 21) {
+        // Room for a derivation on a reference row. Nullable, and null on
+        // almost every row by design: a conversion table needs no proof.
+        final columns = await customSelect(
+          'PRAGMA table_info(reference_rows);',
+        ).get();
+        final existing = columns
+            .map((row) => row.data['name'] as String)
+            .toSet();
+        if (!existing.contains('detail')) {
+          await m.addColumn(referenceRows, referenceRows.detail);
         }
       }
     },

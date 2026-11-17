@@ -22,4 +22,17 @@ class ReferenceRows extends Table {
   BoolColumn get isCustom => boolean().withDefault(const Constant(false))();
 
   IntColumn get orderIndex => integer().withDefault(const Constant(0))();
+
+  /// Where the rule comes from, at length.
+  ///
+  /// [note] is one line — a mnemonic, or the condition a formula holds
+  /// under. This is the other thing: the derivation. হেরনের সূত্র is four
+  /// symbols to memorise and a page to understand, and the page is what
+  /// makes it stay. Markdown, rendered the same way the AI explanations
+  /// already are.
+  ///
+  /// Null on almost every row, and meant to be: a conversion table needs no
+  /// proof. It is for the handful of rules that are worth understanding
+  /// rather than memorising.
+  TextColumn get detail => text().nullable()();
 }

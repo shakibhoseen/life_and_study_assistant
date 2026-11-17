@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_and_study_assistant/core/database/app_database.dart';
@@ -123,6 +124,117 @@ void main() {
 
     expect(find.text('এই টেবিল থেকে পরীক্ষা'), findsNothing);
     expect(find.text('সারি যোগ'), findsOneWidget);
+  });
+
+  // A tall surface throughout: the derivation sheet is nearly full height,
+  // and on the default 1600 its buttons fall off the bottom.
+  group('the derivation behind a rule', () {
+    /// The sheet is taller than any surface, so its buttons have to be
+    /// scrolled to before they can be tapped.
+    Future<void> tapIn(WidgetTester tester, String label) async {
+      final target = find.text(label);
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+      await tester.tap(target);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('tapping a row opens it, in both layouts', (tester) async {
+      for (final key in ['length', 'tense']) {
+        await open(tester, key, size: const Size(1000, 2600));
+        await tester.tap(
+          find.text(key == 'length' ? '১ মাইল' : 'Present'),
+        );
+        await tester.pumpAndSettle();
+
+        // Nothing written yet, so it opens straight into the editor rather
+        // than a dead end with an empty box.
+        expect(find.text('প্রম্পট কপি করুন'), findsOneWidget);
+        await tapIn(tester, 'বাতিল');
+      }
+    });
+
+    testWidgets('what is written is kept and shown as markdown', (
+      tester,
+    ) async {
+      await open(tester, 'length', size: const Size(1000, 2600));
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField),
+        '## কোথা থেকে\n\n১ গজ = ৩ ফুট ধরে হিসাব।',
+      );
+      await tester.tap(find.text('সংরক্ষণ'));
+      await tester.pumpAndSettle();
+
+      final rows = await ReferenceService.instance.rows(db, 'length');
+      expect(rows.single.detail, contains('কোথা থেকে'));
+      // Editing a bundled row claims it, or the next content update would
+      // replace the row and take the explanation with it.
+      expect(rows.single.isCustom, isTrue);
+
+      // Reopening reads rather than edits.
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+      expect(find.text('সম্পাদনা'), findsOneWidget);
+      expect(find.text('প্রম্পট কপি করুন'), findsNothing);
+    });
+
+    testWidgets('the copied prompt carries the row and the table', (
+      tester,
+    ) async {
+      String? copied;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String?;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      await open(tester, 'length', size: const Size(1000, 2600));
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('প্রম্পট কপি করুন'));
+      await tester.pumpAndSettle();
+
+      // Without the row in it the prompt is useless, and without the ban on
+      // LaTeX the answer comes back unreadable.
+      expect(copied, contains('১ মাইল'));
+      expect(copied, contains('দৈর্ঘ্য'));
+      expect(copied, contains('LaTeX'));
+    });
+
+    testWidgets('clearing it removes the detail rather than storing blank', (
+      tester,
+    ) async {
+      await open(tester, 'length', size: const Size(1000, 2600));
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'কিছু একটা');
+      await tester.tap(find.text('সংরক্ষণ'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('১ মাইল'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('সম্পাদনা'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '   ');
+      await tester.tap(find.text('সংরক্ষণ'));
+      await tester.pumpAndSettle();
+
+      final rows = await ReferenceService.instance.rows(db, 'length');
+      expect(rows.single.detail, isNull);
+    });
   });
 
   for (final shape in [
