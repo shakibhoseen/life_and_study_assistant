@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_and_study_assistant/core/database/app_database.dart';
@@ -190,6 +191,61 @@ void main() {
           .join(' | ');
       // The correction is the user's and outlives the content update.
       expect(joined, contains('১৭৬০ গজ'));
+    });
+
+    test('attaching a detail to a bundled row never duplicates the row on seed', () async {
+      final view = await ReferenceService.instance.view(db, 'length');
+      final countBefore = view!.rows.length;
+      final target = view.rows.first;
+
+      await ReferenceService.instance.setRowDetail(
+        db,
+        rowId: target.id,
+        detail: '১ মাইল = ১৭৬০ গজ। রোমান সাম্রাজ্য থেকে এর উৎপত্তি।',
+      );
+
+      // Seed runs again (on provider invalidation, app restart, etc.)
+      await ReferenceService.instance.seed(db, sheets: const [sheet]);
+
+      final after = await ReferenceService.instance.view(db, 'length');
+      expect(after!.rows.length, countBefore);
+      final updated = after.rows.firstWhere((r) => r.id == target.id);
+      expect(updated.detail, contains('রোমান সাম্রাজ্য'));
+    });
+
+    test('existing duplicate rows in database are healed and deduplicated', () async {
+      // Simulate duplicate rows present from previous buggy runs
+      final view = await ReferenceService.instance.view(db, 'length');
+      final target = view!.rows.first;
+
+      // Attach a detail to the authentic row
+      await ReferenceService.instance.setRowDetail(
+        db,
+        rowId: target.id,
+        detail: '১ মাইল = ১৭৬০ গজ।',
+      );
+
+      // Insert an identical copy without detail
+      await db.into(db.referenceRows).insert(
+        ReferenceRowsCompanion.insert(
+          sheetKey: 'length',
+          cellsJson: target.cellsJson,
+          note: const Value(''),
+          orderIndex: const Value(99),
+        ),
+      );
+
+      final beforeHeal = await ReferenceService.instance.view(db, 'length');
+      expect(beforeHeal!.rows.length, view.rows.length + 1);
+
+      // Seed should automatically heal and deduplicate, keeping the row with detail
+      await ReferenceService.instance.seed(db, sheets: const [sheet]);
+
+      final healed = await ReferenceService.instance.view(db, 'length');
+      expect(healed!.rows.length, view.rows.length);
+      final matches = healed.rows.where((r) => r.cellsJson == target.cellsJson).toList();
+      expect(matches.length, 1);
+      expect(matches.first.detail, isNotNull);
     });
 
     test('a bundled sheet cannot be deleted', () async {

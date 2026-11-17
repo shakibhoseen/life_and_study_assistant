@@ -110,12 +110,31 @@ class _RowDetailSheetState extends ConsumerState<RowDetailSheet> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_heading, style: FluentType.bodyStrong),
-                    Text(
-                      widget.view.sheet.title,
-                      style: FluentType.caption.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_heading, style: FluentType.bodyStrong),
+                              Text(
+                                widget.view.sheet.title,
+                                style: FluentType.caption.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!_editing)
+                          IconButton(
+                            onPressed: () => setState(() => _editing = true),
+                            icon: const Icon(Icons.edit_outlined, size: 20),
+                            tooltip: 'সম্পাদনা',
+                            visualDensity: VisualDensity.compact,
+                          ),
+                      ],
                     ),
                     const SizedBox(height: FluentSpacing.l),
 

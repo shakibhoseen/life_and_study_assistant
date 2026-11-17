@@ -244,24 +244,75 @@ class ReferenceService {
             ),
           );
 
-      await (db.delete(db.referenceRows)..where(
-            (t) => t.sheetKey.equals(sheet.sheetKey) & t.isCustom.equals(false),
-          ))
-          .go();
+      // Reconcile rows for this sheet: preserve existing user details and custom edits,
+      // and prevent re-inserting duplicate copies of bundled rows.
+      final existingRows = await (db.select(db.referenceRows)
+            ..where((t) => t.sheetKey.equals(sheet.sheetKey)))
+          .get();
+
+      // Deduplicate any rows that already share the same cellsJson
+      final existingByCells = <String, ReferenceRow>{};
+      for (final r in existingRows) {
+        final existing = existingByCells[r.cellsJson];
+        if (existing != null) {
+          // A duplicate exists: prefer the one that has an attached detail
+          final existingHasDetail = (existing.detail ?? '').trim().isNotEmpty;
+          final rHasDetail = (r.detail ?? '').trim().isNotEmpty;
+          if (!existingHasDetail && rHasDetail) {
+            await (db.delete(db.referenceRows)
+                  ..where((t) => t.id.equals(existing.id)))
+                .go();
+            existingByCells[r.cellsJson] = r;
+          } else {
+            await (db.delete(db.referenceRows)
+                  ..where((t) => t.id.equals(r.id)))
+                .go();
+          }
+        } else {
+          existingByCells[r.cellsJson] = r;
+        }
+      }
 
       for (var r = 0; r < sheet.rows.length; r++) {
         final row = sheet.rows[r];
         if (row.cells.isEmpty) continue;
-        await db
-            .into(db.referenceRows)
-            .insert(
-              ReferenceRowsCompanion.insert(
-                sheetKey: sheet.sheetKey,
-                cellsJson: jsonEncode(row.cells),
-                note: Value(row.note),
-                orderIndex: Value(r),
-              ),
-            );
+        final cellsJson = jsonEncode(row.cells);
+
+        final existing = existingByCells.remove(cellsJson);
+        if (existing != null) {
+          // The row already exists: update its orderIndex and note if needed,
+          // but NEVER insert a duplicate and NEVER wipe its detail!
+          await (db.update(db.referenceRows)
+                ..where((t) => t.id.equals(existing.id)))
+              .write(
+                ReferenceRowsCompanion(
+                  orderIndex: Value(r),
+                  note: Value(row.note.isNotEmpty ? row.note : existing.note),
+                ),
+              );
+        } else {
+          await db
+              .into(db.referenceRows)
+              .insert(
+                ReferenceRowsCompanion.insert(
+                  sheetKey: sheet.sheetKey,
+                  cellsJson: cellsJson,
+                  note: Value(row.note),
+                  orderIndex: Value(r),
+                ),
+              );
+        }
+      }
+
+      // Any remaining rows in existingByCells:
+      // Keep rows that are custom or have user explanations; prune obsolete uncustomized rows.
+      for (final leftover in existingByCells.values) {
+        final hasDetail = (leftover.detail ?? '').trim().isNotEmpty;
+        if (!leftover.isCustom && !hasDetail) {
+          await (db.delete(db.referenceRows)
+                ..where((t) => t.id.equals(leftover.id)))
+              .go();
+        }
       }
     }
   }
