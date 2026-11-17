@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/data/confusable_pairs.dart';
 import '../../../../core/data/mistake_kind.dart';
 import '../../../../core/database/database_provider.dart';
 
@@ -24,4 +25,16 @@ final mistakePatternProvider = FutureProvider<MistakePattern>((ref) async {
   final db = ref.watch(appDatabaseProvider);
   ref.watch(mistakePatternRevisionProvider);
   return db.getMistakePattern(withinDays: 90);
+});
+
+/// The option pairs the user keeps swapping for each other.
+///
+/// Six months rather than three: a confusion is a slower thing than a habit,
+/// and two mix-ups four months apart are still the same two words.
+final confusablePairsProvider = FutureProvider<List<ConfusablePair>>((
+  ref,
+) async {
+  final db = ref.watch(appDatabaseProvider);
+  ref.watch(mistakePatternRevisionProvider);
+  return db.getConfusablePairs(withinDays: 180);
 });

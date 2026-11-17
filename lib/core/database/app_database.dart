@@ -19,6 +19,7 @@ import 'tables/syllabus_nodes_table.dart';
 import 'tables/syllabus_progress_table.dart';
 import 'tables/syllabus_tracks_table.dart';
 import 'tables/weak_topics_table.dart';
+import '../data/confusable_pairs.dart';
 import '../data/mistake_kind.dart';
 import '../data/study_data_cleanup.dart';
 
@@ -2061,6 +2062,51 @@ class AppDatabase extends _$AppDatabase {
           topic: row.topic,
         ),
     ]);
+  }
+
+  /// The option pairs the user keeps swapping for each other.
+  ///
+  /// Built entirely from what wrong answers already recorded — the option
+  /// picked and the option that was right. Skipped questions and ones
+  /// imported without an answer key are left out: there is no pair when
+  /// nothing was chosen, or nothing was right.
+  Future<List<ConfusablePair>> getConfusablePairs({int withinDays = 180}) async {
+    final since = DateTime.now().subtract(Duration(days: withinDays));
+    final rows =
+        await (select(drillQuestions)..where(
+              (t) =>
+                  t.isCorrect.equals(false) &
+                  t.attemptedAt.isBiggerOrEqualValue(since),
+            ))
+            .get();
+
+    final evidence = <ConfusionEvidence>[];
+    for (final row in rows) {
+      if (row.selectedIndex < 0 || row.correctIndex < 0) continue;
+
+      List<dynamic> options;
+      try {
+        final decoded = jsonDecode(row.optionsJson);
+        if (decoded is! List) continue;
+        options = decoded;
+      } catch (_) {
+        continue;
+      }
+      if (row.selectedIndex >= options.length ||
+          row.correctIndex >= options.length) {
+        continue;
+      }
+
+      evidence.add(
+        ConfusionEvidence(
+          chosen: options[row.selectedIndex].toString(),
+          correct: options[row.correctIndex].toString(),
+          topic: row.topic,
+        ),
+      );
+    }
+
+    return findConfusablePairs(evidence);
   }
 
   Future<int> deleteDrillQuestion(int id) {
