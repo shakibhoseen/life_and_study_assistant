@@ -12,6 +12,13 @@ import 'photo_capture_service.dart';
 /// Turning first means the crop that follows is drawn on a page the right way
 /// up.
 ///
+/// **Turning is free until it is confirmed.** The screen keeps a count of
+/// quarter-turns and shows the photo through a [RotatedBox]; no pixels move
+/// until the user goes on to the crop. The first version re-encoded the whole
+/// file on every tap, which on a full-size phone photo meant seconds of a
+/// frozen screen — and for a format the Dart decoder could not read, meant a
+/// button that did nothing at all, silently, for ever.
+///
 /// The photo is shown whole, scaled to fit, so a turn that changes a portrait
 /// page into a landscape one cannot push the edges out of view. Nothing here
 /// zooms or pans: the one question being asked is which way is up.
@@ -32,24 +39,47 @@ class PhotoRotateScreen extends StatefulWidget {
 }
 
 class _PhotoRotateScreenState extends State<PhotoRotateScreen> {
-  late File _photo = widget.photo;
-  bool _turning = false;
+  int _quarterTurns = 0;
+  bool _baking = false;
+  String? _error;
 
-  Future<void> _turn({required bool clockwise}) async {
-    if (_turning) return;
-    setState(() => _turning = true);
-    final turned = await PhotoCaptureService.instance.rotateQuarterTurn(
-      _photo,
-      clockwise: clockwise,
-    );
-    if (!mounted) return;
+  void _turn({required bool clockwise}) {
+    if (_baking) return;
     setState(() {
-      _photo = turned;
-      _turning = false;
-      // Flutter caches a decoded file by path and size, so without this the
-      // old orientation stays on screen.
-      imageCache.clear();
+      _quarterTurns = (_quarterTurns + (clockwise ? 1 : -1)) % 4;
+      _error = null;
     });
+  }
+
+  Future<void> _confirm() async {
+    if (_baking) return;
+    if (_quarterTurns == 0) {
+      Navigator.of(context).pop(widget.photo);
+      return;
+    }
+
+    setState(() {
+      _baking = true;
+      _error = null;
+    });
+
+    try {
+      final upright = await PhotoCaptureService.instance.bakeQuarterTurns(
+        widget.photo,
+        _quarterTurns,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(upright);
+    } catch (e) {
+      debugPrint('Rotate: could not turn the page: $e');
+      if (!mounted) return;
+      // Said out loud rather than swallowed. Handing back the sideways photo
+      // without a word is what made this impossible to report.
+      setState(() {
+        _baking = false;
+        _error = 'ছবিটি ঘোরানো গেল না। অন্যভাবে তুলে বা গ্যালারি থেকে নিয়ে দেখুন।';
+      });
+    }
   }
 
   @override
@@ -67,12 +97,11 @@ class _PhotoRotateScreenState extends State<PhotoRotateScreen> {
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Center(
-                // contain, never cover: a turned page must stay whole on
-                // screen rather than having its edges cut away.
-                child: Image.file(
-                  _photo,
-                  key: ValueKey(_photo.path),
-                  fit: BoxFit.contain,
+                child: RotatedBox(
+                  quarterTurns: _quarterTurns,
+                  // contain, never cover: a turned page must stay whole on
+                  // screen rather than having its edges cut away.
+                  child: Image.file(widget.photo, fit: BoxFit.contain),
                 ),
               ),
             ),
@@ -83,9 +112,15 @@ class _PhotoRotateScreenState extends State<PhotoRotateScreen> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Column(
                 children: [
-                  const Text(
-                    'পাতাটা সোজা করে নিন, তারপর কেটে নেবেন',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  Text(
+                    _error ?? 'পাতাটা সোজা করে নিন, তারপর কেটে নেবেন',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _error == null
+                          ? Colors.white70
+                          : Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -93,14 +128,14 @@ class _PhotoRotateScreenState extends State<PhotoRotateScreen> {
                     children: [
                       IconButton.filledTonal(
                         tooltip: 'বাঁয়ে ঘোরান',
-                        onPressed: _turning
+                        onPressed: _baking
                             ? null
                             : () => _turn(clockwise: false),
                         icon: const Icon(Icons.rotate_left_rounded),
                       ),
                       IconButton.filledTonal(
                         tooltip: 'ডানে ঘোরান',
-                        onPressed: _turning
+                        onPressed: _baking
                             ? null
                             : () => _turn(clockwise: true),
                         icon: const Icon(Icons.rotate_right_rounded),
@@ -111,11 +146,15 @@ class _PhotoRotateScreenState extends State<PhotoRotateScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: _turning
-                          ? null
-                          : () => Navigator.of(context).pop(_photo),
-                      icon: const Icon(Icons.crop_rounded, size: 18),
-                      label: const Text('এবার কেটে নিন'),
+                      onPressed: _baking ? null : _confirm,
+                      icon: _baking
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.crop_rounded, size: 18),
+                      label: Text(_baking ? 'ঘোরানো হচ্ছে…' : 'এবার কেটে নিন'),
                     ),
                   ),
                 ],

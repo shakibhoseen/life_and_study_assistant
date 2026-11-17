@@ -5,6 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:life_and_study_assistant/core/services/media/photo_rotate_screen.dart';
 
+/// Standing a photographed page upright.
+///
+/// The contract changed after the button was found doing nothing at all on a
+/// real phone: turning used to re-encode the file on every tap, which on a
+/// full-size photo froze the screen for seconds and, for a format the Dart
+/// decoder could not read, failed silently for ever. Turning is now free and
+/// instant, and the pixels move once, when the user goes on to the crop.
 void main() {
   late Directory tmp;
   late File sideways;
@@ -22,37 +29,53 @@ void main() {
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
   });
 
-  Future<void> open(WidgetTester tester) async {
+  File? popped;
+
+  Future<void> open(WidgetTester tester, {File? photo}) async {
+    popped = null;
     await tester.pumpWidget(
-      MaterialApp(home: PhotoRotateScreen(photo: sideways)),
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                popped = await PhotoRotateScreen.show(
+                  context,
+                  photo ?? sideways,
+                );
+              },
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
     );
+    await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
   }
 
-  /// Taps a turn and lets it finish.
-  ///
-  /// Rotation reads and writes a real file, and a widget test's fake async
-  /// never runs that, so the tap has to happen inside runAsync or the screen
-  /// keeps showing the photo it started with.
+  int shownTurns(WidgetTester tester) =>
+      tester.widget<RotatedBox>(find.byType(RotatedBox).first).quarterTurns;
+
   File shownFile(WidgetTester tester) {
     final image = tester.widget<Image>(find.byType(Image).first);
     return (image.image as FileImage).file;
   }
 
-  Future<void> turn(WidgetTester tester, IconData icon) async {
-    final before = shownFile(tester).path;
+  /// Taps the confirm button and lets the real codec work finish.
+  ///
+  /// Baking reads and writes a real file through Skia, which a widget test's
+  /// fake async never runs, so it has to happen inside runAsync.
+  Future<void> confirm(WidgetTester tester) async {
     await tester.runAsync(() async {
-      await tester.tap(find.byIcon(icon));
-      // Waits for the work rather than for a fixed time: a decode, rotate
-      // and encode takes as long as the machine takes, and a fixed delay
-      // that is long enough alone is not long enough under a full suite.
+      await tester.tap(find.byType(FilledButton));
       final deadline = DateTime.now().add(const Duration(seconds: 10));
       while (DateTime.now().isBefore(deadline)) {
         await Future<void>.delayed(const Duration(milliseconds: 20));
         await tester.pump();
-        if (shownFile(tester).path != before) return;
+        if (popped != null) return;
+        if (find.textContaining('ঘোরানো গেল না').evaluate().isNotEmpty) return;
       }
-      fail('the photo did not change after $before');
     });
     await tester.pumpAndSettle();
   }
@@ -73,46 +96,95 @@ void main() {
     expect(find.text('এবার কেটে নিন'), findsOneWidget);
   });
 
-  testWidgets('a turn stands the page upright and stays on screen', (
-    tester,
-  ) async {
+  testWidgets('a turn shows immediately and touches no file', (tester) async {
     await open(tester);
+    expect(shownTurns(tester), 0);
 
-    await turn(tester, Icons.rotate_right_rounded);
+    await tester.tap(find.byIcon(Icons.rotate_right_rounded));
+    await tester.pump();
 
-    // No overflow: a 400x100 page becoming 100x400 must still fit.
+    // Instant, with no decode: this is the whole point of the redesign.
+    expect(shownTurns(tester), 1);
+    expect(shownFile(tester).path, sideways.path);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a turn replaces the photo on screen with the upright one', (
-    tester,
-  ) async {
-    // Awaiting the screen's own result deadlocks here: the caller resumes in
-    // a microtask that only runs on a later pump. What matters is the same
-    // either way — the file the screen is holding, which is what it hands on.
+  testWidgets('turning left goes the other way', (tester) async {
     await open(tester);
 
-    await turn(tester, Icons.rotate_right_rounded);
+    await tester.tap(find.byIcon(Icons.rotate_left_rounded));
+    await tester.pump();
 
-    final file = shownFile(tester);
-    final result = img.decodeImage(file.readAsBytesSync())!;
+    // -1 is kept in range rather than going negative, which RotatedBox
+    // would otherwise render as a turn in the wrong direction.
+    expect(shownTurns(tester), 3);
+  });
 
+  testWidgets('four turns come back to where it started', (tester) async {
+    await open(tester);
+
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(find.byIcon(Icons.rotate_right_rounded));
+      await tester.pump();
+    }
+
+    expect(shownTurns(tester), 0);
+  });
+
+  testWidgets('going on without turning hands back the very same file', (
+    tester,
+  ) async {
+    await open(tester);
+    await confirm(tester);
+
+    // No turn means no re-encode: the photo must not be touched at all.
+    expect(popped!.path, sideways.path);
+  });
+
+  testWidgets('going on after a turn hands back an upright file', (
+    tester,
+  ) async {
+    await open(tester);
+
+    await tester.tap(find.byIcon(Icons.rotate_right_rounded));
+    await tester.pump();
+    await confirm(tester);
+
+    expect(popped, isNotNull);
+    expect(popped!.path, isNot(sideways.path));
+
+    final result = img.decodeImage(popped!.readAsBytesSync())!;
     expect(result.width, 100);
     expect(result.height, 400);
-    expect(file.path, isNot(sideways.path));
   });
 
-  testWidgets('turning twice keeps turning the newest photo', (tester) async {
+  testWidgets('two turns put it back to landscape', (tester) async {
     await open(tester);
 
-    await turn(tester, Icons.rotate_right_rounded);
-    await turn(tester, Icons.rotate_right_rounded);
+    await tester.tap(find.byIcon(Icons.rotate_right_rounded));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.rotate_right_rounded));
+    await tester.pump();
+    await confirm(tester);
 
-    final result = img.decodeImage(shownFile(tester).readAsBytesSync())!;
-
-    // Two quarter turns: back to landscape, upside down.
+    final result = img.decodeImage(popped!.readAsBytesSync())!;
     expect(result.width, 400);
     expect(result.height, 100);
-    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a photo that cannot be turned says so', (tester) async {
+    final broken = File('${tmp.path}/not-an-image.jpg')
+      ..writeAsStringSync('this is not a photograph');
+
+    await open(tester, photo: broken);
+
+    await tester.tap(find.byIcon(Icons.rotate_right_rounded));
+    await tester.pump();
+    await confirm(tester);
+
+    // The old code handed back the sideways original without a word, which
+    // is exactly why a broken rotate went unreported for so long.
+    expect(popped, isNull);
+    expect(find.textContaining('ঘোরানো গেল না'), findsOneWidget);
   });
 }

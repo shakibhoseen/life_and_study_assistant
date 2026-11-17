@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -126,8 +128,74 @@ class PhotoCaptureService {
   /// degree or two. A page lying on its side needs a quarter turn, which is
   /// one tap here and is applied to the whole photo before any trimming.
   ///
+  /// Turns a photo by whole quarter-turns using the platform's own decoder.
+  ///
+  /// [rotateQuarterTurn] below does the same thing with the `image` package,
+  /// which is pure Dart: it is slow enough on a full-size phone photo to
+  /// freeze the screen for many seconds, and it returns null outright for
+  /// anything it cannot parse — a Samsung gallery HEIC, most commonly. Both
+  /// failures look identical from the outside, which is how a rotate button
+  /// came to do nothing at all with no error anywhere.
+  ///
+  /// `dart:ui` hands the work to Skia, so this is fast and reads whatever
+  /// Android can already display on screen. It throws rather than quietly
+  /// handing back the original, because a rotation that silently does
+  /// nothing is the bug this replaces.
+  Future<File> bakeQuarterTurns(File photo, int quarterTurns) async {
+    final turns = quarterTurns % 4;
+    if (turns == 0) return photo;
+
+    final bytes = await photo.readAsBytes();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final source = frame.image;
+
+    try {
+      final swaps = turns.isOdd;
+      final width = swaps ? source.height : source.width;
+      final height = swaps ? source.width : source.height;
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      canvas.translate(width / 2, height / 2);
+      canvas.rotate(turns * math.pi / 2);
+      canvas.translate(-source.width / 2, -source.height / 2);
+      canvas.drawImage(source, Offset.zero, Paint());
+
+      final picture = recorder.endRecording();
+      try {
+        final turned = await picture.toImage(width, height);
+        try {
+          final data = await turned.toByteData(
+            format: ui.ImageByteFormat.png,
+          );
+          if (data == null) {
+            throw StateError('the turned page could not be encoded');
+          }
+
+          // A new path each time: writing over the source leaves the old
+          // image cached by anything already showing it.
+          final dir = photo.parent.path;
+          final stamp = DateTime.now().microsecondsSinceEpoch;
+          final out = File('$dir/rot_$stamp.png');
+          await out.writeAsBytes(data.buffer.asUint8List(), flush: true);
+          return out;
+        } finally {
+          turned.dispose();
+        }
+      } finally {
+        picture.dispose();
+      }
+    } finally {
+      source.dispose();
+    }
+  }
+
   /// Returns the rotated file, or the original when the image cannot be
   /// decoded — a photo is never lost to a failed rotation.
+  ///
+  /// Prefer [bakeQuarterTurns]: this one cannot read every format the phone
+  /// can show, and on a full-size photo it blocks the isolate for seconds.
   Future<File> rotateQuarterTurn(File photo, {bool clockwise = true}) async {
     try {
       final bytes = await photo.readAsBytes();
