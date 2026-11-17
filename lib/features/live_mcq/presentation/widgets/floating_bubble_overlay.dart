@@ -13,6 +13,13 @@ import 'package:overlay_bridge/overlay_bridge.dart';
 
 import '../../../../core/services/voice/device_dictation_service.dart';
 import '../../../../core/services/voice/voice_recording_service.dart';
+import '../../../../core/services/reference/reference_service.dart';
+import '../../../reference/presentation/widgets/detail_body.dart';
+
+enum OverlayMode {
+  mistake,
+  formula,
+}
 
 class FloatingBubbleOverlay extends StatefulWidget {
   const FloatingBubbleOverlay({super.key});
@@ -53,11 +60,21 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
   int _pendingCount = 0;
   String? _statusMessage;
 
+  // Formula Peek & Law states
+  OverlayMode _mode = OverlayMode.mistake;
+  final TextEditingController _formulaSearchController = TextEditingController();
+  List<ReferenceHit> _formulaHits = [];
+  ReferenceHit? _selectedFormulaHit;
+  bool _isSearchingFormulas = false;
+  late final AppDatabase _db = AppDatabase();
+  bool _referenceSeeded = false;
+
   @override
   void initState() {
     super.initState();
     _isExpanded = false;
     unawaited(_refreshPendingCount());
+    unawaited(_ensureReferenceSeeded());
     WidgetsBinding.instance.addObserver(this);
     _overlaySub = FlutterOverlayWindow.overlayListener.listen((data) async {
       if (data == 'reset_to_collapsed' || data == 'reopen') {
@@ -118,6 +135,8 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
     // gone, and both services below are singletons in that same engine.
     unawaited(_releaseMic());
     _typedController.dispose();
+    _formulaSearchController.dispose();
+    unawaited(_db.close());
     super.dispose();
   }
 
@@ -153,6 +172,54 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
       await MicForegroundService.instance.releaseAll();
     } catch (e) {
       debugPrint('Overlay: releasing the microphone service failed: $e');
+    }
+  }
+
+  /// Ensures bundled reference tables (math formulas, units, measurements) are seeded in SQLite
+  Future<void> _ensureReferenceSeeded() async {
+    if (_referenceSeeded) return;
+    try {
+      final sheets = await ReferenceService.instance.sheets(_db);
+      if (sheets.isEmpty) {
+        await ReferenceService.instance.seed(_db);
+      }
+      _referenceSeeded = true;
+    } catch (e) {
+      debugPrint('Overlay: reference seed check failed: $e');
+    }
+  }
+
+  /// Searches formulas across all reference tables in SQLite
+  Future<void> _searchFormulas(String query) async {
+    await _ensureReferenceSeeded();
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _formulaHits = [];
+          _isSearchingFormulas = false;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _isSearchingFormulas = true;
+    });
+
+    try {
+      final hits = await ReferenceService.instance.search(_db, trimmed);
+      if (!mounted) return;
+      setState(() {
+        _formulaHits = hits;
+        _isSearchingFormulas = false;
+      });
+    } catch (e) {
+      debugPrint('Overlay: formula search failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _isSearchingFormulas = false;
+      });
     }
   }
 
@@ -659,8 +726,12 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
 
   /// Expanded glassmorphic card over LiveMCQ
   Widget _buildExpandedCard() {
+    final isFormulaMode = _mode == OverlayMode.formula;
     return Container(
-      constraints: const BoxConstraints(maxWidth: 340, minWidth: 280),
+      constraints: BoxConstraints(
+        maxWidth: isFormulaMode ? 380 : 340,
+        minWidth: 280,
+      ),
       padding: const EdgeInsets.all(FluentSpacing.l),
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A).withValues(alpha: 0.96),
@@ -673,6 +744,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Top bar
           Row(
@@ -680,12 +752,16 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
               Container(
                 padding: const EdgeInsets.all(FluentSpacing.s),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                  color: isFormulaMode
+                      ? const Color(0xFF6366F1).withValues(alpha: 0.2)
+                      : const Color(0xFF10B981).withValues(alpha: 0.2),
                   borderRadius: FluentRadius.controlBorder,
                 ),
-                child: const Icon(
-                  Icons.mic,
-                  color: Color(0xFF10B981),
+                child: Icon(
+                  isFormulaMode ? Icons.functions : Icons.mic,
+                  color: isFormulaMode
+                      ? const Color(0xFF818CF8)
+                      : const Color(0xFF10B981),
                   size: 18,
                 ),
               ),
@@ -695,16 +771,20 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'LiveMCQ Voice Note',
+                      isFormulaMode ? 'কুইক সূত্র ও Law' : 'LiveMCQ Voice Note',
                       style: FluentType.bodyStrong.copyWith(
                         color: Colors.white,
                       ),
                     ),
                     Text(
-                      'ভুল হওয়া প্রশ্ন মুখে বলুন — জেমিনি সেভ করবে',
+                      isFormulaMode
+                          ? 'সূত্র, প্রমাণ ও ডায়াগ্রাম সাথে সাথে দেখুন'
+                          : 'ভুল হওয়া প্রশ্ন মুখে বলুন — জেমিনি সেভ করবে',
                       style: FluentType.caption.copyWith(
                         color: Colors.white54,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -748,6 +828,7 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
                   // the screen, and anything still listening would be left
                   // running with nothing to turn it off.
                   await _releaseMic();
+                  await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
                   await FlutterOverlayWindow.resizeOverlay(110, 110, true);
                   await FlutterOverlayWindow.closeOverlay();
                 },
@@ -758,14 +839,130 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
           ),
           const SizedBox(height: FluentSpacing.m),
 
-          // Here for as long as anything is waiting, whatever else the card
-          // happens to be showing. It used to sit in the result card, which
-          // meant it vanished the moment the user tapped "Record Another" —
-          // and after dictating three questions in a row there was no way
-          // into the app left at all.
-          if (_pendingCount > 0) ...[
-            InkWell(
-              onTap: _continueInApp,
+          // Mode Switcher Tabs
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: FluentRadius.controlBorder,
+              border: Border.all(color: const Color(0xFF334155)),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      if (_mode != OverlayMode.mistake) {
+                        await FlutterOverlayWindow.updateFlag(OverlayFlag.defaultFlag);
+                        setState(() {
+                          _mode = OverlayMode.mistake;
+                        });
+                      }
+                    },
+                    borderRadius: FluentRadius.controlBorder,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _mode == OverlayMode.mistake
+                            ? const Color(0xFF10B981)
+                            : Colors.transparent,
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.mic,
+                            size: 14,
+                            color: _mode == OverlayMode.mistake
+                                ? Colors.white
+                                : Colors.white70,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'ভুল খাতা',
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: _mode == OverlayMode.mistake
+                                  ? Colors.white
+                                  : Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      if (_mode != OverlayMode.formula) {
+                        setState(() {
+                          _mode = OverlayMode.formula;
+                        });
+                        if (_formulaSearchController.text.trim().isNotEmpty) {
+                          _searchFormulas(_formulaSearchController.text);
+                        }
+                      }
+                    },
+                    borderRadius: FluentRadius.controlBorder,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _mode == OverlayMode.formula
+                            ? const Color(0xFF6366F1)
+                            : Colors.transparent,
+                        borderRadius: FluentRadius.controlBorder,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.functions,
+                            size: 14,
+                            color: _mode == OverlayMode.formula
+                                ? Colors.white
+                                : Colors.white70,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'সূত্র ও Law',
+                            style: FluentType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: _mode == OverlayMode.formula
+                                  ? Colors.white
+                                  : Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: FluentSpacing.m),
+
+          if (_mode == OverlayMode.mistake)
+            _buildMistakeSection()
+          else if (_selectedFormulaHit != null)
+            _buildFormulaDetailView(_selectedFormulaHit!)
+          else
+            _buildFormulaSearchView(),
+        ],
+      ),
+    );
+  }
+
+  /// Voice note mistake dictation & transcription section
+  Widget _buildMistakeSection() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_pendingCount > 0) ...[
+          InkWell(
+            onTap: _continueInApp,
               borderRadius: FluentRadius.controlBorder,
               child: Container(
                 width: double.infinity,
@@ -1119,7 +1316,414 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
             ),
           ],
         ],
-      ),
+      );
+  }
+
+  /// Search interface for formula peek
+  Widget _buildFormulaSearchView() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Search bar
+        TextField(
+          controller: _formulaSearchController,
+          style: FluentType.body.copyWith(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'খুঁজুন — বৃত্ত, পিথাগোরাস, ত্বরণ...',
+            hintStyle: FluentType.caption.copyWith(color: Colors.white38),
+            prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),
+            suffixIcon: _formulaSearchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.white70, size: 18),
+                    onPressed: () {
+                      _formulaSearchController.clear();
+                      _searchFormulas('');
+                    },
+                  )
+                : null,
+            filled: true,
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(
+              borderRadius: FluentRadius.controlBorder,
+              borderSide: BorderSide.none,
+            ),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: FluentSpacing.m,
+              vertical: FluentSpacing.s,
+            ),
+          ),
+          onTap: () async {
+            await FlutterOverlayWindow.updateFlag(OverlayFlag.focusPointer);
+          },
+          onChanged: (text) {
+            _searchFormulas(text);
+          },
+        ),
+        const SizedBox(height: FluentSpacing.s),
+
+        // Quick tags when search query is empty
+        if (_formulaSearchController.text.trim().isEmpty) ...[
+          Text(
+            'কুইক সার্চ টপিক:',
+            style: FluentType.caption.copyWith(
+              color: Colors.white54,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: FluentSpacing.xs),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final tag in [
+                'বৃত্ত',
+                'পিথাগোরাস',
+                'ঘনক',
+                'গতি',
+                'ত্বরণ',
+                'মাইল',
+                'ত্রিভুজ',
+              ])
+                InkWell(
+                  onTap: () {
+                    _formulaSearchController.text = tag;
+                    _searchFormulas(tag);
+                  },
+                  borderRadius: FluentRadius.controlBorder,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: FluentRadius.controlBorder,
+                      border: Border.all(color: const Color(0xFF334155)),
+                    ),
+                    child: Text(
+                      tag,
+                      style: FluentType.caption.copyWith(
+                        color: const Color(0xFFA5B4FC),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: FluentSpacing.m),
+        ],
+
+        // Loading indicator
+        if (_isSearchingFormulas) ...[
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(FluentSpacing.m),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF6366F1),
+                ),
+              ),
+            ),
+          ),
+        ] else if (_formulaHits.isEmpty &&
+            _formulaSearchController.text.trim().isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.all(FluentSpacing.m),
+            child: Center(
+              child: Text(
+                'কোনো সূত্র মেলেনি',
+                style: FluentType.caption.copyWith(color: Colors.white54),
+              ),
+            ),
+          ),
+        ] else if (_formulaHits.isNotEmpty) ...[
+          Container(
+            constraints: const BoxConstraints(maxHeight: 260),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: _formulaHits.length,
+              separatorBuilder: (_, index) => const SizedBox(height: 6),
+              itemBuilder: (context, index) {
+                final hit = _formulaHits[index];
+                final cells = decodeStringList(hit.row.cellsJson);
+                final hasDetail = (hit.row.detail ?? '').trim().isNotEmpty;
+
+                return InkWell(
+                  onTap: () async {
+                    await FlutterOverlayWindow.updateFlag(
+                      OverlayFlag.defaultFlag,
+                    );
+                    setState(() {
+                      _selectedFormulaHit = hit;
+                    });
+                  },
+                  borderRadius: FluentRadius.controlBorder,
+                  child: Container(
+                    padding: const EdgeInsets.all(FluentSpacing.s),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: FluentRadius.controlBorder,
+                      border: Border.all(
+                        color: hasDetail
+                            ? const Color(0xFF10B981).withValues(alpha: 0.5)
+                            : const Color(0xFF334155),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      hit.sheet.title,
+                                      style: FluentType.caption.copyWith(
+                                        color: const Color(0xFFA5B4FC),
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 11,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (hasDetail) ...[
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        'Law/চিত্র',
+                                        style: FluentType.caption.copyWith(
+                                          color: const Color(0xFF10B981),
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                cells.join('  •  '),
+                                style: FluentType.bodyStrong.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (hit.row.note.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  hit.row.note,
+                                  style: FluentType.caption.copyWith(
+                                    color: Colors.white54,
+                                    fontSize: 10,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: Colors.white38,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Detail view for a selected formula (cells, law explanation, SVG)
+  Widget _buildFormulaDetailView(ReferenceHit hit) {
+    final cells = decodeStringList(hit.row.cellsJson);
+    final columns = decodeStringList(hit.sheet.columnsJson);
+    final hasDetail = (hit.row.detail ?? '').trim().isNotEmpty;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              tooltip: 'তালিকায় ফিরুন',
+              onPressed: () {
+                setState(() {
+                  _selectedFormulaHit = null;
+                });
+              },
+            ),
+            const SizedBox(width: FluentSpacing.s),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hit.sheet.title,
+                    style: FluentType.bodyStrong.copyWith(color: Colors.white),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    hit.sheet.category.isNotEmpty
+                        ? hit.sheet.category
+                        : 'রেফারেন্স টেবিল',
+                    style: FluentType.caption.copyWith(
+                      color: const Color(0xFFA5B4FC),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.open_in_new,
+                color: Color(0xFFA5B4FC),
+                size: 18,
+              ),
+              tooltip: 'অ্যাপে বিস্তারিত দেখুন',
+              onPressed: _continueInApp,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+        const SizedBox(height: FluentSpacing.m),
+
+        // Formula values / Row card
+        Container(
+          padding: const EdgeInsets.all(FluentSpacing.m),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: FluentRadius.cardBorder,
+            border: Border.all(
+              color: const Color(0xFF6366F1).withValues(alpha: 0.4),
+              width: FluentStroke.width,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < cells.length; i++) ...[
+                if (i < columns.length && columns[i].trim().isNotEmpty)
+                  Text(
+                    columns[i],
+                    style: FluentType.caption.copyWith(
+                      color: const Color(0xFFA5B4FC),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                Text(
+                  cells[i],
+                  style: FluentType.bodyStrong.copyWith(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
+                if (i < cells.length - 1)
+                  const Divider(color: Color(0xFF334155), height: 12),
+              ],
+              if (hit.row.note.trim().isNotEmpty) ...[
+                const SizedBox(height: FluentSpacing.xs),
+                Text(
+                  'নোট: ${hit.row.note}',
+                  style: FluentType.caption.copyWith(
+                    color: const Color(0xFFF59E0B),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: FluentSpacing.m),
+
+        // Detail body (Markdown prose + SVG figure)
+        if (hasDetail) ...[
+          Row(
+            children: [
+              const Icon(Icons.auto_stories, color: Color(0xFF10B981), size: 16),
+              const SizedBox(width: FluentSpacing.xs),
+              Text(
+                'ব্যাখ্যা ও উৎপত্তি (Law):',
+                style: FluentType.caption.copyWith(
+                  color: const Color(0xFF10B981),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: FluentSpacing.s),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 280),
+            child: SingleChildScrollView(
+              child: DetailBody(detail: hit.row.detail!),
+            ),
+          ),
+        ] else ...[
+          Container(
+            padding: const EdgeInsets.all(FluentSpacing.m),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: FluentRadius.controlBorder,
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.white38, size: 24),
+                const SizedBox(height: FluentSpacing.xs),
+                Text(
+                  'এই সূত্রে এখনও বিস্তারিত ব্যাখ্যা বা ডায়াগ্রাম যোগ করা হয়নি।',
+                  style: FluentType.caption.copyWith(color: Colors.white60),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: FluentSpacing.xs),
+                Text(
+                  'মূল অ্যাপে রেফারেন্স শীট থেকে এআই দিয়ে ব্যাখ্যা তৈরি করতে পারেন।',
+                  style: FluentType.caption.copyWith(
+                    color: Colors.white38,
+                    fontSize: 11,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
