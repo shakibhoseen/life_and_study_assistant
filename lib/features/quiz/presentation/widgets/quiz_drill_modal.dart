@@ -458,9 +458,62 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
             scorePercentage: percent,
             questions: questionsCompanions,
           );
+      await _recordWeakTopics(ref.read(appDatabaseProvider));
       ref.invalidate(studyStreakProvider);
     } catch (e) {
       debugPrint('Error persisting drill session: $e');
+    }
+  }
+
+  /// Feeds what the user just got wrong into the weak-topics list.
+  ///
+  /// This used to live behind the "save mistakes" button on the results
+  /// screen, which meant finishing a drill and closing it changed nothing:
+  /// no weak topic, and so nothing for the next-action card, the healing
+  /// drill or the widget to work from. The drill was a dead end unless you
+  /// happened to tap one button.
+  ///
+  /// It belongs here because it is a derived signal rather than content: it
+  /// is thresholded in [weakTopicsFromDrill] — at least two asked, at least
+  /// two wrong, more than half — so a single unlucky question cannot brand a
+  /// topic weak. Adding cards to the revision deck is a different matter and
+  /// stays a choice, because that decides what the user gets asked at a bus
+  /// stop.
+  Future<void> _recordWeakTopics(AppDatabase db) async {
+    // Named here so the results screen can say which ones. Marking a topic
+    // weak changes what the app recommends next, and doing that without
+    // telling the user is the quiet kind of change worth avoiding.
+    final weak = weakTopicsFromDrill(
+      tallyByTopic([
+        for (var i = 0; i < _questions.length; i++)
+          if (_userAnswers[i] != null)
+            (
+              subject: (_questions[i].subject ?? '').isEmpty
+                  ? widget.subject
+                  : _questions[i].subject!,
+              topic: widget.topic,
+              // Skipped counts as not knowing it, which is what the weak
+              // list is for. Through isCorrectChoice rather than comparing
+              // the indices: a skipped question on one with no answer key is
+              // -1 against -1, which read as correct.
+              wasWrong: !_questions[i].isCorrectChoice(_userAnswers[i]!),
+            ),
+      ]),
+    );
+
+    for (final topic in weak) {
+      await db.insertWeakTopic(
+        WeakTopicsCompanion.insert(
+          subject: topic.subject,
+          topicName: topic.topic,
+          proficiencyLevel: ProficiencyLevel.weak,
+          notes: Value('ড্রিলে ${topic.asked}টির মধ্যে ${topic.wrong}টি ভুল'),
+        ),
+      );
+    }
+
+    if (weak.isNotEmpty && mounted) {
+      setState(() => _weakTopicsRecorded = weak.map((w) => w.topic).toList());
     }
   }
 
@@ -1492,6 +1545,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
 
   bool _mistakesSaved = false;
 
+  /// Topics this drill just put on the weak list, to say so on the results.
+  List<String> _weakTopicsRecorded = const [];
+
   /// How many questions an AI drill asks for.
   ///
   /// It was fixed at five with no way to change it, which is a short practice
@@ -1607,34 +1663,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
 
     final added = await db.addMistakesToReview(wrong);
 
-    // The weak-topics list and the healing drill built on it were fed by
-    // spoken mistakes, the chat and hand-typed entries — never by what the
-    // user actually gets wrong in a drill.
-    final weak = weakTopicsFromDrill(
-      tallyByTopic([
-        for (var i = 0; i < _questions.length; i++)
-          if (_userAnswers[i] != null)
-            (
-              subject: (_questions[i].subject ?? '').isEmpty
-                  ? widget.subject
-                  : _questions[i].subject!,
-              topic: widget.topic,
-              // Skipped counts as not knowing it, which is what the weak
-              // list is for.
-              wasWrong: _userAnswers[i] != _questions[i].correctIndex,
-            ),
-      ]),
-    );
-    for (final topic in weak) {
-      await db.insertWeakTopic(
-        WeakTopicsCompanion.insert(
-          subject: topic.subject,
-          topicName: topic.topic,
-          proficiencyLevel: ProficiencyLevel.weak,
-          notes: Value('ড্রিলে ${topic.asked}টির মধ্যে ${topic.wrong}টি ভুল'),
-        ),
-      );
-    }
+    // The weak-topics signal is no longer done here: it runs whenever the
+    // drill is saved, button or no button.
+    //
     // Cards are pushed from a queue built at startup, so a new card only
     // reaches the user once that queue is rebuilt.
     await ref
@@ -1645,12 +1676,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          [
-            added == wrong.length
-                ? '$added টি প্রশ্ন কাল থেকে রিভিশনে আসবে'
-                : '$added টি যোগ হলো, বাকিগুলো আগেই ছিল',
-            if (weak.isNotEmpty) '"${weak.first.topic}" দুর্বল তালিকায় গেল',
-          ].join(' · '),
+          added == wrong.length
+              ? '$added টি প্রশ্ন কাল থেকে রিভিশনে আসবে'
+              : '$added টি যোগ হলো, বাকিগুলো আগেই ছিল',
         ),
       ),
     );
@@ -1697,6 +1725,33 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         child: Column(
           children: [
+            // Said out loud, because it happened without being asked for and
+            // it changes what the app recommends next.
+            if (_weakTopicsRecorded.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.flag_outlined,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: FluentSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        '"${_weakTopicsRecorded.first}" দুর্বল তালিকায় গেল',
+                        style: FluentType.caption.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // The point of a drill is that what you got wrong comes back.
             // Until now that loop closed one question at a time, by hand,
             // from the notebook — so in practice it did not close.
