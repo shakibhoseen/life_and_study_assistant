@@ -418,7 +418,10 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
 
       questionsCompanions.add(
         DrillQuestionsCompanion.insert(
-          subject: widget.subject,
+          // The question's own subject when the import knew it. Every row
+          // used to take the subject of whatever screen launched the drill,
+          // so a mixed page of scanned questions all came out as one.
+          subject: (q.subject ?? '').isEmpty ? widget.subject : q.subject!,
           topic: widget.topic,
           questionText: q.questionText,
           optionsJson: jsonEncode(q.options),
@@ -428,6 +431,9 @@ class _QuizDrillModalState extends ConsumerState<QuizDrillModal> {
           explanation: Value(q.explanation),
           isMastered: const Value(false),
           attemptedAt: Value(DateTime.now()),
+          // Read off the page by the OCR, shown on the review card, and
+          // until now thrown away here.
+          sourceExam: Value(q.sourceExam),
         ),
       );
     }

@@ -3641,6 +3641,17 @@ class $DrillQuestionsTable extends DrillQuestions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _sourceExamMeta = const VerificationMeta(
+    'sourceExam',
+  );
+  @override
+  late final GeneratedColumn<String> sourceExam = GeneratedColumn<String>(
+    'source_exam',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3666,6 +3677,7 @@ class $DrillQuestionsTable extends DrillQuestions
     verificationNote,
     verifiedAt,
     mistakeKind,
+    sourceExam,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3876,6 +3888,12 @@ class $DrillQuestionsTable extends DrillQuestions
         ),
       );
     }
+    if (data.containsKey('source_exam')) {
+      context.handle(
+        _sourceExamMeta,
+        sourceExam.isAcceptableOrUnknown(data['source_exam']!, _sourceExamMeta),
+      );
+    }
     return context;
   }
 
@@ -3977,6 +3995,10 @@ class $DrillQuestionsTable extends DrillQuestions
         DriftSqlType.string,
         data['${effectivePrefix}mistake_kind'],
       ),
+      sourceExam: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_exam'],
+      ),
     );
   }
 
@@ -4045,6 +4067,15 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
   /// already one folded row here — so this is the latest reason, which is
   /// the one that decides what to do next.
   final String? mistakeKind;
+
+  /// The exam this question was printed under — "৪৫তম বিসিএস", "প্রাথমিক ২২".
+  ///
+  /// The question-bank OCR has always asked for this and the review card has
+  /// always shown it; it was then dropped on the way to the database, because
+  /// there was nowhere to put it. Which meant the one thing that makes a
+  /// topic genuinely high-yield — how often it has actually been asked —
+  /// could be read off a page and never counted.
+  final String? sourceExam;
   const DrillQuestion({
     required this.id,
     this.drillRecordId,
@@ -4069,6 +4100,7 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
     this.verificationNote,
     this.verifiedAt,
     this.mistakeKind,
+    this.sourceExam,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4115,6 +4147,9 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
     }
     if (!nullToAbsent || mistakeKind != null) {
       map['mistake_kind'] = Variable<String>(mistakeKind);
+    }
+    if (!nullToAbsent || sourceExam != null) {
+      map['source_exam'] = Variable<String>(sourceExam);
     }
     return map;
   }
@@ -4164,6 +4199,9 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
       mistakeKind: mistakeKind == null && nullToAbsent
           ? const Value.absent()
           : Value(mistakeKind),
+      sourceExam: sourceExam == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceExam),
     );
   }
 
@@ -4206,6 +4244,7 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
       verificationNote: serializer.fromJson<String?>(json['verificationNote']),
       verifiedAt: serializer.fromJson<DateTime?>(json['verifiedAt']),
       mistakeKind: serializer.fromJson<String?>(json['mistakeKind']),
+      sourceExam: serializer.fromJson<String?>(json['sourceExam']),
     );
   }
   @override
@@ -4235,6 +4274,7 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
       'verificationNote': serializer.toJson<String?>(verificationNote),
       'verifiedAt': serializer.toJson<DateTime?>(verifiedAt),
       'mistakeKind': serializer.toJson<String?>(mistakeKind),
+      'sourceExam': serializer.toJson<String?>(sourceExam),
     };
   }
 
@@ -4262,6 +4302,7 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
     Value<String?> verificationNote = const Value.absent(),
     Value<DateTime?> verifiedAt = const Value.absent(),
     Value<String?> mistakeKind = const Value.absent(),
+    Value<String?> sourceExam = const Value.absent(),
   }) => DrillQuestion(
     id: id ?? this.id,
     drillRecordId: drillRecordId.present
@@ -4300,6 +4341,7 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
         : this.verificationNote,
     verifiedAt: verifiedAt.present ? verifiedAt.value : this.verifiedAt,
     mistakeKind: mistakeKind.present ? mistakeKind.value : this.mistakeKind,
+    sourceExam: sourceExam.present ? sourceExam.value : this.sourceExam,
   );
   DrillQuestion copyWithCompanion(DrillQuestionsCompanion data) {
     return DrillQuestion(
@@ -4364,6 +4406,9 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
       mistakeKind: data.mistakeKind.present
           ? data.mistakeKind.value
           : this.mistakeKind,
+      sourceExam: data.sourceExam.present
+          ? data.sourceExam.value
+          : this.sourceExam,
     );
   }
 
@@ -4392,7 +4437,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
           ..write('verificationStatus: $verificationStatus, ')
           ..write('verificationNote: $verificationNote, ')
           ..write('verifiedAt: $verifiedAt, ')
-          ..write('mistakeKind: $mistakeKind')
+          ..write('mistakeKind: $mistakeKind, ')
+          ..write('sourceExam: $sourceExam')
           ..write(')'))
         .toString();
   }
@@ -4422,6 +4468,7 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
     verificationNote,
     verifiedAt,
     mistakeKind,
+    sourceExam,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -4449,7 +4496,8 @@ class DrillQuestion extends DataClass implements Insertable<DrillQuestion> {
           other.verificationStatus == this.verificationStatus &&
           other.verificationNote == this.verificationNote &&
           other.verifiedAt == this.verifiedAt &&
-          other.mistakeKind == this.mistakeKind);
+          other.mistakeKind == this.mistakeKind &&
+          other.sourceExam == this.sourceExam);
 }
 
 class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
@@ -4476,6 +4524,7 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
   final Value<String?> verificationNote;
   final Value<DateTime?> verifiedAt;
   final Value<String?> mistakeKind;
+  final Value<String?> sourceExam;
   const DrillQuestionsCompanion({
     this.id = const Value.absent(),
     this.drillRecordId = const Value.absent(),
@@ -4500,6 +4549,7 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
     this.verificationNote = const Value.absent(),
     this.verifiedAt = const Value.absent(),
     this.mistakeKind = const Value.absent(),
+    this.sourceExam = const Value.absent(),
   });
   DrillQuestionsCompanion.insert({
     this.id = const Value.absent(),
@@ -4525,6 +4575,7 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
     this.verificationNote = const Value.absent(),
     this.verifiedAt = const Value.absent(),
     this.mistakeKind = const Value.absent(),
+    this.sourceExam = const Value.absent(),
   }) : subject = Value(subject),
        topic = Value(topic),
        questionText = Value(questionText),
@@ -4556,6 +4607,7 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
     Expression<String>? verificationNote,
     Expression<DateTime>? verifiedAt,
     Expression<String>? mistakeKind,
+    Expression<String>? sourceExam,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4585,6 +4637,7 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
       if (verificationNote != null) 'verification_note': verificationNote,
       if (verifiedAt != null) 'verified_at': verifiedAt,
       if (mistakeKind != null) 'mistake_kind': mistakeKind,
+      if (sourceExam != null) 'source_exam': sourceExam,
     });
   }
 
@@ -4612,6 +4665,7 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
     Value<String?>? verificationNote,
     Value<DateTime?>? verifiedAt,
     Value<String?>? mistakeKind,
+    Value<String?>? sourceExam,
   }) {
     return DrillQuestionsCompanion(
       id: id ?? this.id,
@@ -4637,6 +4691,7 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
       verificationNote: verificationNote ?? this.verificationNote,
       verifiedAt: verifiedAt ?? this.verifiedAt,
       mistakeKind: mistakeKind ?? this.mistakeKind,
+      sourceExam: sourceExam ?? this.sourceExam,
     );
   }
 
@@ -4716,6 +4771,9 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
     if (mistakeKind.present) {
       map['mistake_kind'] = Variable<String>(mistakeKind.value);
     }
+    if (sourceExam.present) {
+      map['source_exam'] = Variable<String>(sourceExam.value);
+    }
     return map;
   }
 
@@ -4744,7 +4802,8 @@ class DrillQuestionsCompanion extends UpdateCompanion<DrillQuestion> {
           ..write('verificationStatus: $verificationStatus, ')
           ..write('verificationNote: $verificationNote, ')
           ..write('verifiedAt: $verifiedAt, ')
-          ..write('mistakeKind: $mistakeKind')
+          ..write('mistakeKind: $mistakeKind, ')
+          ..write('sourceExam: $sourceExam')
           ..write(')'))
         .toString();
   }
@@ -9868,6 +9927,7 @@ typedef $$DrillQuestionsTableCreateCompanionBuilder =
       Value<String?> verificationNote,
       Value<DateTime?> verifiedAt,
       Value<String?> mistakeKind,
+      Value<String?> sourceExam,
     });
 typedef $$DrillQuestionsTableUpdateCompanionBuilder =
     DrillQuestionsCompanion Function({
@@ -9894,6 +9954,7 @@ typedef $$DrillQuestionsTableUpdateCompanionBuilder =
       Value<String?> verificationNote,
       Value<DateTime?> verifiedAt,
       Value<String?> mistakeKind,
+      Value<String?> sourceExam,
     });
 
 class $$DrillQuestionsTableFilterComposer
@@ -10017,6 +10078,11 @@ class $$DrillQuestionsTableFilterComposer
 
   ColumnFilters<String> get mistakeKind => $composableBuilder(
     column: $table.mistakeKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceExam => $composableBuilder(
+    column: $table.sourceExam,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -10144,6 +10210,11 @@ class $$DrillQuestionsTableOrderingComposer
     column: $table.mistakeKind,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get sourceExam => $composableBuilder(
+    column: $table.sourceExam,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DrillQuestionsTableAnnotationComposer
@@ -10261,6 +10332,11 @@ class $$DrillQuestionsTableAnnotationComposer
     column: $table.mistakeKind,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get sourceExam => $composableBuilder(
+    column: $table.sourceExam,
+    builder: (column) => column,
+  );
 }
 
 class $$DrillQuestionsTableTableManager
@@ -10319,6 +10395,7 @@ class $$DrillQuestionsTableTableManager
                 Value<String?> verificationNote = const Value.absent(),
                 Value<DateTime?> verifiedAt = const Value.absent(),
                 Value<String?> mistakeKind = const Value.absent(),
+                Value<String?> sourceExam = const Value.absent(),
               }) => DrillQuestionsCompanion(
                 id: id,
                 drillRecordId: drillRecordId,
@@ -10343,6 +10420,7 @@ class $$DrillQuestionsTableTableManager
                 verificationNote: verificationNote,
                 verifiedAt: verifiedAt,
                 mistakeKind: mistakeKind,
+                sourceExam: sourceExam,
               ),
           createCompanionCallback:
               ({
@@ -10369,6 +10447,7 @@ class $$DrillQuestionsTableTableManager
                 Value<String?> verificationNote = const Value.absent(),
                 Value<DateTime?> verifiedAt = const Value.absent(),
                 Value<String?> mistakeKind = const Value.absent(),
+                Value<String?> sourceExam = const Value.absent(),
               }) => DrillQuestionsCompanion.insert(
                 id: id,
                 drillRecordId: drillRecordId,
@@ -10393,6 +10472,7 @@ class $$DrillQuestionsTableTableManager
                 verificationNote: verificationNote,
                 verifiedAt: verifiedAt,
                 mistakeKind: mistakeKind,
+                sourceExam: sourceExam,
               ),
           withReferenceMapper: (p0) => p0
               .map(

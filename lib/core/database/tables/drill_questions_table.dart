@@ -91,4 +91,13 @@ class DrillQuestions extends Table {
   /// already one folded row here — so this is the latest reason, which is
   /// the one that decides what to do next.
   TextColumn get mistakeKind => text().nullable()();
+
+  /// The exam this question was printed under — "৪৫তম বিসিএস", "প্রাথমিক ২২".
+  ///
+  /// The question-bank OCR has always asked for this and the review card has
+  /// always shown it; it was then dropped on the way to the database, because
+  /// there was nowhere to put it. Which meant the one thing that makes a
+  /// topic genuinely high-yield — how often it has actually been asked —
+  /// could be read off a page and never counted.
+  TextColumn get sourceExam => text().nullable()();
 }

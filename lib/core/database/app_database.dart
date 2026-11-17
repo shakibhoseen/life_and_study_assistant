@@ -21,6 +21,7 @@ import 'tables/syllabus_tracks_table.dart';
 import 'tables/weak_topics_table.dart';
 import '../data/confusable_pairs.dart';
 import '../data/mistake_kind.dart';
+import '../data/topic_frequency.dart';
 import '../data/study_data_cleanup.dart';
 
 part 'app_database.g.dart';
@@ -47,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'life_and_study_assistant');
@@ -237,6 +238,20 @@ class AppDatabase extends _$AppDatabase {
             .toSet();
         if (!existing.contains('mistake_kind')) {
           await m.addColumn(drillQuestions, drillQuestions.mistakeKind);
+        }
+      }
+      if (from < 20) {
+        // Which exam the question was printed under. Nullable: everything
+        // already in the bank was imported before this was kept, and there
+        // is no way to recover it after the fact.
+        final columns = await customSelect(
+          'PRAGMA table_info(drill_questions);',
+        ).get();
+        final existing = columns
+            .map((row) => row.data['name'] as String)
+            .toSet();
+        if (!existing.contains('source_exam')) {
+          await m.addColumn(drillQuestions, drillQuestions.sourceExam);
         }
       }
     },
@@ -2107,6 +2122,54 @@ class AppDatabase extends _$AppDatabase {
     }
 
     return findConfusablePairs(evidence);
+  }
+
+  /// Topics ranked by how often they have actually been asked.
+  ///
+  /// This is what "high-yield" is supposed to mean, and until the source
+  /// exam was kept it could only be guessed at. A topic that shows up in
+  /// four past papers is worth more of an evening than one that shows up in
+  /// one, whatever any syllabus weighting says.
+  ///
+  /// Only questions carrying a source exam count. Everything scanned before
+  /// the column existed has none, so a thin list means a thin import rather
+  /// than an easy syllabus — which is why the count of distinct exams is
+  /// reported alongside.
+  Future<List<TopicFrequency>> getTopicFrequency({int limit = 10}) async {
+    final rows = await (select(
+      drillQuestions,
+    )..where((t) => t.sourceExam.isNotNull())).get();
+
+    final byTopic = <String, Map<String, int>>{};
+    for (final row in rows) {
+      final exam = (row.sourceExam ?? '').trim();
+      final topic = row.topic.trim();
+      if (exam.isEmpty || topic.isEmpty) continue;
+      final exams = byTopic.putIfAbsent(topic, () => <String, int>{});
+      exams[exam] = (exams[exam] ?? 0) + 1;
+    }
+
+    final out = <TopicFrequency>[];
+    for (final entry in byTopic.entries) {
+      final exams = entry.value.keys.toList()..sort();
+      out.add(
+        TopicFrequency(
+          topic: entry.key,
+          exams: exams,
+          questions: entry.value.values.fold(0, (a, b) => a + b),
+        ),
+      );
+    }
+
+    out.sort((a, b) {
+      // By how many different papers it turned up in, not how many questions
+      // were scanned: scanning one paper twice must not promote its topics.
+      final byExams = b.exams.length.compareTo(a.exams.length);
+      if (byExams != 0) return byExams;
+      final byQuestions = b.questions.compareTo(a.questions);
+      return byQuestions != 0 ? byQuestions : a.topic.compareTo(b.topic);
+    });
+    return out.take(limit).toList();
   }
 
   Future<int> deleteDrillQuestion(int id) {

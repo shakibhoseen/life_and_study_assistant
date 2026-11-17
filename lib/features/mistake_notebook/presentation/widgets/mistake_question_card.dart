@@ -605,6 +605,32 @@ class MistakeQuestionCard extends ConsumerWidget {
               const SizedBox(height: FluentSpacing.s),
             ],
 
+            // Which paper it came from, when the import knew. Worth seeing
+            // on the question itself: a mistake on something that has been
+            // asked three times is not the same mistake as one on a topic
+            // that has been asked once.
+            if ((dq.sourceExam ?? '').trim().isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(
+                    Icons.history_edu_outlined,
+                    size: 14,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: FluentSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      dq.sourceExam!.trim(),
+                      style: FluentType.caption.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: FluentSpacing.s),
+            ],
+
             // Why it went wrong — asked here, where the question is still
             // in front of the user, rather than on a screen they would have
             // to go and open.
