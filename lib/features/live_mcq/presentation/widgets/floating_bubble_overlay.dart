@@ -96,6 +96,18 @@ class _FloatingBubbleOverlayState extends State<FloatingBubbleOverlay>
           });
           WidgetsBinding.instance.scheduleFrame();
         }
+      } else if (data == 'mode_formula') {
+        if (mounted) {
+          setState(() {
+            _mode = OverlayMode.formula;
+          });
+        }
+      } else if (data == 'mode_mistake') {
+        if (mounted) {
+          setState(() {
+            _mode = OverlayMode.mistake;
+          });
+        }
       }
     });
   }

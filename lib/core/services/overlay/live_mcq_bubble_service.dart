@@ -61,10 +61,10 @@ class LiveMcqBubbleService {
     }
   }
 
-  /// Launch the floating bubble over LiveMCQ.
+  /// Launch the floating bubble over LiveMCQ or other study apps.
   /// Checks and requests both Overlay (draw over apps) and Microphone permissions
   /// in the foreground activity before starting the overlay service.
-  Future<BubbleLaunchResult> startBubble() async {
+  Future<BubbleLaunchResult> startBubble({String? initialMode}) async {
     // 1. Verify / Request Overlay permission
     final hasPerm = await checkPermission();
     if (!hasPerm) {
@@ -119,6 +119,12 @@ class LiveMcqBubbleService {
       } catch (_) {}
 
       _isBubbleRunning = true;
+      if (initialMode != null) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        try {
+          await FlutterOverlayWindow.shareData(initialMode);
+        } catch (_) {}
+      }
       return BubbleLaunchResult.success;
     } catch (e) {
       debugPrint('Error starting overlay bubble: $e');

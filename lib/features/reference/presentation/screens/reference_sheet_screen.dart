@@ -7,6 +7,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/data/table_drill.dart';
 import '../../../../core/services/ai/models/quiz_question.dart';
 import '../../../../core/services/reference/reference_service.dart';
+import '../../../../core/services/overlay/live_mcq_bubble_service.dart';
 import '../../../../features/quiz/presentation/widgets/quiz_drill_modal.dart';
 import '../../../../core/theme/fluent_tokens.dart';
 import '../providers/reference_provider.dart';
@@ -102,6 +103,34 @@ class ReferenceSheetScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(async.value?.sheet.title ?? 'টেবিল'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_in_picture_alt_outlined),
+            tooltip: 'ফ্লোটিং সূত্র বাবল',
+            onPressed: () async {
+              final result = await LiveMcqBubbleService.instance.startBubble(
+                initialMode: 'mode_formula',
+              );
+              if (!context.mounted) return;
+              if (result == BubbleLaunchResult.success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'ফ্লোটিং সূত্র বাবল চালু হয়েছে! স্ক্রিনের কোণায় চাপ দিয়ে সূত্র খুঁজুন।',
+                    ),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              } else if (result == BubbleLaunchResult.overlayPermissionDenied) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'অন্য অ্যাপের ওপর দেখানোর অনুমতি (Overlay Permission) দিন।',
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
           if (async.value?.sheet.isCustom == true)
             IconButton(
               icon: const Icon(Icons.delete_outline),
