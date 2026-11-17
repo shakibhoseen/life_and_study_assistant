@@ -16,6 +16,7 @@ import 'ai_mistake_explainer_sheet.dart';
 import 'save_to_flashcard_sheet.dart';
 import 'edit_question_dialog.dart';
 import '../../../../core/database/database_provider.dart';
+import 'mistake_kind_chips.dart';
 
 /// The status palette for this feature. One value each, picked to stay
 /// readable on both the light and the dark card surface, so "right", "wrong"
@@ -603,6 +604,12 @@ class MistakeQuestionCard extends ConsumerWidget {
               ),
               const SizedBox(height: FluentSpacing.s),
             ],
+
+            // Why it went wrong — asked here, where the question is still
+            // in front of the user, rather than on a screen they would have
+            // to go and open.
+            MistakeKindChips(dq: dq),
+            const SizedBox(height: FluentSpacing.s),
 
             // Action Toolbar at Bottom of Card
             Row(

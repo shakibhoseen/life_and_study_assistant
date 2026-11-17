@@ -16,6 +16,7 @@ import '../widgets/mistake_question_card.dart';
 import '../widgets/nightly_review_modal.dart';
 import '../../../../core/utils/option_label.dart';
 import '../../../quiz/domain/external_audit_brief.dart';
+import '../widgets/mistake_pattern_card.dart';
 
 class MistakeNotebookScreen extends ConsumerStatefulWidget {
   final String? initialSubjectFolder;
@@ -283,6 +284,11 @@ class _MistakeNotebookScreenState extends ConsumerState<MistakeNotebookScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 0. What kind of wrong this person goes — above the counts,
+          // because "I misread questions" changes tomorrow and "ভুল ৬টি"
+          // does not.
+          const MistakePatternCard(),
+
           // 1. Mastery Overview Card
           MasteryOverviewCard(
             total: totalMistakes,

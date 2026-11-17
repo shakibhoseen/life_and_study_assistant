@@ -79,4 +79,16 @@ class DrillQuestions extends Table {
   TextColumn get verificationStatus => text().nullable()();
   TextColumn get verificationNote => text().nullable()();
   DateTimeColumn get verifiedAt => dateTime().nullable()();
+
+  /// Why this one was got wrong, in the user's own judgement.
+  ///
+  /// Stored as a [MistakeKind] name rather than an enum column, so a build
+  /// that no longer has a kind reads it as untagged instead of throwing on
+  /// every row. Null means nobody has said yet, which is most of them: the
+  /// tagging is optional and the pattern screen says how thin it is.
+  ///
+  /// It sits on the question rather than on an attempt because a question is
+  /// already one folded row here — so this is the latest reason, which is
+  /// the one that decides what to do next.
+  TextColumn get mistakeKind => text().nullable()();
 }

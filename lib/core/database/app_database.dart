@@ -19,6 +19,7 @@ import 'tables/syllabus_nodes_table.dart';
 import 'tables/syllabus_progress_table.dart';
 import 'tables/syllabus_tracks_table.dart';
 import 'tables/weak_topics_table.dart';
+import '../data/mistake_kind.dart';
 import '../data/study_data_cleanup.dart';
 
 part 'app_database.g.dart';
@@ -45,7 +46,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'life_and_study_assistant');
@@ -222,6 +223,20 @@ class AppDatabase extends _$AppDatabase {
         // not have.
         await m.createTable(referenceSheets);
         await m.createTable(referenceRows);
+      }
+      if (from < 19) {
+        // Why a question was got wrong, not just that it was. Nullable and
+        // added in place: every existing mistake reads as untagged, which is
+        // exactly what it is.
+        final columns = await customSelect(
+          'PRAGMA table_info(drill_questions);',
+        ).get();
+        final existing = columns
+            .map((row) => row.data['name'] as String)
+            .toSet();
+        if (!existing.contains('mistake_kind')) {
+          await m.addColumn(drillQuestions, drillQuestions.mistakeKind);
+        }
       }
     },
   );
@@ -2010,6 +2025,42 @@ class AppDatabase extends _$AppDatabase {
     final rows = await (update(drillQuestions)..where((t) => t.id.equals(id)))
         .write(DrillQuestionsCompanion(isMastered: Value(mastered)));
     return rows > 0;
+  }
+
+  /// Records why a question was got wrong, or clears the tag with null.
+  ///
+  /// Tapping the kind already set clears it, so a mis-tap costs one tap to
+  /// undo. Without that the tagging is a one-way door and people stop using
+  /// it the first time they get one wrong.
+  Future<bool> setMistakeKind(int id, MistakeKind? kind) async {
+    final rows = await (update(drillQuestions)..where((t) => t.id.equals(id)))
+        .write(DrillQuestionsCompanion(mistakeKind: Value(kind?.name)));
+    return rows > 0;
+  }
+
+  /// Every wrong question as the mistake pattern sees it.
+  ///
+  /// Mastered ones are left out: they are not mistakes the user still makes,
+  /// and leaving them in would keep an old habit in the picture long after
+  /// it was fixed.
+  Future<MistakePattern> getMistakePattern({int withinDays = 90}) async {
+    final since = DateTime.now().subtract(Duration(days: withinDays));
+    final rows =
+        await (select(drillQuestions)..where(
+              (t) =>
+                  t.isCorrect.equals(false) &
+                  t.isMastered.equals(false) &
+                  t.attemptedAt.isBiggerOrEqualValue(since),
+            ))
+            .get();
+
+    return summariseMistakes([
+      for (final row in rows)
+        TaggedMistake(
+          kind: mistakeKindFromName(row.mistakeKind),
+          topic: row.topic,
+        ),
+    ]);
   }
 
   Future<int> deleteDrillQuestion(int id) {

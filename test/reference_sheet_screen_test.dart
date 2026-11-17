@@ -16,6 +16,11 @@ import 'support/ui_style_override.dart';
 /// to the five-column tense chart could not be edited, revised or removed by
 /// any means at all. These check both shapes, because the layouts diverge and
 /// the thing that diverged was the only way to undo anything.
+///
+/// The way in is a long press on the row, in both shapes. A visible control
+/// was tried and taken out again: this is a single-user app and its user
+/// knows the gesture, so a button on every line was clutter — and in the
+/// grid it cost a whole column of a table that already scrolls sideways.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -73,14 +78,10 @@ void main() {
         expect(find.text(shape.cell), findsOneWidget);
       });
 
-      testWidgets('offers the row actions without a hidden gesture', (
-        tester,
-      ) async {
+      testWidgets('a long press offers the row actions', (tester) async {
         await open(tester, shape.key);
 
-        // Visible control, not a long press nobody discovers.
-        expect(find.byIcon(Icons.more_vert), findsOneWidget);
-        await tester.tap(find.byIcon(Icons.more_vert));
+        await tester.longPress(find.text(shape.cell));
         await tester.pumpAndSettle();
 
         expect(find.text('রিভিশনে পাঠান'), findsOneWidget);
@@ -91,7 +92,7 @@ void main() {
       testWidgets('a row can actually be removed', (tester) async {
         await open(tester, shape.key);
 
-        await tester.tap(find.byIcon(Icons.more_vert));
+        await tester.longPress(find.text(shape.cell));
         await tester.pumpAndSettle();
         await tester.tap(find.text('সারিটি মুছুন'));
         await tester.pumpAndSettle();
@@ -103,7 +104,7 @@ void main() {
       testWidgets('a row can be sent to the review deck', (tester) async {
         await open(tester, shape.key);
 
-        await tester.tap(find.byIcon(Icons.more_vert));
+        await tester.longPress(find.text(shape.cell));
         await tester.pumpAndSettle();
         await tester.tap(find.text('রিভিশনে পাঠান'));
         await tester.pumpAndSettle();
