@@ -574,9 +574,14 @@ class _ExamCredentialCardState extends State<ExamCredentialCard> {
             ),
           ],
 
-          // Attachments & Quick Action Chips Row
+          // Attachments & Quick Action Chips
           Padding(
-            padding: const EdgeInsets.all(FluentSpacing.l),
+            padding: const EdgeInsets.fromLTRB(
+              FluentSpacing.l,
+              FluentSpacing.m,
+              FluentSpacing.l,
+              FluentSpacing.xs,
+            ),
             child: Wrap(
               spacing: FluentSpacing.s,
               runSpacing: FluentSpacing.s,
@@ -659,20 +664,32 @@ class _ExamCredentialCardState extends State<ExamCredentialCard> {
                       }
                     },
                   ),
+              ],
+            ),
+          ),
 
-                const Spacer(),
-
-                // Edit Button
+          // Bottom Controls: Edit & Delete Row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              FluentSpacing.l,
+              0,
+              FluentSpacing.m,
+              FluentSpacing.s,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
                 IconButton(
                   icon: const Icon(Icons.edit_outlined, size: 18),
-                  tooltip: 'এডিট করুন',
+                  tooltip: 'সম্পাদনা করুন',
                   onPressed: widget.onEdit,
                 ),
-
-                // Delete Button
                 IconButton(
-                  icon: const Icon(Icons.delete_outline,
-                      size: 18, color: Colors.red),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Colors.red,
+                  ),
                   tooltip: 'মুছে ফেলুন',
                   onPressed: () async {
                     final confirm = await showDialog<bool>(
@@ -680,7 +697,7 @@ class _ExamCredentialCardState extends State<ExamCredentialCard> {
                       builder: (ctx) => AlertDialog(
                         title: const Text('আবেদন রেকর্ড মুছে ফেলবেন?'),
                         content: Text(
-                          '${app.postName} (${app.organization})-এর সংরক্ষিত ইউজার আইডি ও পিডিএফ ফাইল স্থায়ীভাবে মুছে যাবে।',
+                          '${app.postName} (${app.organization})-এর সংরক্ষিত তথ্য স্থায়ীভাবে মুছে যাবে।',
                         ),
                         actions: [
                           TextButton(
