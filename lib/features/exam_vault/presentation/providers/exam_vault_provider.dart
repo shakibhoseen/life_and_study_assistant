@@ -116,6 +116,7 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
       final user = await GoogleDriveVaultService.instance.signInSilently();
       if (user != null) {
         state = state.copyWith(googleUser: user);
+        await autoSyncOrRestore(isSilent: true);
       }
     } catch (_) {}
   }
@@ -125,10 +126,57 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
       state = state.copyWith(isSyncingDrive: true, clearError: true);
       final user = await GoogleDriveVaultService.instance.signIn();
       state = state.copyWith(isSyncingDrive: false, googleUser: user);
+      if (user != null) {
+        await autoSyncOrRestore(isSilent: false);
+      }
       return user;
     } catch (e) {
       state = state.copyWith(isSyncingDrive: false, errorMessage: e.toString());
       rethrow;
+    }
+  }
+
+  /// Automatically synchronizes local vault data with Google Drive on sign-in / app start.
+  /// - Downloads and merges any existing backup from Drive (ExamVault folder).
+  /// - Uploads local applications and PDF documents to Drive.
+  Future<void> autoSyncOrRestore({bool isSilent = false}) async {
+    if (!GoogleDriveVaultService.instance.isSignedIn) return;
+
+    try {
+      if (!isSilent) {
+        state = state.copyWith(isSyncingDrive: true, clearError: true);
+      }
+
+      // Check if Drive has an existing backup in ExamVault folder
+      final driveBackupJson =
+          await GoogleDriveVaultService.instance.downloadBackupFromDrive();
+
+      if (driveBackupJson != null && driveBackupJson.trim().isNotEmpty) {
+        final mergedCount = await importBackup(driveBackupJson);
+        debugPrint(
+            'Auto-sync: successfully imported/merged $mergedCount applications from Google Drive');
+      }
+
+      // Ensure Drive is updated with current local data & PDFs
+      await syncToGoogleDrive();
+
+      if (!isSilent) {
+        state = state.copyWith(isSyncingDrive: false);
+      }
+    } catch (e) {
+      debugPrint('AutoSyncOrRestore error: $e');
+      if (!isSilent) {
+        state = state.copyWith(isSyncingDrive: false);
+      }
+    }
+  }
+
+  void _triggerAutoSync() {
+    if (GoogleDriveVaultService.instance.isSignedIn) {
+      syncToGoogleDrive().catchError((e) {
+        debugPrint('Auto background sync failed: $e');
+        return (success: false, pdfCount: 0);
+      });
     }
   }
 
@@ -312,6 +360,7 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
     final updated = [app, ...state.applications];
     await ExamVaultService.instance.saveApplications(updated);
     state = state.copyWith(applications: updated);
+    _triggerAutoSync();
   }
 
   Future<void> updateApplication(ExamApplication app) async {
@@ -320,6 +369,7 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
     }).toList();
     await ExamVaultService.instance.saveApplications(updated);
     state = state.copyWith(applications: updated);
+    _triggerAutoSync();
   }
 
   Future<void> deleteApplication(String id) async {
@@ -335,6 +385,7 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
     final updated = state.applications.where((a) => a.id != id).toList();
     await ExamVaultService.instance.saveApplications(updated);
     state = state.copyWith(applications: updated);
+    _triggerAutoSync();
   }
 
   Future<void> updateStatus(String id, String newStatus) async {
@@ -346,6 +397,7 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
     }).toList();
     await ExamVaultService.instance.saveApplications(updated);
     state = state.copyWith(applications: updated);
+    _triggerAutoSync();
   }
 
   void setSearchQuery(String query) {

@@ -372,8 +372,28 @@ class ExamVaultService {
       final map = {for (final a in existing) a.id: a};
 
       for (final a in imported) {
-        if (overwriteExisting || !map.containsKey(a.id)) {
+        if (!map.containsKey(a.id)) {
           map[a.id] = a;
+        } else if (overwriteExisting) {
+          map[a.id] = a;
+        } else {
+          final current = map[a.id]!;
+          final isImportedNewer = a.updatedAt.isAfter(current.updatedAt);
+          final base = isImportedNewer ? a : current;
+          map[a.id] = base.copyWith(
+            applicantCopyDriveFileId: base.applicantCopyDriveFileId ??
+                current.applicantCopyDriveFileId ??
+                a.applicantCopyDriveFileId,
+            admitCardDriveFileId: base.admitCardDriveFileId ??
+                current.admitCardDriveFileId ??
+                a.admitCardDriveFileId,
+            applicantCopyPdfPath: base.applicantCopyPdfPath ??
+                current.applicantCopyPdfPath ??
+                a.applicantCopyPdfPath,
+            admitCardPdfPath: base.admitCardPdfPath ??
+                current.admitCardPdfPath ??
+                a.admitCardPdfPath,
+          );
         }
       }
 

@@ -49,6 +49,9 @@ class GoogleDriveVaultService {
   GoogleSignInAccount? get currentUser => _currentUser;
   bool get isSignedIn => _currentUser != null;
 
+  String? _cachedMainFolderId;
+  String? _cachedDocumentsFolderId;
+
   Future<String?> getServerClientId() async {
     // 1. Check .env if loaded
     if (dotenv.isInitialized) {
@@ -136,6 +139,8 @@ class GoogleDriveVaultService {
       await _ensureInitialized();
       await GoogleSignIn.instance.signOut();
       _currentUser = null;
+      _cachedMainFolderId = null;
+      _cachedDocumentsFolderId = null;
     } catch (e) {
       debugPrint('Google sign-out error: $e');
     }
@@ -157,40 +162,125 @@ class GoogleDriveVaultService {
     return drive.DriveApi(client);
   }
 
-  /// Finds a file by name in the user's Google Drive
-  Future<drive.File?> _findFileByName(drive.DriveApi api, String name) async {
+  /// Finds a file by name in the user's Google Drive.
+  /// If [parentFolderId] is provided, searches inside that folder first,
+  /// with a global fallback for backwards compatibility with legacy backups.
+  Future<drive.File?> _findFileByName(
+    drive.DriveApi api,
+    String name, {
+    String? parentFolderId,
+  }) async {
     try {
+      if (parentFolderId != null) {
+        final scopedList = await api.files.list(
+          q: "name = '$name' and '$parentFolderId' in parents and trashed = false",
+          spaces: 'drive',
+          $fields: 'files(id, name, modifiedTime, size, parents)',
+        );
+        if (scopedList.files != null && scopedList.files!.isNotEmpty) {
+          return scopedList.files!.first;
+        }
+      }
+
       final fileList = await api.files.list(
         q: "name = '$name' and trashed = false",
         spaces: 'drive',
-        $fields: 'files(id, name, modifiedTime, size)',
+        $fields: 'files(id, name, modifiedTime, size, parents)',
       );
       if (fileList.files != null && fileList.files!.isNotEmpty) {
         return fileList.files!.first;
       }
       return null;
     } catch (e) {
-      debugPrint('Error searching file on Drive: $e');
+      debugPrint('Error searching file on Drive ($name): $e');
+      return null;
+    }
+  }
+
+  static const String mainVaultFolderName = 'ExamVault';
+  static const String vaultDocumentsFolderName = 'Documents';
+
+  Future<String?> _getOrCreateMainFolder(drive.DriveApi api) async {
+    if (_cachedMainFolderId != null) return _cachedMainFolderId;
+    try {
+      final list = await api.files.list(
+        q: "name = '$mainVaultFolderName' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+        spaces: 'drive',
+        $fields: 'files(id, name)',
+      );
+      if (list.files != null && list.files!.isNotEmpty) {
+        _cachedMainFolderId = list.files!.first.id;
+        return _cachedMainFolderId;
+      }
+      final folderMetadata = drive.File()
+        ..name = mainVaultFolderName
+        ..mimeType = 'application/vnd.google-apps.folder'
+        ..description =
+            'Life & Study Assistant - Exam & Credential Vault Backup Folder';
+      final folder = await api.files.create(folderMetadata);
+      _cachedMainFolderId = folder.id;
+      return _cachedMainFolderId;
+    } catch (e) {
+      debugPrint('Error creating/finding main ExamVault folder on Drive: $e');
+      return null;
+    }
+  }
+
+  Future<String?> _getOrCreateDocumentsFolder(drive.DriveApi api) async {
+    if (_cachedDocumentsFolderId != null) return _cachedDocumentsFolderId;
+    try {
+      final mainId = await _getOrCreateMainFolder(api);
+      String query =
+          "name = '$vaultDocumentsFolderName' and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+      if (mainId != null) {
+        query += " and '$mainId' in parents";
+      }
+      final list = await api.files.list(
+        q: query,
+        spaces: 'drive',
+        $fields: 'files(id, name)',
+      );
+      if (list.files != null && list.files!.isNotEmpty) {
+        _cachedDocumentsFolderId = list.files!.first.id;
+        return _cachedDocumentsFolderId;
+      }
+      final folderMetadata = drive.File()
+        ..name = vaultDocumentsFolderName
+        ..mimeType = 'application/vnd.google-apps.folder'
+        ..description =
+            'Life & Study Assistant - Exam Vault PDF Attachments';
+      if (mainId != null) {
+        folderMetadata.parents = [mainId];
+      }
+      final folder = await api.files.create(folderMetadata);
+      _cachedDocumentsFolderId = folder.id;
+      return _cachedDocumentsFolderId;
+    } catch (e) {
+      debugPrint('Error creating/finding documents folder on Drive: $e');
       return null;
     }
   }
 
   /// Uploads backup content to Google Drive maintaining the Rolling Dual Backup:
-  /// 1. If ExamVault_Latest_Backup.json already exists in Drive, renames/copies to ExamVault_Previous_Backup.json
-  /// 2. Saves new backup as ExamVault_Latest_Backup.json
+  /// 1. Finds or creates the dedicated 'ExamVault' folder on user's Drive.
+  /// 2. If ExamVault_Latest_Backup.json already exists in Drive, renames/rotates to ExamVault_Previous_Backup.json.
+  /// 3. Saves new backup as ExamVault_Latest_Backup.json inside 'ExamVault' folder.
   Future<bool> syncBackupToDrive(String jsonContent) async {
     final api = await _getDriveApi();
     if (api == null) return false;
 
     try {
       final bytes = utf8.encode(jsonContent);
+      final mainFolderId = await _getOrCreateMainFolder(api);
 
-      // Step 1: Check if Latest backup already exists on Drive
-      final existingLatest = await _findFileByName(api, latestFileName);
+      // Step 1: Check if Latest backup already exists on Drive in main folder
+      final existingLatest =
+          await _findFileByName(api, latestFileName, parentFolderId: mainFolderId);
 
       if (existingLatest != null && existingLatest.id != null) {
         // Find or delete older previous backup if any, and rotate latest -> previous
-        final existingPrevious = await _findFileByName(api, previousFileName);
+        final existingPrevious = await _findFileByName(api, previousFileName,
+            parentFolderId: mainFolderId);
         if (existingPrevious != null && existingPrevious.id != null) {
           try {
             await api.files.delete(existingPrevious.id!);
@@ -208,7 +298,7 @@ class GoogleDriveVaultService {
         }
       }
 
-      // Step 2: Upload new backup as ExamVault_Latest_Backup.json
+      // Step 2: Upload new backup as ExamVault_Latest_Backup.json inside ExamVault folder
       final media = drive.Media(
         Stream.value(bytes),
         bytes.length,
@@ -220,13 +310,16 @@ class GoogleDriveVaultService {
         ..description =
             'Life & Study Assistant - Exam & Credential Vault Backup'
         ..mimeType = 'application/json';
+      if (mainFolderId != null) {
+        newFileMetadata.parents = [mainFolderId];
+      }
 
       await api.files.create(
         newFileMetadata,
         uploadMedia: media,
       );
 
-      debugPrint('Backup successfully synced to Google Drive!');
+      debugPrint('Backup successfully synced to Google Drive in ExamVault folder!');
       return true;
     } catch (e) {
       debugPrint('Error syncing backup to Google Drive: $e');
@@ -240,7 +333,9 @@ class GoogleDriveVaultService {
     if (api == null) return null;
 
     final targetName = usePrevious ? previousFileName : latestFileName;
-    final file = await _findFileByName(api, targetName);
+    final mainFolderId = await _getOrCreateMainFolder(api);
+    final file =
+        await _findFileByName(api, targetName, parentFolderId: mainFolderId);
     if (file == null || file.id == null) {
       return null;
     }
@@ -260,31 +355,7 @@ class GoogleDriveVaultService {
     return null;
   }
 
-  static const String vaultDocumentsFolderName = 'ExamVault_Documents';
-
-  Future<String?> _getOrCreateDocumentsFolder(drive.DriveApi api) async {
-    try {
-      final list = await api.files.list(
-        q: "name = '$vaultDocumentsFolderName' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
-        spaces: 'drive',
-        $fields: 'files(id, name)',
-      );
-      if (list.files != null && list.files!.isNotEmpty) {
-        return list.files!.first.id;
-      }
-      final folderMetadata = drive.File()
-        ..name = vaultDocumentsFolderName
-        ..mimeType = 'application/vnd.google-apps.folder'
-        ..description = 'Life & Study Assistant - Exam Vault PDF Documents';
-      final folder = await api.files.create(folderMetadata);
-      return folder.id;
-    } catch (e) {
-      debugPrint('Error creating/finding documents folder on Drive: $e');
-      return null;
-    }
-  }
-
-  /// Uploads or updates a PDF file on Google Drive inside ExamVault_Documents folder.
+  /// Uploads or updates a PDF file on Google Drive inside ExamVault/Documents folder.
   /// Returns the Google Drive file ID.
   Future<String?> uploadPdfFile({
     required File file,

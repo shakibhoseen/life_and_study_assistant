@@ -16,11 +16,12 @@ class ExamVaultScreen extends ConsumerWidget {
 
   Future<void> _handleFullDriveShare(
       BuildContext context, WidgetRef ref) async {
+    if (!context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
       final zipFile =
           await ref.read(examVaultProvider.notifier).exportFullBackupZip();
-      if (zipFile != null) {
+      if (zipFile != null && context.mounted) {
         messenger.showSnackBar(
           const SnackBar(
             backgroundColor: Color(0xFF10B981),
@@ -32,9 +33,11 @@ class ExamVaultScreen extends ConsumerWidget {
         await ExamVaultService.instance.shareBackupToDrive(zipFile);
       }
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('শেয়ার ব্যর্থ: $e')),
-      );
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('শেয়ার ব্যর্থ: $e')),
+        );
+      }
     }
   }
 
@@ -130,43 +133,46 @@ class ExamVaultScreen extends ConsumerWidget {
 
   Future<void> _handleDirectDriveSync(
       BuildContext context, WidgetRef ref) async {
+    if (!context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
       messenger.showSnackBar(
         const SnackBar(
-          content: Text('গুগল ড্রাইভে সিঙ্ক হচ্ছে...'),
+          content: Text('গুগল ড্রাইভ ExamVault ফোল্ডারে সিঙ্ক হচ্ছে...'),
           duration: Duration(seconds: 2),
         ),
       );
       final result =
           await ref.read(examVaultProvider.notifier).syncToGoogleDrive();
-      if (result.success) {
+      if (context.mounted && result.success) {
         messenger.showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFF10B981),
             content: Text(
               result.pdfCount > 0
-                  ? '🎉 গুগল ড্রাইভে ব্যাকআপ সম্পন্ন হয়েছে!\n(ExamVault_Documents ফোল্ডারে ${result.pdfCount}টি PDF ও মাস্টার ডাটা সংরক্ষিত)'
-                  : '🎉 গুগল ড্রাইভে ব্যাকআপ সম্পন্ন হয়েছে!\n(ক্রেডেনশিয়াল মাস্টার ব্যাকআপ ও সেফটি কপি আপডেট হয়েছে)',
+                  ? '🎉 ExamVault ফোল্ডারে ব্যাকআপ সম্পন্ন হয়েছে!\n(Documents ফোল্ডারে ${result.pdfCount}টি PDF ও ডাটা সংরক্ষিত)'
+                  : '🎉 ExamVault ফোল্ডারে ব্যাকআপ সম্পন্ন হয়েছে!\n(ক্রেডেনশিয়াল মাস্টার ব্যাকআপ ও সেফটি কপি আপডেট হয়েছে)',
             ),
           ),
         );
       }
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.amber.shade900,
-          duration: const Duration(seconds: 6),
-          content: Text(
-            'ড্রাইভে সরাসরি আপলোড হতে সমস্যা: $e\nআপনি অফলাইন ব্যাকআপ ফাইল তৈরি করে Drive অ্যাপে শেয়ার করতে পারেন।',
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.amber.shade900,
+            duration: const Duration(seconds: 6),
+            content: Text(
+              'ড্রাইভে সরাসরি আপলোড হতে সমস্যা: $e\nআপনি অফলাইন ব্যাকআপ ফাইল তৈরি করে Drive অ্যাপে শেয়ার করতে পারেন।',
+            ),
+            action: SnackBarAction(
+              label: 'শেয়ার করুন',
+              textColor: Colors.white,
+              onPressed: () => _handleBackup(context, ref),
+            ),
           ),
-          action: SnackBarAction(
-            label: 'শেয়ার করুন',
-            textColor: Colors.white,
-            onPressed: () => _handleBackup(context, ref),
-          ),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -245,20 +251,20 @@ class ExamVaultScreen extends ConsumerWidget {
   }
 
   Future<void> _showCloudBackupSheet(
-      BuildContext context, WidgetRef ref) async {
-    final theme = Theme.of(context);
+      BuildContext parentContext, WidgetRef parentRef) async {
+    final theme = Theme.of(parentContext);
     final isDark = theme.brightness == Brightness.dark;
 
     await showModalBottomSheet(
-      context: context,
+      context: parentContext,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) {
         return Consumer(
-          builder: (context, ref, _) {
-            final state = ref.watch(examVaultProvider);
+          builder: (sheetCtx, sheetRef, _) {
+            final state = sheetRef.watch(examVaultProvider);
             return Padding(
               padding: EdgeInsets.only(
                 left: FluentSpacing.l,
@@ -294,7 +300,7 @@ class ExamVaultScreen extends ConsumerWidget {
                               ),
                             ),
                             Text(
-                              'রোলিং ডুয়েল ব্যাকআপ (Latest ও Previous)',
+                              'ExamVault ফোল্ডারে ডুয়েল ব্যাকআপ (Latest ও Previous)',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurface
                                     .withValues(alpha: 0.7),
@@ -364,7 +370,7 @@ class ExamVaultScreen extends ConsumerWidget {
                         if (state.isGoogleSignedIn)
                           TextButton(
                             onPressed: () async {
-                              await ref
+                              await parentRef
                                   .read(examVaultProvider.notifier)
                                   .signOutGoogle();
                             },
@@ -386,15 +392,29 @@ class ExamVaultScreen extends ConsumerWidget {
                                 style: TextStyle(fontSize: 12)),
                             onPressed: () async {
                               try {
-                                final user = await ref
+                                final user = await parentRef
                                     .read(examVaultProvider.notifier)
                                     .signInGoogle();
-                                if (user == null && context.mounted) {
-                                  _showGoogleSignInConfigDialog(context, ref);
+                                if (user != null) {
+                                  if (parentContext.mounted) {
+                                    ScaffoldMessenger.of(parentContext)
+                                        .showSnackBar(
+                                      const SnackBar(
+                                        backgroundColor: Color(0xFF10B981),
+                                        content: Text(
+                                          '🎉 Google Drive-এ সফলভাবে সাইন ইন হয়েছে!\nExamVault ফোল্ডারে স্বয়ংক্রিয় ব্যাকআপ সক্রিয় হয়েছে।',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } else if (parentContext.mounted) {
+                                  _showGoogleSignInConfigDialog(
+                                      parentContext, parentRef);
                                 }
                               } catch (e) {
-                                if (context.mounted) {
-                                  _showGoogleSignInConfigDialog(context, ref);
+                                if (parentContext.mounted) {
+                                  _showGoogleSignInConfigDialog(
+                                      parentContext, parentRef);
                                 }
                               }
                             },
@@ -413,7 +433,7 @@ class ExamVaultScreen extends ConsumerWidget {
                           children: [
                             CircularProgressIndicator(),
                             SizedBox(height: 8),
-                            Text('গুগল ড্রাইভে কাজ চলছে...'),
+                            Text('গুগল ড্রাইভ ExamVault ফোল্ডারে কাজ চলছে...'),
                           ],
                         ),
                       ),
@@ -435,7 +455,8 @@ class ExamVaultScreen extends ConsumerWidget {
                       ),
                       onPressed: () async {
                         Navigator.pop(sheetContext);
-                        _handleFullDriveShare(context, ref);
+                        if (!parentContext.mounted) return;
+                        await _handleFullDriveShare(parentContext, parentRef);
                       },
                     ),
                     const SizedBox(height: 10),
@@ -450,10 +471,11 @@ class ExamVaultScreen extends ConsumerWidget {
                         ),
                         icon: const Icon(Icons.sync_rounded),
                         label: const Text(
-                            '🔄 সরাসরি Google API সিঙ্ক (In-App)'),
+                            '🔄 সরাসরি ExamVault ফোল্ডারে সিঙ্ক করুন'),
                         onPressed: () async {
                           Navigator.pop(sheetContext);
-                          _handleDirectDriveSync(context, ref);
+                          if (!parentContext.mounted) return;
+                          await _handleDirectDriveSync(parentContext, parentRef);
                         },
                       ),
                       const SizedBox(height: 10),
@@ -465,10 +487,11 @@ class ExamVaultScreen extends ConsumerWidget {
                         ),
                         icon: const Icon(Icons.cloud_download),
                         label: const Text(
-                            '📥 Google API রিস্টোর (Latest / Previous)'),
+                            '📥 ExamVault ফোল্ডার থেকে রিস্টোর (Latest / Previous)'),
                         onPressed: () {
                           Navigator.pop(sheetContext);
-                          _showDriveRestoreDialog(context, ref);
+                          if (!parentContext.mounted) return;
+                          _showDriveRestoreDialog(parentContext, parentRef);
                         },
                       ),
                       const SizedBox(height: 10),
@@ -483,10 +506,11 @@ class ExamVaultScreen extends ConsumerWidget {
                       ),
                       icon: const Icon(Icons.cloud_download_outlined),
                       label: const Text(
-                          '📥 Google Drive থেকে রিস্টোর (Pick from Drive)'),
+                          '📥 Google Drive ফাইল থেকে রিস্টোর (Pick from Drive)'),
                       onPressed: () {
                         Navigator.pop(sheetContext);
-                        _handleRestore(context, ref);
+                        if (!parentContext.mounted) return;
+                        _handleRestore(parentContext, parentRef);
                       },
                     ),
                     const SizedBox(height: 10),
@@ -499,10 +523,11 @@ class ExamVaultScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(10)),
                       ),
                       icon: const Icon(Icons.share_outlined),
-                      label: const Text('📤 লোকাল ফাইল ব্যাকআপ ও শেয়ার'),
+                      label: const Text('📤 অফলাইন ব্যাকআপ এক্সপোর্ট ও শেয়ার'),
                       onPressed: () {
                         Navigator.pop(sheetContext);
-                        _handleBackup(context, ref);
+                        if (!parentContext.mounted) return;
+                        _handleBackup(parentContext, parentRef);
                       },
                     ),
                     const SizedBox(height: 10),
@@ -515,10 +540,11 @@ class ExamVaultScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(10)),
                       ),
                       icon: const Icon(Icons.folder_open_outlined),
-                      label: const Text('📂 লোকাল .json ফাইল থেকে রিস্টোর'),
+                      label: const Text('📂 ফাইল ম্যানেজার (.json / .zip) থেকে রিস্টোর'),
                       onPressed: () {
                         Navigator.pop(sheetContext);
-                        _handleRestore(context, ref);
+                        if (!parentContext.mounted) return;
+                        _handleRestore(parentContext, parentRef);
                       },
                     ),
                   ],
