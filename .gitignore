@@ -61,3 +61,6 @@ test_results/
 # never worth committing. The evidence artifacts that used to live here are
 # on the archive/offline-ocr branch — see docs/OFFLINE_OCR_PARKED.md.
 /test_results/
+
+# Separate public repo for the Google OAuth consent pages
+/exam_vault_site/
