@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -7,8 +10,9 @@ import '../../../../core/theme/fluent_tokens.dart';
 import '../../../../core/widgets/premium_ui_kit.dart';
 import '../../data/models/exam_application.dart';
 import '../../data/services/exam_vault_service.dart';
+import '../providers/exam_vault_provider.dart';
 
-class ExamCredentialCard extends StatefulWidget {
+class ExamCredentialCard extends ConsumerStatefulWidget {
   final ExamApplication application;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -23,11 +27,68 @@ class ExamCredentialCard extends StatefulWidget {
   });
 
   @override
-  State<ExamCredentialCard> createState() => _ExamCredentialCardState();
+  ConsumerState<ExamCredentialCard> createState() => _ExamCredentialCardState();
 }
 
-class _ExamCredentialCardState extends State<ExamCredentialCard> {
+class _ExamCredentialCardState extends ConsumerState<ExamCredentialCard> {
   bool _obscurePassword = true;
+
+  Future<void> _handleOpenPdf(BuildContext context,
+      {required bool isAdmitCard}) async {
+    final app = widget.application;
+    final path = isAdmitCard ? app.admitCardPdfPath : app.applicantCopyPdfPath;
+    final driveId =
+        isAdmitCard ? app.admitCardDriveFileId : app.applicantCopyDriveFileId;
+
+    // 1. If local file exists, open directly
+    if (path != null && path.isNotEmpty) {
+      final file = File(path);
+      if (await file.exists()) {
+        final res = await ExamVaultService.instance.openDocument(path);
+        if (res.type != ResultType.done && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${res.message}')),
+          );
+        }
+        return;
+      }
+    }
+
+    // 2. If local file missing but Drive file ID exists, download from Drive
+    if (driveId != null && driveId.isNotEmpty) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('গুগল ড্রাইভ থেকে PDF ডাউনলোড হচ্ছে...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      final downloaded = await ref
+          .read(examVaultProvider.notifier)
+          .downloadPdfDocument(app.id, isAdmitCard: isAdmitCard);
+
+      if (downloaded != null && context.mounted) {
+        await ExamVaultService.instance.openDocument(downloaded.path);
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('গুগল ড্রাইভ থেকে PDF ডাউনলোড করা সম্ভব হয়নি।'),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('PDF ফাইলটি ডিভাইসে খুঁজে পাওয়া যায়নি।'),
+        ),
+      );
+    }
+  }
 
   void _copyToClipboard(BuildContext context, String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
@@ -589,48 +650,50 @@ class _ExamCredentialCardState extends State<ExamCredentialCard> {
                 // Applicant Copy PDF Chip
                 if (app.hasApplicantCopy)
                   ActionChip(
-                    avatar: const Icon(
-                      Icons.picture_as_pdf_rounded,
+                    avatar: Icon(
+                      app.isApplicantCopySyncedToDrive
+                          ? Icons.cloud_done_rounded
+                          : Icons.picture_as_pdf_rounded,
                       size: 16,
-                      color: Colors.red,
+                      color: app.isApplicantCopySyncedToDrive
+                          ? const Color(0xFF10B981)
+                          : Colors.red,
                     ),
-                    label: const Text('Applicant Copy'),
+                    label: Text(
+                      app.isApplicantCopySyncedToDrive
+                          ? 'Applicant Copy ☁️'
+                          : 'Applicant Copy',
+                    ),
                     labelStyle: FluentType.caption.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
-                    onPressed: () async {
-                      final res = await ExamVaultService.instance
-                          .openDocument(app.applicantCopyPdfPath!);
-                      if (res.type != ResultType.done && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: ${res.message}')),
-                        );
-                      }
-                    },
+                    onPressed: () =>
+                        _handleOpenPdf(context, isAdmitCard: false),
                   ),
 
                 // Admit Card PDF Chip
                 if (app.hasAdmitCard)
                   ActionChip(
-                    avatar: const Icon(
-                      Icons.assignment_ind_rounded,
+                    avatar: Icon(
+                      app.isAdmitCardSyncedToDrive
+                          ? Icons.cloud_done_rounded
+                          : Icons.assignment_ind_rounded,
                       size: 16,
-                      color: Colors.teal,
+                      color: app.isAdmitCardSyncedToDrive
+                          ? const Color(0xFF10B981)
+                          : Colors.teal,
                     ),
-                    label: const Text('Admit Card 🎟️'),
+                    label: Text(
+                      app.isAdmitCardSyncedToDrive
+                          ? 'Admit Card 🎟️ ☁️'
+                          : 'Admit Card 🎟️',
+                    ),
                     labelStyle: FluentType.caption.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.teal,
                     ),
-                    onPressed: () async {
-                      final res = await ExamVaultService.instance
-                          .openDocument(app.admitCardPdfPath!);
-                      if (res.type != ResultType.done && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: ${res.message}')),
-                        );
-                      }
-                    },
+                    onPressed: () =>
+                        _handleOpenPdf(context, isAdmitCard: true),
                   ),
 
                 // View SMS Button

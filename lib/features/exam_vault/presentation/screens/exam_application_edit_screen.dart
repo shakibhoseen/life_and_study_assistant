@@ -316,6 +316,9 @@ class _ExamApplicationEditScreenState
             : null,
         applicantCopyPdfPath: savedApplicantPath,
         admitCardPdfPath: savedAdmitPath,
+        applicantCopyDriveFileId:
+            widget.existingApplication?.applicantCopyDriveFileId,
+        admitCardDriveFileId: widget.existingApplication?.admitCardDriveFileId,
         status: _status,
         applicationDate: _applicationDate,
         examDate: _examDate,

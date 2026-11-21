@@ -14,6 +14,8 @@ class ExamApplication {
   final String? rawSms;
   final String? applicantCopyPdfPath;
   final String? admitCardPdfPath;
+  final String? applicantCopyDriveFileId;
+  final String? admitCardDriveFileId;
   final String status; // 'applied', 'paid', 'admitIssued', 'examScheduled', 'completed', 'passed'
   final DateTime? applicationDate;
   final DateTime? examDate;
@@ -38,6 +40,8 @@ class ExamApplication {
     this.rawSms,
     this.applicantCopyPdfPath,
     this.admitCardPdfPath,
+    this.applicantCopyDriveFileId,
+    this.admitCardDriveFileId,
     this.status = 'applied',
     this.applicationDate,
     this.examDate,
@@ -76,10 +80,20 @@ class ExamApplication {
   }
 
   bool get hasApplicantCopy =>
-      applicantCopyPdfPath != null && applicantCopyPdfPath!.isNotEmpty;
+      (applicantCopyPdfPath != null && applicantCopyPdfPath!.isNotEmpty) ||
+      (applicantCopyDriveFileId != null &&
+          applicantCopyDriveFileId!.isNotEmpty);
 
   bool get hasAdmitCard =>
-      admitCardPdfPath != null && admitCardPdfPath!.isNotEmpty;
+      (admitCardPdfPath != null && admitCardPdfPath!.isNotEmpty) ||
+      (admitCardDriveFileId != null && admitCardDriveFileId!.isNotEmpty);
+
+  bool get isApplicantCopySyncedToDrive =>
+      applicantCopyDriveFileId != null &&
+      applicantCopyDriveFileId!.isNotEmpty;
+
+  bool get isAdmitCardSyncedToDrive =>
+      admitCardDriveFileId != null && admitCardDriveFileId!.isNotEmpty;
 
   ExamApplication copyWith({
     String? id,
@@ -98,6 +112,10 @@ class ExamApplication {
     bool clearApplicantCopy = false,
     String? admitCardPdfPath,
     bool clearAdmitCard = false,
+    String? applicantCopyDriveFileId,
+    bool clearApplicantCopyDriveFileId = false,
+    String? admitCardDriveFileId,
+    bool clearAdmitCardDriveFileId = false,
     String? status,
     DateTime? applicationDate,
     DateTime? examDate,
@@ -126,6 +144,12 @@ class ExamApplication {
           : (applicantCopyPdfPath ?? this.applicantCopyPdfPath),
       admitCardPdfPath:
           clearAdmitCard ? null : (admitCardPdfPath ?? this.admitCardPdfPath),
+      applicantCopyDriveFileId: clearApplicantCopyDriveFileId
+          ? null
+          : (applicantCopyDriveFileId ?? this.applicantCopyDriveFileId),
+      admitCardDriveFileId: clearAdmitCardDriveFileId
+          ? null
+          : (admitCardDriveFileId ?? this.admitCardDriveFileId),
       status: status ?? this.status,
       applicationDate: applicationDate ?? this.applicationDate,
       examDate: clearExamDate ? null : (examDate ?? this.examDate),
@@ -152,6 +176,8 @@ class ExamApplication {
         'rawSms': rawSms,
         'applicantCopyPdfPath': applicantCopyPdfPath,
         'admitCardPdfPath': admitCardPdfPath,
+        'applicantCopyDriveFileId': applicantCopyDriveFileId,
+        'admitCardDriveFileId': admitCardDriveFileId,
         'status': status,
         'applicationDate': applicationDate?.toIso8601String(),
         'examDate': examDate?.toIso8601String(),
@@ -178,6 +204,8 @@ class ExamApplication {
         rawSms: json['rawSms'] as String?,
         applicantCopyPdfPath: json['applicantCopyPdfPath'] as String?,
         admitCardPdfPath: json['admitCardPdfPath'] as String?,
+        applicantCopyDriveFileId: json['applicantCopyDriveFileId'] as String?,
+        admitCardDriveFileId: json['admitCardDriveFileId'] as String?,
         status: json['status'] as String? ?? 'applied',
         applicationDate: json['applicationDate'] != null
             ? DateTime.tryParse(json['applicationDate'] as String)

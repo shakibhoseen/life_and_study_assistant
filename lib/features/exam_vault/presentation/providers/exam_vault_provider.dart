@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -136,21 +137,138 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
     state = state.copyWith(clearGoogleUser: true);
   }
 
-  Future<bool> syncToGoogleDrive() async {
+  Future<({bool success, int pdfCount})> syncToGoogleDrive() async {
     try {
       state = state.copyWith(isSyncingDrive: true, clearError: true);
-      final jsonContent = ExamVaultService.instance
-          .createBackupJsonString(state.applications);
+
+      // Step 1: Upload any local PDFs to Drive and get their Drive File IDs
+      int pdfCount = 0;
+      final updatedApps = <ExamApplication>[];
+
+      for (final app in state.applications) {
+        var modifiedApp = app;
+
+        // Check applicant copy
+        if (app.applicantCopyPdfPath != null &&
+            app.applicantCopyPdfPath!.isNotEmpty) {
+          final file = File(app.applicantCopyPdfPath!);
+          if (await file.exists()) {
+            final cleanOrg = app.organization
+                .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+            final cleanPost =
+                app.postName.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+            final cleanUser =
+                app.userId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+            final remoteName =
+                '${cleanOrg}_${cleanPost}_${cleanUser}_applicant_copy.pdf';
+
+            final driveId =
+                await GoogleDriveVaultService.instance.uploadPdfFile(
+              file: file,
+              remoteFileName: remoteName,
+            );
+            if (driveId != null) {
+              modifiedApp =
+                  modifiedApp.copyWith(applicantCopyDriveFileId: driveId);
+              pdfCount++;
+            }
+          }
+        }
+
+        // Check admit card
+        if (app.admitCardPdfPath != null && app.admitCardPdfPath!.isNotEmpty) {
+          final file = File(app.admitCardPdfPath!);
+          if (await file.exists()) {
+            final cleanOrg = app.organization
+                .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+            final cleanPost =
+                app.postName.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+            final cleanUser =
+                app.userId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+            final remoteName =
+                '${cleanOrg}_${cleanPost}_${cleanUser}_admit_card.pdf';
+
+            final driveId =
+                await GoogleDriveVaultService.instance.uploadPdfFile(
+              file: file,
+              remoteFileName: remoteName,
+            );
+            if (driveId != null) {
+              modifiedApp =
+                  modifiedApp.copyWith(admitCardDriveFileId: driveId);
+              pdfCount++;
+            }
+          }
+        }
+
+        updatedApps.add(modifiedApp);
+      }
+
+      // Save locally with updated Drive IDs
+      await ExamVaultService.instance.saveApplications(updatedApps);
+
+      // Step 2: Upload rolling JSON backup (contains all metadata + PDF Drive file IDs)
+      final jsonContent =
+          ExamVaultService.instance.createBackupJsonString(updatedApps);
       final success =
           await GoogleDriveVaultService.instance.syncBackupToDrive(jsonContent);
+
       state = state.copyWith(
         isSyncingDrive: false,
+        applications: updatedApps,
         googleUser: GoogleDriveVaultService.instance.currentUser,
       );
-      return success;
+      return (success: success, pdfCount: pdfCount);
     } catch (e) {
       state = state.copyWith(isSyncingDrive: false, errorMessage: e.toString());
       rethrow;
+    }
+  }
+
+  /// Downloads a PDF document from Google Drive if the local file is missing
+  Future<File?> downloadPdfDocument(
+    String examId, {
+    required bool isAdmitCard,
+  }) async {
+    try {
+      final appIndex = state.applications.indexWhere((a) => a.id == examId);
+      if (appIndex == -1) return null;
+      final app = state.applications[appIndex];
+
+      final driveFileId = isAdmitCard
+          ? app.admitCardDriveFileId
+          : app.applicantCopyDriveFileId;
+      if (driveFileId == null || driveFileId.isEmpty) return null;
+
+      final docType = isAdmitCard ? 'admit_card' : 'applicant_copy';
+      final localPath =
+          await ExamVaultService.instance.getLocalPdfPathForDownload(
+        examId: examId,
+        docType: docType,
+      );
+
+      final downloaded =
+          await GoogleDriveVaultService.instance.downloadPdfFile(
+        fileId: driveFileId,
+        localDestinationPath: localPath,
+      );
+
+      if (downloaded != null) {
+        // Update application local path
+        final updatedApp = isAdmitCard
+            ? app.copyWith(admitCardPdfPath: downloaded.path)
+            : app.copyWith(applicantCopyPdfPath: downloaded.path);
+
+        final updatedList = List<ExamApplication>.from(state.applications);
+        updatedList[appIndex] = updatedApp;
+        await ExamVaultService.instance.saveApplications(updatedList);
+        state = state.copyWith(applications: updatedList);
+      }
+
+      return downloaded;
+    } catch (e) {
+      debugPrint('Error downloading PDF from Drive: $e');
+      return null;
     }
   }
 

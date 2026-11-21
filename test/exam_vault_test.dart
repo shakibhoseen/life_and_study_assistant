@@ -52,6 +52,8 @@ void main() {
         rawSms: 'Fee received for Senior Officer. User ID: BBSO10982, Password: PassSecret@99',
         applicantCopyPdfPath: '/path/to/applicant.pdf',
         admitCardPdfPath: '/path/to/admit.pdf',
+        applicantCopyDriveFileId: 'drive_file_applicant_99',
+        admitCardDriveFileId: 'drive_file_admit_88',
         status: 'admitIssued',
         applicationDate: DateTime(2026, 11, 1),
         examDate: DateTime(2026, 12, 15),
@@ -75,6 +77,10 @@ void main() {
       expect(roundtrip.statusLabelBn, contains('অ্যাডমিট এসেছে'));
       expect(roundtrip.hasApplicantCopy, isTrue);
       expect(roundtrip.hasAdmitCard, isTrue);
+      expect(roundtrip.isApplicantCopySyncedToDrive, isTrue);
+      expect(roundtrip.isAdmitCardSyncedToDrive, isTrue);
+      expect(roundtrip.applicantCopyDriveFileId, equals('drive_file_applicant_99'));
+      expect(roundtrip.admitCardDriveFileId, equals('drive_file_admit_88'));
       expect(roundtrip.transactionId, equals('TXN987654'));
     });
 

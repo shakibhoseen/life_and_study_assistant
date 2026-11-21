@@ -23,14 +23,16 @@ class ExamVaultScreen extends ConsumerWidget {
           duration: Duration(seconds: 2),
         ),
       );
-      final success =
+      final result =
           await ref.read(examVaultProvider.notifier).syncToGoogleDrive();
-      if (success) {
+      if (result.success) {
         messenger.showSnackBar(
-          const SnackBar(
-            backgroundColor: Color(0xFF10B981),
+          SnackBar(
+            backgroundColor: const Color(0xFF10B981),
             content: Text(
-              '🎉 সফলভাবে গুগল ড্রাইভে সেভ হয়েছে!\n(ExamVault_Latest_Backup.json ও সেফটি কপি আপডেট হয়েছে)',
+              result.pdfCount > 0
+                  ? '🎉 গুগল ড্রাইভে ব্যাকআপ সম্পন্ন হয়েছে!\n(ExamVault_Documents ফোল্ডারে ${result.pdfCount}টি PDF ও মাস্টার ডাটা সংরক্ষিত)'
+                  : '🎉 গুগল ড্রাইভে ব্যাকআপ সম্পন্ন হয়েছে!\n(ক্রেডেনশিয়াল মাস্টার ব্যাকআপ ও সেফটি কপি আপডেট হয়েছে)',
             ),
           ),
         );
@@ -313,7 +315,7 @@ class ExamVaultScreen extends ConsumerWidget {
                       ),
                       icon: const Icon(Icons.cloud_upload),
                       label: const Text(
-                        '☁️ ড্রাইভে ব্যাকআপ সিঙ্ক করুন (Latest)',
+                        '☁️ ড্রাইভে ব্যাকআপ সিঙ্ক (JSON + সকল PDF)',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       onPressed: () async {

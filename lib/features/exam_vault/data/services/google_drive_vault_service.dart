@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
@@ -200,5 +201,136 @@ class GoogleDriveVaultService {
       return utf8.decode(bytes);
     }
     return null;
+  }
+
+  static const String vaultDocumentsFolderName = 'ExamVault_Documents';
+
+  Future<String?> _getOrCreateDocumentsFolder(drive.DriveApi api) async {
+    try {
+      final list = await api.files.list(
+        q: "name = '$vaultDocumentsFolderName' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+        spaces: 'drive',
+        $fields: 'files(id, name)',
+      );
+      if (list.files != null && list.files!.isNotEmpty) {
+        return list.files!.first.id;
+      }
+      final folderMetadata = drive.File()
+        ..name = vaultDocumentsFolderName
+        ..mimeType = 'application/vnd.google-apps.folder'
+        ..description = 'Life & Study Assistant - Exam Vault PDF Documents';
+      final folder = await api.files.create(folderMetadata);
+      return folder.id;
+    } catch (e) {
+      debugPrint('Error creating/finding documents folder on Drive: $e');
+      return null;
+    }
+  }
+
+  /// Uploads or updates a PDF file on Google Drive inside ExamVault_Documents folder.
+  /// Returns the Google Drive file ID.
+  Future<String?> uploadPdfFile({
+    required File file,
+    required String remoteFileName,
+  }) async {
+    final api = await _getDriveApi();
+    if (api == null) return null;
+
+    try {
+      if (!await file.exists()) {
+        debugPrint('Local PDF file does not exist: ${file.path}');
+        return null;
+      }
+
+      final folderId = await _getOrCreateDocumentsFolder(api);
+      final length = await file.length();
+      final media = drive.Media(
+        file.openRead(),
+        length,
+        contentType: 'application/pdf',
+      );
+
+      // Search if a file with this name already exists in this folder
+      String query = "name = '$remoteFileName' and trashed = false";
+      if (folderId != null) {
+        query += " and '$folderId' in parents";
+      }
+      final existing = await api.files.list(
+        q: query,
+        spaces: 'drive',
+        $fields: 'files(id, name)',
+      );
+
+      if (existing.files != null && existing.files!.isNotEmpty) {
+        final existingId = existing.files!.first.id!;
+        final updated = await api.files.update(
+          drive.File()..name = remoteFileName,
+          existingId,
+          uploadMedia: media,
+        );
+        return updated.id ?? existingId;
+      } else {
+        final newFile = drive.File()
+          ..name = remoteFileName
+          ..mimeType = 'application/pdf'
+          ..description = 'Exam Vault Document';
+        if (folderId != null) {
+          newFile.parents = [folderId];
+        }
+        final created = await api.files.create(
+          newFile,
+          uploadMedia: media,
+        );
+        return created.id;
+      }
+    } catch (e) {
+      debugPrint('Error uploading PDF to Drive ($remoteFileName): $e');
+      return null;
+    }
+  }
+
+  /// Downloads a PDF file from Google Drive to local storage
+  Future<File?> downloadPdfFile({
+    required String fileId,
+    required String localDestinationPath,
+  }) async {
+    final api = await _getDriveApi();
+    if (api == null) return null;
+
+    try {
+      final media = await api.files.get(
+        fileId,
+        downloadOptions: drive.DownloadOptions.fullMedia,
+      );
+
+      if (media is drive.Media) {
+        final targetFile = File(localDestinationPath);
+        if (!await targetFile.parent.exists()) {
+          await targetFile.parent.create(recursive: true);
+        }
+        final sink = targetFile.openWrite();
+        await media.stream.pipe(sink);
+        await sink.flush();
+        await sink.close();
+        return targetFile;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error downloading PDF from Drive ($fileId): $e');
+      return null;
+    }
+  }
+
+  /// Deletes a file from Google Drive
+  Future<bool> deleteFileFromDrive(String fileId) async {
+    final api = await _getDriveApi();
+    if (api == null) return false;
+    try {
+      await api.files.delete(fileId);
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting file from Drive ($fileId): $e');
+      return false;
+    }
   }
 }

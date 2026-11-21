@@ -116,6 +116,16 @@ class ExamVaultService {
     }
   }
 
+  /// Returns a designated local destination file path for downloading a PDF from Drive
+  Future<String> getLocalPdfPathForDownload({
+    required String examId,
+    required String docType, // 'applicant_copy' or 'admit_card'
+  }) async {
+    final attachDir = await _getAttachmentsDirectory();
+    final cleanExamId = examId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    return p.join(attachDir.path, '${cleanExamId}_$docType.pdf');
+  }
+
   /// Opens a local document file using native viewer (PDF viewer, etc.)
   Future<OpenResult> openDocument(String filePath) async {
     try {
