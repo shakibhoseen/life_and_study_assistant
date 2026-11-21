@@ -38,6 +38,8 @@ import '../../../analytics/presentation/providers/today_activity_provider.dart';
 import '../../domain/next_study_action.dart';
 import '../../domain/today_progress.dart';
 import 'office_portal_screen.dart';
+import '../../../exam_vault/presentation/screens/exam_vault_screen.dart';
+import '../../../exam_vault/presentation/widgets/exam_vault_dashboard_card.dart';
 import '../widgets/biometric_status_banner.dart';
 import '../widgets/attention_card.dart';
 import '../widgets/next_action_card.dart';
@@ -252,6 +254,8 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: FluentSpacing.s),
                   const ExamAccountabilityCard(),
+                  const SizedBox(height: FluentSpacing.s),
+                  const ExamVaultDashboardCard(),
                   _buildTodayProgress(ref),
                   const SizedBox(height: FluentSpacing.s),
                   _buildAttention(
@@ -528,7 +532,23 @@ class DashboardScreen extends ConsumerWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          // 0. Reference tables — the things that only make sense whole.
+          // 0. Exam & Job Vault — User ID, Password & Admit Card PDF
+          _buildQuickActionPill(
+            context,
+            icon: Icons.shield_outlined,
+            iconColor: Colors.indigo,
+            label: 'Exam Vault',
+            badge: 'Credentials 🛡️',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => const ExamVaultScreen(),
+              ),
+            ),
+          ),
+          const SizedBox(width: FluentSpacing.s),
+
+          // 0.1. Reference tables — the things that only make sense whole.
           _buildQuickActionPill(
             context,
             icon: Icons.table_chart_outlined,

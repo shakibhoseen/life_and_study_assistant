@@ -58,6 +58,7 @@ dependencies:
   image_cropper: ^13.0.0
   audioplayers: ^6.8.1
   url_launcher: ^6.3.3
+  open_filex: ^4.7.0
   record: ^7.1.2
   flutter_overlay_window: ^1.0.2
   crypto: ^3.0.3
