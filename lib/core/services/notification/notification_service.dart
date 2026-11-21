@@ -10,6 +10,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../config/notification_constants.dart';
+import '../background/wifi_monitor_service.dart';
 import '../flashcards/flashcard_service.dart';
 import 'notification_action_handler.dart';
 
@@ -288,18 +289,9 @@ class NotificationService {
     bool ignoreOffDay = false,
   }) async {
     if (!ignoreOffDay) {
-      final prefs = await SharedPreferences.getInstance();
-      final offDaysStr = prefs.getString(NotificationConstants.prefOffDays);
-      final offDays = (offDaysStr == null || offDaysStr.isEmpty)
-          ? [DateTime.thursday, DateTime.friday]
-          : offDaysStr
-                .split(',')
-                .map((s) => int.tryParse(s.trim()))
-                .whereType<int>()
-                .toList();
-      if (offDays.contains(DateTime.now().weekday)) {
+      if (await WifiMonitorService.instance.isOfficeClosedToday()) {
         debugPrint(
-          'Today is an off-day (${DateTime.now().weekday}). Suppressing office check-in reminder.',
+          'Office is closed today (Off-day, Holiday, or Leave). Suppressing office check-in reminder.',
         );
         return;
       }
@@ -330,8 +322,8 @@ class NotificationService {
           cancelNotification: true,
         ),
         AndroidNotificationAction(
-          NotificationConstants.actionCheckInSnooze,
-          '⏰ Remind in 10m',
+          NotificationConstants.actionMarkLeaveToday,
+          '🌴 আজ ছুটিতে (Leave)',
           showsUserInterface: false,
           cancelNotification: true,
         ),
@@ -367,18 +359,24 @@ class NotificationService {
     bool isEarly = false,
   }) async {
     if (!ignoreOffDay) {
-      final prefs = await SharedPreferences.getInstance();
-      final offDaysStr = prefs.getString(NotificationConstants.prefOffDays);
-      final offDays = (offDaysStr == null || offDaysStr.isEmpty)
-          ? [DateTime.thursday, DateTime.friday]
-          : offDaysStr
-                .split(',')
-                .map((s) => int.tryParse(s.trim()))
-                .whereType<int>()
-                .toList();
-      if (offDays.contains(DateTime.now().weekday)) {
+      if (await WifiMonitorService.instance.isOfficeClosedToday()) {
         debugPrint(
-          'Today is an off-day (${DateTime.now().weekday}). Suppressing office check-out reminder.',
+          'Office is closed today (Off-day, Holiday, or Leave). Suppressing office check-out reminder.',
+        );
+        return;
+      }
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final today = now.toIso8601String().substring(0, 10);
+      final lastCheckInDate =
+          prefs.getString(NotificationConstants.prefLastCheckInDate);
+      final lastCheckInStatus =
+          prefs.getString(NotificationConstants.prefLastCheckInStatus);
+      final isPunchedInToday = lastCheckInDate == today &&
+          (lastCheckInStatus == 'Punched' || lastCheckInStatus == 'Punched In');
+      if (!isPunchedInToday) {
+        debugPrint(
+          'User was not punched in today ($today). Suppressing office check-out reminder.',
         );
         return;
       }
@@ -439,6 +437,13 @@ class NotificationService {
   Future<void> showLateWarningNotification({
     required int minutesRemaining,
   }) async {
+    if (await WifiMonitorService.instance.isOfficeClosedToday()) {
+      debugPrint(
+        'Office is closed today (Off-day, Holiday, or Leave). Suppressing late warning.',
+      );
+      return;
+    }
+
     const androidDetails = AndroidNotificationDetails(
       NotificationConstants.urgentChannelId,
       NotificationConstants.urgentChannelName,
@@ -453,6 +458,12 @@ class NotificationService {
         AndroidNotificationAction(
           NotificationConstants.actionCheckInNow,
           '⚡ Punch In Now',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+        AndroidNotificationAction(
+          NotificationConstants.actionMarkLeaveToday,
+          '🌴 আজ ছুটিতে (Leave)',
           showsUserInterface: false,
           cancelNotification: true,
         ),
@@ -627,7 +638,13 @@ class NotificationService {
       return;
     }
 
-    final now = tz.TZDateTime.now(tz.local);
+    final tz.TZDateTime now;
+    try {
+      now = tz.TZDateTime.now(tz.local);
+    } catch (_) {
+      debugPrint('Timezone not initialized for watchdogs. Skipping schedule.');
+      return;
+    }
     var scheduledDate = tz.TZDateTime(
       tz.local,
       now.year,
@@ -720,7 +737,13 @@ class NotificationService {
       return;
     }
 
-    final now = tz.TZDateTime.now(tz.local);
+    final tz.TZDateTime now;
+    try {
+      now = tz.TZDateTime.now(tz.local);
+    } catch (_) {
+      debugPrint('Timezone not initialized for watchdogs. Skipping schedule.');
+      return;
+    }
     final today = now.toIso8601String().substring(0, 10);
     final lastCheckInDate =
         prefs.getString(NotificationConstants.prefLastCheckInDate);
@@ -762,6 +785,12 @@ class NotificationService {
           showsUserInterface: false,
           cancelNotification: true,
         ),
+        AndroidNotificationAction(
+          NotificationConstants.actionMarkLeaveToday,
+          '🌴 আজ ছুটিতে (Leave)',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
       ],
     );
 
@@ -775,6 +804,9 @@ class NotificationService {
       ),
     );
 
+    final isClosedToday =
+        await WifiMonitorService.instance.isOfficeClosedToday(now);
+
     for (final wd in watchdogs) {
       var scheduledDate = tz.TZDateTime(
         tz.local,
@@ -785,9 +817,14 @@ class NotificationService {
         wd.minute,
       );
 
-      // If time has already passed today OR user is already punched in today,
-      // push schedule to tomorrow so sirens don't disturb someone already at work.
-      if (scheduledDate.isBefore(now) || alreadyPunchedInToday) {
+      // If time has already passed today, user already punched in today,
+      // or office is closed today (weekly off-day, holiday, or user leave):
+      if (scheduledDate.isBefore(now) || alreadyPunchedInToday || isClosedToday) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+
+      // Advance past any weekly off-days, official company holidays, or user leaves
+      while (await WifiMonitorService.instance.isOfficeClosedToday(scheduledDate)) {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
 
@@ -800,10 +837,9 @@ class NotificationService {
           scheduledDate: scheduledDate,
           notificationDetails: details,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          matchDateTimeComponents: DateTimeComponents.time,
         );
         debugPrint(
-          'Morning watchdog [${wd.hour}:${wd.minute.toString().padLeft(2, '0')}] scheduled for $scheduledDate',
+          'Morning watchdog [${wd.hour}:${wd.minute.toString().padLeft(2, '0')}] scheduled for next working day: $scheduledDate',
         );
       } catch (e) {
         debugPrint('Error scheduling morning watchdog (${wd.id}): $e');
@@ -855,7 +891,13 @@ class NotificationService {
 
   /// Schedules daily 12:25 PM lunch status sentinel trigger
   Future<void> scheduleDailyLunchTrackingTrigger() async {
-    final now = tz.TZDateTime.now(tz.local);
+    final tz.TZDateTime now;
+    try {
+      now = tz.TZDateTime.now(tz.local);
+    } catch (_) {
+      debugPrint('Timezone not initialized for watchdogs. Skipping schedule.');
+      return;
+    }
     var scheduledDate = tz.TZDateTime(
       tz.local,
       now.year,
@@ -922,7 +964,13 @@ class NotificationService {
       return;
     }
 
-    final now = tz.TZDateTime.now(tz.local);
+    final tz.TZDateTime now;
+    try {
+      now = tz.TZDateTime.now(tz.local);
+    } catch (_) {
+      debugPrint('Timezone not initialized for watchdogs. Skipping schedule.');
+      return;
+    }
 
     final breaks = [
       (
@@ -1006,7 +1054,13 @@ class NotificationService {
     int hour = 8,
     int minute = 30,
   }) async {
-    final now = tz.TZDateTime.now(tz.local);
+    final tz.TZDateTime now;
+    try {
+      now = tz.TZDateTime.now(tz.local);
+    } catch (_) {
+      debugPrint('Timezone not initialized for watchdogs. Skipping schedule.');
+      return;
+    }
     var scheduledDate = tz.TZDateTime(
       tz.local,
       now.year,
@@ -1058,7 +1112,13 @@ class NotificationService {
     int hour = 22,
     int minute = 0,
   }) async {
-    final now = tz.TZDateTime.now(tz.local);
+    final tz.TZDateTime now;
+    try {
+      now = tz.TZDateTime.now(tz.local);
+    } catch (_) {
+      debugPrint('Timezone not initialized for watchdogs. Skipping schedule.');
+      return;
+    }
     var scheduledDate = tz.TZDateTime(
       tz.local,
       now.year,

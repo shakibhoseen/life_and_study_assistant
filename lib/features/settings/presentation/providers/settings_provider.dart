@@ -173,6 +173,7 @@ class SettingsNotifier extends AsyncNotifier<SettingsState> {
     final joined = days.join(',');
     await prefs.setString(NotificationConstants.prefOffDays, joined);
     state = AsyncValue.data(state.value!.copyWith(offDays: days));
+    await NotificationService.instance.scheduleMorningOfficeWatchdogs();
   }
 
   Future<void> updateGeminiModel(String modelName) async {

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_and_study_assistant/core/config/notification_constants.dart';
 import 'package:life_and_study_assistant/core/services/attendance/packly_attendance_service.dart';
+import 'package:life_and_study_assistant/core/services/background/wifi_monitor_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -157,6 +158,28 @@ void main() {
       expect(checkInResult.success, isTrue);
       expect(checkInResult.message, contains('[TEST MODE]'));
       expect(checkInResult.status?.isCheckedIn, isTrue);
+    });
+
+    test('isOfficeClosedToday accurately identifies off-days and leaves', () async {
+      SharedPreferences.setMockInitialValues({
+        NotificationConstants.prefOffDays: '5,6', // Friday, Saturday
+      });
+
+      final friday = DateTime(2026, 11, 20); // Friday (weekday 5)
+      final thursday = DateTime(2026, 11, 19); // Thursday (weekday 4)
+
+      expect(await WifiMonitorService.instance.isOfficeClosedToday(friday), isTrue);
+      expect(await WifiMonitorService.instance.isOfficeClosedToday(thursday), isFalse);
+
+      // Now set Thursday as leave
+      await WifiMonitorService.instance.setUserLeaveForDate(thursday, true);
+      expect(await WifiMonitorService.instance.isOfficeClosedToday(thursday), isTrue);
+      expect(await WifiMonitorService.instance.isUserOnLeave(thursday), isTrue);
+
+      // Cancel leave on Thursday
+      await WifiMonitorService.instance.setUserLeaveForDate(thursday, false);
+      expect(await WifiMonitorService.instance.isOfficeClosedToday(thursday), isFalse);
+      expect(await WifiMonitorService.instance.isUserOnLeave(thursday), isFalse);
     });
   });
 }

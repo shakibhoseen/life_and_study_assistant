@@ -354,6 +354,16 @@ class OfficeSentinelTaskHandler extends TaskHandler {
           return;
         }
 
+        // If user was never checked in today, stop evening sentinel immediately!
+        if (!isAlreadyCheckedIn) {
+          debugPrint(
+            'OfficeSentinel: User was not checked in today ($today). Stopping evening sentinel.',
+          );
+          await FlutterForegroundTask.stopService();
+          await WorkmanagerService.instance.cancelSafetyWatchdog();
+          return;
+        }
+
         // Step 2: Live Server Verification (every ~60s when internet is available)
         final shouldVerifyServer = _lastInternetSync == null ||
             now.difference(_lastInternetSync!).inSeconds >= 60;
@@ -643,6 +653,15 @@ class OfficeSentinelService {
         await SentinelLog.write('trigger: evening window, already checked out');
         await stopSentinel();
         await WorkmanagerService.instance.cancelSafetyWatchdog();
+        return;
+      }
+      if (!isCheckedIn) {
+        debugPrint(
+          'OfficeSentinel: Evening window, but user was not checked in today ($today). Skipping sentinel.',
+        );
+        await SentinelLog.write(
+          'trigger: evening window, but not checked in today',
+        );
         return;
       }
       await SentinelLog.write('starting evening sentinel');

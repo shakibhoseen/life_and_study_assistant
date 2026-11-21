@@ -57,6 +57,20 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
     }
   }
 
+  PacklyHoliday? _getTodayHoliday() {
+    final now = DateTime.now();
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    for (final h in _holidays) {
+      final start =
+          DateTime(h.startDate.year, h.startDate.month, h.startDate.day);
+      final end = DateTime(h.endDate.year, h.endDate.month, h.endDate.day);
+      if (!todayMidnight.isBefore(start) && !todayMidnight.isAfter(end)) {
+        return h;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -955,6 +969,8 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
     final isOfficeConnected =
         currentSsid != null && officeSsids.any((s) => currentSsid.contains(s));
 
+    final todayHoliday = state.todayHoliday ?? _getTodayHoliday();
+
     return RefreshIndicator(
       onRefresh: () async {
         await ref.read(officeAttendanceProvider.notifier).syncLiveAttendance();
@@ -963,6 +979,154 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
       child: ListView(
         padding: const EdgeInsets.all(FluentSpacing.l),
         children: [
+          // 0. Off-day / Leave / Holiday Status Alert Banner
+          if (state.isTodayLeave)
+            Container(
+              margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+              padding: const EdgeInsets.all(FluentSpacing.m),
+              decoration: BoxDecoration(
+                color: Colors.teal.withValues(alpha: isDark ? 0.2 : 0.1),
+                borderRadius: FluentRadius.cardBorder,
+                border: Border.all(
+                  color: Colors.teal.withValues(alpha: 0.4),
+                  width: FluentStroke.width,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.beach_access_rounded,
+                    color: Colors.teal,
+                    size: 26,
+                  ),
+                  const SizedBox(width: FluentSpacing.m),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '🌴 আজ আপনি ছুটিতে আছেন (On Leave)',
+                          style: FluentType.bodyStrong.copyWith(
+                            color: Colors.teal,
+                          ),
+                        ),
+                        const SizedBox(height: FluentSpacing.xs),
+                        Text(
+                          'আজকের জন্য চেক-ইন, চেক-আউট ও সাইরেন অ্যালার্ট বন্ধ থাকবে।',
+                          style: FluentType.caption.copyWith(
+                            color: onSurfaceMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await ref
+                          .read(officeAttendanceProvider.notifier)
+                          .toggleTodayLeave();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'আজকের ছুটি বাতিল করা হয়েছে। অ্যালার্ট পুনরায় সক্রিয়।',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('ছুটি বাতিল'),
+                  ),
+                ],
+              ),
+            )
+          else if (state.isTodayOffDay)
+            Container(
+              margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+              padding: const EdgeInsets.all(FluentSpacing.m),
+              decoration: BoxDecoration(
+                color: Colors.indigo.withValues(alpha: isDark ? 0.2 : 0.1),
+                borderRadius: FluentRadius.cardBorder,
+                border: Border.all(
+                  color: Colors.indigo.withValues(alpha: 0.4),
+                  width: FluentStroke.width,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.weekend_rounded,
+                    color: Colors.indigoAccent,
+                    size: 26,
+                  ),
+                  const SizedBox(width: FluentSpacing.m),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '☕ আজ সাপ্তাহিক ছুটির দিন (Off-Day)',
+                          style: FluentType.bodyStrong.copyWith(
+                            color: isDark
+                                ? Colors.indigo.shade200
+                                : Colors.indigo.shade900,
+                          ),
+                        ),
+                        const SizedBox(height: FluentSpacing.xs),
+                        Text(
+                          'সাপ্তাহিক ছুটির দিনে চেক-ইন রিমাইন্ডার ও সাইরেন বন্ধ রাখা হয়েছে।',
+                          style: FluentType.caption.copyWith(
+                            color: onSurfaceMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (todayHoliday != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: FluentSpacing.m),
+              padding: const EdgeInsets.all(FluentSpacing.m),
+              decoration: BoxDecoration(
+                color: amber.withValues(alpha: isDark ? 0.2 : 0.1),
+                borderRadius: FluentRadius.cardBorder,
+                border: Border.all(
+                  color: amber.withValues(alpha: 0.4),
+                  width: FluentStroke.width,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.celebration_rounded,
+                    color: amber,
+                    size: 26,
+                  ),
+                  const SizedBox(width: FluentSpacing.m),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '🎉 সরকারি/কোম্পানি ছুটি: ${todayHoliday.name}',
+                          style: FluentType.bodyStrong.copyWith(color: amber),
+                        ),
+                        const SizedBox(height: FluentSpacing.xs),
+                        Text(
+                          'অফিসিয়াল ছুটির কারণে নোটিফিকেশন ও অ্যালার্ট সাময়িকভাবে বন্ধ থাকবে।',
+                          style: FluentType.caption.copyWith(
+                            color: onSurfaceMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // 1. Live Attendance Status Card
           Container(
             padding: const EdgeInsets.all(FluentSpacing.l),
@@ -1424,6 +1588,89 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                     ),
                   ],
                 ),
+                if (!isCheckedIn && !state.isTodayLeave) ...[
+                  const SizedBox(height: FluentSpacing.s),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: FluentSpacing.s,
+                        ),
+                        side: BorderSide(
+                          color: FluentStroke.card(brightness),
+                          width: FluentStroke.width,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: FluentRadius.controlBorder,
+                        ),
+                      ),
+                      icon: const Icon(
+                        Icons.beach_access_rounded,
+                        color: Colors.teal,
+                        size: 16,
+                      ),
+                      label: const Text(
+                        '🌴 আজ আমি ছুটিতে (Mark Leave Today)',
+                        style: FluentType.caption,
+                      ),
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: FluentRadius.cardBorder,
+                            ),
+                            title: const Row(
+                              children: [
+                                Icon(
+                                  Icons.beach_access_rounded,
+                                  color: Colors.teal,
+                                ),
+                                SizedBox(width: FluentSpacing.s),
+                                Text('আজকের ছুটি নিশ্চিত করুন'),
+                              ],
+                            ),
+                            content: const Text(
+                              'আপনি কি আজ ছুটিতে আছেন?\n\n'
+                              'ছুটি মার্ক করলে আজকের জন্য সকালের সাইরেন (৮:৫০ ও ৯:০৮ AM), অফিস চেক-ইন এবং চেক-আউট নোটিফিকেশন বন্ধ থাকবে।',
+                              style: FluentType.body,
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                  foregroundColor: Colors.white,
+                                ),
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text('হ্যাঁ, ছুটি মার্ক করুন'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          await ref
+                              .read(officeAttendanceProvider.notifier)
+                              .toggleTodayLeave();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                backgroundColor: Colors.teal,
+                                content: Text(
+                                  'আজকের জন্য ছুটি মার্ক করা হয়েছে। নোটিফিকেশন বন্ধ রাখা হয়েছে।',
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

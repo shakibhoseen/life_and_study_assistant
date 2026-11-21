@@ -311,16 +311,72 @@ class WifiMonitorService {
     return list.contains(date.weekday);
   }
 
-  /// Checks whether office is closed today: either a weekly off-day (Thu/Fri) OR an official Packly holiday
+  /// Checks whether user is marked on leave for a given date (default today)
+  Future<bool> isUserOnLeave([DateTime? testDate]) async {
+    final date = testDate ?? DateTime.now();
+    final dateIso = date.toIso8601String().substring(0, 10);
+    final prefs = await SharedPreferences.getInstance();
+    final leaveDatesStr =
+        prefs.getString(NotificationConstants.prefUserLeaveDates) ?? '';
+    if (leaveDatesStr.isNotEmpty) {
+      final leaveDates = leaveDatesStr.split(',').map((s) => s.trim()).toSet();
+      if (leaveDates.contains(dateIso)) return true;
+    }
+    return false;
+  }
+
+  /// Sets or clears user leave status for a given date
+  Future<void> setUserLeaveForDate(DateTime date, bool onLeave) async {
+    final dateIso = date.toIso8601String().substring(0, 10);
+    final prefs = await SharedPreferences.getInstance();
+    final leaveDatesStr =
+        prefs.getString(NotificationConstants.prefUserLeaveDates) ?? '';
+    final leaveDates = leaveDatesStr.isNotEmpty
+        ? leaveDatesStr.split(',').map((s) => s.trim()).toSet()
+        : <String>{};
+
+    if (onLeave) {
+      leaveDates.add(dateIso);
+    } else {
+      leaveDates.remove(dateIso);
+    }
+
+    await prefs.setString(
+      NotificationConstants.prefUserLeaveDates,
+      leaveDates.join(','),
+    );
+
+    if (onLeave &&
+        dateIso == DateTime.now().toIso8601String().substring(0, 10)) {
+      // Cancel morning watchdogs and check-out alerts for today
+      await NotificationService.instance.cancelMorningOfficeWatchdogs();
+      await NotificationService.instance.cancelCheckOutReminder();
+      await OfficeSentinelService.instance.stopSentinel();
+    } else {
+      // Re-arm watchdogs for the next working day
+      await NotificationService.instance.scheduleMorningOfficeWatchdogs();
+    }
+  }
+
+  /// Checks whether office is closed today: user leave, weekly off-day (e.g. Thu/Fri/Sat), or Packly holiday
   Future<bool> isOfficeClosedToday([DateTime? testDate]) async {
     final date = testDate ?? DateTime.now();
+
+    // 1. Check user-marked leave
+    if (await isUserOnLeave(date)) {
+      debugPrint(
+        'Date (${date.toIso8601String().substring(0, 10)}) is marked as leave. Office closed.',
+      );
+      return true;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final offDaysStr = prefs.getString(NotificationConstants.prefOffDays);
 
-    // 1. Check weekly off-day (e.g. Thursday, Friday)
+    // 2. Check weekly off-day (e.g. Thursday, Friday, or user configured days)
     if (isOffDay(date, offDaysStr)) return true;
 
-    // 2. Check official company holiday (e.g. Eid, Victory Day, etc.)
+    // 3. Check official company holiday (e.g. Eid, Victory Day, etc.)
     final holiday =
         await PacklyAttendanceService.instance.getHolidayForDate(date);
     if (holiday != null) {
@@ -489,6 +545,21 @@ class WifiMonitorService {
 
     if (lastCheckOutDate == today) {
       debugPrint('Already checked out today ($today). Skipping check-out.');
+      return;
+    }
+
+    // Safety check: If user never punched in today, checkout makes no sense
+    final lastCheckInDate =
+        prefs.getString(NotificationConstants.prefLastCheckInDate);
+    final lastCheckInStatus =
+        prefs.getString(NotificationConstants.prefLastCheckInStatus);
+    final isPunchedInToday = lastCheckInDate == today &&
+        (lastCheckInStatus == 'Punched' || lastCheckInStatus == 'Punched In');
+
+    if (!isPunchedInToday) {
+      debugPrint(
+        'WifiMonitor: User was not punched in today ($today). Suppressing check-out on disconnect.',
+      );
       return;
     }
 

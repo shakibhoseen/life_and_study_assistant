@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/notification_constants.dart';
 import '../attendance/packly_attendance_service.dart';
 import '../attendance/steadfast_lunch_service.dart';
+import '../background/wifi_monitor_service.dart';
 import '../background/workmanager_service.dart';
 import '../flashcards/flashcard_service.dart';
 import 'notification_service.dart';
@@ -96,6 +97,12 @@ Future<void> handleNotificationResponse(NotificationResponse response) async {
     );
     await prefs.setString(NotificationConstants.prefLastCheckInDate, todayIso);
     await NotificationService.instance.cancelMorningOfficeWatchdogs();
+    await FlutterForegroundTask.stopService();
+    await WorkmanagerService.instance.cancelSafetyWatchdog();
+  } else if (actionId == NotificationConstants.actionMarkLeaveToday) {
+    await WifiMonitorService.instance.setUserLeaveForDate(DateTime.now(), true);
+    await NotificationService.instance.cancelMorningOfficeWatchdogs();
+    await NotificationService.instance.cancelCheckOutReminder();
     await FlutterForegroundTask.stopService();
     await WorkmanagerService.instance.cancelSafetyWatchdog();
   } else if (actionId == NotificationConstants.actionCheckOutNow) {

@@ -139,6 +139,7 @@ class NotificationConstants {
   static const String actionCheckInDone = 'checkin_action_done';
   static const String actionCheckInNow = 'checkin_action_now';
   static const String actionCheckInSnooze = 'checkin_action_snooze';
+  static const String actionMarkLeaveToday = 'attendance_action_leave_today';
 
   // Action IDs for Biometric Check-Out Notification
   static const String actionCheckOutDone = 'checkout_action_done';
@@ -163,6 +164,8 @@ class NotificationConstants {
   static const String prefDinnerMinute = 'dinner_minute';
   static const String prefOffDays =
       'weekly_off_days'; // Comma-separated weekdays (e.g. "4,5" for Thu, Fri)
+  static const String prefUserLeaveDates =
+      'user_leave_dates'; // Comma-separated ISO dates (e.g. "2026-11-21,2026-11-22")
   static const String prefWeaknessHealingEnabled = 'weakness_healing_enabled';
 
   // Zavisoft Packly Attendance & Office Geofence Settings

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/config/notification_constants.dart';
 import '../../../../core/services/attendance/packly_attendance_service.dart';
 import '../../../../core/services/attendance/steadfast_lunch_service.dart';
+import '../../../../core/services/background/wifi_monitor_service.dart';
 import '../../../../core/services/home_widget_service.dart';
 
 // ==========================================
@@ -338,6 +339,8 @@ class AttendanceState {
   final bool isLate;
   final bool isSimulationMode;
   final String bannerMode;
+  final bool isTodayLeave;
+  final bool isTodayOffDay;
 
   const AttendanceState({
     this.isLoading = false,
@@ -348,6 +351,8 @@ class AttendanceState {
     this.isLate = false,
     this.isSimulationMode = false,
     this.bannerMode = 'contextual',
+    this.isTodayLeave = false,
+    this.isTodayOffDay = false,
   });
 
   AttendanceState copyWith({
@@ -361,6 +366,8 @@ class AttendanceState {
     bool? isLate,
     bool? isSimulationMode,
     String? bannerMode,
+    bool? isTodayLeave,
+    bool? isTodayOffDay,
   }) {
     return AttendanceState(
       isLoading: isLoading ?? this.isLoading,
@@ -375,6 +382,8 @@ class AttendanceState {
       isLate: isLate ?? this.isLate,
       isSimulationMode: isSimulationMode ?? this.isSimulationMode,
       bannerMode: bannerMode ?? this.bannerMode,
+      isTodayLeave: isTodayLeave ?? this.isTodayLeave,
+      isTodayOffDay: isTodayOffDay ?? this.isTodayOffDay,
     );
   }
 }
@@ -434,6 +443,10 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
       }
     }
 
+    final isLeave = await WifiMonitorService.instance.isUserOnLeave();
+    final offDaysStr = prefs.getString(NotificationConstants.prefOffDays);
+    final isOffDay = WifiMonitorService.isOffDay(DateTime.now(), offDaysStr);
+
     state = state.copyWith(
       todayHoliday: holiday,
       bannerMode: bannerMode,
@@ -442,10 +455,21 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
       lastCheckOutTime: outTime,
       clearCheckOutTime: outTime == null,
       isLate: isLate,
+      isTodayLeave: isLeave,
+      isTodayOffDay: isOffDay,
     );
 
     // Sync live from portal in background
     syncLiveAttendance();
+  }
+
+  Future<void> toggleTodayLeave() async {
+    final newStatus = !state.isTodayLeave;
+    await WifiMonitorService.instance.setUserLeaveForDate(
+      DateTime.now(),
+      newStatus,
+    );
+    state = state.copyWith(isTodayLeave: newStatus);
   }
 
   Future<void> syncLiveAttendance() async {
