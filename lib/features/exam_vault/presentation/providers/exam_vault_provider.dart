@@ -1,11 +1,15 @@
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../data/models/exam_application.dart';
 import '../../data/services/exam_vault_service.dart';
+import '../../data/services/google_drive_vault_service.dart';
 
 class ExamVaultState {
   final bool isLoading;
+  final bool isSyncingDrive;
+  final GoogleSignInAccount? googleUser;
   final List<ExamApplication> applications;
   final String searchQuery;
   final String selectedFilter; // 'all', 'admit_issued', 'upcoming', 'completed'
@@ -13,11 +17,15 @@ class ExamVaultState {
 
   const ExamVaultState({
     this.isLoading = false,
+    this.isSyncingDrive = false,
+    this.googleUser,
     this.applications = const [],
     this.searchQuery = '',
     this.selectedFilter = 'all',
     this.errorMessage,
   });
+
+  bool get isGoogleSignedIn => googleUser != null;
 
   List<ExamApplication> get filteredApplications {
     return applications.where((app) {
@@ -71,6 +79,9 @@ class ExamVaultState {
 
   ExamVaultState copyWith({
     bool? isLoading,
+    bool? isSyncingDrive,
+    GoogleSignInAccount? googleUser,
+    bool clearGoogleUser = false,
     List<ExamApplication>? applications,
     String? searchQuery,
     String? selectedFilter,
@@ -79,6 +90,8 @@ class ExamVaultState {
   }) {
     return ExamVaultState(
       isLoading: isLoading ?? this.isLoading,
+      isSyncingDrive: isSyncingDrive ?? this.isSyncingDrive,
+      googleUser: clearGoogleUser ? null : (googleUser ?? this.googleUser),
       applications: applications ?? this.applications,
       searchQuery: searchQuery ?? this.searchQuery,
       selectedFilter: selectedFilter ?? this.selectedFilter,
@@ -90,8 +103,76 @@ class ExamVaultState {
 class ExamVaultNotifier extends Notifier<ExamVaultState> {
   @override
   ExamVaultState build() {
-    Future.microtask(() => loadApplications());
+    Future.microtask(() async {
+      await loadApplications();
+      await initGoogleAuth();
+    });
     return const ExamVaultState(isLoading: true);
+  }
+
+  Future<void> initGoogleAuth() async {
+    try {
+      final user = await GoogleDriveVaultService.instance.signInSilently();
+      if (user != null) {
+        state = state.copyWith(googleUser: user);
+      }
+    } catch (_) {}
+  }
+
+  Future<GoogleSignInAccount?> signInGoogle() async {
+    try {
+      state = state.copyWith(isSyncingDrive: true, clearError: true);
+      final user = await GoogleDriveVaultService.instance.signIn();
+      state = state.copyWith(isSyncingDrive: false, googleUser: user);
+      return user;
+    } catch (e) {
+      state = state.copyWith(isSyncingDrive: false, errorMessage: e.toString());
+      return null;
+    }
+  }
+
+  Future<void> signOutGoogle() async {
+    await GoogleDriveVaultService.instance.signOut();
+    state = state.copyWith(clearGoogleUser: true);
+  }
+
+  Future<bool> syncToGoogleDrive() async {
+    try {
+      state = state.copyWith(isSyncingDrive: true, clearError: true);
+      final jsonContent = ExamVaultService.instance
+          .createBackupJsonString(state.applications);
+      final success =
+          await GoogleDriveVaultService.instance.syncBackupToDrive(jsonContent);
+      state = state.copyWith(
+        isSyncingDrive: false,
+        googleUser: GoogleDriveVaultService.instance.currentUser,
+      );
+      return success;
+    } catch (e) {
+      state = state.copyWith(isSyncingDrive: false, errorMessage: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<int> restoreFromGoogleDrive({bool usePrevious = false}) async {
+    try {
+      state = state.copyWith(isSyncingDrive: true, clearError: true);
+      final jsonContent = await GoogleDriveVaultService.instance
+          .downloadBackupFromDrive(usePrevious: usePrevious);
+      if (jsonContent == null) {
+        state = state.copyWith(isSyncingDrive: false);
+        return 0;
+      }
+      final count = await importBackup(jsonContent);
+      state = state.copyWith(
+        isSyncingDrive: false,
+        googleUser: GoogleDriveVaultService.instance.currentUser,
+      );
+      return count;
+    } catch (e) {
+      state = state.copyWith(isSyncingDrive: false, errorMessage: e.toString());
+      rethrow;
+    }
   }
 
   Future<void> loadApplications() async {

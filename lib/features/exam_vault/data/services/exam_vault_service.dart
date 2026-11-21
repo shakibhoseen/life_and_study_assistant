@@ -152,6 +152,17 @@ class ExamVaultService {
   static const String masterBackupFileName = 'ExamVault_Latest_Backup.json';
   static const String previousBackupFileName = 'ExamVault_Previous_Backup.json';
 
+  /// Generates the standard JSON string for backup
+  String createBackupJsonString(List<ExamApplication> applications) {
+    final data = {
+      'version': 1,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'count': applications.length,
+      'applications': applications.map((a) => a.toJson()).toList(),
+    };
+    return const JsonEncoder.withIndent('  ').convert(data);
+  }
+
   /// Exports all exam applications into a rolling dual-backup system:
   /// 1. ExamVault_Latest_Backup.json (Always the current newest master backup)
   /// 2. ExamVault_Previous_Backup.json (Safety copy of previous backup before overwrite)
@@ -174,17 +185,8 @@ class ExamVaultService {
         }
       }
 
-      final data = {
-        'version': 1,
-        'exportedAt': DateTime.now().toIso8601String(),
-        'count': applications.length,
-        'applications': applications.map((a) => a.toJson()).toList(),
-      };
-
-      await latestFile.writeAsString(
-        const JsonEncoder.withIndent('  ').convert(data),
-        flush: true,
-      );
+      final jsonContent = createBackupJsonString(applications);
+      await latestFile.writeAsString(jsonContent, flush: true);
       return latestFile;
     } catch (e) {
       debugPrint('Error exporting backup to file: $e');
