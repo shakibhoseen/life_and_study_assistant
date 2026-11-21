@@ -334,6 +334,7 @@ class AttendanceState {
   final bool isLoading;
   final PacklyAttendanceStatus? status;
   final PacklyHoliday? todayHoliday;
+  final PacklyLeaveItem? todayLeave;
   final String? lastCheckInTime;
   final String? lastCheckOutTime;
   final bool isLate;
@@ -346,6 +347,7 @@ class AttendanceState {
     this.isLoading = false,
     this.status,
     this.todayHoliday,
+    this.todayLeave,
     this.lastCheckInTime,
     this.lastCheckOutTime,
     this.isLate = false,
@@ -359,6 +361,7 @@ class AttendanceState {
     bool? isLoading,
     PacklyAttendanceStatus? status,
     PacklyHoliday? todayHoliday,
+    PacklyLeaveItem? todayLeave,
     String? lastCheckInTime,
     String? lastCheckOutTime,
     bool clearCheckOutTime = false,
@@ -373,6 +376,7 @@ class AttendanceState {
       isLoading: isLoading ?? this.isLoading,
       status: status ?? this.status,
       todayHoliday: todayHoliday ?? this.todayHoliday,
+      todayLeave: todayLeave ?? this.todayLeave,
       lastCheckInTime: clearCheckInTime
           ? null
           : (lastCheckInTime ?? this.lastCheckInTime),
@@ -443,12 +447,18 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
       }
     }
 
-    final isLeave = await WifiMonitorService.instance.isUserOnLeave();
+    final manualLeave = await WifiMonitorService.instance.isUserOnLeave();
+    final packlyLeave = await PacklyAttendanceService.instance.getLeaveForDate(
+      DateTime.now(),
+    );
+    final isLeave =
+        manualLeave || (packlyLeave != null && packlyLeave.isActiveLeave);
     final offDaysStr = prefs.getString(NotificationConstants.prefOffDays);
     final isOffDay = WifiMonitorService.isOffDay(DateTime.now(), offDaysStr);
 
     state = state.copyWith(
       todayHoliday: holiday,
+      todayLeave: packlyLeave,
       bannerMode: bannerMode,
       isSimulationMode: isSim,
       lastCheckInTime: inTime,
@@ -480,12 +490,28 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
       final isSim =
           prefs.getBool(NotificationConstants.prefPacklySimulationMode) ??
           false;
+
+      // Sync user leaves from Packly
+      PacklyLeaveItem? liveLeave;
+      try {
+        await PacklyAttendanceService.instance.fetchUserLeaves();
+        liveLeave = await PacklyAttendanceService.instance.getLeaveForDate(
+          DateTime.now(),
+        );
+      } catch (_) {}
+
       final status = await PacklyAttendanceService.instance
           .getAttendanceStatus();
+
+      final manualLeave = await WifiMonitorService.instance.isUserOnLeave();
+      final isLeave =
+          manualLeave || (liveLeave != null && liveLeave.isActiveLeave);
 
       state = state.copyWith(
         isLoading: false,
         status: status,
+        todayLeave: liveLeave ?? state.todayLeave,
+        isTodayLeave: isLeave,
         isSimulationMode: isSim,
         lastCheckInTime:
             status.checkInTime ?? (isSim ? state.lastCheckInTime : null),

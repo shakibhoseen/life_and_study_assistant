@@ -186,6 +186,8 @@ class NotificationConstants {
   static const String prefLastCheckInIsLate = 'packly_last_checkin_is_late';
   static const String prefPacklyHolidaysCache = 'packly_holidays_cache';
   static const String prefPacklyHolidaysLastSync = 'packly_holidays_last_sync';
+  static const String prefPacklyLeavesCache = 'packly_leaves_cache';
+  static const String prefPacklyLeavesLastSync = 'packly_leaves_last_sync';
   static const String prefOfficeBannerMode = 'office_banner_display_mode';
   static const String prefPacklySimulationMode = 'packly_simulation_mode';
 

@@ -1005,14 +1005,18 @@ class _OfficePortalScreenState extends ConsumerState<OfficePortalScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '🌴 আজ আপনি ছুটিতে আছেন (On Leave)',
+                          state.todayLeave != null
+                              ? '🌴 আজ ছুটি: ${state.todayLeave!.leaveType} (${state.todayLeave!.status})'
+                              : '🌴 আজ আপনি ছুটিতে আছেন (On Leave)',
                           style: FluentType.bodyStrong.copyWith(
                             color: Colors.teal,
                           ),
                         ),
                         const SizedBox(height: FluentSpacing.xs),
                         Text(
-                          'আজকের জন্য চেক-ইন, চেক-আউট ও সাইরেন অ্যালার্ট বন্ধ থাকবে।',
+                          state.todayLeave != null
+                              ? 'প্যাকলিতে লিভ রেকর্ড (${state.todayLeave!.status}) পাওয়ায় নোটিফিকেশন ও অ্যালার্ট বন্ধ থাকবে।'
+                              : 'আজকের জন্য চেক-ইন, চেক-আউট ও সাইরেন অ্যালার্ট বন্ধ থাকবে।',
                           style: FluentType.caption.copyWith(
                             color: onSurfaceMuted,
                           ),

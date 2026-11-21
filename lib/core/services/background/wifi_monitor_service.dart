@@ -362,7 +362,7 @@ class WifiMonitorService {
   Future<bool> isOfficeClosedToday([DateTime? testDate]) async {
     final date = testDate ?? DateTime.now();
 
-    // 1. Check user-marked leave
+    // 1. Check user-marked leave in app
     if (await isUserOnLeave(date)) {
       debugPrint(
         'Date (${date.toIso8601String().substring(0, 10)}) is marked as leave. Office closed.',
@@ -370,13 +370,23 @@ class WifiMonitorService {
       return true;
     }
 
+    // 2. Check auto-synced Packly leaves (Pending or Approved)
+    final packlyLeave =
+        await PacklyAttendanceService.instance.getLeaveForDate(date);
+    if (packlyLeave != null && packlyLeave.isActiveLeave) {
+      debugPrint(
+        'Date (${date.toIso8601String().substring(0, 10)}) is active Packly leave: ${packlyLeave.leaveType} (${packlyLeave.status}). Office closed.',
+      );
+      return true;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final offDaysStr = prefs.getString(NotificationConstants.prefOffDays);
 
-    // 2. Check weekly off-day (e.g. Thursday, Friday, or user configured days)
+    // 3. Check weekly off-day (e.g. Thursday, Friday, or user configured days)
     if (isOffDay(date, offDaysStr)) return true;
 
-    // 3. Check official company holiday (e.g. Eid, Victory Day, etc.)
+    // 4. Check official company holiday (e.g. Eid, Victory Day, etc.)
     final holiday =
         await PacklyAttendanceService.instance.getHolidayForDate(date);
     if (holiday != null) {

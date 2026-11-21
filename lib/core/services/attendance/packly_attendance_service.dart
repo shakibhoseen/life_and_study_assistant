@@ -168,6 +168,53 @@ class PacklyHoliday {
       );
 }
 
+class PacklyLeaveItem {
+  final String leaveType;
+  final DateTime startDate;
+  final DateTime endDate;
+  final double days;
+  final String status; // 'Pending', 'Approved', 'Rejected', 'Cancelled'
+
+  const PacklyLeaveItem({
+    required this.leaveType,
+    required this.startDate,
+    required this.endDate,
+    required this.days,
+    required this.status,
+  });
+
+  /// User took leave when it is either Approved OR Pending (as user applied and was told to take it)
+  bool get isActiveLeave {
+    final s = status.toLowerCase();
+    return s == 'approved' || s == 'pending';
+  }
+
+  bool containsDate(DateTime date) {
+    final d = DateTime(date.year, date.month, date.day);
+    final s = DateTime(startDate.year, startDate.month, startDate.day);
+    final e = DateTime(endDate.year, endDate.month, endDate.day);
+    return (d.isAtSameMomentAs(s) || d.isAfter(s)) &&
+        (d.isAtSameMomentAs(e) || d.isBefore(e));
+  }
+
+  Map<String, dynamic> toJson() => {
+        'leaveType': leaveType,
+        'startDate': startDate.toIso8601String(),
+        'endDate': endDate.toIso8601String(),
+        'days': days,
+        'status': status,
+      };
+
+  factory PacklyLeaveItem.fromJson(Map<String, dynamic> json) =>
+      PacklyLeaveItem(
+        leaveType: json['leaveType'] as String? ?? 'Leave',
+        startDate: DateTime.parse(json['startDate'] as String),
+        endDate: DateTime.parse(json['endDate'] as String),
+        days: (json['days'] as num?)?.toDouble() ?? 1.0,
+        status: json['status'] as String? ?? 'Approved',
+      );
+}
+
 class PacklyAttendanceService {
   PacklyAttendanceService._();
   static final PacklyAttendanceService instance = PacklyAttendanceService._();
@@ -730,6 +777,163 @@ class PacklyAttendanceService {
     for (final h in list) {
       if (h.containsDate(date)) {
         return h;
+      }
+    }
+    return null;
+  }
+
+  List<PacklyLeaveItem> _cachedLeaves = [];
+
+  /// Fetches user's leave applications from /leaves/my-leaves and caches them
+  Future<List<PacklyLeaveItem>> fetchUserLeaves({bool forceRefresh = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (!forceRefresh && _cachedLeaves.isNotEmpty) {
+      return _cachedLeaves;
+    }
+
+    // Try loading from prefs cache first if fresh (less than 6h old)
+    if (!forceRefresh) {
+      final cachedJsonStr =
+          prefs.getString(NotificationConstants.prefPacklyLeavesCache);
+      final lastSyncStr =
+          prefs.getString(NotificationConstants.prefPacklyLeavesLastSync);
+      if (cachedJsonStr != null && lastSyncStr != null) {
+        final lastSync = DateTime.tryParse(lastSyncStr);
+        if (lastSync != null &&
+            DateTime.now().difference(lastSync).inHours < 6) {
+          try {
+            final List decoded = jsonDecode(cachedJsonStr);
+            _cachedLeaves = decoded
+                .map((item) =>
+                    PacklyLeaveItem.fromJson(item as Map<String, dynamic>))
+                .toList();
+            return _cachedLeaves;
+          } catch (e) {
+            debugPrint('Error decoding cached leaves: $e');
+          }
+        }
+      }
+    }
+
+    final loggedIn = await login();
+    if (!loggedIn) {
+      return _cachedLeaves;
+    }
+
+    try {
+      final client = http.Client();
+      try {
+        final resp = await client.get(
+          Uri.parse('$baseUrl/leaves/my-leaves'),
+          headers: _buildHeaders(),
+        ).timeout(_requestTimeout);
+        _extractCookies(resp);
+
+        final html = resp.body;
+        final rowRegex = RegExp(
+          r'<tr[^>]*>(.*?)</tr>',
+          dotAll: true,
+        );
+        final matches = rowRegex.allMatches(html);
+
+        final leaves = <PacklyLeaveItem>[];
+
+        for (final m in matches) {
+          final rowHtml = m.group(1) ?? '';
+          final tdMatches = RegExp(r'<td[^>]*>(.*?)</td>', dotAll: true)
+              .allMatches(rowHtml)
+              .toList();
+          if (tdMatches.length < 6) continue;
+
+          // td[2]: Leave Type
+          final leaveType = tdMatches[2]
+              .group(1)!
+              .replaceAll(RegExp(r'<[^>]+>'), ' ')
+              .replaceAll(RegExp(r'\s+'), ' ')
+              .trim();
+
+          // td[3]: Dates
+          final dateCol = tdMatches[3]
+              .group(1)!
+              .replaceAll(RegExp(r'<[^>]+>'), ' ')
+              .replaceAll(RegExp(r'\s+'), ' ')
+              .trim();
+
+          // td[4]: Days
+          final daysCol = tdMatches[4]
+              .group(1)!
+              .replaceAll(RegExp(r'<[^>]+>'), ' ')
+              .replaceAll(RegExp(r'\s+'), ' ')
+              .trim();
+          final daysNum = double.tryParse(daysCol.split(' ').first) ?? 1.0;
+
+          // td[5]: Status
+          final statusCol = tdMatches[5]
+              .group(1)!
+              .replaceAll(RegExp(r'<[^>]+>'), ' ')
+              .replaceAll(RegExp(r'\s+'), ' ')
+              .trim();
+
+          if (dateCol.isEmpty || leaveType.isEmpty) continue;
+
+          // Parse dates e.g. "18 Nov 2026" or "18 Nov 2026 - 20 Nov 2026"
+          final dateMatches = RegExp(r'(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})')
+              .allMatches(dateCol);
+
+          if (dateMatches.isNotEmpty) {
+            final parsedDates = <DateTime>[];
+            for (final dm in dateMatches) {
+              final day = int.tryParse(dm.group(1) ?? '');
+              final monStr = (dm.group(2) ?? '').toLowerCase();
+              final year = int.tryParse(dm.group(3) ?? '');
+              final mon = _monthMap[monStr];
+              if (day != null && mon != null && year != null) {
+                parsedDates.add(DateTime(year, mon, day));
+              }
+            }
+
+            if (parsedDates.isNotEmpty) {
+              final start = parsedDates.first;
+              final end = parsedDates.length > 1 ? parsedDates[1] : start;
+              leaves.add(PacklyLeaveItem(
+                leaveType: leaveType,
+                startDate: start,
+                endDate: end,
+                days: daysNum,
+                status: statusCol,
+              ));
+            }
+          }
+        }
+
+        if (leaves.isNotEmpty) {
+          _cachedLeaves = leaves;
+          await prefs.setString(
+            NotificationConstants.prefPacklyLeavesCache,
+            jsonEncode(leaves.map((l) => l.toJson()).toList()),
+          );
+          await prefs.setString(
+            NotificationConstants.prefPacklyLeavesLastSync,
+            DateTime.now().toIso8601String(),
+          );
+        }
+      } finally {
+        client.close();
+      }
+    } catch (e) {
+      debugPrint('Error fetching user leaves from Packly: $e');
+    }
+
+    return _cachedLeaves;
+  }
+
+  /// Checks if given date falls on an active user leave (Pending or Approved)
+  Future<PacklyLeaveItem?> getLeaveForDate(DateTime date) async {
+    final list = await fetchUserLeaves();
+    for (final l in list) {
+      if (l.isActiveLeave && l.containsDate(date)) {
+        return l;
       }
     }
     return null;

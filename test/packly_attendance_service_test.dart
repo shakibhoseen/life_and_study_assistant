@@ -181,5 +181,38 @@ void main() {
       expect(await WifiMonitorService.instance.isOfficeClosedToday(thursday), isFalse);
       expect(await WifiMonitorService.instance.isUserOnLeave(thursday), isFalse);
     });
+
+    test('PacklyLeaveItem detects Pending and Approved leaves accurately', () {
+      final pendingLeave = PacklyLeaveItem(
+        leaveType: 'Casual Leave',
+        startDate: DateTime(2026, 11, 18),
+        endDate: DateTime(2026, 11, 18),
+        days: 1.0,
+        status: 'Pending',
+      );
+
+      final approvedLeave = PacklyLeaveItem(
+        leaveType: 'Sick Leave',
+        startDate: DateTime(2026, 11, 3),
+        endDate: DateTime(2026, 11, 3),
+        days: 1.0,
+        status: 'Approved',
+      );
+
+      final rejectedLeave = PacklyLeaveItem(
+        leaveType: 'Casual Leave',
+        startDate: DateTime(2026, 11, 10),
+        endDate: DateTime(2026, 11, 10),
+        days: 1.0,
+        status: 'Rejected',
+      );
+
+      expect(pendingLeave.isActiveLeave, isTrue);
+      expect(approvedLeave.isActiveLeave, isTrue);
+      expect(rejectedLeave.isActiveLeave, isFalse);
+
+      expect(pendingLeave.containsDate(DateTime(2026, 11, 18)), isTrue);
+      expect(pendingLeave.containsDate(DateTime(2026, 11, 17)), isFalse);
+    });
   });
 }
