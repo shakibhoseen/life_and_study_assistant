@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/fluent_tokens.dart';
+import '../../data/services/exam_vault_service.dart';
 import '../providers/exam_vault_provider.dart';
 import '../widgets/exam_credential_card.dart';
 import 'exam_application_edit_screen.dart';
@@ -21,11 +22,20 @@ class ExamVaultScreen extends ConsumerWidget {
           SnackBar(
             backgroundColor: const Color(0xFF10B981),
             duration: const Duration(seconds: 4),
-            content: Text(
-              '☁️ ড্রাইভ ও ডাউনলোডে ব্যাকআপ সংরক্ষিত হয়েছে!\n📁 লোকেশন: ${file.path}',
+            content: const Text(
+              '☁️ মাস্টার ব্যাকআপ তৈরি হয়েছে!\n(ExamVault_Latest_Backup.json ও পূর্ববর্তী সেফটি কপি)',
+            ),
+            action: SnackBarAction(
+              label: 'Drive-এ পাঠান',
+              textColor: Colors.white,
+              onPressed: () {
+                ExamVaultService.instance.shareBackupToDrive(file);
+              },
             ),
           ),
         );
+        // Automatically open the Drive / System Share sheet
+        await ExamVaultService.instance.shareBackupToDrive(file);
       }
     } catch (e) {
       messenger.showSnackBar(
@@ -50,10 +60,13 @@ class ExamVaultScreen extends ConsumerWidget {
         final content = await file.readAsString();
         final count =
             await ref.read(examVaultProvider.notifier).importBackup(content);
+        final fileName = file.path.split(Platform.pathSeparator).last;
         messenger.showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFF10B981),
-            content: Text('সফলভাবে $count টি আবেদন রিস্টোর করা হয়েছে!'),
+            content: Text(
+              'সফলভাবে $count টি আবেদন রিস্টোর করা হয়েছে! ($fileName)',
+            ),
           ),
         );
       }

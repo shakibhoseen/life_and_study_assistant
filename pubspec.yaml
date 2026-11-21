@@ -73,6 +73,7 @@ dependencies:
   http: ^1.6.0
   geolocator: ^14.0.1
   flutter_foreground_task: ^11.0.3
+  share_plus: ^13.3.1
 
 # shared_preferences_android 2.5.0 switched its implementation to Pigeon JNI.
 # In debug builds the Java-side registrar is not yet attached when main() first

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/services/export/app_export_service.dart';
 import '../models/exam_application.dart';
@@ -148,16 +149,30 @@ class ExamVaultService {
     }
   }
 
-  /// Exports all exam applications and credential records into a downloadable backup JSON file.
+  static const String masterBackupFileName = 'ExamVault_Latest_Backup.json';
+  static const String previousBackupFileName = 'ExamVault_Previous_Backup.json';
+
+  /// Exports all exam applications into a rolling dual-backup system:
+  /// 1. ExamVault_Latest_Backup.json (Always the current newest master backup)
+  /// 2. ExamVault_Previous_Backup.json (Safety copy of previous backup before overwrite)
   Future<File?> exportBackupToFile(List<ExamApplication> applications) async {
     try {
       final exportDir = await AppExportService.getExportDirectory(
         subfolder: 'LifeAndStudyAssistant/ExamVault',
       );
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-      final exportFile = File(
-        p.join(exportDir.path, 'ExamVault_Backup_$timestamp.json'),
-      );
+
+      final latestFile = File(p.join(exportDir.path, masterBackupFileName));
+      final previousFile = File(p.join(exportDir.path, previousBackupFileName));
+
+      // Rolling safety step: if Latest already exists, preserve it as Previous backup!
+      if (await latestFile.exists()) {
+        try {
+          await latestFile.copy(previousFile.path);
+          debugPrint('Previous backup safely preserved at: ${previousFile.path}');
+        } catch (e) {
+          debugPrint('Could not rotate previous backup: $e');
+        }
+      }
 
       final data = {
         'version': 1,
@@ -166,14 +181,29 @@ class ExamVaultService {
         'applications': applications.map((a) => a.toJson()).toList(),
       };
 
-      await exportFile.writeAsString(
+      await latestFile.writeAsString(
         const JsonEncoder.withIndent('  ').convert(data),
         flush: true,
       );
-      return exportFile;
+      return latestFile;
     } catch (e) {
       debugPrint('Error exporting backup to file: $e');
       return null;
+    }
+  }
+
+  /// Shares backup file to Google Drive or other cloud storage via native share sheet
+  Future<void> shareBackupToDrive(File file) async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Exam Vault Backup (Google Drive)',
+          text: 'Life & Study Assistant - Exam & Credential Vault Backup',
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error sharing backup to drive: $e');
     }
   }
 

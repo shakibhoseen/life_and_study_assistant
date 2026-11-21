@@ -209,5 +209,53 @@ void main() {
       expect(merged.any((a) => a.id == 'app_existing'), isTrue);
       expect(merged.any((a) => a.id == 'app_imported'), isTrue);
     });
+
+    test('exportBackupToFile maintains rolling dual backup (Latest + Previous)', () async {
+      final now = DateTime.now();
+      final app1 = ExamApplication(
+        id: '1',
+        postName: 'Post 1',
+        organization: 'Org 1',
+        userId: 'U1',
+        password: 'P1',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      // Export 1
+      final file1 = await ExamVaultService.instance.exportBackupToFile([app1]);
+      expect(file1, isNotNull);
+      expect(file1!.path, contains(ExamVaultService.masterBackupFileName));
+      expect(await file1.exists(), isTrue);
+
+      final app2 = ExamApplication(
+        id: '2',
+        postName: 'Post 2',
+        organization: 'Org 2',
+        userId: 'U2',
+        password: 'P2',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      // Export 2
+      final file2 = await ExamVaultService.instance.exportBackupToFile([app1, app2]);
+      expect(file2, isNotNull);
+
+      // Verify that Previous backup now exists containing app1!
+      final prevFile = File(file2!.path.replaceAll(
+        ExamVaultService.masterBackupFileName,
+        ExamVaultService.previousBackupFileName,
+      ));
+      expect(await prevFile.exists(), isTrue);
+
+      final prevContent = await prevFile.readAsString();
+      expect(prevContent, contains('Post 1'));
+      expect(prevContent, isNot(contains('Post 2')));
+
+      final latestContent = await file2.readAsString();
+      expect(latestContent, contains('Post 1'));
+      expect(latestContent, contains('Post 2'));
+    });
   });
 }
