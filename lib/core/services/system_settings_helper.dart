@@ -3,7 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 class SystemSettingsHelper {
   static const MethodChannel _channel = MethodChannel(
-    'com.example.life_and_study_assistant/system_settings',
+    'com.shakib.life_and_study_assistant/system_settings',
   );
 
   /// Opens the app's Notification Settings (Channel list, custom sounds, badges)

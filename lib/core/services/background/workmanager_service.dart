@@ -12,13 +12,13 @@ import 'office_sentinel_service.dart';
 import 'wifi_monitor_service.dart';
 
 const String backgroundTaskWifiCheck =
-    'com.example.life_and_study_assistant.wifi_check';
+    'com.shakib.life_and_study_assistant.wifi_check';
 const String backgroundTaskDailyMeal =
-    'com.example.life_and_study_assistant.daily_meal';
+    'com.shakib.life_and_study_assistant.daily_meal';
 const String backgroundTaskWidgetSync =
-    'com.example.life_and_study_assistant.widget_sync';
+    'com.shakib.life_and_study_assistant.widget_sync';
 const String backgroundTaskStudyWidgetSync =
-    'com.example.life_and_study_assistant.study_widget_sync';
+    'com.shakib.life_and_study_assistant.study_widget_sync';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {

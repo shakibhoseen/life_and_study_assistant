@@ -11,7 +11,7 @@ import 'study_widget_service.dart';
 
 class HomeWidgetService {
   static const MethodChannel _channel = MethodChannel(
-    'com.example.life_and_study_assistant/system_settings',
+    'com.shakib.life_and_study_assistant/system_settings',
   );
 
   /// h:mm AM/PM, the "last synced" stamp in the widget header.

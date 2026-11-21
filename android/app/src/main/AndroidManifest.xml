@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.life_and_study_assistant">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.shakib.life_and_study_assistant">
 
     <!-- Connectivity and Wi-Fi SSID detection permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -120,8 +120,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.example.life_and_study_assistant.REFRESH_WIDGET" />
-                <action android:name="com.example.life_and_study_assistant.UPDATE_WIDGET_DATA" />
+                <action android:name="com.shakib.life_and_study_assistant.REFRESH_WIDGET" />
+                <action android:name="com.shakib.life_and_study_assistant.UPDATE_WIDGET_DATA" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -135,8 +135,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.example.life_and_study_assistant.REFRESH_STUDY_WIDGET" />
-                <action android:name="com.example.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA" />
+                <action android:name="com.shakib.life_and_study_assistant.REFRESH_STUDY_WIDGET" />
+                <action android:name="com.shakib.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -148,8 +148,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.example.life_and_study_assistant.REFRESH_STUDY_WIDGET" />
-                <action android:name="com.example.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA" />
+                <action android:name="com.shakib.life_and_study_assistant.REFRESH_STUDY_WIDGET" />
+                <action android:name="com.shakib.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -161,11 +161,11 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.example.life_and_study_assistant.REFRESH_STUDY_WIDGET" />
-                <action android:name="com.example.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA" />
-                <action android:name="com.example.life_and_study_assistant.TOGGLE_QOTD_ANSWER" />
-                <action android:name="com.example.life_and_study_assistant.QOTD_ANSWER" />
-                <action android:name="com.example.life_and_study_assistant.QOTD_NEXT" />
+                <action android:name="com.shakib.life_and_study_assistant.REFRESH_STUDY_WIDGET" />
+                <action android:name="com.shakib.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA" />
+                <action android:name="com.shakib.life_and_study_assistant.TOGGLE_QOTD_ANSWER" />
+                <action android:name="com.shakib.life_and_study_assistant.QOTD_ANSWER" />
+                <action android:name="com.shakib.life_and_study_assistant.QOTD_NEXT" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

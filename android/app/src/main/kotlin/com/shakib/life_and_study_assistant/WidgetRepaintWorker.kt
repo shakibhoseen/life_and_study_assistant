@@ -1,4 +1,4 @@
-package com.example.life_and_study_assistant
+package com.shakib.life_and_study_assistant
 
 import android.content.Context
 import androidx.work.Worker

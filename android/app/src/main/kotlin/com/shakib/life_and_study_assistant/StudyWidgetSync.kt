@@ -1,4 +1,4 @@
-package com.example.life_and_study_assistant
+package com.shakib.life_and_study_assistant
 
 import android.content.Context
 import androidx.work.Data
@@ -16,11 +16,11 @@ import dev.fluttercommunity.workmanager.BackgroundWorker
  */
 object StudyWidgetSync {
 
-    const val ACTION_REFRESH = "com.example.life_and_study_assistant.REFRESH_STUDY_WIDGET"
-    const val ACTION_UPDATE_DATA = "com.example.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA"
+    const val ACTION_REFRESH = "com.shakib.life_and_study_assistant.REFRESH_STUDY_WIDGET"
+    const val ACTION_UPDATE_DATA = "com.shakib.life_and_study_assistant.UPDATE_STUDY_WIDGET_DATA"
 
     /** The Dart task name the background worker dispatches on. */
-    private const val DART_TASK = "com.example.life_and_study_assistant.study_widget_sync"
+    private const val DART_TASK = "com.shakib.life_and_study_assistant.study_widget_sync"
 
     fun prefs(context: Context) =
         context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)

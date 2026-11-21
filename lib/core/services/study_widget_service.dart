@@ -23,7 +23,7 @@ import 'background/workmanager_service.dart';
 /// and after each drill is recorded.
 class StudyWidgetService {
   static const MethodChannel _channel = MethodChannel(
-    'com.example.life_and_study_assistant/system_settings',
+    'com.shakib.life_and_study_assistant/system_settings',
   );
 
   // Widget 1: what needs attention today.

@@ -1,4 +1,4 @@
-package com.example.life_and_study_assistant
+package com.shakib.life_and_study_assistant
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -63,7 +63,7 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
                     val data = Data.Builder()
                         .putString(
                             BackgroundWorker.DART_TASK_KEY,
-                            "com.example.life_and_study_assistant.widget_sync"
+                            "com.shakib.life_and_study_assistant.widget_sync"
                         )
                         .putString(
                             "dev.fluttercommunity.workmanager.UNIQUE_NAME",
@@ -102,8 +102,8 @@ class OfficeStatusWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
-        const val ACTION_REFRESH_WIDGET = "com.example.life_and_study_assistant.REFRESH_WIDGET"
-        const val ACTION_UPDATE_DATA = "com.example.life_and_study_assistant.UPDATE_WIDGET_DATA"
+        const val ACTION_REFRESH_WIDGET = "com.shakib.life_and_study_assistant.REFRESH_WIDGET"
+        const val ACTION_UPDATE_DATA = "com.shakib.life_and_study_assistant.UPDATE_WIDGET_DATA"
 
         fun updateAllWidgets(context: Context) {
             val appWidgetManager = AppWidgetManager.getInstance(context)

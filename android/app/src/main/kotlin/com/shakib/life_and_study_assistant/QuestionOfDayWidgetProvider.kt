@@ -1,4 +1,4 @@
-package com.example.life_and_study_assistant
+package com.shakib.life_and_study_assistant
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -78,9 +78,9 @@ class QuestionOfDayWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
-        const val ACTION_ANSWER = "com.example.life_and_study_assistant.QOTD_ANSWER"
-        const val ACTION_REVEAL = "com.example.life_and_study_assistant.TOGGLE_QOTD_ANSWER"
-        const val ACTION_NEXT = "com.example.life_and_study_assistant.QOTD_NEXT"
+        const val ACTION_ANSWER = "com.shakib.life_and_study_assistant.QOTD_ANSWER"
+        const val ACTION_REVEAL = "com.shakib.life_and_study_assistant.TOGGLE_QOTD_ANSWER"
+        const val ACTION_NEXT = "com.shakib.life_and_study_assistant.QOTD_NEXT"
         const val EXTRA_OPTION = "option"
 
         private const val KEY_QUEUE = "flutter.study_qotd_queue"

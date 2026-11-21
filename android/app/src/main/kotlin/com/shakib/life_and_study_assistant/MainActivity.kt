@@ -1,4 +1,4 @@
-package com.example.life_and_study_assistant
+package com.shakib.life_and_study_assistant
 
 import android.content.Intent
 import android.os.Build
@@ -11,7 +11,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.example.life_and_study_assistant/system_settings"
+    private val CHANNEL = "com.shakib.life_and_study_assistant/system_settings"
 
     companion object {
         var activeChannel: MethodChannel? = null
