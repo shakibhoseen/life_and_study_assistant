@@ -361,9 +361,27 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
         .exportBackupToFile(state.applications);
   }
 
+  Future<File?> exportFullBackupZip() async {
+    return await ExamVaultService.instance
+        .exportFullBackupZip(state.applications);
+  }
+
   Future<int> importBackup(String jsonString) async {
     final merged =
         await ExamVaultService.instance.importBackupFromJson(jsonString);
+    state = state.copyWith(applications: merged);
+    return merged.length;
+  }
+
+  Future<int> importBackupFromFile(File file) async {
+    final isZip = file.path.toLowerCase().endsWith('.zip');
+    List<ExamApplication> merged;
+    if (isZip) {
+      merged = await ExamVaultService.instance.importBackupFromZip(file);
+    } else {
+      final content = await file.readAsString();
+      merged = await ExamVaultService.instance.importBackupFromJson(content);
+    }
     state = state.copyWith(applications: merged);
     return merged.length;
   }

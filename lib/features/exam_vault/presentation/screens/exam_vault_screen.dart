@@ -18,17 +18,18 @@ class ExamVaultScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final count = await ExamVaultService.instance
-          .shareAllToDrive(ref.read(examVaultProvider).applications);
-      if (count > 0) {
+      final zipFile =
+          await ref.read(examVaultProvider.notifier).exportFullBackupZip();
+      if (zipFile != null) {
         messenger.showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF10B981),
+          const SnackBar(
+            backgroundColor: Color(0xFF10B981),
             content: Text(
-              '☁️ $count টি ফাইল প্রস্তুত! তালিকা থেকে "Drive" সিলেক্ট করে সেভ করুন।',
+              '📦 অল-ইন-ওয়ান ব্যাকআপ (JSON + সকল PDF) প্রস্তুত!\nতালিকা থেকে "Drive" সিলেক্ট করে সেভ করুন।',
             ),
           ),
         );
+        await ExamVaultService.instance.shareBackupToDrive(zipFile);
       }
     } catch (e) {
       messenger.showSnackBar(
@@ -569,20 +570,23 @@ class ExamVaultScreen extends ConsumerWidget {
     try {
       final picked = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['json'],
+        allowedExtensions: ['json', 'zip'],
       );
 
       if (picked.isNotEmpty && picked.first.path != null) {
         final file = File(picked.first.path!);
-        final content = await file.readAsString();
-        final count =
-            await ref.read(examVaultProvider.notifier).importBackup(content);
+        final count = await ref
+            .read(examVaultProvider.notifier)
+            .importBackupFromFile(file);
         final fileName = file.path.split(Platform.pathSeparator).last;
+        final isZip = fileName.toLowerCase().endsWith('.zip');
         messenger.showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFF10B981),
             content: Text(
-              'সফলভাবে $count টি আবেদন রিস্টোর করা হয়েছে! ($fileName)',
+              isZip
+                  ? '🎉 সফলভাবে $count টি আবেদন ও সকল PDF রিস্টোর হয়েছে! ($fileName)'
+                  : '🎉 সফলভাবে $count টি আবেদন রিস্টোর করা হয়েছে! ($fileName)',
             ),
           ),
         );

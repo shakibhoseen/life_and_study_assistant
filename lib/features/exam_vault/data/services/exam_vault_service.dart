@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
@@ -161,6 +162,97 @@ class ExamVaultService {
 
   static const String masterBackupFileName = 'ExamVault_Latest_Backup.json';
   static const String previousBackupFileName = 'ExamVault_Previous_Backup.json';
+  static const String fullBackupZipFileName = 'ExamVault_Full_Backup.zip';
+
+  /// Generates a single zip archive containing the JSON database and all attached PDFs
+  Future<File?> exportFullBackupZip(List<ExamApplication> applications) async {
+    try {
+      final exportDir = await AppExportService.getExportDirectory(
+        subfolder: 'LifeAndStudyAssistant/ExamVault',
+      );
+      final zipFile = File(p.join(exportDir.path, fullBackupZipFileName));
+
+      final archive = Archive();
+
+      // 1. Add ExamVault_Latest_Backup.json
+      final jsonContent = createBackupJsonString(applications);
+      final jsonBytes = utf8.encode(jsonContent);
+      archive.addFile(
+        ArchiveFile(
+          masterBackupFileName,
+          jsonBytes.length,
+          jsonBytes,
+        ),
+      );
+
+      // 2. Add each existing PDF under attachments/
+      for (final app in applications) {
+        if (app.applicantCopyPdfPath != null) {
+          final f = File(app.applicantCopyPdfPath!);
+          if (await f.exists()) {
+            final fileName = p.basename(f.path);
+            final bytes = await f.readAsBytes();
+            archive.addFile(
+              ArchiveFile('attachments/$fileName', bytes.length, bytes),
+            );
+          }
+        }
+        if (app.admitCardPdfPath != null) {
+          final f = File(app.admitCardPdfPath!);
+          if (await f.exists()) {
+            final fileName = p.basename(f.path);
+            final bytes = await f.readAsBytes();
+            archive.addFile(
+              ArchiveFile('attachments/$fileName', bytes.length, bytes),
+            );
+          }
+        }
+      }
+
+      final zipEncoder = ZipEncoder();
+      final encodedZip = zipEncoder.encode(archive);
+      await zipFile.writeAsBytes(encodedZip, flush: true);
+      return zipFile;
+    } catch (e) {
+      debugPrint('Error exporting full backup zip: $e');
+      return null;
+    }
+  }
+
+  /// Imports applications and unzips all PDFs from an ExamVault_Full_Backup.zip archive
+  Future<List<ExamApplication>> importBackupFromZip(
+    File zipFile, {
+    bool overwriteExisting = false,
+  }) async {
+    try {
+      final bytes = await zipFile.readAsBytes();
+      final archive = ZipDecoder().decodeBytes(bytes);
+      final attachDir = await _getAttachmentsDirectory();
+
+      String? jsonContent;
+
+      for (final file in archive) {
+        if (file.name == masterBackupFileName || file.name.endsWith('.json')) {
+          jsonContent = utf8.decode(file.content as List<int>);
+        } else if (file.name.startsWith('attachments/') && file.isFile) {
+          final fileName = p.basename(file.name);
+          final targetFile = File(p.join(attachDir.path, fileName));
+          await targetFile.writeAsBytes(file.content as List<int>, flush: true);
+        }
+      }
+
+      if (jsonContent != null) {
+        return await importBackupFromJson(
+          jsonContent,
+          overwriteExisting: overwriteExisting,
+        );
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error importing backup from zip: $e');
+      rethrow;
+    }
+  }
 
   /// Generates the standard JSON string for backup
   String createBackupJsonString(List<ExamApplication> applications) {

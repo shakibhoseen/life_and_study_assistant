@@ -263,5 +263,35 @@ void main() {
       expect(latestContent, contains('Post 1'));
       expect(latestContent, contains('Post 2'));
     });
+
+    test('exportFullBackupZip and importBackupFromZip bundles JSON and PDFs', () async {
+      final now = DateTime.now();
+
+      // Create a dummy PDF in temp
+      final dummyPdf = File('${tempDir.path}/dummy_admit.pdf');
+      await dummyPdf.writeAsString('%PDF-1.4 dummy admit card bytes');
+
+      final app = ExamApplication(
+        id: 'zip_test_1',
+        postName: 'Assistant Director',
+        organization: 'RAJUK',
+        userId: '3V9BDT',
+        password: 'Password@123',
+        admitCardPdfPath: dummyPdf.path,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final zipFile = await ExamVaultService.instance.exportFullBackupZip([app]);
+      expect(zipFile, isNotNull);
+      expect(await zipFile!.exists(), isTrue);
+      expect(zipFile.path.endsWith('.zip'), isTrue);
+
+      // Now import from zip
+      final imported = await ExamVaultService.instance.importBackupFromZip(zipFile);
+      expect(imported.length, equals(1));
+      expect(imported.first.id, equals('zip_test_1'));
+      expect(imported.first.organization, equals('RAJUK'));
+    });
   });
 }
