@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -265,6 +266,12 @@ class GeminiAiService {
   }
 
   Future<String?> _getStoredApiKey() async {
+    if (dotenv.isInitialized) {
+      final envKey = dotenv.env['GEMINI_API_KEY'];
+      if (envKey != null && envKey.trim().isNotEmpty) {
+        return envKey.trim();
+      }
+    }
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(NotificationConstants.prefGeminiApiKey);
   }

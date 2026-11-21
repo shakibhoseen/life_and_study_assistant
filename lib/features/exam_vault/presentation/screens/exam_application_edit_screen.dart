@@ -102,23 +102,23 @@ class _ExamApplicationEditScreenState
 
     // 1. Post Name and Organization
     final postOrgMatch = RegExp(
-      r'(?:completed\s+for|charged\s+for|applied\s+for|received\s+for|for)\s+(.+?)(?:\s+post)?\s+of\s+([A-Za-z0-9\s&.-]+?)(?:\s*[\.,]|through|\.|\n|$)',
+      r'(?:completed\s+for|charged\s+for|applied\s+for|received\s+for|fee\s+received\s+for|for)\s+(.+?)(?:\s+post)?\s+of\s+([A-Za-z0-9\s&.-]+?)(?:\s*[\.,]|through|\.|\n|$)',
       caseSensitive: false,
     ).firstMatch(text);
 
     if (postOrgMatch != null) {
       final post = postOrgMatch.group(1)!.trim();
       final org = postOrgMatch.group(2)!.trim();
-      if (_postNameController.text.isEmpty && post.isNotEmpty) {
+      if (_postNameController.text.trim().isEmpty && post.isNotEmpty) {
         _postNameController.text = post;
         extractedFields.add('পদের নাম');
       }
-      if (_organizationController.text.isEmpty && org.isNotEmpty) {
+      if (_organizationController.text.trim().isEmpty && org.isNotEmpty) {
         _organizationController.text = org;
         extractedFields.add('প্রতিষ্ঠান');
       }
     } else {
-      // Fallback: 'for <post>, <org>'
+      // Fallback 1: 'for <post>, <org>'
       final postCommaMatch = RegExp(
         r'(?:for)\s+([A-Za-z0-9\s()&.-]+?),\s*([A-Za-z0-9\s()&.-]+?)(?:\.|\n|$)',
         caseSensitive: false,
@@ -126,14 +126,50 @@ class _ExamApplicationEditScreenState
       if (postCommaMatch != null) {
         final post = postCommaMatch.group(1)!.trim();
         final org = postCommaMatch.group(2)!.trim();
-        if (_postNameController.text.isEmpty && post.isNotEmpty) {
+        if (_postNameController.text.trim().isEmpty && post.isNotEmpty) {
           _postNameController.text = post;
           extractedFields.add('পদের নাম');
         }
-        if (_organizationController.text.isEmpty && org.isNotEmpty) {
+        if (_organizationController.text.trim().isEmpty && org.isNotEmpty) {
           _organizationController.text = org;
           extractedFields.add('প্রতিষ্ঠান');
         }
+      } else {
+        // Fallback 2: 'for <Exam/Post>' (e.g. BCS or solitary exam name)
+        final postSoloMatch = RegExp(
+          r'(?:completed\s+for|charged\s+for|applied\s+for|received\s+for|fee\s+received\s+for|for)\s+([A-Za-z0-9\s()&.-]+?)(?:\.|\n|User|Pass|Roll|$)',
+          caseSensitive: false,
+        ).firstMatch(text);
+        if (postSoloMatch != null) {
+          final post = postSoloMatch.group(1)!.trim();
+          if (_postNameController.text.trim().isEmpty && post.isNotEmpty) {
+            _postNameController.text = post;
+            extractedFields.add('পদের নাম');
+          }
+          if (_organizationController.text.trim().isEmpty) {
+            if (post.toLowerCase().contains('bcs')) {
+              _organizationController.text = 'BPSC';
+              extractedFields.add('প্রতিষ্ঠান');
+            }
+          }
+        }
+      }
+    }
+
+    // Candidate / Applicant Name
+    final nameMatch = RegExp(
+          r'(?:Congrats!\s+|Congratulations!\s+)([A-Za-z\s.]+?),\s*(?:payment|fee|User)',
+          caseSensitive: false,
+        ).firstMatch(text) ??
+        RegExp(
+          r'(?:^|\n)([A-Za-z\s.]+?),\s*(?:Tk\.?\s*\d|payment|fee)',
+          caseSensitive: false,
+        ).firstMatch(text.trim());
+    if (nameMatch != null && _notesController.text.trim().isEmpty) {
+      final candidateName = nameMatch.group(1)!.trim();
+      if (candidateName.isNotEmpty) {
+        _notesController.text = 'প্রার্থী: $candidateName';
+        extractedFields.add('প্রার্থীর নাম');
       }
     }
 
@@ -141,7 +177,7 @@ class _ExamApplicationEditScreenState
     final userMatch = RegExp(r'User(?:\s*ID)?[:\s]+([A-Za-z0-9_-]+)',
             caseSensitive: false)
         .firstMatch(text);
-    if (userMatch != null && _userIdController.text.isEmpty) {
+    if (userMatch != null && _userIdController.text.trim().isEmpty) {
       _userIdController.text = userMatch.group(1)!.trim();
       extractedFields.add('User ID');
     }
@@ -151,7 +187,7 @@ class _ExamApplicationEditScreenState
             r'(?:Password|Pass)[:\s]+([A-Za-z0-9_@#!]+)',
             caseSensitive: false)
         .firstMatch(text);
-    if (passMatch != null && _passwordController.text.isEmpty) {
+    if (passMatch != null && _passwordController.text.trim().isEmpty) {
       _passwordController.text = passMatch.group(1)!.trim();
       extractedFields.add('Password');
     } else {
@@ -159,7 +195,7 @@ class _ExamApplicationEditScreenState
               r'PIN(?:\s*is)?[:\s]+([A-Za-z0-9_@#!]+)',
               caseSensitive: false)
           .firstMatch(text);
-      if (pinMatch != null && _passwordController.text.isEmpty) {
+      if (pinMatch != null && _passwordController.text.trim().isEmpty) {
         _passwordController.text = pinMatch.group(1)!.trim();
         extractedFields.add('PIN');
       }
@@ -170,7 +206,7 @@ class _ExamApplicationEditScreenState
             r'Tracking(?:\s*ID|No)?[:\s]+([A-Za-z0-9_-]+)',
             caseSensitive: false)
         .firstMatch(text);
-    if (trackMatch != null && _trackingNoController.text.isEmpty) {
+    if (trackMatch != null && _trackingNoController.text.trim().isEmpty) {
       _trackingNoController.text = trackMatch.group(1)!.trim();
       extractedFields.add('Tracking No');
     }
@@ -180,7 +216,7 @@ class _ExamApplicationEditScreenState
             r'Tk\.?\s*([0-9]+(?:\.[0-9]+)?)',
             caseSensitive: false)
         .firstMatch(text);
-    if (feeMatch != null && _feeAmountController.text.isEmpty) {
+    if (feeMatch != null && _feeAmountController.text.trim().isEmpty) {
       _feeAmountController.text = feeMatch.group(1)!.trim();
       extractedFields.add('ফি');
     }
@@ -188,7 +224,7 @@ class _ExamApplicationEditScreenState
     // 6. Portal URL
     final urlMatch = RegExp(r'(https?://[^\s,]+)', caseSensitive: false)
         .firstMatch(text);
-    if (urlMatch != null && _portalUrlController.text.isEmpty) {
+    if (urlMatch != null && _portalUrlController.text.trim().isEmpty) {
       _portalUrlController.text = urlMatch.group(1)!.trim();
       extractedFields.add('ওয়েবসাইট লিঙ্ক');
     }
@@ -198,7 +234,7 @@ class _ExamApplicationEditScreenState
             r'(?:TxID|Transaction\s*ID|Txn\s*ID)[:\s]+([A-Za-z0-9_-]+)',
             caseSensitive: false)
         .firstMatch(text);
-    if (txMatch != null && _txIdController.text.isEmpty) {
+    if (txMatch != null && _txIdController.text.trim().isEmpty) {
       _txIdController.text = txMatch.group(1)!.trim();
       extractedFields.add('TxID');
     }
@@ -207,7 +243,7 @@ class _ExamApplicationEditScreenState
     final rollMatch =
         RegExp(r'Roll(?:\s*No)?[:\s]+([0-9]+)', caseSensitive: false)
             .firstMatch(text);
-    if (rollMatch != null && _rollNoController.text.isEmpty) {
+    if (rollMatch != null && _rollNoController.text.trim().isEmpty) {
       _rollNoController.text = rollMatch.group(1)!.trim();
       extractedFields.add('Roll No');
       setState(() {

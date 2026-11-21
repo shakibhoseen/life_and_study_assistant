@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/services/ai/gemini_ai_service.dart';
@@ -40,6 +41,13 @@ void overlayMain() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load .env configuration if present
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    debugPrint('.env file not loaded: $e');
+  }
 
   // 1. Initialize Local Notifications & Create Channels
   await NotificationService.instance.init();

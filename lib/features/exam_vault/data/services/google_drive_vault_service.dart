@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:http/http.dart' as http;
@@ -49,6 +50,21 @@ class GoogleDriveVaultService {
   bool get isSignedIn => _currentUser != null;
 
   Future<String?> getServerClientId() async {
+    // 1. Check .env if loaded
+    if (dotenv.isInitialized) {
+      final envId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
+      if (envId != null && envId.trim().isNotEmpty) {
+        return envId.trim();
+      }
+    }
+
+    // 2. Check compile-time environment variable
+    const compileTimeId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+    if (compileTimeId.isNotEmpty) {
+      return compileTimeId;
+    }
+
+    // 3. Fallback to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(prefKeyServerClientId);
   }
