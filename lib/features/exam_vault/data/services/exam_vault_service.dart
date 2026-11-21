@@ -204,6 +204,42 @@ class ExamVaultService {
     }
   }
 
+  /// Exports rolling backup and shares both JSON and all attached PDFs to Google Drive via native share sheet
+  Future<int> shareAllToDrive(List<ExamApplication> applications) async {
+    final file = await exportBackupToFile(applications);
+    if (file == null) return 0;
+
+    final xfiles = <XFile>[XFile(file.path)];
+    for (final app in applications) {
+      if (app.applicantCopyPdfPath != null) {
+        final f = File(app.applicantCopyPdfPath!);
+        if (await f.exists()) {
+          xfiles.add(XFile(f.path));
+        }
+      }
+      if (app.admitCardPdfPath != null) {
+        final f = File(app.admitCardPdfPath!);
+        if (await f.exists()) {
+          xfiles.add(XFile(f.path));
+        }
+      }
+    }
+
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: xfiles,
+          subject: 'Exam & Job Vault Full Backup (Google Drive)',
+          text:
+              'Life & Study Assistant - Exam & Credential Vault Backup (${xfiles.length} files: JSON + PDFs)',
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error sharing full backup to drive: $e');
+    }
+    return xfiles.length;
+  }
+
   /// Shares backup file to Google Drive or other cloud storage via native share sheet
   Future<void> shareBackupToDrive(File file) async {
     try {

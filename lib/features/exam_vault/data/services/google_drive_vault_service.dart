@@ -4,6 +4,15 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class GoogleSignInConfigurationException implements Exception {
+  final String message;
+  const GoogleSignInConfigurationException(this.message);
+
+  @override
+  String toString() => message;
+}
 
 class GoogleAuthClient extends http.BaseClient {
   final Map<String, String> _headers;
@@ -31,15 +40,34 @@ class GoogleDriveVaultService {
   static const String latestFileName = 'ExamVault_Latest_Backup.json';
   static const String previousFileName = 'ExamVault_Previous_Backup.json';
 
+  static const String prefKeyServerClientId =
+      'exam_vault_google_server_client_id';
+
   bool _initialized = false;
   GoogleSignInAccount? _currentUser;
   GoogleSignInAccount? get currentUser => _currentUser;
   bool get isSignedIn => _currentUser != null;
 
+  Future<String?> getServerClientId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(prefKeyServerClientId);
+  }
+
+  Future<void> setServerClientId(String? id) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (id == null || id.trim().isEmpty) {
+      await prefs.remove(prefKeyServerClientId);
+    } else {
+      await prefs.setString(prefKeyServerClientId, id.trim());
+    }
+    _initialized = false;
+  }
+
   Future<void> _ensureInitialized() async {
     if (_initialized) return;
     try {
-      await GoogleSignIn.instance.initialize();
+      final serverClientId = await getServerClientId();
+      await GoogleSignIn.instance.initialize(serverClientId: serverClientId);
       _initialized = true;
     } catch (e) {
       debugPrint('GoogleSignIn initialize error: $e');
@@ -49,6 +77,10 @@ class GoogleDriveVaultService {
   /// Attempts silent/lightweight sign in on app startup
   Future<GoogleSignInAccount?> signInSilently() async {
     try {
+      final serverClientId = await getServerClientId();
+      if (serverClientId == null || serverClientId.trim().isEmpty) {
+        return null;
+      }
       await _ensureInitialized();
       _currentUser =
           await GoogleSignIn.instance.attemptLightweightAuthentication();
@@ -61,6 +93,15 @@ class GoogleDriveVaultService {
 
   /// Interactive sign in
   Future<GoogleSignInAccount?> signIn() async {
+    final serverClientId = await getServerClientId();
+    if (serverClientId == null || serverClientId.trim().isEmpty) {
+      throw const GoogleSignInConfigurationException(
+        'Google Cloud Web Client ID সেট করা নেই।\n\n'
+        'সরাসরি অ্যাপের ভেতর থেকে সাইন-ইন করতে Google Cloud OAuth Web Client ID প্রয়োজন।\n\n'
+        'তবে কোনো কনফিগারেশন ছাড়াই আপনি "গুগল ড্রাইভ ১-ট্যাপ ব্যাকআপ" ব্যবহার করে এখনই সব ডেটা ও PDF ড্রাইভে সেভ করতে পারেন!',
+      );
+    }
+
     try {
       await _ensureInitialized();
       _currentUser = await GoogleSignIn.instance.authenticate(

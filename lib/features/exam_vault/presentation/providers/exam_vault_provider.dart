@@ -128,8 +128,13 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
       return user;
     } catch (e) {
       state = state.copyWith(isSyncingDrive: false, errorMessage: e.toString());
-      return null;
+      rethrow;
     }
+  }
+
+  Future<void> setGoogleServerClientId(String? id) async {
+    await GoogleDriveVaultService.instance.setServerClientId(id);
+    await initGoogleAuth();
   }
 
   Future<void> signOutGoogle() async {
