@@ -1429,10 +1429,95 @@ class AppDatabase extends _$AppDatabase {
 
     final allSettings = await select(appSettings).get();
 
+    final allRefSheets = await (select(
+      referenceSheets,
+    )..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+
+    final allRefRows = await (select(
+      referenceRows,
+    )..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+
+    final allSyllabusProgress = await (select(
+      syllabusProgress,
+    )..orderBy([(t) => OrderingTerm(expression: t.nodeKey)])).get();
+
+    final customSyllabusTracks = await (select(
+      syllabusTracks,
+    )..where((t) => t.isCustom.equals(true))
+     ..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+
+    final customSyllabusNodes = await (select(
+      syllabusNodes,
+    )..where((t) => t.isCustom.equals(true))
+     ..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+
     final backupMap = {
       'version': 2,
       'exported_at': DateTime.now().toIso8601String(),
       'preferences': extraPreferences,
+      'reference_sheets': allRefSheets
+          .map(
+            (s) => {
+              'sheet_key': s.sheetKey,
+              'title': s.title,
+              'category': s.category,
+              'subject': s.subject,
+              'note': s.note,
+              'columns_json': s.columnsJson,
+              'is_custom': s.isCustom,
+              'order_index': s.orderIndex,
+              'created_at': s.createdAt.toIso8601String(),
+            },
+          )
+          .toList(),
+      'reference_rows': allRefRows
+          .map(
+            (r) => {
+              'sheet_key': r.sheetKey,
+              'cells_json': r.cellsJson,
+              'note': r.note,
+              'is_custom': r.isCustom,
+              'order_index': r.orderIndex,
+              'detail': r.detail,
+            },
+          )
+          .toList(),
+      'syllabus_progress': allSyllabusProgress
+          .map(
+            (p) => {
+              'node_key': p.nodeKey,
+              'status': p.status.name,
+              'source': p.source.name,
+              'marked_at': p.markedAt.toIso8601String(),
+              'note': p.note,
+            },
+          )
+          .toList(),
+      'custom_syllabus_tracks': customSyllabusTracks
+          .map(
+            (t) => {
+              'track_key': t.trackKey,
+              'name': t.name,
+              'note': t.note,
+              'order_index': t.orderIndex,
+              'created_at': t.createdAt.toIso8601String(),
+            },
+          )
+          .toList(),
+      'custom_syllabus_nodes': customSyllabusNodes
+          .map(
+            (n) => {
+              'node_key': n.nodeKey,
+              'track_key': n.trackKey,
+              'kind': n.kind.name,
+              'title': n.title,
+              'merge_key': n.mergeKey,
+              'marks': n.marks,
+              'weight': n.weight,
+              'order_index': n.orderIndex,
+            },
+          )
+          .toList(),
       'drill_records': allDrills
           .map(
             (d) => {
@@ -1858,6 +1943,280 @@ class AppDatabase extends _$AppDatabase {
       }
     }
 
+    // Reference Sheets (পরিমাপ, গাণিতিক সূত্র, বিজ্ঞান, ভাষা ও ব্যাকরণ, আইন/ধারা)
+    var importedRefSheets = 0;
+    if (data['reference_sheets'] is List) {
+      final existingSheets = await select(referenceSheets).get();
+      final sheetMap = {for (final s in existingSheets) s.sheetKey: s};
+
+      for (final raw in data['reference_sheets'] as List) {
+        if (raw is! Map) continue;
+        final sheetKey =
+            (raw['sheet_key'] ?? raw['sheetKey'])?.toString().trim();
+        if (sheetKey == null || sheetKey.isEmpty) continue;
+
+        final title = (raw['title'] ?? '').toString();
+        final category = (raw['category'] ?? '').toString();
+        final subject = (raw['subject'] ?? '').toString();
+        final note = (raw['note'] ?? '').toString();
+        final columnsJson =
+            (raw['columns_json'] ?? raw['columnsJson'] ?? '[]').toString();
+        final isCustom = raw['is_custom'] == true || raw['isCustom'] == true;
+        final orderIndex = (raw['order_index'] as num?)?.toInt() ?? 0;
+        final createdAt =
+            DateTime.tryParse(raw['created_at']?.toString() ?? '') ??
+                DateTime.now();
+
+        if (sheetMap.containsKey(sheetKey)) {
+          final existing = sheetMap[sheetKey]!;
+          if (isCustom || (note.isNotEmpty && existing.note.isEmpty)) {
+            await (update(referenceSheets)
+                  ..where((t) => t.sheetKey.equals(sheetKey)))
+                .write(
+              ReferenceSheetsCompanion(
+                title: Value(title.isNotEmpty ? title : existing.title),
+                category: Value(
+                    category.isNotEmpty ? category : existing.category),
+                note: Value(note.isNotEmpty ? note : existing.note),
+                columnsJson: Value(columnsJson != '[]'
+                    ? columnsJson
+                    : existing.columnsJson),
+                isCustom: Value(isCustom || existing.isCustom),
+              ),
+            );
+            importedRefSheets++;
+          }
+        } else {
+          await into(referenceSheets).insert(
+            ReferenceSheetsCompanion.insert(
+              sheetKey: sheetKey,
+              title: title,
+              category: category,
+              subject: Value(subject),
+              note: Value(note),
+              columnsJson: columnsJson,
+              isCustom: Value(isCustom),
+              orderIndex: Value(orderIndex),
+              createdAt: Value(createdAt),
+            ),
+          );
+          importedRefSheets++;
+        }
+      }
+    }
+
+    // Reference Rows (সূত্র, একক, পরিমাপ, ধারা ও বিস্তারিত ডেরিভেশন/নোট)
+    var importedRefRows = 0;
+    if (data['reference_rows'] is List) {
+      final existingRows = await select(referenceRows).get();
+      final seenRowKeys = <String, ReferenceRow>{};
+      for (final r in existingRows) {
+        seenRowKeys['${r.sheetKey}|${r.cellsJson}'] = r;
+      }
+
+      for (final raw in data['reference_rows'] as List) {
+        if (raw is! Map) continue;
+        final sheetKey =
+            (raw['sheet_key'] ?? raw['sheetKey'])?.toString().trim();
+        final cellsJson =
+            (raw['cells_json'] ?? raw['cellsJson'])?.toString().trim();
+        if (sheetKey == null ||
+            sheetKey.isEmpty ||
+            cellsJson == null ||
+            cellsJson.isEmpty) {
+          continue;
+        }
+
+        final note = (raw['note'] ?? '').toString();
+        final isCustom = raw['is_custom'] == true || raw['isCustom'] == true;
+        final orderIndex = (raw['order_index'] as num?)?.toInt() ?? 0;
+        final detail = raw['detail']?.toString();
+
+        final dedupeKey = '$sheetKey|$cellsJson';
+        if (seenRowKeys.containsKey(dedupeKey)) {
+          final existing = seenRowKeys[dedupeKey]!;
+          bool needsUpdate = false;
+          String newNote = existing.note;
+          String? newDetail = existing.detail;
+
+          if (note.isNotEmpty && existing.note.isEmpty) {
+            newNote = note;
+            needsUpdate = true;
+          }
+          if (detail != null &&
+              detail.isNotEmpty &&
+              (existing.detail == null || existing.detail!.isEmpty)) {
+            newDetail = detail;
+            needsUpdate = true;
+          }
+
+          if (needsUpdate) {
+            await (update(referenceRows)
+                  ..where((t) => t.id.equals(existing.id)))
+                .write(
+              ReferenceRowsCompanion(
+                note: Value(newNote),
+                detail: Value(newDetail),
+              ),
+            );
+            importedRefRows++;
+          }
+        } else {
+          await into(referenceRows).insert(
+            ReferenceRowsCompanion.insert(
+              sheetKey: sheetKey,
+              cellsJson: cellsJson,
+              note: Value(note),
+              isCustom: Value(isCustom),
+              orderIndex: Value(orderIndex),
+              detail: detail != null ? Value(detail) : const Value.absent(),
+            ),
+          );
+          seenRowKeys[dedupeKey] = ReferenceRow(
+            id: 0,
+            sheetKey: sheetKey,
+            cellsJson: cellsJson,
+            note: note,
+            isCustom: isCustom,
+            orderIndex: orderIndex,
+            detail: detail,
+          );
+          importedRefRows++;
+        }
+      }
+    }
+
+    // Syllabus Progress (পড়ার অগ্রগতি ও ট্র্যাক)
+    var importedProgress = 0;
+    if (data['syllabus_progress'] is List) {
+      final existingProgress = await select(syllabusProgress).get();
+      final progressMap = {for (final p in existingProgress) p.nodeKey: p};
+
+      for (final raw in data['syllabus_progress'] as List) {
+        if (raw is! Map) continue;
+        final nodeKey =
+            (raw['node_key'] ?? raw['nodeKey'])?.toString().trim();
+        if (nodeKey == null || nodeKey.isEmpty) continue;
+
+        final statusStr = (raw['status'] ?? 'notStarted').toString();
+        final sourceStr = (raw['source'] ?? 'self').toString();
+        final note = raw['note']?.toString();
+
+        final status = SyllabusStatus.values.firstWhere(
+          (s) => s.name == statusStr,
+          orElse: () => SyllabusStatus.notStarted,
+        );
+        final source = SyllabusProgressSource.values.firstWhere(
+          (s) => s.name == sourceStr,
+          orElse: () => SyllabusProgressSource.self,
+        );
+        final markedAt =
+            DateTime.tryParse(raw['marked_at']?.toString() ?? '') ??
+                DateTime.now();
+
+        if (progressMap.containsKey(nodeKey)) {
+          final existing = progressMap[nodeKey]!;
+          if (status != SyllabusStatus.notStarted &&
+              (existing.status == SyllabusStatus.notStarted ||
+                  markedAt.isAfter(existing.markedAt))) {
+            await (update(syllabusProgress)
+                  ..where((t) => t.nodeKey.equals(nodeKey)))
+                .write(
+              SyllabusProgressCompanion(
+                status: Value(status),
+                source: Value(source),
+                markedAt: Value(markedAt),
+                note: note != null ? Value(note) : Value(existing.note),
+              ),
+            );
+            importedProgress++;
+          }
+        } else {
+          await into(syllabusProgress).insert(
+            SyllabusProgressCompanion.insert(
+              nodeKey: nodeKey,
+              status: status,
+              source: source,
+              markedAt: Value(markedAt),
+              note: note != null ? Value(note) : const Value.absent(),
+            ),
+          );
+          importedProgress++;
+        }
+      }
+    }
+
+    // Custom Syllabus Tracks
+    var importedCustomSyllabus = 0;
+    if (data['custom_syllabus_tracks'] is List) {
+      final existingTracks = await select(syllabusTracks).get();
+      final seenTrackKeys = existingTracks.map((t) => t.trackKey).toSet();
+      for (final raw in data['custom_syllabus_tracks'] as List) {
+        if (raw is! Map) continue;
+        final trackKey =
+            (raw['track_key'] ?? raw['trackKey'])?.toString().trim();
+        if (trackKey == null || trackKey.isEmpty) continue;
+        if (seenTrackKeys.contains(trackKey)) continue;
+
+        await into(syllabusTracks).insert(
+          SyllabusTracksCompanion.insert(
+            trackKey: trackKey,
+            name: (raw['name'] ?? raw['title'] ?? '').toString(),
+            note: Value((raw['note'] ?? '').toString()),
+            isCustom: const Value(true),
+            orderIndex: Value((raw['order_index'] as num?)?.toInt() ?? 0),
+          ),
+        );
+        seenTrackKeys.add(trackKey);
+        importedCustomSyllabus++;
+      }
+    }
+
+    // Custom Syllabus Nodes
+    if (data['custom_syllabus_nodes'] is List) {
+      final existingNodes = await select(syllabusNodes).get();
+      final seenNodeKeys = existingNodes.map((n) => n.nodeKey).toSet();
+      for (final raw in data['custom_syllabus_nodes'] as List) {
+        if (raw is! Map) continue;
+        final nodeKey =
+            (raw['node_key'] ?? raw['nodeKey'])?.toString().trim();
+        final trackKey =
+            (raw['track_key'] ?? raw['trackKey'])?.toString().trim();
+        if (nodeKey == null ||
+            nodeKey.isEmpty ||
+            trackKey == null ||
+            trackKey.isEmpty) {
+          continue;
+        }
+        if (seenNodeKeys.contains(nodeKey)) continue;
+
+        final kindStr = (raw['kind'] ?? 'topic').toString();
+        final kind = SyllabusNodeKind.values.firstWhere(
+          (k) => k.name == kindStr,
+          orElse: () => SyllabusNodeKind.topic,
+        );
+        final title = (raw['title'] ?? '').toString();
+        final mergeKey =
+            (raw['merge_key'] ?? raw['mergeKey'] ?? title).toString();
+
+        await into(syllabusNodes).insert(
+          SyllabusNodesCompanion.insert(
+            nodeKey: nodeKey,
+            trackKey: trackKey,
+            kind: kind,
+            title: title,
+            mergeKey: mergeKey,
+            marks: Value((raw['marks'] as num?)?.toInt() ?? 0),
+            weight: Value((raw['weight'] as num?)?.toInt() ?? 1),
+            isCustom: const Value(true),
+            orderIndex: Value((raw['order_index'] as num?)?.toInt() ?? 0),
+          ),
+        );
+        seenNodeKeys.add(nodeKey);
+        importedCustomSyllabus++;
+      }
+    }
+
     final result = <String, int>{
       'weak_topics': importedTopics,
       'exam_schedules': importedExams,
@@ -1874,6 +2233,18 @@ class AppDatabase extends _$AppDatabase {
     }
     if (data.containsKey('app_settings')) {
       result['settings'] = importedSettings;
+    }
+    if (data.containsKey('reference_sheets') ||
+        data.containsKey('reference_rows')) {
+      result['reference_tables'] = importedRefSheets;
+      result['reference_rows'] = importedRefRows;
+    }
+    if (data.containsKey('syllabus_progress')) {
+      result['syllabus_progress'] = importedProgress;
+    }
+    if (data.containsKey('custom_syllabus_tracks') ||
+        data.containsKey('custom_syllabus_nodes')) {
+      result['custom_syllabus'] = importedCustomSyllabus;
     }
     return result;
   }

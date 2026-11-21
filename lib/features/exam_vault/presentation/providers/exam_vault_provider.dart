@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../data/models/exam_application.dart';
+import '../../data/services/backup_status_store.dart';
 import '../../data/services/exam_vault_service.dart';
 import '../../data/services/google_drive_vault_service.dart';
 
@@ -15,6 +17,7 @@ class ExamVaultState {
   final String searchQuery;
   final String selectedFilter; // 'all', 'admit_issued', 'upcoming', 'completed'
   final String? errorMessage;
+  final VaultBackupStatus backupStatus;
 
   const ExamVaultState({
     this.isLoading = false,
@@ -24,6 +27,7 @@ class ExamVaultState {
     this.searchQuery = '',
     this.selectedFilter = 'all',
     this.errorMessage,
+    this.backupStatus = VaultBackupStatus.never,
   });
 
   bool get isGoogleSignedIn => googleUser != null;
@@ -88,6 +92,7 @@ class ExamVaultState {
     String? selectedFilter,
     String? errorMessage,
     bool clearError = false,
+    VaultBackupStatus? backupStatus,
   }) {
     return ExamVaultState(
       isLoading: isLoading ?? this.isLoading,
@@ -97,6 +102,7 @@ class ExamVaultState {
       searchQuery: searchQuery ?? this.searchQuery,
       selectedFilter: selectedFilter ?? this.selectedFilter,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      backupStatus: backupStatus ?? this.backupStatus,
     );
   }
 }
@@ -106,9 +112,15 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
   ExamVaultState build() {
     Future.microtask(() async {
       await loadApplications();
+      await loadBackupStatus();
       await initGoogleAuth();
     });
     return const ExamVaultState(isLoading: true);
+  }
+
+  Future<void> loadBackupStatus() async {
+    final status = await BackupStatusStore.instance.load();
+    state = state.copyWith(backupStatus: status);
   }
 
   Future<void> initGoogleAuth() async {
@@ -266,10 +278,31 @@ class ExamVaultNotifier extends Notifier<ExamVaultState> {
       final success =
           await GoogleDriveVaultService.instance.syncBackupToDrive(jsonContent);
 
+      // Remember when this landed, so the backup screen can say "last backup"
+      // instead of leaving the user guessing whether anything happened.
+      //
+      // Count every document the backup covers, not just the ones uploaded on
+      // this run: a PDF already on Drive is not re-uploaded, so pdfCount would
+      // report 0 for a vault that is in fact fully backed up.
+      var status = state.backupStatus;
+      if (success) {
+        var documents = 0;
+        for (final app in updatedApps) {
+          if (app.hasApplicantCopy) documents++;
+          if (app.hasAdmitCard) documents++;
+        }
+        status = await BackupStatusStore.instance.record(
+          applications: updatedApps.length,
+          pdfs: documents,
+          bytes: utf8.encode(jsonContent).length,
+        );
+      }
+
       state = state.copyWith(
         isSyncingDrive: false,
         applications: updatedApps,
         googleUser: GoogleDriveVaultService.instance.currentUser,
+        backupStatus: status,
       );
       return (success: success, pdfCount: pdfCount);
     } catch (e) {

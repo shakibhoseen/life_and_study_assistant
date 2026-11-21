@@ -293,5 +293,55 @@ void main() {
       expect(imported.first.id, equals('zip_test_1'));
       expect(imported.first.organization, equals('RAJUK'));
     });
+
+    test(
+        'attachment paths from an older package name are repointed at the '
+        'extracted files', () {
+      // What a backup taken before the com.example -> com.shakib rename holds:
+      // absolute paths into a private directory that no longer exists.
+      const staleDir =
+          '/data/user/0/com.example.life_and_study_assistant/app_flutter/exam_vault/attachments';
+      final backupJson = jsonEncode({
+        'version': 1,
+        'applications': [
+          {
+            'id': 'stale_1',
+            'applicantCopyPdfPath': '$staleDir/exam_1_applicant_copy.pdf',
+            'admitCardPdfPath': '$staleDir/exam_1_admit_card.pdf',
+          },
+          {
+            'id': 'stale_2',
+            // Not in the archive — must survive untouched so the Drive file id
+            // can still recover it.
+            'admitCardPdfPath': '$staleDir/exam_2_admit_card.pdf',
+          },
+        ],
+      });
+
+      final extracted = {
+        'exam_1_applicant_copy.pdf': '${tempDir.path}/exam_1_applicant_copy.pdf',
+        'exam_1_admit_card.pdf': '${tempDir.path}/exam_1_admit_card.pdf',
+      };
+
+      final rewritten = jsonDecode(
+        ExamVaultService.instance.rewriteAttachmentPaths(backupJson, extracted),
+      ) as Map<String, dynamic>;
+      final apps = rewritten['applications'] as List;
+
+      expect(apps[0]['applicantCopyPdfPath'],
+          equals('${tempDir.path}/exam_1_applicant_copy.pdf'));
+      expect(apps[0]['admitCardPdfPath'],
+          equals('${tempDir.path}/exam_1_admit_card.pdf'));
+      expect(apps[1]['admitCardPdfPath'],
+          equals('$staleDir/exam_2_admit_card.pdf'));
+    });
+
+    test('nothing extracted leaves the backup JSON exactly as it was', () {
+      const original = '{"version":1,"applications":[]}';
+      expect(
+        ExamVaultService.instance.rewriteAttachmentPaths(original, const {}),
+        equals(original),
+      );
+    });
   });
 }

@@ -231,6 +231,10 @@ class ExamVaultService {
 
       String? jsonContent;
 
+      // Where each attachment actually landed on THIS install, keyed by file
+      // name, so the backup's stale absolute paths can be pointed at it.
+      final extracted = <String, String>{};
+
       for (final file in archive) {
         if (file.name == masterBackupFileName || file.name.endsWith('.json')) {
           jsonContent = utf8.decode(file.content as List<int>);
@@ -238,12 +242,13 @@ class ExamVaultService {
           final fileName = p.basename(file.name);
           final targetFile = File(p.join(attachDir.path, fileName));
           await targetFile.writeAsBytes(file.content as List<int>, flush: true);
+          extracted[fileName] = targetFile.path;
         }
       }
 
       if (jsonContent != null) {
         return await importBackupFromJson(
-          jsonContent,
+          rewriteAttachmentPaths(jsonContent, extracted),
           overwriteExisting: overwriteExisting,
         );
       }
@@ -251,6 +256,55 @@ class ExamVaultService {
     } catch (e) {
       debugPrint('Error importing backup from zip: $e');
       rethrow;
+    }
+  }
+
+  /// Repoints a backup's attachment paths at the files just unpacked from it.
+  ///
+  /// A backup stores absolute paths into the app's private storage, and those
+  /// paths contain the package name — `/data/user/0/<package>/app_flutter/...`.
+  /// After the package was renamed (com.example.* -> com.shakib.*), a ZIP made
+  /// by the old build unpacks its PDFs correctly and then points at a directory
+  /// that no longer exists, so the documents look missing even though they are
+  /// right there. Matching on file name survives that, and any rename of the
+  /// app in future.
+  ///
+  /// Paths with no matching extracted file are left untouched: the document may
+  /// still be recoverable from Drive by its file id.
+  @visibleForTesting
+  String rewriteAttachmentPaths(
+    String jsonString,
+    Map<String, String> extracted,
+  ) {
+    if (extracted.isEmpty) return jsonString;
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      final List rawList;
+      if (decoded is List) {
+        rawList = decoded;
+      } else if (decoded is Map<String, dynamic> &&
+          decoded['applications'] is List) {
+        rawList = decoded['applications'] as List;
+      } else {
+        return jsonString;
+      }
+
+      for (final item in rawList) {
+        if (item is! Map<String, dynamic>) continue;
+        for (final key in const ['applicantCopyPdfPath', 'admitCardPdfPath']) {
+          final stored = item[key];
+          if (stored is! String || stored.isEmpty) continue;
+          final relocated = extracted[p.basename(stored)];
+          if (relocated != null) item[key] = relocated;
+        }
+      }
+
+      return jsonEncode(decoded);
+    } catch (e) {
+      // A backup we cannot re-encode is still a backup we can import as-is.
+      debugPrint('Could not rewrite attachment paths, using them as-is: $e');
+      return jsonString;
     }
   }
 

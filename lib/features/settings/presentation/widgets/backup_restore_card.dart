@@ -64,7 +64,7 @@ class BackupRestoreCard extends ConsumerWidget {
                     ),
                   ),
                   subtitle: Text(
-                    'Save all Weak Topics, LiveMCQ routines & daily logs',
+                    'Weak Topics, লাইভ রুটিন, সূত্র, পরিমাপ ও সিলেবাস প্রোগ্রেস',
                     style: FluentType.caption.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
@@ -121,6 +121,8 @@ class BackupRestoreCard extends ConsumerWidget {
       final topicsCount = (parsed['weak_topics'] as List?)?.length ?? 0;
       final examsCount = (parsed['exam_schedules'] as List?)?.length ?? 0;
       final logsCount = (parsed['daily_energy_logs'] as List?)?.length ?? 0;
+      final refRowsCount = (parsed['reference_rows'] as List?)?.length ?? 0;
+      final progressCount = (parsed['syllabus_progress'] as List?)?.length ?? 0;
 
       if (!context.mounted) return;
       final theme = Theme.of(context);
@@ -228,6 +230,30 @@ class BackupRestoreCard extends ConsumerWidget {
                       Icons.bolt_outlined,
                       ctx,
                     ),
+                    if (refRowsCount > 0) ...[
+                      Divider(
+                        height: FluentSpacing.m,
+                        color: FluentStroke.divider(brightness),
+                      ),
+                      _buildBackupStatRow(
+                        'সূত্র, পরিমাপ ও রেফারেন্স টেবিল',
+                        '$refRowsCount টি এন্ট্রি',
+                        Icons.table_chart_outlined,
+                        ctx,
+                      ),
+                    ],
+                    if (progressCount > 0) ...[
+                      Divider(
+                        height: FluentSpacing.m,
+                        color: FluentStroke.divider(brightness),
+                      ),
+                      _buildBackupStatRow(
+                        'সিলেবাস পড়ার প্রোগ্রেস',
+                        '$progressCount টি টপিক',
+                        Icons.account_tree_outlined,
+                        ctx,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -682,6 +708,18 @@ class BackupRestoreCard extends ConsumerWidget {
                 Text('• ${result['drill_records']} টি ড্রিলের রেকর্ড ফিরেছে'),
               if ((result['spaced_reviews'] ?? 0) > 0)
                 Text('• ${result['spaced_reviews']} টি রিভিশন কার্ড ফিরেছে'),
+              if ((result['reference_rows'] ?? 0) > 0)
+                Text(
+                  '• ${result['reference_rows']} টি সূত্র, পরিমাপ ও রেফারেন্স তথ্য রিস্টোর হয়েছে',
+                ),
+              if ((result['syllabus_progress'] ?? 0) > 0)
+                Text(
+                  '• ${result['syllabus_progress']} টি সিলেবাস পড়ার প্রোগ্রেস ফিরেছে',
+                ),
+              if ((result['custom_syllabus'] ?? 0) > 0)
+                Text(
+                  '• ${result['custom_syllabus']} টি কাস্টম সিলেবাস টপিক ফিরেছে',
+                ),
               if (restoredPrefs > 0) Text('• $restoredPrefs টি সেটিংস ফিরেছে'),
               const SizedBox(height: FluentSpacing.s),
               // Said every time: it is the one thing a restore cannot do for

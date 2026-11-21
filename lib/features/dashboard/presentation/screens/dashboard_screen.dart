@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/bengali_math_sanitizer.dart';
 import '../../../../core/widgets/premium_glass_card.dart';
 import '../../../../core/widgets/premium_ui_kit.dart';
 import '../../../../core/theme/fluent_tokens.dart';
@@ -38,8 +39,8 @@ import '../../../analytics/presentation/providers/today_activity_provider.dart';
 import '../../domain/next_study_action.dart';
 import '../../domain/today_progress.dart';
 import 'office_portal_screen.dart';
+import '../../../exam_vault/presentation/providers/exam_vault_provider.dart';
 import '../../../exam_vault/presentation/screens/exam_vault_screen.dart';
-import '../../../exam_vault/presentation/widgets/exam_vault_dashboard_card.dart';
 import '../widgets/biometric_status_banner.dart';
 import '../widgets/attention_card.dart';
 import '../widgets/next_action_card.dart';
@@ -255,7 +256,9 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: FluentSpacing.s),
                   const ExamAccountabilityCard(),
                   const SizedBox(height: FluentSpacing.s),
-                  const ExamVaultDashboardCard(),
+                  // The vault is not a daily read — it is somewhere you go when
+                  // an exam is close. It lives in the Quick Actions strip, whose
+                  // pill carries the same counts this card used to spell out.
                   _buildTodayProgress(ref),
                   const SizedBox(height: FluentSpacing.s),
                   _buildAttention(
@@ -532,13 +535,15 @@ class DashboardScreen extends ConsumerWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          // 0. Exam & Job Vault — User ID, Password & Admit Card PDF
+          // 0. Exam & Job Vault — User ID, Password & Admit Card PDF.
+          // The badge carries whatever is most worth knowing right now, so the
+          // vault no longer needs a card of its own on the dashboard.
           _buildQuickActionPill(
             context,
             icon: Icons.shield_outlined,
             iconColor: Colors.indigo,
             label: 'Exam Vault',
-            badge: 'Credentials 🛡️',
+            badge: _examVaultBadge(ref),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute<void>(
@@ -666,6 +671,28 @@ class DashboardScreen extends ConsumerWidget {
       ),
     );
   }
+
+  /// What the Exam Vault pill says under its name.
+  ///
+  /// Ordered by what would actually make someone open the vault: an admit card
+  /// waiting to be downloaded beats an exam date, which beats a plain count.
+  String _examVaultBadge(WidgetRef ref) {
+    final vault = ref.watch(examVaultProvider);
+
+    final admits = vault.admitCardAvailableCount;
+    if (admits > 0) return '${_bnDigits(admits)}টি অ্যাডমিট 🎫';
+
+    final upcoming = vault.upcomingExamsCount;
+    if (upcoming > 0) return '${_bnDigits(upcoming)}টি সামনে ⏳';
+
+    final total = vault.applications.length;
+    if (total > 0) return '${_bnDigits(total)}টি আবেদন 🛡️';
+
+    return 'Credentials 🛡️';
+  }
+
+  String _bnDigits(int value) =>
+      BengaliMathSanitizer.toBengaliDigits('$value');
 
   Widget _buildQuickActionPill(
     BuildContext context, {

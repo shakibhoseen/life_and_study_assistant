@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_and_study_assistant/core/config/notification_constants.dart';
 import 'package:life_and_study_assistant/core/database/app_database.dart';
+import 'package:life_and_study_assistant/core/database/tables/syllabus_progress_table.dart';
 import 'package:life_and_study_assistant/core/services/export/preference_backup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,6 +47,33 @@ void main() {
     await db.into(db.appSettings).insert(
           AppSettingsCompanion.insert(key: 'theme', value: 'oled'),
         );
+    await db.into(db.referenceSheets).insert(
+          ReferenceSheetsCompanion.insert(
+            sheetKey: 'custom_law_articles',
+            title: 'সংবিধানের গুরুত্বপূর্ণ অনুচ্ছেদ',
+            category: 'আইন ও সংবিধান',
+            subject: const Value('বাংলাদেশ বিষয়াবলী'),
+            note: const Value('পরীক্ষার জন্য জরুরি'),
+            columnsJson: '["অনুচ্ছেদ", "বিষয়", "টীকা"]',
+            isCustom: const Value(true),
+          ),
+        );
+    await db.into(db.referenceRows).insert(
+          ReferenceRowsCompanion.insert(
+            sheetKey: 'custom_law_articles',
+            cellsJson: '["অনুচ্ছেদ ৭ক", "সংবিধান লঙ্ঘন", "রাষ্ট্রদ্রোহিতার অপরাধ"]',
+            note: const Value('পঞ্চদশ সংশোধনীতে যুক্ত'),
+            isCustom: const Value(true),
+            detail: const Value('সংবিধান স্থগিত বা বাতিল রাষ্ট্রদ্রোহিতা হিসেবে গণ্য হবে।'),
+          ),
+        );
+    await db.into(db.syllabusProgress).insert(
+          SyllabusProgressCompanion.insert(
+            nodeKey: 'math_algebra_formulas',
+            status: SyllabusStatus.done,
+            source: SyllabusProgressSource.self,
+          ),
+        );
   }
 
   group('what the file carries', () {
@@ -65,6 +94,9 @@ void main() {
       // The settings table ships with defaults, so this one is only ever
       // asked to be non-empty.
       expect((decoded['app_settings'] as List), isNotEmpty);
+      expect(jsonEncode(decoded['reference_sheets']), contains('custom_law_articles'));
+      expect(jsonEncode(decoded['reference_rows']), contains('অনুচ্ছেদ ৭ক'));
+      expect(jsonEncode(decoded['syllabus_progress']), contains('math_algebra_formulas'));
     });
 
     test('a round trip brings them all back', () async {
@@ -77,6 +109,8 @@ void main() {
       expect(result['drill_records'], 1);
       expect(result['spaced_reviews'], greaterThanOrEqualTo(1));
       expect(result['settings'], greaterThanOrEqualTo(1));
+      expect(result['reference_rows'], greaterThanOrEqualTo(1));
+      expect(result['syllabus_progress'], greaterThanOrEqualTo(1));
 
       final reviews = await fresh.select(fresh.spacedReviewItems).get();
       final restored = reviews.firstWhere((r) => r.title == 'দ্বন্দ্ব সমাস');
@@ -84,6 +118,16 @@ void main() {
 
       final drills = await fresh.select(fresh.drillRecords).get();
       expect(drills.single.correctCount, 7);
+
+      final rows = await fresh.select(fresh.referenceRows).get();
+      final restoredRow = rows.firstWhere((r) => r.sheetKey == 'custom_law_articles');
+      expect(restoredRow.note, 'পঞ্চদশ সংশোধনীতে যুক্ত');
+      expect(restoredRow.detail, contains('রাষ্ট্রদ্রোহিতা'));
+
+      final progress = await fresh.select(fresh.syllabusProgress).get();
+      final restoredProg = progress.firstWhere((p) => p.nodeKey == 'math_algebra_formulas');
+      expect(restoredProg.status, SyllabusStatus.done);
+
       await fresh.close();
     });
 
