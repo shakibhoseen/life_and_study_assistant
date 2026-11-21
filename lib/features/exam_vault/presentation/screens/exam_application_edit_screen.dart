@@ -94,53 +94,146 @@ class _ExamApplicationEditScreenState
     super.dispose();
   }
 
-  /// Parses User ID, Password, and TxID from SMS text if found
+  /// Intelligently parses Post Name, Organization, User ID, Password/PIN, TxID, Fee, and URL from SMS
   void _extractFromSms(String text) {
     if (text.isEmpty) return;
 
-    // Extract User ID
-    final userMatch = RegExp(r'User\s*(?:ID|Id)?[:\s]+([A-Za-z0-9_-]+)',
+    final extractedFields = <String>[];
+
+    // 1. Post Name and Organization
+    final postOrgMatch = RegExp(
+      r'(?:completed\s+for|charged\s+for|applied\s+for|received\s+for|for)\s+(.+?)(?:\s+post)?\s+of\s+([A-Za-z0-9\s&.-]+?)(?:\s*[\.,]|through|\.|\n|$)',
+      caseSensitive: false,
+    ).firstMatch(text);
+
+    if (postOrgMatch != null) {
+      final post = postOrgMatch.group(1)!.trim();
+      final org = postOrgMatch.group(2)!.trim();
+      if (_postNameController.text.isEmpty && post.isNotEmpty) {
+        _postNameController.text = post;
+        extractedFields.add('পদের নাম');
+      }
+      if (_organizationController.text.isEmpty && org.isNotEmpty) {
+        _organizationController.text = org;
+        extractedFields.add('প্রতিষ্ঠান');
+      }
+    } else {
+      // Fallback: 'for <post>, <org>'
+      final postCommaMatch = RegExp(
+        r'(?:for)\s+([A-Za-z0-9\s()&.-]+?),\s*([A-Za-z0-9\s()&.-]+?)(?:\.|\n|$)',
+        caseSensitive: false,
+      ).firstMatch(text);
+      if (postCommaMatch != null) {
+        final post = postCommaMatch.group(1)!.trim();
+        final org = postCommaMatch.group(2)!.trim();
+        if (_postNameController.text.isEmpty && post.isNotEmpty) {
+          _postNameController.text = post;
+          extractedFields.add('পদের নাম');
+        }
+        if (_organizationController.text.isEmpty && org.isNotEmpty) {
+          _organizationController.text = org;
+          extractedFields.add('প্রতিষ্ঠান');
+        }
+      }
+    }
+
+    // 2. User ID / User:
+    final userMatch = RegExp(r'User(?:\s*ID)?[:\s]+([A-Za-z0-9_-]+)',
             caseSensitive: false)
         .firstMatch(text);
     if (userMatch != null && _userIdController.text.isEmpty) {
       _userIdController.text = userMatch.group(1)!.trim();
+      extractedFields.add('User ID');
     }
 
-    // Extract Password
+    // 3. Password / Pass / PIN
     final passMatch = RegExp(
-            r'(?:Password|Pass|PIN)[:\s]+([A-Za-z0-9_@#!]+)',
+            r'(?:Password|Pass)[:\s]+([A-Za-z0-9_@#!]+)',
             caseSensitive: false)
         .firstMatch(text);
     if (passMatch != null && _passwordController.text.isEmpty) {
       _passwordController.text = passMatch.group(1)!.trim();
+      extractedFields.add('Password');
+    } else {
+      final pinMatch = RegExp(
+              r'PIN(?:\s*is)?[:\s]+([A-Za-z0-9_@#!]+)',
+              caseSensitive: false)
+          .firstMatch(text);
+      if (pinMatch != null && _passwordController.text.isEmpty) {
+        _passwordController.text = pinMatch.group(1)!.trim();
+        extractedFields.add('PIN');
+      }
     }
 
-    // Extract TxID / Transaction ID
+    // 4. Tracking ID
+    final trackMatch = RegExp(
+            r'Tracking(?:\s*ID|No)?[:\s]+([A-Za-z0-9_-]+)',
+            caseSensitive: false)
+        .firstMatch(text);
+    if (trackMatch != null && _trackingNoController.text.isEmpty) {
+      _trackingNoController.text = trackMatch.group(1)!.trim();
+      extractedFields.add('Tracking No');
+    }
+
+    // 5. Fee / Tk.
+    final feeMatch = RegExp(
+            r'Tk\.?\s*([0-9]+(?:\.[0-9]+)?)',
+            caseSensitive: false)
+        .firstMatch(text);
+    if (feeMatch != null && _feeAmountController.text.isEmpty) {
+      _feeAmountController.text = feeMatch.group(1)!.trim();
+      extractedFields.add('ফি');
+    }
+
+    // 6. Portal URL
+    final urlMatch = RegExp(r'(https?://[^\s,]+)', caseSensitive: false)
+        .firstMatch(text);
+    if (urlMatch != null && _portalUrlController.text.isEmpty) {
+      _portalUrlController.text = urlMatch.group(1)!.trim();
+      extractedFields.add('ওয়েবসাইট লিঙ্ক');
+    }
+
+    // 7. TxID
     final txMatch = RegExp(
             r'(?:TxID|Transaction\s*ID|Txn\s*ID)[:\s]+([A-Za-z0-9_-]+)',
             caseSensitive: false)
         .firstMatch(text);
     if (txMatch != null && _txIdController.text.isEmpty) {
       _txIdController.text = txMatch.group(1)!.trim();
+      extractedFields.add('TxID');
     }
 
-    // Extract Roll
+    // 8. Roll No
     final rollMatch =
         RegExp(r'Roll(?:\s*No)?[:\s]+([0-9]+)', caseSensitive: false)
             .firstMatch(text);
     if (rollMatch != null && _rollNoController.text.isEmpty) {
       _rollNoController.text = rollMatch.group(1)!.trim();
+      extractedFields.add('Roll No');
       setState(() {
         _status = 'admitIssued';
       });
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('SMS থেকে তথ্য শনাক্ত করে ফর্ম পূরণ করা হয়েছে!'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    // 9. Payment Status Auto-Detection
+    final lower = text.toLowerCase();
+    if (lower.contains('payment completed') || lower.contains('fee received')) {
+      setState(() {
+        _isPaid = true;
+        if (_status == 'applied') {
+          _status = 'paid';
+        }
+      });
+    }
+
+    if (extractedFields.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('SMS থেকে ${extractedFields.join(", ")} স্বয়ংক্রিয়ভাবে পূরণ হয়েছে!'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _pickPdf(bool isAdmitCard) async {

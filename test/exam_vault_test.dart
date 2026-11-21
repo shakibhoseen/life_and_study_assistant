@@ -111,6 +111,38 @@ void main() {
       expect(passMatch?.group(1), equals('SecretKey99'));
       expect(txMatch?.group(1), equals('TXN887711'));
     });
+
+    test('Real Teletalk SMS extracts Post, Org, User, Pass, Fee, and URL', () {
+      const smsRajuk = 'Congrats! SHAMIMA NASRIN TITLY, payment completed for Assistant Director (Administration) of RAJUK through . User: 3V9BDTQC and Pass: E267432A. For more jobs, visit http://alljobs.teletalk.com.bd';
+
+      final postOrg = RegExp(
+        r'(?:completed\s+for|charged\s+for|applied\s+for|received\s+for|for)\s+(.+?)(?:\s+post)?\s+of\s+([A-Za-z0-9\s&.-]+?)(?:\s*[\.,]|through|\.|\n|$)',
+        caseSensitive: false,
+      ).firstMatch(smsRajuk);
+
+      final user = RegExp(r'User(?:\s*ID)?[:\s]+([A-Za-z0-9_-]+)', caseSensitive: false).firstMatch(smsRajuk);
+      final pass = RegExp(r'(?:Password|Pass)[:\s]+([A-Za-z0-9_@#!]+)', caseSensitive: false).firstMatch(smsRajuk);
+      final url = RegExp(r'(https?://[^\s,]+)', caseSensitive: false).firstMatch(smsRajuk);
+
+      expect(postOrg?.group(1)?.trim(), equals('Assistant Director (Administration)'));
+      expect(postOrg?.group(2)?.trim(), equals('RAJUK'));
+      expect(user?.group(1)?.trim(), equals('3V9BDTQC'));
+      expect(pass?.group(1)?.trim(), equals('E267432A'));
+      expect(url?.group(1)?.trim(), equals('http://alljobs.teletalk.com.bd'));
+
+      const smsBogmc = 'Congrats! MD. SHAKIB HOSSAIN,payment completed for Assistant Manager(Administration) post of BOGMC. User ID: 6NFC2HJZ, Password: MVDKBAD1.';
+      final postOrgBogmc = RegExp(
+        r'(?:completed\s+for|charged\s+for|applied\s+for|received\s+for|for)\s+(.+?)(?:\s+post)?\s+of\s+([A-Za-z0-9\s&.-]+?)(?:\s*[\.,]|through|\.|\n|$)',
+        caseSensitive: false,
+      ).firstMatch(smsBogmc);
+      final userBogmc = RegExp(r'User(?:\s*ID)?[:\s]+([A-Za-z0-9_-]+)', caseSensitive: false).firstMatch(smsBogmc);
+      final passBogmc = RegExp(r'(?:Password|Pass)[:\s]+([A-Za-z0-9_@#!]+)', caseSensitive: false).firstMatch(smsBogmc);
+
+      expect(postOrgBogmc?.group(1)?.trim(), equals('Assistant Manager(Administration)'));
+      expect(postOrgBogmc?.group(2)?.trim(), equals('BOGMC'));
+      expect(userBogmc?.group(1)?.trim(), equals('6NFC2HJZ'));
+      expect(passBogmc?.group(1)?.trim(), equals('MVDKBAD1'));
+    });
   });
 
   group('ExamVaultService Tests', () {
